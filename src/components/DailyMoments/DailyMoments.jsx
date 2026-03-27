@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, isConfigured } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
 import { HiPlus } from 'react-icons/hi'
@@ -12,6 +12,7 @@ export default function DailyMoments() {
 
   useEffect(() => {
     async function fetchMoments() {
+      if (!db) return
       try {
         const q = query(
           collection(db, 'memories'),

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, isConfigured } from '../firebase'
 import Layout from '../components/Layout/Layout'
 import DailyMoments from '../components/DailyMoments/DailyMoments'
 import MemoryCard, { HeroCard } from '../components/MemoryCard/MemoryCard'
@@ -13,6 +13,7 @@ export default function HomePage() {
 
   useEffect(() => {
     async function fetchMemories() {
+      if (!db) { setLoading(false); return }
       try {
         const q = query(
           collection(db, 'memories'),

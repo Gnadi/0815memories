@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, isConfigured } from '../../firebase'
 import styles from './FamilyAlbumGlimpse.module.css'
 
 export default function FamilyAlbumGlimpse() {
@@ -10,6 +10,7 @@ export default function FamilyAlbumGlimpse() {
 
   useEffect(() => {
     async function fetchPhotos() {
+      if (!db) return
       try {
         const q = query(
           collection(db, 'memories'),

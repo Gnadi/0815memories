@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, getDocs, where } from 'firebase/firestore'
-import { db, auth } from '../../firebase'
+import { db, auth, isConfigured } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import Layout from '../../components/Layout/Layout'
 import styles from './AdminDashboard.module.css'
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchStats() {
+      if (!db) return
       try {
         const allDocs = await getDocs(collection(db, 'memories'))
         let memories = 0

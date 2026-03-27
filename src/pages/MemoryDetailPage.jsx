@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, isConfigured } from '../firebase'
 import { format } from 'date-fns'
 import { HiArrowLeft, HiShare, HiDotsVertical, HiCalendar, HiLocationMarker } from 'react-icons/hi'
 import Layout from '../components/Layout/Layout'
@@ -15,6 +15,7 @@ export default function MemoryDetailPage() {
 
   useEffect(() => {
     async function fetchMemory() {
+      if (!db) { setLoading(false); return }
       try {
         const docRef = doc(db, 'memories', id)
         const docSnap = await getDoc(docRef)

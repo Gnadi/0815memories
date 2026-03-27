@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db, auth } from '../../firebase'
+import { db, auth, isConfigured } from '../../firebase'
 import { HiArrowLeft, HiPhotograph, HiX } from 'react-icons/hi'
 import Layout from '../../components/Layout/Layout'
 import styles from './PostMemory.module.css'

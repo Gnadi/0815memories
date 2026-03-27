@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, orderBy, getDocs } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, isConfigured } from '../firebase'
 import Layout from '../components/Layout/Layout'
 import styles from './AlbumPage.module.css'
 
@@ -12,6 +12,7 @@ export default function AlbumPage() {
 
   useEffect(() => {
     async function fetchPhotos() {
+      if (!db) { setLoading(false); return }
       try {
         const q = query(
           collection(db, 'memories'),

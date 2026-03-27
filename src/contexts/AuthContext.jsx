@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth } from '../firebase'
+import { auth, isConfigured } from '../firebase'
 
 const AuthContext = createContext()
 
@@ -18,6 +18,10 @@ export function AuthProvider({ children }) {
   const isAuthenticated = isViewer || isAdmin
 
   useEffect(() => {
+    if (!isConfigured || !auth) {
+      setLoading(false)
+      return
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAdminUser(user)
       setLoading(false)
@@ -26,10 +30,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (!viewerToken) {
-      setLoading(false)
-      return
-    }
+    if (!viewerToken) return
     try {
       const payload = JSON.parse(atob(viewerToken.split('.')[1]))
       if (payload.exp * 1000 < Date.now()) {
@@ -55,11 +56,12 @@ export function AuthProvider({ children }) {
   }
 
   async function loginAdmin(email, password) {
+    if (!auth) throw new Error('Firebase not configured')
     await signInWithEmailAndPassword(auth, email, password)
   }
 
   async function logout() {
-    if (adminUser) {
+    if (adminUser && auth) {
       await signOut(auth)
     }
     localStorage.removeItem('viewerToken')
