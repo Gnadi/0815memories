@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Memories: public read, no client writes (writes via Admin SDK only)
+    match /memories/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Stories: public read, no client writes
+    match /stories/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Settings: completely locked from client access.
+    // The password hash lives here — server-side only via Admin SDK.
+    match /settings/{id} {
+      allow read, write: if false;
+    }
+  }
+}
