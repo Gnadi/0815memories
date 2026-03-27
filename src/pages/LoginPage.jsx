@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { loginAsViewer, loginAsAdmin, isAuthenticated } = useAuth()
+  const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
 
   if (isAuthenticated) {
@@ -87,6 +87,14 @@ export default function LoginPage() {
             <p className="text-bark-light text-center mb-8">
               Step inside the digital living room of your loved ones.
             </p>
+
+            {!firebaseReady && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
+                <strong>Setup required:</strong> Firebase environment variables are not configured.
+                Copy <code className="bg-amber-100 px-1 rounded">.env.example</code> to{' '}
+                <code className="bg-amber-100 px-1 rounded">.env.local</code> and add your Firebase credentials.
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Admin email field */}

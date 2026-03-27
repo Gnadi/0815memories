@@ -10,12 +10,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
   const [loading, setLoading] = useState(true)
+  const firebaseReady = !!(auth && db)
 
   useEffect(() => {
     // Check localStorage for viewer session
     const viewerSession = localStorage.getItem('fh_viewer')
     if (viewerSession === 'true') {
       setIsViewer(true)
+    }
+
+    if (!auth) {
+      setLoading(false)
+      return
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -27,6 +33,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginAsViewer = async (password) => {
+    if (!db) throw new Error('Firebase not configured — add env vars and reload')
+
     const settingsDoc = await getDoc(doc(db, 'settings', 'access'))
     if (!settingsDoc.exists()) {
       throw new Error('Access settings not configured')
@@ -44,11 +52,12 @@ export function AuthProvider({ children }) {
   }
 
   const loginAsAdmin = async (email, password) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
     await signInWithEmailAndPassword(auth, email, password)
   }
 
   const logout = async () => {
-    if (user) {
+    if (user && auth) {
       await signOut(auth)
     }
     setIsViewer(false)
@@ -65,6 +74,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       isAuthenticated,
       loading,
+      firebaseReady,
       loginAsViewer,
       loginAsAdmin,
       logout,

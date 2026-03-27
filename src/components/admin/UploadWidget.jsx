@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { Upload, X, Image as ImageIcon } from 'lucide-react'
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../../config/cloudinary'
+import { X, Image as ImageIcon } from 'lucide-react'
+import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 
 export default function UploadWidget({ onUpload, currentUrl }) {
   const [uploading, setUploading] = useState(false)
@@ -16,23 +16,34 @@ export default function UploadWidget({ onUpload, currentUrl }) {
     setUploading(true)
 
     try {
+      // Get signed upload credentials from Vercel serverless function
+      const signRes = await fetch('/api/cloudinary-sign')
+      if (!signRes.ok) throw new Error('Failed to get upload signature')
+      const { timestamp, signature, folder, apiKey } = await signRes.json()
+
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+      formData.append('api_key', apiKey)
+      formData.append('folder', folder)
 
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
         { method: 'POST', body: formData }
       )
 
-      const data = await response.json()
-
-      if (data.secure_url) {
-        setPreview(data.secure_url)
-        onUpload(data.secure_url, data.public_id)
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
       }
+
+      const data = await response.json()
+      setPreview(data.secure_url)
+      onUpload(data.secure_url, data.public_id)
     } catch (err) {
       console.error('Upload failed:', err)
+      setPreview('')
     } finally {
       setUploading(false)
     }
