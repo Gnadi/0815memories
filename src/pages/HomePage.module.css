@@ -1,0 +1,16 @@
+.page {
+  max-width: 680px;
+}
+
+.memoryFeed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 600px) {
+  .memoryFeed {
+    grid-template-columns: 1fr;
+  }
+}

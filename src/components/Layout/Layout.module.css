@@ -1,0 +1,17 @@
+.layout {
+  min-height: 100vh;
+}
+
+.main {
+  margin-left: 200px;
+  padding: 32px 40px;
+  max-width: 900px;
+}
+
+@media (max-width: 768px) {
+  .main {
+    margin-left: 0;
+    padding: 72px 16px 80px;
+    max-width: 100%;
+  }
+}

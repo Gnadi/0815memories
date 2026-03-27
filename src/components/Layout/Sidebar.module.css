@@ -1,0 +1,106 @@
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 200px;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.logoIcon {
+  font-size: 1.4rem;
+  color: var(--color-accent);
+}
+
+.logoText {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.tagline {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: 0 8px;
+  margin-bottom: 32px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+.navItemActive {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.navItemActive:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.navIcon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.postButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--gradient-button);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: auto;
+  transition: opacity 0.2s;
+}
+
+.postButton:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
