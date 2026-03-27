@@ -48,8 +48,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between">
+      {/* Desktop header — hidden on mobile */}
+      <header className="hidden lg:flex px-6 py-4 items-center justify-between">
         <div className="flex items-center gap-2 text-hearth font-semibold text-lg">
           <Home className="w-5 h-5" />
           <span>FamilyHearth</span>
@@ -58,21 +58,80 @@ export default function LoginPage() {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col lg:flex-row items-stretch">
-        {/* Left / Top — Illustration */}
-        <div className="lg:w-1/2 relative overflow-hidden flex items-center justify-center bg-cream-dark p-8 lg:p-12">
+        {/* ====== MOBILE LAYOUT (< lg) ====== */}
+        <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
+          {/* Mobile brand */}
+          <div className="flex items-center gap-2 mb-4">
+            <Home className="w-5 h-5 text-hearth" />
+            <span className="text-lg font-bold text-bark">Our Family Hearth</span>
+          </div>
+
+          {/* Illustration card */}
+          <div className="rounded-2xl overflow-hidden mb-6">
+            <FamilyIllustration />
+          </div>
+
+          {/* Welcome heading */}
+          <h1 className="text-3xl font-bold text-bark text-center mb-2">
+            Welcome Home
+          </h1>
+          <p className="text-bark-light text-center mb-6">
+            Step inside the digital living room of your loved ones.
+          </p>
+
+          {!firebaseReady && <SetupBanner />}
+
+          {/* Form */}
+          <LoginForm
+            showAdminLogin={showAdminLogin}
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            stayLoggedIn={stayLoggedIn}
+            setStayLoggedIn={setStayLoggedIn}
+            error={error}
+            loading={loading}
+            handleSubmit={handleSubmit}
+          />
+
+          {/* Admin toggle */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setShowAdminLogin(!showAdminLogin)}
+              className="text-sm text-bark-muted hover:text-hearth transition-colors"
+            >
+              {showAdminLogin ? 'Back to family login' : 'Admin login'}
+            </button>
+          </div>
+
+          {/* Request invite */}
+          <div className="mt-6 text-center">
+            <button className="w-full py-3 border-2 border-cream-dark rounded-full text-hearth font-semibold hover:bg-cream-dark transition-colors">
+              Request an Invite
+            </button>
+          </div>
+        </div>
+
+        {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
+        {/* Left — Illustration */}
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
           <FamilyIllustration />
           <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-2xl lg:text-3xl font-bold mb-2 drop-shadow-lg">
+            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               Your digital living room awaits.
             </h2>
-            <p className="text-sm lg:text-base opacity-90 drop-shadow">
+            <p className="text-base opacity-90 drop-shadow">
               Safe, private, and filled with the ones who matter most.
             </p>
           </div>
         </div>
 
-        {/* Right / Bottom — Login Form */}
-        <div className="lg:w-1/2 flex flex-col items-center justify-center px-6 py-12 lg:px-16">
+        {/* Right — Login Form */}
+        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
           <div className="w-full max-w-md">
             {/* House icon */}
             <div className="flex justify-center mb-6">
@@ -81,108 +140,29 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <h1 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-2">
+            <h1 className="text-4xl font-bold text-bark text-center mb-2">
               Welcome Home
             </h1>
             <p className="text-bark-light text-center mb-8">
               Step inside the digital living room of your loved ones.
             </p>
 
-            {!firebaseReady && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-                <strong>Setup required:</strong> Firebase environment variables are not configured.
-                Copy <code className="bg-amber-100 px-1 rounded">.env.example</code> to{' '}
-                <code className="bg-amber-100 px-1 rounded">.env.local</code> and add your Firebase credentials.
-              </div>
-            )}
+            {!firebaseReady && <SetupBanner />}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Admin email field */}
-              {showAdminLogin && (
-                <div>
-                  <label className="block text-sm font-medium text-bark mb-1.5">
-                    Family Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Password field */}
-              <div>
-                <label className="block text-sm font-medium text-bark mb-1.5">
-                  Private Key
-                </label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your private key"
-                    className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Stay logged in & Forgot */}
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-bark-light cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stayLoggedIn}
-                    onChange={(e) => setStayLoggedIn(e.target.checked)}
-                    className="w-4 h-4 rounded border-bark-muted accent-hearth"
-                  />
-                  Stay logged in
-                </label>
-                <button
-                  type="button"
-                  className="text-sm text-hearth hover:text-hearth-dark font-medium"
-                >
-                  Lost your key?
-                </button>
-              </div>
-
-              {/* Error message */}
-              {error && (
-                <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
-                  {error}
-                </p>
-              )}
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-hearth w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    Enter the Home
-                    <span className="text-xl">&rarr;</span>
-                  </>
-                )}
-              </button>
-            </form>
+            <LoginForm
+              showAdminLogin={showAdminLogin}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              stayLoggedIn={stayLoggedIn}
+              setStayLoggedIn={setStayLoggedIn}
+              error={error}
+              loading={loading}
+              handleSubmit={handleSubmit}
+            />
 
             {/* Admin toggle */}
             <div className="mt-4 text-center">
@@ -212,10 +192,10 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
+      {/* Footer — desktop only */}
+      <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
         <p>&copy; {new Date().getFullYear()} FamilyHearth. Designed for memories.</p>
-        <div className="flex gap-4 mt-2 sm:mt-0">
+        <div className="flex gap-4">
           <span className="hover:text-bark cursor-pointer">Privacy Policy</span>
           <span className="hover:text-bark cursor-pointer">Terms of Service</span>
           <span className="hover:text-bark cursor-pointer">Help Center</span>
@@ -225,10 +205,115 @@ export default function LoginPage() {
   )
 }
 
+function SetupBanner() {
+  return (
+    <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
+      <strong>Setup required:</strong> Firebase environment variables are not configured.
+      Copy <code className="bg-amber-100 px-1 rounded">.env.example</code> to{' '}
+      <code className="bg-amber-100 px-1 rounded">.env.local</code> and add your Firebase credentials.
+    </div>
+  )
+}
+
+function LoginForm({
+  showAdminLogin, email, setEmail, password, setPassword,
+  showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
+  error, loading, handleSubmit,
+}) {
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Admin email field */}
+      {showAdminLogin && (
+        <div>
+          <label className="block text-sm font-medium text-bark mb-1.5">
+            Family Email
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="the.millers@hearth.com"
+              className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Password field */}
+      <div>
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          Private Key
+        </label>
+        <div className="relative">
+          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your private key"
+            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
+          >
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Stay logged in & Forgot */}
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm text-bark-light cursor-pointer">
+          <input
+            type="checkbox"
+            checked={stayLoggedIn}
+            onChange={(e) => setStayLoggedIn(e.target.checked)}
+            className="w-4 h-4 rounded border-bark-muted accent-hearth"
+          />
+          Stay logged in
+        </label>
+        <button
+          type="button"
+          className="text-sm text-hearth hover:text-hearth-dark font-medium"
+        >
+          Lost your key?
+        </button>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
+          {error}
+        </p>
+      )}
+
+      {/* Submit button */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-hearth w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
+      >
+        {loading ? (
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            Enter the Home
+            <span className="text-xl">&rarr;</span>
+          </>
+        )}
+      </button>
+    </form>
+  )
+}
+
 function FamilyIllustration() {
   return (
-    <svg viewBox="0 0 500 400" className="w-full max-w-lg" role="img" aria-label="Family gathering illustration">
-      {/* Warm background */}
+    <svg viewBox="0 0 500 400" className="w-full" role="img" aria-label="Family gathering illustration">
       <defs>
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#F4A460" />
@@ -242,22 +327,28 @@ function FamilyIllustration() {
       </defs>
 
       {/* Background */}
-      <rect width="500" height="400" rx="16" fill="url(#skyGrad)" />
+      <rect width="500" height="400" fill="url(#skyGrad)" />
 
       {/* Window glow */}
       <rect x="150" y="30" width="200" height="150" rx="8" fill="#FFD700" opacity="0.3" />
       <rect x="160" y="40" width="80" height="60" rx="4" fill="#FFA500" opacity="0.4" />
       <rect x="260" y="40" width="80" height="60" rx="4" fill="#FFA500" opacity="0.4" />
 
+      {/* Bookshelf left */}
+      <rect x="10" y="40" width="80" height="200" rx="4" fill="#6B3F1F" opacity="0.4" />
+      <rect x="18" y="55" width="64" height="12" rx="2" fill="#8B5E3C" opacity="0.5" />
+      <rect x="18" y="75" width="64" height="12" rx="2" fill="#A0522D" opacity="0.5" />
+      <rect x="18" y="95" width="64" height="12" rx="2" fill="#8B5E3C" opacity="0.5" />
+      <rect x="18" y="115" width="64" height="12" rx="2" fill="#CD853F" opacity="0.4" />
+
       {/* Table */}
-      <ellipse cx="250" cy="300" rx="200" ry="40" fill="url(#tableGrad)" />
+      <ellipse cx="250" cy="310" rx="210" ry="35" fill="url(#tableGrad)" />
 
       {/* Plates */}
-      <ellipse cx="150" cy="290" rx="25" ry="8" fill="#FFFDF9" opacity="0.8" />
-      <ellipse cx="250" cy="285" rx="25" ry="8" fill="#FFFDF9" opacity="0.8" />
-      <ellipse cx="350" cy="290" rx="25" ry="8" fill="#FFFDF9" opacity="0.8" />
+      <ellipse cx="150" cy="300" rx="22" ry="7" fill="#FFFDF9" opacity="0.8" />
+      <ellipse cx="250" cy="295" rx="22" ry="7" fill="#FFFDF9" opacity="0.8" />
+      <ellipse cx="350" cy="300" rx="22" ry="7" fill="#FFFDF9" opacity="0.8" />
 
-      {/* People silhouettes - simplified warm figures */}
       {/* Person 1 - left */}
       <circle cx="120" cy="210" r="22" fill="#D2691E" />
       <ellipse cx="120" cy="260" rx="25" ry="35" fill="#CD853F" />
@@ -289,7 +380,7 @@ function FamilyIllustration() {
       <circle cx="400" cy="112" r="5" fill="#FFD700" opacity="0.8" />
 
       {/* Warm glow overlay */}
-      <rect width="500" height="400" rx="16" fill="#FFA500" opacity="0.08" />
+      <rect width="500" height="400" fill="#FFA500" opacity="0.08" />
     </svg>
   )
 }
