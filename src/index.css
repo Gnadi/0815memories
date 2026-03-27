@@ -18,8 +18,8 @@
   --shadow-sm: 0 1px 3px rgba(61, 43, 31, 0.08);
   --shadow-md: 0 4px 12px rgba(61, 43, 31, 0.1);
   --shadow-lg: 0 8px 24px rgba(61, 43, 31, 0.12);
-  --font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-family: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 16px;
