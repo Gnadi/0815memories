@@ -1,13 +1,25 @@
 import { useNavigate } from 'react-router-dom'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 
 export default function MemoryCard({ memory, onEdit, onDelete }) {
   const [showMenu, setShowMenu] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
   const { isAdmin } = useAuth()
   const navigate = useNavigate()
+
+  const allImages = memory.images?.length ? memory.images : (memory.imageUrl ? [memory.imageUrl] : [])
+
+  const prevImg = (e) => {
+    e.stopPropagation()
+    setImgIndex((i) => (i - 1 + allImages.length) % allImages.length)
+  }
+  const nextImg = (e) => {
+    e.stopPropagation()
+    setImgIndex((i) => (i + 1) % allImages.length)
+  }
 
   return (
     <div
@@ -65,27 +77,56 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
         </p>
       )}
 
-      {/* Image */}
-      {(() => {
-        const firstImage = memory.images?.[0] || memory.imageUrl
-        const imageCount = memory.images?.length ?? (memory.imageUrl ? 1 : 0)
-        return firstImage ? (
-          <div className="relative">
-            <img
-              src={firstImage}
-              alt={memory.title}
-              className="w-full h-48 object-cover"
-            />
-            {imageCount > 1 && (
+      {/* Image slider */}
+      {allImages.length > 0 ? (
+        <div className="relative">
+          <img
+            src={allImages[imgIndex]}
+            alt={memory.title}
+            className="w-full h-48 object-cover"
+          />
+
+          {allImages.length > 1 && (
+            <>
+              {/* Prev */}
+              <button
+                onClick={prevImg}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Next */}
+              <button
+                onClick={nextImg}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Counter */}
               <span className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                1 / {imageCount}
+                {imgIndex + 1} / {allImages.length}
               </span>
-            )}
-          </div>
-        ) : (
-          <MemoryPlaceholderImage title={memory.title} />
-        )
-      })()}
+
+              {/* Dots */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {allImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setImgIndex(i) }}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      i === imgIndex ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <MemoryPlaceholderImage title={memory.title} />
+      )}
 
       {/* Caption */}
       {memory.quote && (
