@@ -35,6 +35,8 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
       setCurrentImageIndex((i) => i + 1)
     } else if (!isLastMoment) {
       setCurrentMomentIndex((i) => i + 1)
+    } else {
+      onClose()
     }
   }
 
