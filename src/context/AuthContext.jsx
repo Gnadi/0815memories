@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
@@ -56,6 +56,14 @@ export function AuthProvider({ children }) {
     await signInWithEmailAndPassword(auth, email, password)
   }
 
+  const signup = async (email, password, displayName) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    const result = await createUserWithEmailAndPassword(auth, email, password)
+    if (displayName) {
+      await updateProfile(result.user, { displayName })
+    }
+  }
+
   const logout = async () => {
     if (user && auth) {
       await signOut(auth)
@@ -77,6 +85,7 @@ export function AuthProvider({ children }) {
       firebaseReady,
       loginAsViewer,
       loginAsAdmin,
+      signup,
       logout,
     }}>
       {children}
