@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FDF6EC;
+  --color-cream-dark: #F5E6D0;
+  --color-hearth: #C25A2E;
+  --color-hearth-light: #D4784A;
+  --color-hearth-dark: #A04420;
+  --color-bark: #2D1B0E;
+  --color-bark-light: #7A6A5E;
+  --color-bark-muted: #B8A99C;
+  --color-warm-white: #FFFDF9;
+  --font-family-serif: 'Georgia', 'Times New Roman', serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-cream);
+  color: var(--color-bark);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-serif {
+  font-family: var(--font-family-serif);
+}
+
+.btn-hearth {
+  background: linear-gradient(135deg, var(--color-hearth), var(--color-hearth-light));
+  color: white;
+  border-radius: 9999px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(194, 90, 46, 0.3);
+}
+
+.btn-hearth:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(194, 90, 46, 0.4);
+}
+
+.story-ring {
+  background: linear-gradient(135deg, var(--color-hearth), var(--color-hearth-light));
+  padding: 3px;
+  border-radius: 9999px;
+}
+
+.story-ring-inner {
+  background: var(--color-cream);
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
