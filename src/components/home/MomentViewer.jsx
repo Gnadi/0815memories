@@ -83,25 +83,27 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
   onCloseRef.current = onClose
 
   // Auto-advance timer: 2% per 100ms = 5 000ms total
+  // Only increments progress — side effects (goNext / onClose) live in the effect below
   useEffect(() => {
     if (paused) return
     const id = setInterval(() => {
       setProgress((prev) => {
         const next = prev + 2
-        if (next >= 100) {
-          clearInterval(id)
-          if (!isAtEndRef.current) {
-            goNextRef.current()
-          } else {
-            onCloseRef.current()  // last image finished — close the viewer
-          }
-          return 0
-        }
-        return next
+        return next >= 100 ? 100 : next
       })
     }, 100)
     return () => clearInterval(id)
   }, [paused, currentImageIndex, currentMomentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When progress reaches 100, advance to next image or close
+  useEffect(() => {
+    if (progress < 100) return
+    if (isAtEndRef.current) {
+      onCloseRef.current()
+    } else {
+      goNextRef.current()
+    }
+  }, [progress]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation
   useEffect(() => {
