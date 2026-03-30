@@ -71,16 +71,23 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
     setInfoVisible(true)
   }, [currentMomentIndex])
 
+  // Always-fresh ref so the interval callback can check isAtEnd without a stale closure
+  const isAtEndRef = useRef(isAtEnd)
+  isAtEndRef.current = isAtEnd
+
   // Auto-advance timer: 2% per 100ms = 5 000ms total
   useEffect(() => {
-    if (paused || isAtEnd) return
+    if (paused) return
     const id = setInterval(() => {
       setProgress((prev) => {
         const next = prev + 2
         if (next >= 100) {
           clearInterval(id)
-          goNextRef.current()
-          return 0
+          if (!isAtEndRef.current) {
+            goNextRef.current()
+            return 0
+          }
+          return 100  // stay filled on the very last image
         }
         return next
       })
