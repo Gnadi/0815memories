@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
 
@@ -9,6 +9,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
+  const [familyId, setFamilyId] = useState(() => localStorage.getItem('fh_familyId'))
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
@@ -32,36 +33,61 @@ export function AuthProvider({ children }) {
     return unsubscribe
   }, [])
 
-  const loginAsViewer = async (password) => {
-    if (!db) throw new Error('Firebase not configured — add env vars and reload')
+  const resolveFamilyId = async (uid) => {
+    const q = query(collection(db, 'families'), where('adminUid', '==', uid))
+    const snapshot = await getDocs(q)
+    if (snapshot.empty) return null
+    const id = snapshot.docs[0].id
+    setFamilyId(id)
+    localStorage.setItem('fh_familyId', id)
+    return id
+  }
 
-    const settingsDoc = await getDoc(doc(db, 'settings', 'access'))
-    if (!settingsDoc.exists()) {
-      throw new Error('Access settings not configured')
+  const loginAsViewer = async (password, viewerFamilyId) => {
+    if (!db) throw new Error('Firebase not configured — add env vars and reload')
+    if (!viewerFamilyId) throw new Error('No family link provided')
+
+    const familyDoc = await getDoc(doc(db, 'families', viewerFamilyId))
+    if (!familyDoc.exists()) {
+      throw new Error('Family not found')
     }
 
-    const { sharedPassword } = settingsDoc.data()
-    const isMatch = await bcrypt.compare(password, sharedPassword)
+    const { sharedPassword } = familyDoc.data()
+    if (!sharedPassword) {
+      throw new Error('This family has not set a shared password yet')
+    }
 
+    const isMatch = await bcrypt.compare(password, sharedPassword)
     if (!isMatch) {
       throw new Error('Invalid password')
     }
 
     setIsViewer(true)
+    setFamilyId(viewerFamilyId)
     localStorage.setItem('fh_viewer', 'true')
+    localStorage.setItem('fh_familyId', viewerFamilyId)
   }
 
   const loginAsAdmin = async (email, password) => {
     if (!auth) throw new Error('Firebase not configured — add env vars and reload')
-    await signInWithEmailAndPassword(auth, email, password)
+    const result = await signInWithEmailAndPassword(auth, email, password)
+    await resolveFamilyId(result.user.uid)
   }
 
-  const signup = async (email, password, displayName) => {
-    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+  const signup = async (email, password, displayName, familyName) => {
+    if (!auth || !db) throw new Error('Firebase not configured — add env vars and reload')
     const result = await createUserWithEmailAndPassword(auth, email, password)
     if (displayName) {
       await updateProfile(result.user, { displayName })
     }
+    // Create the family document
+    const familyRef = await addDoc(collection(db, 'families'), {
+      adminUid: result.user.uid,
+      familyName: familyName || displayName + "'s Family",
+      createdAt: serverTimestamp(),
+    })
+    setFamilyId(familyRef.id)
+    localStorage.setItem('fh_familyId', familyRef.id)
   }
 
   const logout = async () => {
@@ -69,7 +95,9 @@ export function AuthProvider({ children }) {
       await signOut(auth)
     }
     setIsViewer(false)
+    setFamilyId(null)
     localStorage.removeItem('fh_viewer')
+    localStorage.removeItem('fh_familyId')
   }
 
   const isAuthenticated = !!user || isViewer
@@ -81,6 +109,7 @@ export function AuthProvider({ children }) {
       isViewer,
       isAdmin,
       isAuthenticated,
+      familyId,
       loading,
       firebaseReady,
       loginAsViewer,

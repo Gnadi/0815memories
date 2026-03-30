@@ -13,9 +13,9 @@ import { Plus } from 'lucide-react'
 export default function HomePage() {
   const [showPostModal, setShowPostModal] = useState(false)
   const [editingMemory, setEditingMemory] = useState(null)
-  const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories()
-  const { moments, addMoment } = useMoments()
-  const { isAdmin } = useAuth()
+  const { isAdmin, familyId } = useAuth()
+  const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId)
+  const { moments, addMoment } = useMoments(familyId)
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 

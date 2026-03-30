@@ -14,12 +14,21 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
-export function useMemories() {
+export function useMemories(familyId) {
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const q = query(collection(db, 'memories'), orderBy('date', 'desc'))
+    if (!familyId || !db) {
+      setLoading(false)
+      return
+    }
+
+    const q = query(
+      collection(db, 'memories'),
+      where('familyId', '==', familyId),
+      orderBy('date', 'desc')
+    )
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -30,11 +39,12 @@ export function useMemories() {
     })
 
     return unsubscribe
-  }, [])
+  }, [familyId])
 
   const addMemory = async (memory) => {
     await addDoc(collection(db, 'memories'), {
       ...memory,
+      familyId,
       createdAt: serverTimestamp(),
     })
   }
@@ -52,12 +62,22 @@ export function useMemories() {
   return { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory }
 }
 
-export function useMoments() {
+export function useMoments(familyId) {
   const [moments, setMoments] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const q = query(collection(db, 'moments'), orderBy('date', 'desc'), limit(10))
+    if (!familyId || !db) {
+      setLoading(false)
+      return
+    }
+
+    const q = query(
+      collection(db, 'moments'),
+      where('familyId', '==', familyId),
+      orderBy('date', 'desc'),
+      limit(10)
+    )
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -68,11 +88,12 @@ export function useMoments() {
     })
 
     return unsubscribe
-  }, [])
+  }, [familyId])
 
   const addMoment = async (moment) => {
     await addDoc(collection(db, 'moments'), {
       ...moment,
+      familyId,
       date: serverTimestamp(),
     })
   }

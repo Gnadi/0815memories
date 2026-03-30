@@ -6,6 +6,7 @@ import FamilyIllustration from '../components/FamilyIllustration'
 
 export default function SignupPage() {
   const [displayName, setDisplayName] = useState('')
+  const [familyName, setFamilyName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -38,7 +39,7 @@ export default function SignupPage() {
 
     setLoading(true)
     try {
-      await signup(email, password, displayName)
+      await signup(email, password, displayName, familyName)
       navigate('/home')
     } catch (err) {
       const messages = {
@@ -88,6 +89,7 @@ export default function SignupPage() {
 
           <SignupForm
             displayName={displayName} setDisplayName={setDisplayName}
+            familyName={familyName} setFamilyName={setFamilyName}
             email={email} setEmail={setEmail}
             password={password} setPassword={setPassword}
             confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
@@ -199,7 +201,8 @@ function SetupBanner() {
 }
 
 function SignupForm({
-  displayName, setDisplayName, email, setEmail,
+  displayName, setDisplayName, familyName, setFamilyName,
+  email, setEmail,
   password, setPassword, confirmPassword, setConfirmPassword,
   showPassword, setShowPassword, showConfirm, setShowConfirm,
   error, loading, handleSubmit,
@@ -218,6 +221,24 @@ function SignupForm({
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g., Sarah Miller"
+            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Family Name */}
+      <div>
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          Family Name
+        </label>
+        <div className="relative">
+          <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          <input
+            type="text"
+            value={familyName}
+            onChange={(e) => setFamilyName(e.target.value)}
+            placeholder="e.g., The Millers"
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
             required
           />

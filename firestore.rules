@@ -2,28 +2,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Settings - only admin can write, anyone authenticated can read the hash
-    match /settings/{doc} {
+
+    // Families — anyone can read (needed for viewer password check),
+    // only the family admin can write, anyone authenticated can create
+    match /families/{familyId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.adminUid == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.adminUid == request.auth.uid;
+      allow delete: if false;
     }
 
-    // Memories - anyone can read, only admin can write
+    // Memories — anyone can read (viewers are unauthenticated),
+    // only the admin of the memory's family can write
     match /memories/{memoryId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
 
-    // Moments - anyone can read, only admin can write
+    // Moments — same rules as memories
     match /moments/{momentId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
 
-    // Albums - anyone can read, only admin can write
+    // Albums — same rules as memories
     match /albums/{albumId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
   }
 }

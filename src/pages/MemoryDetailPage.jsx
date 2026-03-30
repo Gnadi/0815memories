@@ -5,10 +5,12 @@ import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
+import { useAuth } from '../context/AuthContext'
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { familyId } = useAuth()
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -16,12 +18,16 @@ export default function MemoryDetailPage() {
     async function fetchMemory() {
       const docSnap = await getDoc(doc(db, 'memories', id))
       if (docSnap.exists()) {
-        setMemory({ id: docSnap.id, ...docSnap.data() })
+        const data = docSnap.data()
+        // Only show memory if it belongs to the current family
+        if (data.familyId === familyId) {
+          setMemory({ id: docSnap.id, ...data })
+        }
       }
       setLoading(false)
     }
     fetchMemory()
-  }, [id])
+  }, [id, familyId])
 
   if (loading) {
     return (

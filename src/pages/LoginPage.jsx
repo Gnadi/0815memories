@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Home, Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
 import FamilyIllustration from '../components/FamilyIllustration'
@@ -15,6 +15,8 @@ export default function LoginPage() {
 
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const urlFamilyId = searchParams.get('family')
 
   if (isAuthenticated) {
     navigate('/home', { replace: true })
@@ -30,7 +32,12 @@ export default function LoginPage() {
       if (showAdminLogin && email) {
         await loginAsAdmin(email, password)
       } else {
-        await loginAsViewer(password)
+        if (!urlFamilyId) {
+          setError('You need a family link to sign in as a viewer')
+          setLoading(false)
+          return
+        }
+        await loginAsViewer(password, urlFamilyId)
       }
       if (!stayLoggedIn) {
         sessionStorage.setItem('fh_session', 'true')
