@@ -5,7 +5,6 @@ import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 export default function PostMomentModal({ onClose, onSave }) {
   const [form, setForm] = useState({
     caption: '',
-    emoji: '',
     category: '',
     location: '',
     label: '',
@@ -172,21 +171,6 @@ export default function PostMomentModal({ onClose, onSave }) {
               rows={3}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30 resize-none"
               required
-            />
-          </div>
-
-          {/* Emoji */}
-          <div>
-            <label className="block text-sm font-medium text-bark mb-1">
-              Emoji <span className="text-bark-muted font-normal">(optional)</span>
-            </label>
-            <input
-              name="emoji"
-              value={form.emoji}
-              onChange={handleChange}
-              placeholder="🌿"
-              maxLength={2}
-              className="w-24 px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30 text-lg text-center"
             />
           </div>
 

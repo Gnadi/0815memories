@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   ChevronLeft,
@@ -14,6 +14,9 @@ import { timeAgo } from '../../utils/helpers'
 export default function MomentViewer({ moments, initialIndex, onClose }) {
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [progress, setProgress] = useState(0)   // 0–100, fill % for current image
+  const [paused, setPaused] = useState(false)
+  const [infoVisible, setInfoVisible] = useState(true)
 
   const moment = moments[currentMomentIndex]
   const images = moment?.images ?? []
@@ -21,20 +24,11 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
   const isLastImage = currentImageIndex === images.length - 1
   const isFirstMoment = currentMomentIndex === 0
   const isLastMoment = currentMomentIndex === moments.length - 1
+  const isAtStart = isFirstMoment && isFirstImage
+  const isAtEnd = isLastMoment && isLastImage
 
-  // Body scroll lock
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
-
-  // Reset image index when switching moments
-  useEffect(() => {
-    setCurrentImageIndex(0)
-  }, [currentMomentIndex])
+  // Keep a stable ref to goNext to avoid stale closures inside setInterval
+  const goNextRef = useRef(null)
 
   const goNext = () => {
     if (!isLastImage) {
@@ -54,6 +48,45 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
       setCurrentImageIndex(Math.max(0, prevImages.length - 1))
     }
   }
+
+  goNextRef.current = goNext
+
+  // Body scroll lock
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
+  // Reset progress + unpause on image/moment change
+  useEffect(() => {
+    setProgress(0)
+    setPaused(false)
+  }, [currentImageIndex, currentMomentIndex])
+
+  // Restore info card visibility on new moment
+  useEffect(() => {
+    setInfoVisible(true)
+  }, [currentMomentIndex])
+
+  // Auto-advance timer: 2% per 100ms = 5 000ms total
+  useEffect(() => {
+    if (paused || isAtEnd) return
+    const id = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + 2
+        if (next >= 100) {
+          clearInterval(id)
+          goNextRef.current()
+          return 0
+        }
+        return next
+      })
+    }, 100)
+    return () => clearInterval(id)
+  }, [paused, currentImageIndex, currentMomentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation
   useEffect(() => {
@@ -77,48 +110,74 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
     .join('')
     .toUpperCase()
 
-  const isAtStart = isFirstMoment && isFirstImage
-  const isAtEnd = isLastMoment && isLastImage
+  // Progress bar segments — one per image in the current moment
+  const ProgressBarMobile = () => (
+    <div className="flex gap-1 w-full">
+      {images.map((_, i) => (
+        <div key={i} className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-white"
+            style={{
+              width:
+                i < currentImageIndex ? '100%'
+                : i === currentImageIndex ? `${progress}%`
+                : '0%',
+              transition: paused ? 'none' : undefined,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+
+  const ProgressBarDesktop = () => (
+    <div className="flex gap-1 w-full">
+      {images.map((_, i) => (
+        <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
+          <div
+            className="h-full rounded-full bg-hearth"
+            style={{
+              width:
+                i < currentImageIndex ? '100%'
+                : i === currentImageIndex ? `${progress}%`
+                : '0%',
+              transition: paused ? 'none' : undefined,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <>
       {/* ─── MOBILE: full-screen story ─── */}
-      <div className="md:hidden fixed inset-0 z-50">
+      <div
+        className="md:hidden fixed inset-0 z-50"
+        onPointerDown={() => setPaused(true)}
+        onPointerUp={() => setPaused(false)}
+        onPointerCancel={() => setPaused(false)}
+      >
         {/* Background image */}
-        {currentImage && (
+        {currentImage ? (
           <img
             src={currentImage}
             alt={moment.caption}
             className="absolute inset-0 w-full h-full object-cover"
           />
-        )}
-        {!currentImage && (
+        ) : (
           <div className="absolute inset-0 bg-bark" />
         )}
 
         {/* Top gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent pointer-events-none" />
 
-        {/* Top bar */}
-        <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2">
-          {/* Moment progress bar */}
-          <div className="flex gap-1 w-full mb-3">
-            {moments.map((_, i) => (
-              <div
-                key={i}
-                className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden"
-              >
-                <div
-                  className={`h-full rounded-full bg-white transition-all duration-200 ${
-                    i < currentMomentIndex ? 'w-full' : i === currentMomentIndex ? 'w-full' : 'w-0'
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
+        {/* Top bar — z-20 so it sits above the tap zones */}
+        <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2 z-20">
+          <ProgressBarMobile />
 
           {/* User row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2.5">
               <div className="story-ring">
                 <div className="story-ring-inner">
@@ -133,7 +192,8 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose() }}
+              onPointerDown={(e) => e.stopPropagation()}
               className="text-white/80 hover:text-white"
               aria-label="Close"
             >
@@ -142,69 +202,68 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
           </div>
         </div>
 
-        {/* Image dot indicators (multiple images within a moment) */}
-        {images.length > 1 && (
-          <div className="absolute left-0 right-0 flex justify-center gap-1.5" style={{ bottom: '220px' }}>
-            {images.map((_, i) => (
-              <div
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  i === currentImageIndex ? 'bg-white scale-125' : 'bg-white/40'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Left/right tap zones */}
+        {/* Tap zones for navigation (z-10, below top bar) */}
         <button
           onClick={goPrev}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
           disabled={isAtStart}
-          className="absolute left-0 top-0 bottom-48 w-1/3 disabled:cursor-default"
+          className="absolute left-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
           aria-label="Previous"
         />
         <button
           onClick={goNext}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
           disabled={isAtEnd}
-          className="absolute right-0 top-0 bottom-48 w-1/3 disabled:cursor-default"
+          className="absolute right-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
           aria-label="Next"
         />
 
-        {/* Bottom card */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8">
-          <div className="bg-cream/95 backdrop-blur-sm rounded-3xl px-5 py-4 shadow-lg">
-            {moment.caption && (
-              <p className="text-bark italic text-sm leading-relaxed mb-2">
-                "{moment.caption}"
-              </p>
-            )}
-            {moment.emoji && (
-              <p className="text-2xl mb-3">{moment.emoji}</p>
-            )}
-            {(moment.category || moment.location) && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {moment.category && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                    <Heart className="w-3 h-3" />
-                    {moment.category}
-                  </span>
-                )}
-                {moment.location && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                    <MapPin className="w-3 h-3" />
-                    {moment.location}
-                  </span>
-                )}
+        {/* Bottom info card — first image only */}
+        {currentImageIndex === 0 && infoVisible && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-20">
+            <div className="relative bg-cream/70 backdrop-blur-sm rounded-3xl px-5 py-4 shadow-lg">
+              {/* Close info button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setInfoVisible(false) }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="absolute top-2 right-2 text-bark-muted hover:text-bark"
+                aria-label="Hide info"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {moment.caption && (
+                <p className="text-bark italic text-sm leading-relaxed mb-2 pr-5">
+                  "{moment.caption}"
+                </p>
+              )}
+              {(moment.category || moment.location) && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {moment.category && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                      <Heart className="w-3 h-3" />
+                      {moment.category}
+                    </span>
+                  )}
+                  {moment.location && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                      <MapPin className="w-3 h-3" />
+                      {moment.location}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-1 pt-2 border-t border-cream-dark">
+                <ChevronsUp className="w-4 h-4 text-bark-muted" />
+                <span className="text-xs font-semibold text-bark-muted tracking-widest uppercase">
+                  Swipe up to reply
+                </span>
               </div>
-            )}
-            <div className="flex items-center justify-center gap-1 pt-2 border-t border-cream-dark">
-              <ChevronsUp className="w-4 h-4 text-bark-muted" />
-              <span className="text-xs font-semibold text-bark-muted tracking-widest uppercase">
-                Swipe up to reply
-              </span>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ─── DESKTOP: centered card modal ─── */}
@@ -224,22 +283,9 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
 
         {/* Card */}
         <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-          {/* Moment progress bar */}
+          {/* Progress bar */}
           <div className="px-4 pt-4">
-            <div className="flex gap-1 w-full">
-              {moments.map((_, i) => (
-                <div
-                  key={i}
-                  className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden"
-                >
-                  <div
-                    className={`h-full rounded-full bg-hearth transition-all duration-200 ${
-                      i <= currentMomentIndex ? 'w-full' : 'w-0'
-                    }`}
-                  />
-                </div>
-              ))}
-            </div>
+            <ProgressBarDesktop />
           </div>
 
           {/* User info row */}
@@ -262,43 +308,46 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
             </button>
           </div>
 
-          {/* Image */}
-          <div className="relative">
+          {/* Image — press to pause */}
+          <div
+            className="relative cursor-pointer select-none"
+            onPointerDown={() => setPaused(true)}
+            onPointerUp={() => setPaused(false)}
+            onPointerLeave={() => setPaused(false)}
+            onPointerCancel={() => setPaused(false)}
+          >
             {currentImage ? (
               <img
                 src={currentImage}
                 alt={moment.caption}
-                className="w-full aspect-[4/5] object-cover"
+                className="w-full aspect-[4/5] object-cover pointer-events-none"
+                draggable={false}
               />
             ) : (
               <div className="w-full aspect-[4/5] bg-cream-dark flex items-center justify-center">
                 <span className="text-bark-muted text-sm">No image</span>
               </div>
             )}
-
-            {/* Image dot indicators */}
-            {images.length > 1 && (
-              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                {images.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1.5 h-1.5 rounded-full transition-all ${
-                      i === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Caption pill */}
-          {(moment.caption || moment.emoji) && (
+          {/* Caption pill — first image only */}
+          {currentImageIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
             <div className="mx-4 -mt-6 relative z-10">
-              <div className="bg-white rounded-2xl px-4 py-3 shadow-md">
-                <p className="text-bark text-sm leading-relaxed">
-                  {moment.emoji && <span className="mr-1.5">{moment.emoji}</span>}
-                  <span className="italic">{moment.caption}</span>
-                </p>
+              <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
+                {/* Close info button */}
+                <button
+                  onClick={() => setInfoVisible(false)}
+                  className="absolute top-2 right-2 text-bark-muted hover:text-bark"
+                  aria-label="Hide info"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                {moment.caption && (
+                  <p className="text-bark text-sm leading-relaxed pr-5">
+                    <span className="italic">{moment.caption}</span>
+                  </p>
+                )}
                 {(moment.category || moment.location) && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {moment.category && (
