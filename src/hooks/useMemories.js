@@ -98,5 +98,9 @@ export function useMoments(familyId) {
     })
   }
 
-  return { moments, loading, addMoment }
+  const deleteMoment = async (id) => {
+    await deleteDoc(doc(db, 'moments', id))
+  }
+
+  return { moments, loading, addMoment, deleteMoment }
 }
