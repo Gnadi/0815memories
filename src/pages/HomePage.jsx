@@ -2,10 +2,12 @@ import { useState } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import DailyMoments from '../components/home/DailyMoments'
+import MomentViewer from '../components/home/MomentViewer'
 import FeaturedJourney from '../components/home/FeaturedJourney'
 import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import PostMemoryModal from '../components/admin/PostMemoryModal'
+import PostMomentModal from '../components/admin/PostMomentModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
 import { Plus } from 'lucide-react'
@@ -13,9 +15,11 @@ import { Plus } from 'lucide-react'
 export default function HomePage() {
   const [showPostModal, setShowPostModal] = useState(false)
   const [editingMemory, setEditingMemory] = useState(null)
+  const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
+  const [showMomentModal, setShowMomentModal] = useState(false)
   const { isAdmin, familyId } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId)
-  const { moments, addMoment } = useMoments(familyId)
+  const { moments, addMoment, deleteMoment } = useMoments(familyId)
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 
@@ -51,7 +55,11 @@ export default function HomePage() {
         <MobileHeader />
 
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
-          <DailyMoments moments={moments} onAddMoment={() => {}} />
+          <DailyMoments
+            moments={moments}
+            onAddMoment={() => setShowMomentModal(true)}
+            onMomentClick={(index) => setViewingMomentIndex(index)}
+          />
           <FeaturedJourney memory={featuredMemory} />
           <MemoryFeed
             memories={nonFeaturedMemories}
@@ -78,6 +86,23 @@ export default function HomePage() {
           memory={editingMemory}
           onClose={handleCloseModal}
           onSave={editingMemory ? updateMemory : addMemory}
+        />
+      )}
+
+      {/* Moment Viewer */}
+      {viewingMomentIndex !== null && moments.length > 0 && (
+        <MomentViewer
+          moments={moments}
+          initialIndex={viewingMomentIndex}
+          onClose={() => setViewingMomentIndex(null)}
+        />
+      )}
+
+      {/* Post Moment Modal (admin only) */}
+      {showMomentModal && (
+        <PostMomentModal
+          onClose={() => setShowMomentModal(false)}
+          onSave={addMoment}
         />
       )}
     </div>

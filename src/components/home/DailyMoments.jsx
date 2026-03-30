@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react'
 import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 
-export default function DailyMoments({ moments, onAddMoment }) {
+export default function DailyMoments({ moments, onAddMoment, onMomentClick }) {
   const { isAdmin } = useAuth()
 
   return (
@@ -29,16 +29,17 @@ export default function DailyMoments({ moments, onAddMoment }) {
         )}
 
         {/* Moment circles */}
-        {moments.map((moment) => (
+        {moments.map((moment, index) => (
           <button
             key={moment.id}
+            onClick={() => onMomentClick?.(index)}
             className="flex flex-col items-center gap-1.5 flex-shrink-0"
           >
             <div className="story-ring">
               <div className="story-ring-inner">
-                {moment.imageUrl ? (
+                {moment.images?.[0] ? (
                   <img
-                    src={moment.imageUrl}
+                    src={moment.images[0]}
                     alt={moment.caption}
                     className="w-16 h-16 rounded-full object-cover"
                   />
