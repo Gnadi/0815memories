@@ -66,6 +66,11 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
     setPaused(false)
   }, [currentImageIndex, currentMomentIndex])
 
+  // Reset image index when switching moments
+  useEffect(() => {
+    setCurrentImageIndex(0)
+  }, [currentMomentIndex])
+
   // Restore info card visibility on new moment
   useEffect(() => {
     setInfoVisible(true)
