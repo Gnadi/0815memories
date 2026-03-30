@@ -234,7 +234,7 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
           onClick={goNext}
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
-          disabled={isAtEnd}
+          disabled={false}
           className="absolute right-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
           aria-label="Next"
         />
@@ -406,7 +406,7 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
         {/* Right arrow */}
         <button
           onClick={goNext}
-          disabled={isAtEnd}
+          disabled={false}
           className="relative z-10 ml-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
           aria-label="Next"
         >
