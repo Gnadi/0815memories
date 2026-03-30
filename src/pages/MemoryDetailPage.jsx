@@ -84,7 +84,7 @@ export default function MemoryDetailPage() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4">
-        <MemoryHero imageUrl={memory.imageUrl} category={memory.category} />
+        <MemoryHero images={memory.images} imageUrl={memory.imageUrl} category={memory.category} />
         <MemoryBody memory={memory} />
       </div>
     </div>

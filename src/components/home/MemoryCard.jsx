@@ -66,15 +66,26 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
       )}
 
       {/* Image */}
-      {memory.imageUrl ? (
-        <img
-          src={memory.imageUrl}
-          alt={memory.title}
-          className="w-full h-48 object-cover"
-        />
-      ) : (
-        <MemoryPlaceholderImage title={memory.title} />
-      )}
+      {(() => {
+        const firstImage = memory.images?.[0] || memory.imageUrl
+        const imageCount = memory.images?.length ?? (memory.imageUrl ? 1 : 0)
+        return firstImage ? (
+          <div className="relative">
+            <img
+              src={firstImage}
+              alt={memory.title}
+              className="w-full h-48 object-cover"
+            />
+            {imageCount > 1 && (
+              <span className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                1 / {imageCount}
+              </span>
+            )}
+          </div>
+        ) : (
+          <MemoryPlaceholderImage title={memory.title} />
+        )
+      })()}
 
       {/* Caption */}
       {memory.quote && (

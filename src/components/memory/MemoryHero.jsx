@@ -1,16 +1,73 @@
-export default function MemoryHero({ imageUrl, category }) {
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+export default function MemoryHero({ images, imageUrl, category }) {
+  const allImages = images?.length ? images : (imageUrl ? [imageUrl] : [])
+  const [index, setIndex] = useState(0)
+
+  const prev = (e) => {
+    e.stopPropagation()
+    setIndex((i) => (i - 1 + allImages.length) % allImages.length)
+  }
+  const next = (e) => {
+    e.stopPropagation()
+    setIndex((i) => (i + 1) % allImages.length)
+  }
+
   return (
     <div className="relative w-full h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden">
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt=""
-          className="w-full h-full object-cover"
-        />
+      {allImages.length > 0 ? (
+        <>
+          <img
+            key={allImages[index]}
+            src={allImages[index]}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+
+          {allImages.length > 1 && (
+            <>
+              {/* Prev button */}
+              <button
+                onClick={prev}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* Next button */}
+              <button
+                onClick={next}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              {/* Counter badge */}
+              <span className="absolute top-3 right-3 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                {index + 1} / {allImages.length}
+              </span>
+
+              {/* Dot indicators */}
+              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {allImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setIndex(i) }}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      i === index ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
       ) : (
         <HeroPlaceholder />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
       {category && (
         <span className="absolute bottom-4 left-4 text-white text-xs font-bold tracking-widest uppercase drop-shadow">
           {category}
