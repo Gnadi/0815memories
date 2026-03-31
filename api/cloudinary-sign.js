@@ -1,6 +1,6 @@
 import { createHash } from 'crypto'
 
-export default function handler(_req, res) {
+export default function handler(req, res) {
   const secret = process.env.CLOUDINARY_API_SECRET
   const apiKey = process.env.CLOUDINARY_API_KEY
 
@@ -9,12 +9,13 @@ export default function handler(_req, res) {
     return
   }
 
+  const resourceType = req.query?.resource_type === 'video' ? 'video' : 'image'
+  const folder = resourceType === 'video' ? 'familyhearth/audio' : 'familyhearth'
   const timestamp = Math.round(Date.now() / 1000)
-  const folder = 'familyhearth'
 
   const signature = createHash('sha1')
     .update(`folder=${folder}&timestamp=${timestamp}${secret}`)
     .digest('hex')
 
-  res.json({ timestamp, signature, folder, apiKey })
+  res.json({ timestamp, signature, folder, apiKey, resourceType })
 }

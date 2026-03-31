@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
-import { X, Plus, Image as ImageIcon } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Mic } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
+import VoiceMemoRecorder from './VoiceMemoRecorder'
 
 export default function PostMemoryModal({ memory, onClose, onSave }) {
   const getInitialImages = () => {
@@ -29,6 +30,8 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       : new Date().toISOString().split('T')[0],
   })
   const [images, setImages] = useState(getInitialImages)
+  const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
+  const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -100,6 +103,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         images: imageUrls,
         imageUrl: imageUrls[0] || '',
         date: Timestamp.fromDate(new Date(form.date)),
+        voiceMemos,
       }
 
       if (memory?.id) {
@@ -182,6 +186,51 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Voice Memos */}
+          <div>
+            <label className="block text-sm font-medium text-bark mb-2">Voice Memos</label>
+
+            {/* Existing memos list */}
+            {voiceMemos.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {voiceMemos.map((memo, i) => (
+                  <div key={memo.publicId || i} className="flex items-center gap-2 bg-cream-dark rounded-xl px-3 py-2">
+                    <Mic className="w-4 h-4 text-hearth flex-shrink-0" />
+                    <span className="text-sm text-bark flex-1 truncate">
+                      {memo.title || `Voice memo ${i + 1}`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceMemos((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-bark-muted hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Recorder (toggle) */}
+            {showRecorder ? (
+              <VoiceMemoRecorder
+                onMemoAdded={(memo) => {
+                  setVoiceMemos((prev) => [...prev, memo])
+                  setShowRecorder(false)
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowRecorder(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+              >
+                <Mic className="w-4 h-4" />
+                Add voice memo
+              </button>
+            )}
           </div>
 
           {/* Title */}
