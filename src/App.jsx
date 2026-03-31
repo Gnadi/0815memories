@@ -7,6 +7,9 @@ import HomePage from './pages/HomePage'
 import MemoryDetailPage from './pages/MemoryDetailPage'
 import MomentsAllPage from './pages/MomentsAllPage'
 import SettingsPage from './pages/SettingsPage'
+import KidsJournalPage from './pages/KidsJournalPage'
+import JournalArchivePage from './pages/JournalArchivePage'
+import BlackBoxPage from './pages/BlackBoxPage'
 
 export default function App() {
   return (
@@ -45,6 +48,30 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal"
+            element={
+              <ProtectedRoute>
+                <KidsJournalPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal/:childId"
+            element={
+              <ProtectedRoute>
+                <JournalArchivePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/blackbox"
+            element={
+              <ProtectedRoute>
+                <BlackBoxPage />
               </ProtectedRoute>
             }
           />

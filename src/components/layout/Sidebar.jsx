@@ -1,4 +1,4 @@
-import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings } from 'lucide-react'
+import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -59,15 +59,31 @@ export default function Sidebar({ onPostMemory }) {
         </button>
       )}
 
-      {/* Settings link (admin only) */}
+      {/* Admin-only links */}
       {isAdmin && (
-        <button
-          onClick={() => navigate('/settings')}
-          className="flex items-center gap-3 px-4 py-2.5 mb-2 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          Settings
-        </button>
+        <>
+          <button
+            onClick={() => navigate('/journal')}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
+          >
+            <BookHeart className="w-5 h-5" />
+            Kid Journals
+          </button>
+          <button
+            onClick={() => navigate('/blackbox')}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
+          >
+            <Lock className="w-5 h-5" />
+            Black Box
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-3 px-4 py-2.5 mb-2 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+            Settings
+          </button>
+        </>
       )}
 
       {/* Logout */}
