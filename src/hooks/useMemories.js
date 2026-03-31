@@ -104,3 +104,33 @@ export function useMoments(familyId) {
 
   return { moments, loading, addMoment, deleteMoment }
 }
+
+export function useAllMoments(familyId) {
+  const [moments, setMoments] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!familyId || !db) {
+      setLoading(false)
+      return
+    }
+
+    const q = query(
+      collection(db, 'moments'),
+      where('familyId', '==', familyId),
+      orderBy('date', 'desc')
+    )
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      setMoments(data)
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [familyId])
+
+  return { moments, loading }
+}

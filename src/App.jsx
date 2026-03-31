@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import HomePage from './pages/HomePage'
 import MemoryDetailPage from './pages/MemoryDetailPage'
+import MomentsAllPage from './pages/MomentsAllPage'
 
 export default function App() {
   return (
@@ -26,6 +27,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MemoryDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/moments"
+            element={
+              <ProtectedRoute>
+                <MomentsAllPage />
               </ProtectedRoute>
             }
           />
