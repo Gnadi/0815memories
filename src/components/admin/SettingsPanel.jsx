@@ -4,25 +4,31 @@ import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import bcrypt from 'bcryptjs'
 import { Settings, Save, Copy, Check, Link } from 'lucide-react'
+import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 
 export default function SettingsPanel() {
   const { familyId } = useAuth()
   const [newPassword, setNewPassword] = useState('')
   const [familyName, setFamilyName] = useState('')
+  const [familySlug, setFamilySlug] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
 
-  const shareLink = familyId
-    ? `${window.location.origin}/?family=${familyId}`
-    : ''
+  const shareLink = familySlug
+    ? `${window.location.origin}/family/${familySlug}`
+    : familyId
+      ? `${window.location.origin}/?family=${familyId}`
+      : ''
 
   useEffect(() => {
     if (!familyId || !db) return
     async function loadFamily() {
       const familyDoc = await getDoc(doc(db, 'families', familyId))
       if (familyDoc.exists()) {
-        setFamilyName(familyDoc.data().familyName || '')
+        const data = familyDoc.data()
+        setFamilyName(data.familyName || '')
+        setFamilySlug(data.familySlug || '')
       }
     }
     loadFamily()
@@ -61,11 +67,26 @@ export default function SettingsPanel() {
     if (!familyName || !familyId) return
     setSaving(true)
     try {
+      const newSlug = generateSlug(familyName)
+      if (!newSlug) {
+        setMessage('Family name produces an invalid URL — please use letters or numbers')
+        setSaving(false)
+        return
+      }
+
+      const available = await isSlugAvailable(newSlug, familyId)
+      if (!available) {
+        setMessage('This family name is already taken — please choose another')
+        setSaving(false)
+        return
+      }
+
       await setDoc(
         doc(db, 'families', familyId),
-        { familyName },
+        { familyName, familySlug: newSlug },
         { merge: true }
       )
+      setFamilySlug(newSlug)
       setMessage('Family name updated!')
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
