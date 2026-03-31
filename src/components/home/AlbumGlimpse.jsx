@@ -1,6 +1,6 @@
 export default function AlbumGlimpse({ memories }) {
   const photos = memories
-    .filter((m) => m.imageUrl)
+    .filter((m) => m.images?.length || m.imageUrl)
     .slice(0, 6)
 
   if (photos.length === 0) return null
@@ -17,7 +17,7 @@ export default function AlbumGlimpse({ memories }) {
             }`}
           >
             <img
-              src={photo.imageUrl}
+              src={photo.images?.[0] || photo.imageUrl}
               alt={photo.title || 'Family photo'}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               style={{ minHeight: i === 0 ? '240px' : '116px' }}
