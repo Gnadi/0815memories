@@ -3,6 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
+import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 
 const AuthContext = createContext(null)
 
@@ -76,6 +77,14 @@ export function AuthProvider({ children }) {
 
   const signup = async (email, password, displayName, familyName) => {
     if (!auth || !db) throw new Error('Firebase not configured — add env vars and reload')
+
+    const name = familyName || displayName + "'s Family"
+    const slug = generateSlug(name)
+    if (!slug) throw new Error('Family name produces an invalid URL — please use letters or numbers')
+
+    const available = await isSlugAvailable(slug)
+    if (!available) throw new Error('This family name is already taken — please choose another')
+
     const result = await createUserWithEmailAndPassword(auth, email, password)
     if (displayName) {
       await updateProfile(result.user, { displayName })
@@ -83,7 +92,8 @@ export function AuthProvider({ children }) {
     // Create the family document
     const familyRef = await addDoc(collection(db, 'families'), {
       adminUid: result.user.uid,
-      familyName: familyName || displayName + "'s Family",
+      familyName: name,
+      familySlug: slug,
       createdAt: serverTimestamp(),
     })
     setFamilyId(familyRef.id)

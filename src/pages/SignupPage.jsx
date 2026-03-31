@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Home, Mail, KeyRound, Eye, EyeOff, User, Shield } from 'lucide-react'
 import FamilyIllustration from '../components/FamilyIllustration'
+import { generateSlug } from '../utils/familySlug'
 
 export default function SignupPage() {
   const [displayName, setDisplayName] = useState('')
@@ -14,6 +15,8 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const slugPreview = useMemo(() => generateSlug(familyName), [familyName])
 
   const { signup, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
@@ -95,7 +98,7 @@ export default function SignupPage() {
             confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
             showPassword={showPassword} setShowPassword={setShowPassword}
             showConfirm={showConfirm} setShowConfirm={setShowConfirm}
-            error={error} loading={loading} handleSubmit={handleSubmit}
+            error={error} loading={loading} handleSubmit={handleSubmit} slugPreview={slugPreview}
           />
 
           {/* Sign in link */}
@@ -147,12 +150,13 @@ export default function SignupPage() {
 
             <SignupForm
               displayName={displayName} setDisplayName={setDisplayName}
+              familyName={familyName} setFamilyName={setFamilyName}
               email={email} setEmail={setEmail}
               password={password} setPassword={setPassword}
               confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
               showPassword={showPassword} setShowPassword={setShowPassword}
               showConfirm={showConfirm} setShowConfirm={setShowConfirm}
-              error={error} loading={loading} handleSubmit={handleSubmit}
+              error={error} loading={loading} handleSubmit={handleSubmit} slugPreview={slugPreview}
             />
 
             {/* Sign in link */}
@@ -205,7 +209,7 @@ function SignupForm({
   email, setEmail,
   password, setPassword, confirmPassword, setConfirmPassword,
   showPassword, setShowPassword, showConfirm, setShowConfirm,
-  error, loading, handleSubmit,
+  error, loading, handleSubmit, slugPreview,
 }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -243,6 +247,11 @@ function SignupForm({
             required
           />
         </div>
+        {slugPreview && (
+          <p className="text-xs text-bark-muted mt-1.5">
+            Your family URL: <span className="font-medium text-hearth">{window.location.origin}/family/{slugPreview}</span>
+          </p>
+        )}
       </div>
 
       {/* Email */}

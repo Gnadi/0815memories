@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Home, Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
 import FamilyIllustration from '../components/FamilyIllustration'
+import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -13,10 +14,38 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Family resolution state
+  const [resolvedFamilyId, setResolvedFamilyId] = useState(null)
+  const [resolvedFamilyName, setResolvedFamilyName] = useState(null)
+  const [resolving, setResolving] = useState(false)
+
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { slug: routeSlug } = useParams()
   const urlFamilyId = searchParams.get('family')
+
+  // Resolve family from slug (route param or subdomain) on mount
+  useEffect(() => {
+    const slug = routeSlug || getSubdomainSlug()
+    if (!slug) return
+
+    setResolving(true)
+    resolveFamilyBySlug(slug)
+      .then((family) => {
+        if (family) {
+          setResolvedFamilyId(family.id)
+          setResolvedFamilyName(family.familyName)
+        } else {
+          setError('Family not found — check the link and try again')
+        }
+      })
+      .catch(() => setError('Could not load family'))
+      .finally(() => setResolving(false))
+  }, [routeSlug])
+
+  // The effective familyId: resolved slug takes priority, then query param fallback
+  const effectiveFamilyId = resolvedFamilyId || urlFamilyId
 
   if (isAuthenticated) {
     navigate('/home', { replace: true })
@@ -32,12 +61,12 @@ export default function LoginPage() {
       if (showAdminLogin && email) {
         await loginAsAdmin(email, password)
       } else {
-        if (!urlFamilyId) {
+        if (!effectiveFamilyId) {
           setError('You need a family link to sign in as a viewer')
           setLoading(false)
           return
         }
-        await loginAsViewer(password, urlFamilyId)
+        await loginAsViewer(password, effectiveFamilyId)
       }
       if (!stayLoggedIn) {
         sessionStorage.setItem('fh_session', 'true')
@@ -81,7 +110,7 @@ export default function LoginPage() {
 
           {/* Welcome heading */}
           <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            Welcome Home
+            {resolvedFamilyName ? `Welcome to ${resolvedFamilyName}` : 'Welcome Home'}
           </h1>
           <p className="text-bark-light text-center mb-6">
             Step inside the digital living room of your loved ones.
