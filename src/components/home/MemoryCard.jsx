@@ -40,6 +40,54 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
       className="bg-warm-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => navigate(`/memory/${memory.id}`)}
     >
+      {/* Image slider */}
+      {allImages.length > 0 ? (
+        <div
+          className="relative"
+          onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
+          onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
+        >
+          <img
+            src={allImages[imgIndex]}
+            alt={memory.title}
+            className="w-full h-64 object-cover"
+          />
+
+          {allImages.length > 1 && (
+            <>
+              <button
+                onClick={prevImg}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={nextImg}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              <span className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                {imgIndex + 1} / {allImages.length}
+              </span>
+
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {allImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setImgIndex(i) }}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === imgIndex ? 'bg-white' : 'bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <MemoryPlaceholderImage title={memory.title} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <span className="text-sm text-hearth font-medium">
@@ -91,54 +139,6 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
         </p>
       )}
 
-      {/* Image slider */}
-      {allImages.length > 0 ? (
-        <div
-          className="relative"
-          onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
-          onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
-        >
-          <img
-            src={allImages[imgIndex]}
-            alt={memory.title}
-            className="w-full h-48 object-cover"
-          />
-
-          {allImages.length > 1 && (
-            <>
-              <button
-                onClick={prevImg}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={nextImg}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-
-              <span className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                {imgIndex + 1} / {allImages.length}
-              </span>
-
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {allImages.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setImgIndex(i) }}
-                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === imgIndex ? 'bg-white' : 'bg-white/50'}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <MemoryPlaceholderImage title={memory.title} />
-      )}
-
       {/* Caption */}
       {memory.quote && (
         <p className="px-4 py-3 text-xs text-bark-muted italic text-center">
@@ -153,7 +153,7 @@ function MemoryPlaceholderImage({ title }) {
   const hue = title ? title.charCodeAt(0) * 5 % 360 : 30
   return (
     <div
-      className="w-full h-48 flex items-center justify-center"
+      className="w-full h-64 flex items-center justify-center"
       style={{ background: `hsl(${hue}, 30%, 85%)` }}
     >
       <svg viewBox="0 0 100 100" className="w-16 h-16 opacity-40">

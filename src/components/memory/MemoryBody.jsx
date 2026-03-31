@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/helpers'
 
 export default function MemoryBody({ memory }) {
   return (
-    <article className="max-w-2xl mx-auto px-4 py-8">
+    <article className="max-w-2xl mx-auto px-4 pt-10 pb-16">
       {/* Badges */}
       <div className="flex flex-wrap gap-3 mb-6">
         {memory.date && (
@@ -21,13 +21,13 @@ export default function MemoryBody({ memory }) {
       </div>
 
       {/* Title */}
-      <h1 className="text-3xl lg:text-4xl font-bold text-bark font-serif leading-tight mb-6">
+      <h1 className="text-4xl lg:text-5xl font-bold text-bark font-serif leading-tight mb-6">
         {memory.title}
       </h1>
 
       {/* Quote */}
       {memory.quote && (
-        <blockquote className="border-l-4 border-hearth pl-4 mb-8 italic text-bark-light text-lg">
+        <blockquote className="border-l-4 border-hearth pl-5 mb-8 italic text-bark-light text-xl leading-relaxed">
           &ldquo;{memory.quote}&rdquo;
         </blockquote>
       )}

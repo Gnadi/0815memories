@@ -11,7 +11,7 @@ export default function FeaturedJourney({ memory }) {
       className="mb-8 cursor-pointer group"
       onClick={() => navigate(`/memory/${memory.id}`)}
     >
-      <div className="relative rounded-2xl overflow-hidden h-64 lg:h-80">
+      <div className="relative rounded-2xl overflow-hidden h-80 lg:h-[480px]">
         {memory.imageUrl ? (
           <img
             src={memory.imageUrl}
@@ -40,7 +40,7 @@ export default function FeaturedJourney({ memory }) {
 function FeaturedPlaceholder() {
   return (
     <section className="mb-8">
-      <div className="relative rounded-2xl overflow-hidden h-64 lg:h-80">
+      <div className="relative rounded-2xl overflow-hidden h-80 lg:h-[480px]">
         <FeaturedPlaceholderImage />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 text-white">

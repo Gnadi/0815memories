@@ -44,7 +44,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
     <>
       {/* Hero */}
       <div
-        className="relative w-full h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden"
+        className="relative w-full h-72 sm:h-96 lg:h-[520px] rounded-2xl overflow-hidden"
         {...(allImages.length > 1 ? heroSwipe : {})}
       >
         {allImages.length > 0 ? (
@@ -101,7 +101,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
           <HeroPlaceholder />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
         {category && (
           <span className="absolute bottom-4 left-4 text-white text-xs font-bold tracking-widest uppercase drop-shadow">
             {category}
