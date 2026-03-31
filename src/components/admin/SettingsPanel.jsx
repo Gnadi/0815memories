@@ -3,14 +3,17 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import bcrypt from 'bcryptjs'
-import { Settings, Save, Copy, Check, Link } from 'lucide-react'
+import { Settings, Save, Copy, Check, Link, Image as ImageIcon } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
+import UploadWidget from './UploadWidget'
 
 export default function SettingsPanel() {
   const { familyId } = useAuth()
   const [newPassword, setNewPassword] = useState('')
   const [familyName, setFamilyName] = useState('')
   const [familySlug, setFamilySlug] = useState('')
+  const [loginHeaderImage, setLoginHeaderImage] = useState('')
+  const [loginHeaderImagePublicId, setLoginHeaderImagePublicId] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -29,6 +32,8 @@ export default function SettingsPanel() {
         const data = familyDoc.data()
         setFamilyName(data.familyName || '')
         setFamilySlug(data.familySlug || '')
+        setLoginHeaderImage(data.loginHeaderImage || '')
+        setLoginHeaderImagePublicId(data.loginHeaderImagePublicId || '')
       }
     }
     loadFamily()
@@ -114,6 +119,23 @@ export default function SettingsPanel() {
     }
   }
 
+  const handleLoginImageUpload = async (url, publicId) => {
+    if (!familyId) return
+    try {
+      await setDoc(
+        doc(db, 'families', familyId),
+        { loginHeaderImage: url, loginHeaderImagePublicId: publicId },
+        { merge: true }
+      )
+      setLoginHeaderImage(url)
+      setLoginHeaderImagePublicId(publicId)
+      setMessage(url ? 'Login image updated!' : 'Login image removed.')
+      setTimeout(() => setMessage(''), 3000)
+    } catch {
+      setMessage('Failed to save image')
+    }
+  }
+
   return (
     <div className="bg-warm-white rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-6">
@@ -126,6 +148,20 @@ export default function SettingsPanel() {
           {message}
         </p>
       )}
+
+      {/* Login page header image */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <ImageIcon className="w-4 h-4" />
+            Login Page Image
+          </div>
+        </label>
+        <p className="text-xs text-bark-muted mb-3">
+          Upload a family photo to replace the default illustration on your login page. Visitors will see it when they open your family link.
+        </p>
+        <UploadWidget onUpload={handleLoginImageUpload} currentUrl={loginHeaderImage} />
+      </div>
 
       {/* Share link */}
       {shareLink && (
