@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+
+function useSwipe(onPrev, onNext) {
+  const startX = useRef(null)
+  return {
+    onTouchStart: (e) => { startX.current = e.touches[0].clientX },
+    onTouchEnd: (e) => {
+      if (startX.current === null) return
+      const delta = startX.current - e.changedTouches[0].clientX
+      if (Math.abs(delta) > 40) delta > 0 ? onNext() : onPrev()
+      startX.current = null
+    },
+  }
+}
 
 export default function MemoryHero({ images, imageUrl, category }) {
   const allImages = images?.length ? images : (imageUrl ? [imageUrl] : [])
   const [index, setIndex] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
 
-  const prev = (e) => {
-    e?.stopPropagation()
-    setIndex((i) => (i - 1 + allImages.length) % allImages.length)
-  }
-  const next = (e) => {
-    e?.stopPropagation()
-    setIndex((i) => (i + 1) % allImages.length)
-  }
+  const prev = () => setIndex((i) => (i - 1 + allImages.length) % allImages.length)
+  const next = () => setIndex((i) => (i + 1) % allImages.length)
+
+  const heroSwipe = useSwipe(prev, next)
+  const lightboxSwipe = useSwipe(prev, next)
 
   useEffect(() => {
     if (!fullscreen) return
@@ -22,21 +32,28 @@ export default function MemoryHero({ images, imageUrl, category }) {
       if (e.key === 'ArrowLeft') prev()
       if (e.key === 'ArrowRight') next()
     }
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', onKey)
+    }
   }, [fullscreen, allImages.length])
 
   return (
     <>
       {/* Hero */}
-      <div className="relative w-full h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden">
+      <div
+        className="relative w-full h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden"
+        {...(allImages.length > 1 ? heroSwipe : {})}
+      >
         {allImages.length > 0 ? (
           <>
             <img
               key={allImages[index]}
               src={allImages[index]}
               alt=""
-              className="w-full h-full object-cover cursor-zoom-in"
+              className="w-full h-full object-cover"
               onClick={() => setFullscreen(true)}
             />
 
@@ -51,36 +68,29 @@ export default function MemoryHero({ images, imageUrl, category }) {
 
             {allImages.length > 1 && (
               <>
-                {/* Prev button */}
                 <button
-                  onClick={prev}
+                  onClick={(e) => { e.stopPropagation(); prev() }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-
-                {/* Next button */}
                 <button
-                  onClick={next}
+                  onClick={(e) => { e.stopPropagation(); next() }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
 
-                {/* Counter badge */}
                 <span className="absolute top-3 right-3 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                   {index + 1} / {allImages.length}
                 </span>
 
-                {/* Dot indicators */}
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-1.5">
                   {allImages.map((_, i) => (
                     <button
                       key={i}
                       onClick={(e) => { e.stopPropagation(); setIndex(i) }}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                        i === index ? 'bg-white' : 'bg-white/50'
-                      }`}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`}
                     />
                   ))}
                 </div>
@@ -104,8 +114,9 @@ export default function MemoryHero({ images, imageUrl, category }) {
         <div
           className="fixed inset-0 z-50 bg-black flex items-center justify-center"
           onClick={() => setFullscreen(false)}
+          {...lightboxSwipe}
         >
-          {/* Close button */}
+          {/* Close */}
           <button
             className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors z-10"
             onClick={() => setFullscreen(false)}
@@ -113,14 +124,12 @@ export default function MemoryHero({ images, imageUrl, category }) {
             <X className="w-5 h-5" />
           </button>
 
-          {/* Counter */}
           {allImages.length > 1 && (
             <span className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
               {index + 1} / {allImages.length}
             </span>
           )}
 
-          {/* Image */}
           <img
             src={allImages[index]}
             alt=""
@@ -128,7 +137,6 @@ export default function MemoryHero({ images, imageUrl, category }) {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* Prev / Next */}
           {allImages.length > 1 && (
             <>
               <button
@@ -144,15 +152,12 @@ export default function MemoryHero({ images, imageUrl, category }) {
                 <ChevronRight className="w-6 h-6" />
               </button>
 
-              {/* Dots */}
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
                 {allImages.map((_, i) => (
                   <button
                     key={i}
                     onClick={(e) => { e.stopPropagation(); setIndex(i) }}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      i === index ? 'bg-white' : 'bg-white/40'
-                    }`}
+                    className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/40'}`}
                   />
                 ))}
               </div>
