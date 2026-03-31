@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen } from 'lucide-react'
+import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
@@ -36,10 +36,13 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
     specificYear: '',
   })
   const [photos, setPhotos] = useState([])
+  const [videos, setVideos] = useState([])
+  const [videoError, setVideoError] = useState('')
   const [voiceNote, setVoiceNote] = useState(null)
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const videoFileInputRef = useRef(null)
 
   const selectedKid = kids?.find((k) => k.id === form.childId)
 
@@ -98,9 +101,57 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
     }
   }
 
+  const handleVideoFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
+
+    try {
+      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
+      if (!signRes.ok) throw new Error('Failed to get upload signature')
+      const { timestamp, signature, folder, apiKey } = await signRes.json()
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+      formData.append('api_key', apiKey)
+      formData.append('folder', folder)
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
+        { method: 'POST', body: formData }
+      )
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+      }
+      const data = await response.json()
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.message.trim() && photos.length === 0 && !voiceNote) return
+    if (!form.message.trim() && photos.length === 0 && videos.length === 0 && !voiceNote) return
     if (form.triggerType !== 'legacy' && !unlockDate) return
     setSaving(true)
     try {
@@ -112,6 +163,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
         milestone: form.triggerType === 'milestone' ? form.milestone : null,
         unlockDate: unlockDate ? Timestamp.fromDate(unlockDate) : null,
         photos: photos.filter((p) => p.url).map((p) => p.url),
+        videos: videos.filter((v) => v.url).map((v) => ({ url: v.url, publicId: v.publicId })),
         voiceNote: voiceNote || null,
       }
       await onSave(data)
@@ -123,7 +175,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
     }
   }
 
-  const hasUploading = photos.some((p) => p.uploading)
+  const hasUploading = photos.some((p) => p.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -250,6 +302,53 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
                 </button>
               </div>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+              {/* Videos */}
+              <div className="space-y-2">
+                <div className="flex gap-2 flex-wrap">
+                  {videos.map((v) => (
+                    <div key={v.id} className="relative w-16 h-16 flex-shrink-0">
+                      <video
+                        src={v.preview}
+                        className="w-16 h-16 rounded-xl object-cover bg-black"
+                        muted
+                        playsInline
+                      />
+                      {!v.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
+                            <Video className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      {v.uploading && (
+                        <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {!v.uploading && (
+                        <button
+                          type="button"
+                          onClick={() => setVideos((prev) => prev.filter((x) => x.id !== v.id))}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => videoFileInputRef.current?.click()}
+                    className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-hearth hover:text-hearth transition-colors text-xs"
+                  >
+                    <Video className="w-5 h-5" />
+                    Video
+                  </button>
+                </div>
+                {videoError && <p className="text-xs text-hearth">{videoError}</p>}
+                <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
+              </div>
             </div>
 
             {/* ── STEP 2: TIME TRIGGER ── */}
@@ -375,7 +474,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
           {/* CTA */}
           <button
             type="submit"
-            disabled={saving || hasUploading || (!form.message.trim() && photos.length === 0 && !voiceNote)}
+            disabled={saving || hasUploading || (!form.message.trim() && photos.length === 0 && videos.length === 0 && !voiceNote)}
             className="w-full flex items-center justify-center gap-2 bg-bark text-white py-3.5 rounded-2xl text-sm font-bold hover:bg-bark/90 transition-colors disabled:opacity-50"
           >
             <Lock className="w-4 h-4" />
@@ -385,4 +484,15 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
       </div>
     </div>
   )
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration) }
+    video.onerror = () => { URL.revokeObjectURL(url); resolve(0) }
+    video.src = url
+  })
 }

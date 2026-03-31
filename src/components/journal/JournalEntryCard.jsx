@@ -86,6 +86,13 @@ export default function JournalEntryCard({ entry, onEdit, onDelete }) {
             🎙 {entry.voiceMemos.length} voice {entry.voiceMemos.length === 1 ? 'memo' : 'memos'}
           </p>
         )}
+
+        {/* Video indicator */}
+        {entry.videos?.length > 0 && (
+          <p className="text-xs text-bark-muted mt-1">
+            🎬 {entry.videos.length} {entry.videos.length === 1 ? 'video' : 'videos'}
+          </p>
+        )}
       </div>
     </div>
   )

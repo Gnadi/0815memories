@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Save, Image as ImageIcon, Mic } from 'lucide-react'
+import { X, Save, Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
@@ -25,6 +25,15 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
     return []
   }
 
+  const getInitialVideos = () => {
+    if (entry?.videos?.length) {
+      return entry.videos.map((v, i) => ({
+        id: i, preview: v.url, url: v.url, publicId: v.publicId, title: v.title || '', uploading: false,
+      }))
+    }
+    return []
+  }
+
   const [form, setForm] = useState({
     title: entry?.title || '',
     volume: entry?.volume || '',
@@ -37,10 +46,13 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
       : new Date().toISOString().split('T')[0],
   })
   const [images, setImages] = useState(getInitialImages)
+  const [videos, setVideos] = useState(getInitialVideos)
+  const [videoError, setVideoError] = useState('')
   const [voiceMemos, setVoiceMemos] = useState(entry?.voiceMemos || [])
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const videoFileInputRef = useRef(null)
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
@@ -80,6 +92,58 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
     }
   }
 
+  const handleVideoFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
+
+    try {
+      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
+      if (!signRes.ok) throw new Error('Failed to get upload signature')
+      const { timestamp, signature, folder, apiKey } = await signRes.json()
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+      formData.append('api_key', apiKey)
+      formData.append('folder', folder)
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
+        { method: 'POST', body: formData }
+      )
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+      }
+      const data = await response.json()
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoTitleChange = (id, title) => {
+    setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, title } : v)))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.content.trim()) return
@@ -89,6 +153,7 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
         ...form,
         date: Timestamp.fromDate(new Date(form.date)),
         photos: images.filter((img) => img.url).map((img) => img.url),
+        videos: videos.filter((v) => v.url).map((v) => ({ url: v.url, publicId: v.publicId, title: v.title })),
         voiceMemos,
       }
       if (entry?.id) {
@@ -105,7 +170,7 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
   }
 
   const selectedEmotion = EMOTIONS.find((e) => e.key === form.emotion)
-  const hasUploading = images.some((img) => img.uploading)
+  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -239,6 +304,74 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
             />
           </div>
 
+          {/* Videos */}
+          <div>
+            <label className="block text-sm font-medium text-bark mb-2">
+              Videos <span className="font-normal text-bark-muted">(optional, max 60s each)</span>
+            </label>
+            {videos.length > 0 && (
+              <div className="space-y-3 mb-3">
+                {videos.map((v) => (
+                  <div key={v.id} className="flex items-start gap-3 bg-cream rounded-xl p-3">
+                    <div className="relative w-16 h-16 flex-shrink-0">
+                      <video
+                        src={v.preview}
+                        className="w-16 h-16 rounded-lg object-cover bg-black"
+                        muted
+                        playsInline
+                      />
+                      {!v.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
+                            <Video className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      {v.uploading && (
+                        <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={v.title}
+                        onChange={(e) => handleVideoTitleChange(v.id, e.target.value)}
+                        placeholder="Add a title (optional)"
+                        className="w-full px-3 py-1.5 bg-warm-white rounded-lg text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                        disabled={v.uploading}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVideos((prev) => prev.filter((x) => x.id !== v.id))}
+                      className="text-bark-muted hover:text-red-500 transition-colors mt-1 flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => videoFileInputRef.current?.click()}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-cream-darker text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+            >
+              <Video className="w-4 h-4" />
+              Add video
+            </button>
+            {videoError && <p className="text-xs text-hearth mt-1">{videoError}</p>}
+            <input
+              ref={videoFileInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={handleVideoFileChange}
+            />
+          </div>
+
           {/* Voice memos */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">Voice Memo (optional)</label>
@@ -288,4 +421,15 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
       </div>
     </div>
   )
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration) }
+    video.onerror = () => { URL.revokeObjectURL(url); resolve(0) }
+    video.src = url
+  })
 }

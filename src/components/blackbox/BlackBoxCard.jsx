@@ -134,6 +134,19 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
               {box.voiceNote?.url && (
                 <audio controls src={box.voiceNote.url} className="w-full mt-2" />
               )}
+              {box.videos?.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {box.videos.map((v, i) => (
+                    <video
+                      key={v.publicId || i}
+                      src={v.url}
+                      controls
+                      playsInline
+                      className="w-full rounded-xl bg-black max-h-64"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
