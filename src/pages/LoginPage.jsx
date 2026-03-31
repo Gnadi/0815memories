@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Home, Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
 import FamilyIllustration from '../components/FamilyIllustration'
@@ -17,6 +19,7 @@ export default function LoginPage() {
   // Family resolution state
   const [resolvedFamilyId, setResolvedFamilyId] = useState(null)
   const [resolvedFamilyName, setResolvedFamilyName] = useState(null)
+  const [resolvedFamilyHeaderImage, setResolvedFamilyHeaderImage] = useState('')
   const [resolving, setResolving] = useState(false)
 
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
@@ -36,6 +39,7 @@ export default function LoginPage() {
         if (family) {
           setResolvedFamilyId(family.id)
           setResolvedFamilyName(family.familyName)
+          setResolvedFamilyHeaderImage(family.loginHeaderImage || '')
         } else {
           setError('Family not found — check the link and try again')
         }
@@ -43,6 +47,18 @@ export default function LoginPage() {
       .catch(() => setError('Could not load family'))
       .finally(() => setResolving(false))
   }, [routeSlug])
+
+  // Load header image for families accessed via ?family= query param (no slug)
+  useEffect(() => {
+    if (!urlFamilyId || resolvedFamilyId || !db) return
+    getDoc(doc(db, 'families', urlFamilyId))
+      .then((snap) => {
+        if (snap.exists()) {
+          setResolvedFamilyHeaderImage(snap.data().loginHeaderImage || '')
+        }
+      })
+      .catch(() => {})
+  }, [urlFamilyId, resolvedFamilyId])
 
   // The effective familyId: resolved slug takes priority, then query param fallback
   const effectiveFamilyId = resolvedFamilyId || urlFamilyId
@@ -104,8 +120,10 @@ export default function LoginPage() {
           </div>
 
           {/* Illustration card */}
-          <div className="rounded-2xl overflow-hidden mb-6">
-            <FamilyIllustration />
+          <div className="rounded-2xl overflow-hidden mb-6 h-48">
+            {resolvedFamilyHeaderImage
+              ? <img src={resolvedFamilyHeaderImage} alt="Family" className="w-full h-full object-cover" />
+              : <FamilyIllustration />}
           </div>
 
           {/* Welcome heading */}
@@ -159,7 +177,9 @@ export default function LoginPage() {
         {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
         {/* Left — Illustration */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
-          <FamilyIllustration />
+          {resolvedFamilyHeaderImage
+            ? <img src={resolvedFamilyHeaderImage} alt="Family" className="absolute inset-0 w-full h-full object-cover" />
+            : <FamilyIllustration />}
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               Your digital living room awaits.
