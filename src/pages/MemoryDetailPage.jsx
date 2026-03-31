@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { ArrowLeft, Share2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
+import PostMemoryModal from '../components/admin/PostMemoryModal'
 import { useAuth } from '../context/AuthContext'
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { familyId } = useAuth()
+  const { familyId, isAdmin } = useAuth()
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const menuRef = useRef(null)
 
   useEffect(() => {
     async function fetchMemory() {
@@ -28,6 +32,34 @@ export default function MemoryDetailPage() {
     }
     fetchMemory()
   }, [id, familyId])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false)
+      }
+    }
+    if (showMenu) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMenu])
+
+  const handleEdit = () => {
+    setShowMenu(false)
+    setShowEditModal(true)
+  }
+
+  const handleDelete = async () => {
+    setShowMenu(false)
+    if (!window.confirm('Are you sure you want to delete this memory?')) return
+    await deleteDoc(doc(db, 'memories', id))
+    navigate('/home')
+  }
+
+  const handleSaveEdit = async (memId, updates) => {
+    await updateDoc(doc(db, 'memories', memId), updates)
+    setMemory((prev) => ({ ...prev, ...updates }))
+    setShowEditModal(false)
+  }
 
   if (loading) {
     return (
@@ -76,9 +108,32 @@ export default function MemoryDetailPage() {
           <button onClick={handleShare} className="text-bark-light hover:text-hearth">
             <Share2 className="w-5 h-5" />
           </button>
-          <button className="text-bark-light hover:text-hearth">
-            <MoreVertical className="w-5 h-5" />
-          </button>
+          {isAdmin && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="text-bark-light hover:text-hearth"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-10 min-w-[140px]">
+                  <button
+                    onClick={handleEdit}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
+                  >
+                    <Pencil className="w-4 h-4" /> Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -87,6 +142,14 @@ export default function MemoryDetailPage() {
         <MemoryHero images={memory.images} imageUrl={memory.imageUrl} category={memory.category} />
         <MemoryBody memory={memory} />
       </div>
+
+      {showEditModal && (
+        <PostMemoryModal
+          memory={memory}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   )
 }
