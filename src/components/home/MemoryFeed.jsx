@@ -16,7 +16,7 @@ export default function MemoryFeed({ memories, onEdit, onDelete }) {
 
   return (
     <section className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         {memories.map((memory) => (
           <MemoryCard
             key={memory.id}
