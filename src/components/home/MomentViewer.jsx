@@ -8,15 +8,19 @@ import {
   Share2,
   MapPin,
   ChevronsUp,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { timeAgo } from '../../utils/helpers'
 
-export default function MomentViewer({ moments, initialIndex, onClose }) {
+export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [progress, setProgress] = useState(0)   // 0–100, fill % for current image
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
+  const [showMenu, setShowMenu] = useState(false)
 
   const moment = moments[currentMomentIndex]
   const images = moment?.images ?? []
@@ -76,7 +80,22 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
   // Restore info card visibility on new moment
   useEffect(() => {
     setInfoVisible(true)
+    setShowMenu(false)
   }, [currentMomentIndex])
+
+  const handleEdit = () => {
+    setShowMenu(false)
+    onEdit?.(moment)
+    onClose()
+  }
+
+  const handleDelete = () => {
+    setShowMenu(false)
+    if (window.confirm('Delete this moment?')) {
+      onDelete?.(moment.id)
+      onClose()
+    }
+  }
 
   // Always-fresh refs so interval callbacks never capture stale values
   const isAtEndRef = useRef(isAtEnd)
@@ -210,14 +229,44 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
                 <p className="text-white/70 text-xs">{timeAgo(moment.date)}</p>
               </div>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); onClose() }}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="text-white/80 hover:text-white"
-              aria-label="Close"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <div className="relative">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v) }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="text-white/80 hover:text-white"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="w-6 h-6" />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]">
+                      <button
+                        onClick={handleEdit}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
+                      >
+                        <Pencil className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose() }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="text-white/80 hover:text-white"
+                aria-label="Close"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -318,13 +367,42 @@ export default function MomentViewer({ moments, initialIndex, onClose }) {
                 <p className="text-xs text-bark-muted">{timeAgo(moment.date)}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-bark-muted hover:text-bark"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {isAdmin && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMenu((v) => !v)}
+                    className="text-bark-muted hover:text-bark p-1"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]">
+                      <button
+                        onClick={handleEdit}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
+                      >
+                        <Pencil className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="text-bark-muted hover:text-bark p-1"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Image — press to pause */}

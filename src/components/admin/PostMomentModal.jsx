@@ -2,17 +2,26 @@ import { useState, useRef } from 'react'
 import { X, Plus, Image as ImageIcon } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 
-export default function PostMomentModal({ onClose, onSave }) {
+export default function PostMomentModal({ moment, onClose, onSave }) {
+  const getInitialImages = () => {
+    if (moment?.images?.length) {
+      return moment.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
+    }
+    return []
+  }
+
   const [form, setForm] = useState({
-    caption: '',
-    category: '',
-    location: '',
-    label: '',
+    caption: moment?.caption || '',
+    category: moment?.category || '',
+    location: moment?.location || '',
+    label: moment?.label || '',
   })
-  const [images, setImages] = useState([]) // [{ preview, url, uploading }]
+  const [images, setImages] = useState(getInitialImages) // [{ preview, url, uploading }]
   const [imageError, setImageError] = useState(false)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+
+  const isEditing = !!moment?.id
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -76,10 +85,15 @@ export default function PostMomentModal({ onClose, onSave }) {
     }
     setSaving(true)
     try {
-      await onSave({
+      const data = {
         ...form,
         images: readyImages.map((img) => img.url),
-      })
+      }
+      if (isEditing) {
+        await onSave(moment.id, data)
+      } else {
+        await onSave(data)
+      }
       onClose()
     } catch (err) {
       console.error('Failed to save moment:', err)
@@ -99,7 +113,9 @@ export default function PostMomentModal({ onClose, onSave }) {
       <div className="relative bg-warm-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-cream-dark sticky top-0 bg-warm-white rounded-t-2xl z-10">
-          <h2 className="text-lg font-bold text-bark">Share a Moment</h2>
+          <h2 className="text-lg font-bold text-bark">
+            {isEditing ? 'Edit Moment' : 'Share a Moment'}
+          </h2>
           <button onClick={onClose} className="text-bark-muted hover:text-bark">
             <X className="w-5 h-5" />
           </button>
@@ -228,6 +244,8 @@ export default function PostMomentModal({ onClose, onSave }) {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Uploading...
               </>
+            ) : isEditing ? (
+              'Save Changes'
             ) : (
               'Share Moment'
             )}
