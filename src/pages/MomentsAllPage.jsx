@@ -4,13 +4,30 @@ import { ChevronLeft, Camera } from 'lucide-react'
 import { useAllMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
 import MomentViewer from '../components/home/MomentViewer'
+import PostMomentModal from '../components/admin/PostMomentModal'
 import { formatRelativeDate } from '../utils/helpers'
 
 export default function MomentsAllPage() {
   const navigate = useNavigate()
-  const { familyId } = useAuth()
-  const { moments, loading } = useAllMoments(familyId)
+  const { familyId, isAdmin } = useAuth()
+  const { moments, loading, updateMoment, deleteMoment } = useAllMoments(familyId)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
+  const [editingMoment, setEditingMoment] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+
+  const handleEditMoment = (moment) => {
+    setEditingMoment(moment)
+    setShowEditModal(true)
+  }
+
+  const handleDeleteMoment = async (id) => {
+    await deleteMoment(id)
+  }
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false)
+    setEditingMoment(null)
+  }
 
   if (loading) {
     return (
@@ -86,6 +103,18 @@ export default function MomentsAllPage() {
           moments={moments}
           initialIndex={viewingMomentIndex}
           onClose={() => setViewingMomentIndex(null)}
+          isAdmin={isAdmin}
+          onEdit={handleEditMoment}
+          onDelete={handleDeleteMoment}
+        />
+      )}
+
+      {/* Edit Moment Modal */}
+      {showEditModal && (
+        <PostMomentModal
+          moment={editingMoment}
+          onClose={handleCloseEditModal}
+          onSave={updateMoment}
         />
       )}
     </div>

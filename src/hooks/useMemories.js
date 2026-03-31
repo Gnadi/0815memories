@@ -98,11 +98,15 @@ export function useMoments(familyId) {
     })
   }
 
+  const updateMoment = async (id, updates) => {
+    await updateDoc(doc(db, 'moments', id), updates)
+  }
+
   const deleteMoment = async (id) => {
     await deleteDoc(doc(db, 'moments', id))
   }
 
-  return { moments, loading, addMoment, deleteMoment }
+  return { moments, loading, addMoment, updateMoment, deleteMoment }
 }
 
 export function useAllMoments(familyId) {
@@ -132,5 +136,13 @@ export function useAllMoments(familyId) {
     return unsubscribe
   }, [familyId])
 
-  return { moments, loading }
+  const updateMoment = async (id, updates) => {
+    await updateDoc(doc(db, 'moments', id), updates)
+  }
+
+  const deleteMoment = async (id) => {
+    await deleteDoc(doc(db, 'moments', id))
+  }
+
+  return { moments, loading, updateMoment, deleteMoment }
 }

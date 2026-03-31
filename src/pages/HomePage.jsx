@@ -19,9 +19,10 @@ export default function HomePage() {
   const [editingMemory, setEditingMemory] = useState(null)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
   const [showMomentModal, setShowMomentModal] = useState(false)
+  const [editingMoment, setEditingMoment] = useState(null)
   const { isAdmin, familyId } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId)
-  const { moments, addMoment, deleteMoment } = useMoments(familyId)
+  const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId)
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 
@@ -39,6 +40,20 @@ export default function HomePage() {
   const handleCloseModal = () => {
     setShowPostModal(false)
     setEditingMemory(null)
+  }
+
+  const handleEditMoment = (moment) => {
+    setEditingMoment(moment)
+    setShowMomentModal(true)
+  }
+
+  const handleDeleteMoment = async (id) => {
+    await deleteMoment(id)
+  }
+
+  const handleCloseMomentModal = () => {
+    setShowMomentModal(false)
+    setEditingMoment(null)
   }
 
   if (loading) {
@@ -98,14 +113,18 @@ export default function HomePage() {
           moments={moments}
           initialIndex={viewingMomentIndex}
           onClose={() => setViewingMomentIndex(null)}
+          isAdmin={isAdmin}
+          onEdit={handleEditMoment}
+          onDelete={handleDeleteMoment}
         />
       )}
 
       {/* Post Moment Modal (admin only) */}
       {showMomentModal && (
         <PostMomentModal
-          onClose={() => setShowMomentModal(false)}
-          onSave={addMoment}
+          moment={editingMoment}
+          onClose={handleCloseMomentModal}
+          onSave={editingMoment ? updateMoment : addMoment}
         />
       )}
     </div>
