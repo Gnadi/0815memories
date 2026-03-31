@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import DailyMoments from '../components/home/DailyMoments'
@@ -13,6 +14,7 @@ import { useAuth } from '../context/AuthContext'
 import { Plus } from 'lucide-react'
 
 export default function HomePage() {
+  const navigate = useNavigate()
   const [showPostModal, setShowPostModal] = useState(false)
   const [editingMemory, setEditingMemory] = useState(null)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
@@ -59,6 +61,7 @@ export default function HomePage() {
             moments={moments}
             onAddMoment={() => setShowMomentModal(true)}
             onMomentClick={(index) => setViewingMomentIndex(index)}
+            onViewAll={() => navigate('/moments')}
           />
           <FeaturedJourney memory={featuredMemory} />
           <MemoryFeed

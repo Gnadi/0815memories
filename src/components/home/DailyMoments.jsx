@@ -2,14 +2,14 @@ import { Plus } from 'lucide-react'
 import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 
-export default function DailyMoments({ moments, onAddMoment, onMomentClick }) {
+export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
   const { isAdmin } = useAuth()
 
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-bark">Daily Moments</h2>
-        <button className="text-sm font-semibold text-hearth hover:text-hearth-dark">
+        <button onClick={onViewAll} className="text-sm font-semibold text-hearth hover:text-hearth-dark">
           VIEW ALL
         </button>
       </div>
