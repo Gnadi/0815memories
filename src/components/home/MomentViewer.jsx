@@ -14,29 +14,48 @@ import {
 } from 'lucide-react'
 import { timeAgo } from '../../utils/helpers'
 
+// Build a unified media list from a moment's images and videos
+function buildMediaItems(moment) {
+  const images = moment?.images ?? []
+  const videos = moment?.videos ?? []
+  return [
+    ...images.map((url) => ({ type: 'image', url })),
+    ...videos.map((v) => ({ type: 'video', url: v.url })),
+  ]
+}
+
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [progress, setProgress] = useState(0)   // 0–100, fill % for current image
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
+  const [progress, setProgress] = useState(0)   // 0–100, fill % for current media item
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
 
+  const videoRef = useRef(null)
+
   const moment = moments[currentMomentIndex]
-  const images = moment?.images ?? []
-  const isFirstImage = currentImageIndex === 0
-  const isLastImage = currentImageIndex === images.length - 1
+  const mediaItems = buildMediaItems(moment)
+  const currentItem = mediaItems[currentMediaIndex]
+  const isVideo = currentItem?.type === 'video'
+
+  const isFirstMedia = currentMediaIndex === 0
+  const isLastMedia = currentMediaIndex === mediaItems.length - 1
   const isFirstMoment = currentMomentIndex === 0
   const isLastMoment = currentMomentIndex === moments.length - 1
-  const isAtStart = isFirstMoment && isFirstImage
-  const isAtEnd = isLastMoment && isLastImage
+  const isAtStart = isFirstMoment && isFirstMedia
+  const isAtEnd = isLastMoment && isLastMedia
 
-  // Keep a stable ref to goNext to avoid stale closures inside setInterval
+  // Keep stable refs to avoid stale closures
   const goNextRef = useRef(null)
+  const isAtEndRef = useRef(isAtEnd)
+  const onCloseRef = useRef(onClose)
+  isAtEndRef.current = isAtEnd
+  onCloseRef.current = onClose
 
   const goNext = () => {
-    if (!isLastImage) {
-      setCurrentImageIndex((i) => i + 1)
+    if (!isLastMedia) {
+      setCurrentMediaIndex((i) => i + 1)
     } else if (!isLastMoment) {
       setCurrentMomentIndex((i) => i + 1)
     } else {
@@ -45,13 +64,13 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   }
 
   const goPrev = () => {
-    if (!isFirstImage) {
-      setCurrentImageIndex((i) => i - 1)
+    if (!isFirstMedia) {
+      setCurrentMediaIndex((i) => i - 1)
     } else if (!isFirstMoment) {
       const prevMoment = moments[currentMomentIndex - 1]
-      const prevImages = prevMoment?.images ?? []
+      const prevItems = buildMediaItems(prevMoment)
       setCurrentMomentIndex((i) => i - 1)
-      setCurrentImageIndex(Math.max(0, prevImages.length - 1))
+      setCurrentMediaIndex(Math.max(0, prevItems.length - 1))
     }
   }
 
@@ -61,20 +80,18 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return () => { document.body.style.overflow = prev }
   }, [])
 
-  // Reset progress + unpause on image/moment change
+  // Reset progress + unpause on media/moment change
   useEffect(() => {
     setProgress(0)
     setPaused(false)
-  }, [currentImageIndex, currentMomentIndex])
+  }, [currentMediaIndex, currentMomentIndex])
 
-  // Reset image index when switching moments
+  // Reset media index when switching moments
   useEffect(() => {
-    setCurrentImageIndex(0)
+    setCurrentMediaIndex(0)
   }, [currentMomentIndex])
 
   // Restore info card visibility on new moment
@@ -82,6 +99,51 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     setInfoVisible(true)
     setShowMenu(false)
   }, [currentMomentIndex])
+
+  // Auto-play video when current item is a video
+  useEffect(() => {
+    if (!isVideo) return
+    const vid = videoRef.current
+    if (!vid) return
+    if (paused) {
+      vid.pause()
+    } else {
+      vid.play().catch(() => {})
+    }
+  }, [isVideo, paused])
+
+  // Auto-advance timer for images: 2% per 100ms = 5 000ms total
+  useEffect(() => {
+    if (paused || isVideo) return
+    const id = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + 2
+        return next >= 100 ? 100 : next
+      })
+    }, 100)
+    return () => clearInterval(id)
+  }, [paused, isVideo, currentMediaIndex, currentMomentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When image progress reaches 100, advance
+  useEffect(() => {
+    if (isVideo || progress < 100) return
+    if (isAtEndRef.current) {
+      onCloseRef.current()
+    } else {
+      goNextRef.current()
+    }
+  }, [progress, isVideo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowRight') goNext()
+      else if (e.key === 'ArrowLeft') goPrev()
+      else if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  })
 
   const handleEdit = () => {
     setShowMenu(false)
@@ -97,49 +159,22 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
   }
 
-  // Always-fresh refs so interval callbacks never capture stale values
-  const isAtEndRef = useRef(isAtEnd)
-  isAtEndRef.current = isAtEnd
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  // Video event handlers
+  const handleVideoTimeUpdate = (e) => {
+    const { currentTime, duration } = e.target
+    if (duration > 0) setProgress((currentTime / duration) * 100)
+  }
 
-  // Auto-advance timer: 2% per 100ms = 5 000ms total
-  // Only increments progress — side effects (goNext / onClose) live in the effect below
-  useEffect(() => {
-    if (paused) return
-    const id = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + 2
-        return next >= 100 ? 100 : next
-      })
-    }, 100)
-    return () => clearInterval(id)
-  }, [paused, currentImageIndex, currentMomentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // When progress reaches 100, advance to next image or close
-  useEffect(() => {
-    if (progress < 100) return
+  const handleVideoEnded = () => {
     if (isAtEndRef.current) {
       onCloseRef.current()
     } else {
       goNextRef.current()
     }
-  }, [progress]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'ArrowRight') goNext()
-      else if (e.key === 'ArrowLeft') goPrev()
-      else if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  })
+  }
 
   if (!moment) return null
 
-  const currentImage = images[currentImageIndex]
   const authorName = moment.authorName || 'Family'
   const authorInitials = authorName
     .split(' ')
@@ -148,17 +183,17 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     .join('')
     .toUpperCase()
 
-  // Progress bar segments — one per image in the current moment
+  // Progress bar segments — one per media item in the current moment
   const ProgressBarMobile = () => (
     <div className="flex gap-1 w-full">
-      {images.map((_, i) => (
+      {mediaItems.map((_, i) => (
         <div key={i} className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden">
           <div
             className="h-full rounded-full bg-white"
             style={{
               width:
-                i < currentImageIndex ? '100%'
-                : i === currentImageIndex ? `${progress}%`
+                i < currentMediaIndex ? '100%'
+                : i === currentMediaIndex ? `${progress}%`
                 : '0%',
               transition: paused ? 'none' : undefined,
             }}
@@ -170,14 +205,14 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   const ProgressBarDesktop = () => (
     <div className="flex gap-1 w-full">
-      {images.map((_, i) => (
+      {mediaItems.map((_, i) => (
         <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
           <div
             className="h-full rounded-full bg-hearth"
             style={{
               width:
-                i < currentImageIndex ? '100%'
-                : i === currentImageIndex ? `${progress}%`
+                i < currentMediaIndex ? '100%'
+                : i === currentMediaIndex ? `${progress}%`
                 : '0%',
               transition: paused ? 'none' : undefined,
             }}
@@ -196,10 +231,22 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
         onPointerUp={() => setPaused(false)}
         onPointerCancel={() => setPaused(false)}
       >
-        {/* Background image */}
-        {currentImage ? (
+        {/* Background media */}
+        {currentItem?.type === 'video' ? (
+          <video
+            ref={videoRef}
+            key={currentItem.url}
+            src={currentItem.url}
+            autoPlay
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            onTimeUpdate={handleVideoTimeUpdate}
+            onEnded={handleVideoEnded}
+          />
+        ) : currentItem?.url ? (
           <img
-            src={currentImage}
+            src={currentItem.url}
             alt={moment.caption}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -210,7 +257,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
         {/* Top gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent pointer-events-none" />
 
-        {/* Top bar — z-20 so it sits above the tap zones */}
+        {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2 z-20">
           <ProgressBarMobile />
 
@@ -270,7 +317,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           </div>
         </div>
 
-        {/* Tap zones for navigation (z-10, below top bar) */}
+        {/* Tap zones for navigation */}
         <button
           onClick={goPrev}
           onPointerDown={(e) => e.stopPropagation()}
@@ -288,11 +335,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           aria-label="Next"
         />
 
-        {/* Bottom info card — first image only */}
-        {currentImageIndex === 0 && infoVisible && (
+        {/* Bottom info card — first media item only */}
+        {currentMediaIndex === 0 && infoVisible && (
           <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-20">
             <div className="relative bg-cream/70 backdrop-blur-sm rounded-3xl px-5 py-4 shadow-lg">
-              {/* Close info button */}
               <button
                 onClick={(e) => { e.stopPropagation(); setInfoVisible(false) }}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -405,7 +451,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             </div>
           </div>
 
-          {/* Image — press to pause */}
+          {/* Media — press to pause */}
           <div
             className="relative cursor-pointer select-none"
             onPointerDown={() => setPaused(true)}
@@ -413,25 +459,36 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             onPointerLeave={() => setPaused(false)}
             onPointerCancel={() => setPaused(false)}
           >
-            {currentImage ? (
+            {currentItem?.type === 'video' ? (
+              <video
+                ref={videoRef}
+                key={currentItem.url}
+                src={currentItem.url}
+                autoPlay
+                muted
+                playsInline
+                className="w-full aspect-[4/5] object-cover pointer-events-none"
+                onTimeUpdate={handleVideoTimeUpdate}
+                onEnded={handleVideoEnded}
+              />
+            ) : currentItem?.url ? (
               <img
-                src={currentImage}
+                src={currentItem.url}
                 alt={moment.caption}
                 className="w-full aspect-[4/5] object-cover pointer-events-none"
                 draggable={false}
               />
             ) : (
               <div className="w-full aspect-[4/5] bg-cream-dark flex items-center justify-center">
-                <span className="text-bark-muted text-sm">No image</span>
+                <span className="text-bark-muted text-sm">No media</span>
               </div>
             )}
           </div>
 
-          {/* Caption pill — first image only */}
-          {currentImageIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
+          {/* Caption pill — first media item only */}
+          {currentMediaIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
             <div className="mx-4 -mt-6 relative z-10">
               <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
-                {/* Close info button */}
                 <button
                   onClick={() => setInfoVisible(false)}
                   className="absolute top-2 right-2 text-bark-muted hover:text-bark"
