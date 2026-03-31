@@ -32,9 +32,6 @@ export default function MomentsAllPage() {
           <ChevronLeft className="w-5 h-5 text-bark" />
         </button>
         <h1 className="text-lg font-bold text-bark">Daily Moments</h1>
-        {moments.length > 0 && (
-          <span className="ml-auto text-sm text-bark-muted">{moments.length}</span>
-        )}
       </div>
 
       {/* Grid */}
@@ -78,12 +75,6 @@ export default function MomentsAllPage() {
                 </p>
               </div>
 
-              {/* Multiple images indicator */}
-              {moment.images?.length > 1 && (
-                <div className="absolute top-2 right-2 bg-black/50 rounded-full px-1.5 py-0.5">
-                  <span className="text-white text-[10px] font-semibold">{moment.images.length}</span>
-                </div>
-              )}
             </button>
           ))}
         </div>
