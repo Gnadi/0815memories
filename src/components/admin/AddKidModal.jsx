@@ -16,6 +16,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
     kid?.profilePhoto ? { preview: kid.profilePhoto, url: kid.profilePhoto, uploading: false } : null
   )
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const fileInputRef = useRef(null)
 
   const handleFileChange = async (e) => {
@@ -70,6 +71,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
       onClose()
     } catch (err) {
       console.error('Failed to save kid:', err)
+      setError(err.message || 'Failed to save. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -142,6 +144,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
             />
           </div>
 
+          {error && <p className="text-xs text-red-500">{error}</p>}
           <button
             type="submit"
             disabled={saving || photo?.uploading}

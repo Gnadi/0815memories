@@ -29,11 +29,18 @@ export function useJournals(familyId, childId) {
       where('childId', '==', childId),
       orderBy('date', 'desc')
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      setJournals(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        setJournals(data)
+        setLoading(false)
+      },
+      (err) => {
+        console.error('useJournals snapshot error:', err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
   }, [familyId, childId])
@@ -73,11 +80,18 @@ export function useAllJournals(familyId) {
       where('familyId', '==', familyId),
       orderBy('date', 'desc')
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      setJournals(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        setJournals(data)
+        setLoading(false)
+      },
+      (err) => {
+        console.error('useAllJournals snapshot error:', err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
   }, [familyId])

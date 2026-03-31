@@ -28,11 +28,18 @@ export function useKids(familyId) {
       where('familyId', '==', familyId),
       orderBy('createdAt', 'asc')
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      setKids(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        setKids(data)
+        setLoading(false)
+      },
+      (err) => {
+        console.error('useKids snapshot error:', err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
   }, [familyId])

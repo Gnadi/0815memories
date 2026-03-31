@@ -28,11 +28,18 @@ export function useBlackBox(familyId) {
       where('familyId', '==', familyId),
       orderBy('createdAt', 'desc')
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      setBoxes(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        setBoxes(data)
+        setLoading(false)
+      },
+      (err) => {
+        console.error('useBlackBox snapshot error:', err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
   }, [familyId])

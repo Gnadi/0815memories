@@ -51,6 +51,7 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
   const [voiceMemos, setVoiceMemos] = useState(entry?.voiceMemos || [])
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const fileInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
 
@@ -164,6 +165,7 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
       onClose()
     } catch (err) {
       console.error('Failed to save journal entry:', err)
+      setError(err.message || 'Failed to save. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -393,8 +395,7 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
             )}
             {showRecorder ? (
               <VoiceMemoRecorder
-                onSave={(memo) => { setVoiceMemos((prev) => [...prev, memo]); setShowRecorder(false) }}
-                onCancel={() => setShowRecorder(false)}
+                onMemoAdded={(memo) => { setVoiceMemos((prev) => [...prev, memo]); setShowRecorder(false) }}
               />
             ) : (
               <button
@@ -407,6 +408,8 @@ export default function JournalEntryModal({ entry, childId, childName, onClose, 
               </button>
             )}
           </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
 
           {/* Save button */}
           <button

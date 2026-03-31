@@ -41,6 +41,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
   const [voiceNote, setVoiceNote] = useState(null)
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const fileInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
 
@@ -151,8 +152,22 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.message.trim() && photos.length === 0 && videos.length === 0 && !voiceNote) return
-    if (form.triggerType !== 'legacy' && !unlockDate) return
+    setSubmitError('')
+
+    if (!form.message.trim() && photos.length === 0 && videos.length === 0 && !voiceNote) {
+      setSubmitError('Please add a message, photo, video, or voice note.')
+      return
+    }
+    if (form.triggerType !== 'legacy' && !unlockDate) {
+      if (form.triggerType === 'milestone' && !selectedKid?.birthdate) {
+        setSubmitError('Please select a child with a birthday to use a milestone trigger.')
+      } else if (form.triggerType === 'specificDate') {
+        setSubmitError('Please fill in the complete unlock date (month, day, and year).')
+      } else {
+        setSubmitError('Please set an unlock date.')
+      }
+      return
+    }
     setSaving(true)
     try {
       const data = {
@@ -170,6 +185,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
       onClose()
     } catch (err) {
       console.error('Failed to seal black box:', err)
+      setSubmitError(err.message || 'Failed to seal. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -245,8 +261,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
                   </div>
                 ) : showRecorder ? (
                   <VoiceMemoRecorder
-                    onSave={(memo) => { setVoiceNote(memo); setShowRecorder(false) }}
-                    onCancel={() => setShowRecorder(false)}
+                    onMemoAdded={(memo) => { setVoiceNote(memo); setShowRecorder(false) }}
                   />
                 ) : (
                   <button
@@ -472,6 +487,7 @@ export default function CreateBlackBoxModal({ kids, onClose, onSave }) {
           </div>
 
           {/* CTA */}
+          {submitError && <p className="text-xs text-red-500 text-center">{submitError}</p>}
           <button
             type="submit"
             disabled={saving || hasUploading || (!form.message.trim() && photos.length === 0 && videos.length === 0 && !voiceNote)}
