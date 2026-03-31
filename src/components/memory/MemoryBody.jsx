@@ -1,6 +1,7 @@
 import { Calendar, MapPin } from 'lucide-react'
 import { formatDate } from '../../utils/helpers'
 import VoiceMemoPlayer from './VoiceMemoPlayer'
+import MemoryVideoPlayer from './MemoryVideoPlayer'
 
 export default function MemoryBody({ memory }) {
   return (
@@ -44,6 +45,9 @@ export default function MemoryBody({ memory }) {
 
       {/* Voice Memos */}
       <VoiceMemoPlayer voiceMemos={memory.voiceMemos} />
+
+      {/* Videos */}
+      <MemoryVideoPlayer videos={memory.videos} />
 
       {/* Author */}
       {memory.authorName && (

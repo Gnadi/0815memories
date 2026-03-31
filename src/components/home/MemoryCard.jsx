@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
@@ -52,11 +52,18 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
             alt={memory.title}
             className="w-full h-64 object-cover"
           />
-          {memory.voiceMemos?.length > 0 && (
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
-              <Mic className="w-3 h-3" /> {memory.voiceMemos.length}
-            </span>
-          )}
+          <div className="absolute bottom-2 left-2 flex gap-1.5">
+            {memory.voiceMemos?.length > 0 && (
+              <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                <Mic className="w-3 h-3" /> {memory.voiceMemos.length}
+              </span>
+            )}
+            {memory.videos?.length > 0 && (
+              <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                <Video className="w-3 h-3" /> {memory.videos.length}
+              </span>
+            )}
+          </div>
 
           {allImages.length > 1 && (
             <>
@@ -92,11 +99,18 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
       ) : (
         <div className="relative">
           <MemoryPlaceholderImage title={memory.title} />
-          {memory.voiceMemos?.length > 0 && (
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
-              <Mic className="w-3 h-3" /> {memory.voiceMemos.length}
-            </span>
-          )}
+          <div className="absolute bottom-2 left-2 flex gap-1.5">
+            {memory.voiceMemos?.length > 0 && (
+              <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                <Mic className="w-3 h-3" /> {memory.voiceMemos.length}
+              </span>
+            )}
+            {memory.videos?.length > 0 && (
+              <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                <Video className="w-3 h-3" /> {memory.videos.length}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

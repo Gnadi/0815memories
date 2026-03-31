@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Plus, Image as ImageIcon } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Video } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
@@ -10,16 +10,26 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     return []
   }
 
+  const getInitialVideos = () => {
+    if (moment?.videos?.length) {
+      return moment.videos.map((v, i) => ({ id: i, preview: v.url, url: v.url, publicId: v.publicId, uploading: false }))
+    }
+    return []
+  }
+
   const [form, setForm] = useState({
     caption: moment?.caption || '',
     category: moment?.category || '',
     location: moment?.location || '',
     label: moment?.label || '',
   })
-  const [images, setImages] = useState(getInitialImages) // [{ preview, url, uploading }]
-  const [imageError, setImageError] = useState(false)
+  const [images, setImages] = useState(getInitialImages)
+  const [videos, setVideos] = useState(getInitialVideos)
+  const [mediaError, setMediaError] = useState(false)
+  const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const videoFileInputRef = useRef(null)
 
   const isEditing = !!moment?.id
 
@@ -36,7 +46,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     const preview = URL.createObjectURL(file)
     const tempId = Date.now()
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-    setImageError(false)
+    setMediaError(false)
 
     try {
       const signRes = await fetch('/api/cloudinary-sign')
@@ -72,15 +82,72 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     }
   }
 
+  const handleVideoFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    // Validate duration before uploading
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
+    setMediaError(false)
+
+    try {
+      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
+      if (!signRes.ok) throw new Error('Failed to get upload signature')
+      const { timestamp, signature, folder, apiKey } = await signRes.json()
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+      formData.append('api_key', apiKey)
+      formData.append('folder', folder)
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
+        { method: 'POST', body: formData }
+      )
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+      }
+
+      const data = await response.json()
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
   const handleRemoveImage = (id) => {
     setImages((prev) => prev.filter((img) => img.id !== id))
+  }
+
+  const handleRemoveVideo = (id) => {
+    setVideos((prev) => prev.filter((v) => v.id !== id))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     const readyImages = images.filter((img) => img.url)
-    if (readyImages.length === 0) {
-      setImageError(true)
+    const readyVideos = videos.filter((v) => v.url)
+    if (readyImages.length === 0 && readyVideos.length === 0) {
+      setMediaError(true)
       return
     }
     setSaving(true)
@@ -88,6 +155,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
       const data = {
         ...form,
         images: readyImages.map((img) => img.url),
+        videos: readyVideos.map((v) => ({ url: v.url, publicId: v.publicId })),
       }
       if (isEditing) {
         await onSave(moment.id, data)
@@ -102,7 +170,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     }
   }
 
-  const hasUploading = images.some((img) => img.uploading)
+  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -125,10 +193,9 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
-              Photos <span className="text-hearth">*</span>
+              Photos
             </label>
-            <div className={`flex gap-3 flex-wrap ${imageError ? 'p-2 ring-2 ring-hearth rounded-xl' : ''}`}>
-              {/* Uploaded image thumbnails */}
+            <div className={`flex gap-3 flex-wrap ${mediaError ? 'p-2 ring-2 ring-hearth rounded-xl' : ''}`}>
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
                   <img
@@ -153,26 +220,83 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 </div>
               ))}
 
-              {/* Add more button */}
+              {/* Add photo button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-hearth hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
-                {images.length === 0 ? (
+                {images.length === 0 && videos.length === 0 ? (
                   <>
                     <ImageIcon className="w-6 h-6 text-bark-muted" />
                     <span className="text-xs text-bark-muted text-center leading-tight">Add photo</span>
                   </>
                 ) : (
-                  <Plus className="w-6 h-6 text-bark-muted" />
+                  <Plus className="w-5 h-5 text-bark-muted" />
                 )}
               </button>
             </div>
-            {imageError && (
-              <p className="text-xs text-hearth mt-1">At least one photo is required.</p>
+          </div>
+
+          {/* Video upload */}
+          <div>
+            <label className="block text-sm font-medium text-bark mb-2">
+              Short Videos <span className="text-bark-muted font-normal">(max 60s)</span>
+            </label>
+            <div className="flex gap-3 flex-wrap">
+              {videos.map((v) => (
+                <div key={v.id} className="relative w-20 h-20 flex-shrink-0">
+                  <video
+                    src={v.preview}
+                    className="w-20 h-20 rounded-xl object-cover bg-black"
+                    muted
+                    playsInline
+                  />
+                  {/* Video icon overlay */}
+                  {!v.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-7 h-7 rounded-full bg-black/50 flex items-center justify-center">
+                        <Video className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
+                  )}
+                  {v.uploading && (
+                    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {!v.uploading && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVideo(v.id)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Add video button */}
+              <button
+                type="button"
+                onClick={() => videoFileInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-hearth hover:bg-cream-dark/50 transition-colors flex-shrink-0"
+              >
+                <>
+                  <Video className="w-6 h-6 text-bark-muted" />
+                  <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
+                </>
+              </button>
+            </div>
+            {videoError && (
+              <p className="text-xs text-hearth mt-1">{videoError}</p>
             )}
           </div>
+
+          {mediaError && (
+            <p className="text-xs text-hearth -mt-2">At least one photo or video is required.</p>
+          )}
 
           {/* Caption */}
           <div>
@@ -260,6 +384,30 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         onChange={handleFileChange}
         className="hidden"
       />
+      <input
+        ref={videoFileInputRef}
+        type="file"
+        accept="video/*"
+        onChange={handleVideoFileChange}
+        className="hidden"
+      />
     </div>
   )
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url)
+      resolve(video.duration)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(0)
+    }
+    video.src = url
+  })
 }

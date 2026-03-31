@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Plus, Image as ImageIcon, Mic } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
@@ -11,6 +11,20 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     }
     if (memory?.imageUrl) {
       return [{ id: 0, preview: memory.imageUrl, url: memory.imageUrl, uploading: false }]
+    }
+    return []
+  }
+
+  const getInitialVideos = () => {
+    if (memory?.videos?.length) {
+      return memory.videos.map((v, i) => ({
+        id: i,
+        preview: v.url,
+        url: v.url,
+        publicId: v.publicId,
+        title: v.title || '',
+        uploading: false,
+      }))
     }
     return []
   }
@@ -30,10 +44,13 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       : new Date().toISOString().split('T')[0],
   })
   const [images, setImages] = useState(getInitialImages)
+  const [videos, setVideos] = useState(getInitialVideos)
   const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
   const [showRecorder, setShowRecorder] = useState(false)
+  const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const videoFileInputRef = useRef(null)
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -86,8 +103,66 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     }
   }
 
+  const handleVideoFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
+
+    try {
+      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
+      if (!signRes.ok) throw new Error('Failed to get upload signature')
+      const { timestamp, signature, folder, apiKey } = await signRes.json()
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+      formData.append('api_key', apiKey)
+      formData.append('folder', folder)
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
+        { method: 'POST', body: formData }
+      )
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+      }
+
+      const data = await response.json()
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoTitleChange = (id, title) => {
+    setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, title } : v)))
+  }
+
   const handleRemoveImage = (id) => {
     setImages((prev) => prev.filter((img) => img.id !== id))
+  }
+
+  const handleRemoveVideo = (id) => {
+    setVideos((prev) => prev.filter((v) => v.id !== id))
   }
 
   const handleSubmit = async (e) => {
@@ -97,6 +172,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     try {
       const readyImages = images.filter((img) => img.url)
       const imageUrls = readyImages.map((img) => img.url)
+      const readyVideos = videos.filter((v) => v.url)
 
       const data = {
         ...form,
@@ -104,6 +180,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         imageUrl: imageUrls[0] || '',
         date: Timestamp.fromDate(new Date(form.date)),
         voiceMemos,
+        videos: readyVideos.map((v) => ({ url: v.url, publicId: v.publicId, title: v.title })),
       }
 
       if (memory?.id) {
@@ -119,7 +196,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     }
   }
 
-  const hasUploading = images.some((img) => img.uploading)
+  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -186,6 +263,73 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Video upload */}
+          <div>
+            <label className="block text-sm font-medium text-bark mb-2">
+              Videos <span className="text-bark-muted font-normal">(max 60s each)</span>
+            </label>
+
+            {/* Uploaded videos list */}
+            {videos.length > 0 && (
+              <div className="space-y-3 mb-3">
+                {videos.map((v) => (
+                  <div key={v.id} className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
+                    <div className="relative w-16 h-16 flex-shrink-0">
+                      <video
+                        src={v.preview}
+                        className="w-16 h-16 rounded-lg object-cover bg-black"
+                        muted
+                        playsInline
+                      />
+                      {!v.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
+                            <Video className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      {v.uploading && (
+                        <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={v.title}
+                        onChange={(e) => handleVideoTitleChange(v.id, e.target.value)}
+                        placeholder="Add a title (optional)"
+                        className="w-full px-3 py-1.5 bg-white rounded-lg text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                        disabled={v.uploading}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVideo(v.id)}
+                      className="text-bark-muted hover:text-red-500 transition-colors mt-1 flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add video button */}
+            <button
+              type="button"
+              onClick={() => videoFileInputRef.current?.click()}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+            >
+              <Video className="w-4 h-4" />
+              Add video
+            </button>
+            {videoError && (
+              <p className="text-xs text-hearth mt-1">{videoError}</p>
+            )}
           </div>
 
           {/* Voice Memos */}
@@ -360,6 +504,30 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         onChange={handleFileChange}
         className="hidden"
       />
+      <input
+        ref={videoFileInputRef}
+        type="file"
+        accept="video/*"
+        onChange={handleVideoFileChange}
+        className="hidden"
+      />
     </div>
   )
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url)
+      resolve(video.duration)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(0)
+    }
+    video.src = url
+  })
 }
