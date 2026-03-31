@@ -1,9 +1,9 @@
-import { Home, Bell, LogOut } from 'lucide-react'
+import { Home, Bell, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
-  const { logout } = useAuth()
+  const { isAdmin, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -23,6 +23,11 @@ export default function MobileHeader() {
         <button className="text-bark-light hover:text-hearth">
           <Bell className="w-5 h-5" />
         </button>
+        {isAdmin && (
+          <button onClick={() => navigate('/settings')} className="text-bark-light hover:text-hearth">
+            <Settings className="w-5 h-5" />
+          </button>
+        )}
         <button onClick={handleLogout} className="text-bark-light hover:text-hearth">
           <LogOut className="w-5 h-5" />
         </button>

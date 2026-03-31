@@ -6,6 +6,7 @@ import SignupPage from './pages/SignupPage'
 import HomePage from './pages/HomePage'
 import MemoryDetailPage from './pages/MemoryDetailPage'
 import MomentsAllPage from './pages/MomentsAllPage'
+import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
   return (
@@ -35,6 +36,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MomentsAllPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
               </ProtectedRoute>
             }
           />
