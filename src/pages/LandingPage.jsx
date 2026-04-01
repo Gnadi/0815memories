@@ -432,10 +432,10 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
-              onClick={() => navigate('/login?admin=1')}
+              onClick={() => navigate('/signup')}
               className="btn-hearth text-base px-8 py-3"
             >
-              Login
+              Get Started
             </button>
             <a
               href="https://github.com/Gnadi/0815memories"
