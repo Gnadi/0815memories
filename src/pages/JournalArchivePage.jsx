@@ -95,6 +95,7 @@ export default function JournalArchivePage() {
                 <JournalEntryCard
                   key={entry.id}
                   entry={entry}
+                  onView={() => navigate(`/journal/${childId}/view/${entry.id}`)}
                   onEdit={() => navigate(`/journal/${childId}/edit/${entry.id}`)}
                   onDelete={() => {
                     if (confirm('Delete this letter permanently?')) {

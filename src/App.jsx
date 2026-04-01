@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage'
 import KidsJournalPage from './pages/KidsJournalPage'
 import JournalArchivePage from './pages/JournalArchivePage'
 import JournalEntryPage from './pages/JournalEntryPage'
+import JournalDetailPage from './pages/JournalDetailPage'
 import BlackBoxPage from './pages/BlackBoxPage'
 import CreateBlackBoxPage from './pages/CreateBlackBoxPage'
 
@@ -82,6 +83,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <JournalEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal/:childId/view/:entryId"
+            element={
+              <ProtectedRoute>
+                <JournalDetailPage />
               </ProtectedRoute>
             }
           />

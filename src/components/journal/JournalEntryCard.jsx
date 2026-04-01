@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../../constants/emotions'
 
-export default function JournalEntryCard({ entry, onEdit, onDelete }) {
+export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const emotion = EMOTIONS.find((e) => e.key === entry.emotion) || EMOTIONS[1]
@@ -15,7 +15,7 @@ export default function JournalEntryCard({ entry, onEdit, onDelete }) {
   })
 
   return (
-    <div className="bg-warm-white rounded-2xl shadow-sm border border-cream-dark overflow-hidden">
+    <div onClick={onView} className="bg-warm-white rounded-2xl shadow-sm border border-cream-dark overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
       {/* Photo strip */}
       {entry.photos?.length > 0 && (
         <div className="flex gap-1 h-36 overflow-hidden">
@@ -40,7 +40,7 @@ export default function JournalEntryCard({ entry, onEdit, onDelete }) {
             </span>
             <div className="relative">
               <button
-                onClick={() => setMenuOpen((v) => !v)}
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
                 className="text-bark-muted hover:text-bark p-1 rounded-lg"
               >
                 <MoreVertical className="w-4 h-4" />
