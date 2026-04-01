@@ -10,11 +10,24 @@ import {
   Ban,
   X,
   Menu,
-  Github,
   GitFork,
   Star,
 } from 'lucide-react'
 import { useState } from 'react'
+
+function OctocatIcon({ className }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.386-1.332-1.755-1.332-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.776.42-1.305.763-1.605-2.665-.3-5.467-1.334-5.467-5.931 0-1.31.468-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.046.138 3.006.404 2.29-1.552 3.296-1.23 3.296-1.23.653 1.653.243 2.874.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.628-5.48 5.922.43.372.815 1.102.815 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+    </svg>
+  )
+}
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -237,7 +250,7 @@ export default function LandingPage() {
             {/* Card 4 — Open Source */}
             <div className="bg-bark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                <Github className="w-5 h-5 text-white" />
+                <OctocatIcon className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white mb-2">Open Source</h3>
@@ -262,7 +275,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-colors w-fit"
               >
-                <Github className="w-4 h-4" />
+                <OctocatIcon className="w-4 h-4" />
                 View on GitHub
               </a>
             </div>
@@ -359,7 +372,7 @@ export default function LandingPage() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
-              <Github className="w-5 h-5" />
+              <OctocatIcon className="w-5 h-5" />
               Open Source
             </a>
           </div>
