@@ -184,7 +184,7 @@ export default function JournalEntryPage() {
   const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col relative overflow-hidden">
 
       {/* Background */}
       <div className="absolute inset-0 -z-10">
@@ -244,7 +244,7 @@ export default function JournalEntryPage() {
         <div className="w-10 h-1 rounded-full bg-hearth mx-5 mt-3 flex-shrink-0" />
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pb-4">
 
           {/* Title */}
           <div className="px-5 pt-3">
