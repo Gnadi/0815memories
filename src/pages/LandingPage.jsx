@@ -12,6 +12,11 @@ import {
   Menu,
   GitFork,
   Star,
+  Camera,
+  Video,
+  Mic,
+  Users,
+  KeyRound,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -155,7 +160,7 @@ export default function LandingPage() {
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Four Pillars of the Hearth</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Five Pillars of the Hearth</h2>
             <p className="text-bark-light max-w-md mx-auto">
               Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
             </p>
@@ -278,6 +283,71 @@ export default function LandingPage() {
                 <OctocatIcon className="w-4 h-4" />
                 View on GitHub
               </a>
+            </div>
+
+            {/* Card 5 — Share: Moments & Memories (full-width) */}
+            <div className="md:col-span-2 bg-gradient-to-br from-amber-50 to-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
+              {/* Left — text */}
+              <div className="flex-1">
+                <div className="w-10 h-10 bg-hearth/10 rounded-xl flex items-center justify-center mb-5">
+                  <Camera className="w-5 h-5 text-hearth" />
+                </div>
+                <h3 className="text-xl font-bold text-bark mb-2">Share: Moments &amp; Memories</h3>
+                <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
+                  Every candid snapshot, milestone video, and voice memo — gathered in one warm, private feed. Your inner circle gets instant access with just a shared family password. No accounts, no friction, no strangers.
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    'Inner circle access — one shared password, zero sign-ups',
+                    'Family admin controls who sees what and when',
+                    'Post, pin, and curate from a simple dashboard',
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                      <Check className="w-4 h-4 text-hearth mt-0.5 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Right — media type badges + access illustration */}
+              <div className="flex flex-col gap-4 lg:w-64 w-full">
+                {/* Media type pills */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { icon: <Camera className="w-4 h-4" />, label: 'Photos' },
+                    { icon: <Video className="w-4 h-4" />, label: 'Videos' },
+                    { icon: <Mic className="w-4 h-4" />, label: 'Voice Memos' },
+                  ].map(({ icon, label }) => (
+                    <div key={label} className="flex items-center gap-2 bg-white rounded-full px-4 py-2 text-sm font-medium text-bark shadow-sm border border-cream-dark">
+                      <span className="text-hearth">{icon}</span>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Access card */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-dark">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-hearth/10 rounded-xl flex items-center justify-center">
+                      <Users className="w-4 h-4 text-hearth" />
+                    </div>
+                    <span className="text-sm font-semibold text-bark">Inner Circle</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-bark-light mb-3">
+                    <KeyRound className="w-3.5 h-3.5 text-bark-muted" />
+                    <span>One shared family password</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {['bg-hearth', 'bg-amber-400', 'bg-green-500', 'bg-blue-400', 'bg-purple-400'].map((c, i) => (
+                      <div key={i} className={`w-7 h-7 rounded-full ${c} border-2 border-white -ml-1.5 first:ml-0`} />
+                    ))}
+                    <div className="w-7 h-7 rounded-full bg-cream-dark border-2 border-white -ml-1.5 flex items-center justify-center text-xs font-bold text-bark-light">
+                      +
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
