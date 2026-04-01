@@ -10,6 +10,9 @@ import {
   Ban,
   X,
   Menu,
+  Github,
+  GitFork,
+  Star,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -231,26 +234,37 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 4 — Create: Scrapbook */}
-            <div className="bg-cream-dark rounded-3xl p-8 flex flex-col gap-4">
+            {/* Card 4 — Open Source */}
+            <div className="bg-bark rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                <Github className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-bark mb-2">Create: Scrapbook</h3>
-                <p className="text-bark-light text-sm leading-relaxed">
-                  The anti-feed. A non-linear, tactile digital canvas where you drag, drop, and layer your family's favorite moments into stunning interactive spreads.
+                <h3 className="text-xl font-bold text-white mb-2">Open Source</h3>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  FamilyHearth is built in the open. Audit the code, contribute features, or self-host for your family. No black boxes — except the ones you create.
                 </p>
               </div>
-              {/* Photo grid */}
-              <div className="grid grid-cols-2 gap-2 mt-auto">
-                <div className="h-24 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-orange-300 via-pink-300 to-purple-400 opacity-80" />
+              {/* Stats row */}
+              <div className="flex gap-4 mt-auto">
+                <div className="flex items-center gap-1.5 text-white/60 text-xs font-medium">
+                  <Star className="w-3.5 h-3.5" />
+                  <span>Star us</span>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <div className="h-11 rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500" />
-                  <div className="h-11 rounded-xl bg-bark/10 flex items-center justify-center">
-                    <span className="text-xs font-semibold text-bark-light">July '24 Roadtrip</span>
-                  </div>
+                <div className="flex items-center gap-1.5 text-white/60 text-xs font-medium">
+                  <GitFork className="w-3.5 h-3.5" />
+                  <span>Fork &amp; self-host</span>
                 </div>
               </div>
+              <a
+                href="https://github.com/Gnadi/0815memories"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-colors w-fit"
+              >
+                <Github className="w-4 h-4" />
+                View on GitHub
+              </a>
             </div>
           </div>
         </div>
@@ -339,11 +353,15 @@ export default function LandingPage() {
             >
               Login
             </button>
-            <button
-              className="px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
+            <a
+              href="https://github.com/Gnadi/0815memories"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
+              <Github className="w-5 h-5" />
               Open Source
-            </button>
+            </a>
           </div>
           <p className="text-xs text-bark-muted">No credit card required to join the waitlist.</p>
         </div>
