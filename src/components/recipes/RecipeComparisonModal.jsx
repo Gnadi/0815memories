@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { X, ChefHat, GitFork, Copy, Share2 } from 'lucide-react'
 
 function computeDiffTags(versA, versB) {
-  const aNames = new Set((versA.ingredients || []).map((i) => i.name.toLowerCase()))
+  // Map A ingredients by normalized name for O(1) lookup and full-text comparison
+  const aMap = new Map((versA.ingredients || []).map((i) => [i.name.toLowerCase(), i]))
   const bNames = new Set((versB.ingredients || []).map((i) => i.name.toLowerCase()))
 
   const enrichedA = (versA.ingredients || []).map((i) => ({
@@ -10,14 +11,16 @@ function computeDiffTags(versA, versB) {
     diffTag: bNames.has(i.name.toLowerCase()) ? 'UNCHANGED' : 'REMOVED',
   }))
 
-  const enrichedB = (versB.ingredients || []).map((i) => ({
-    ...i,
-    diffTag: aNames.has(i.name.toLowerCase())
-      ? i.status === 'modified'
-        ? 'MODIFIED'
-        : 'UNCHANGED'
-      : 'ADDED',
-  }))
+  const enrichedB = (versB.ingredients || []).map((i) => {
+    const normName = i.name.toLowerCase()
+    if (aMap.has(normName)) {
+      const aIng = aMap.get(normName)
+      // MODIFIED if author annotated it OR if the full ingredient text differs (e.g. quantity changed)
+      const isModified = i.status === 'modified' || aIng.name !== i.name
+      return { ...i, diffTag: isModified ? 'MODIFIED' : 'UNCHANGED' }
+    }
+    return { ...i, diffTag: 'ADDED' }
+  })
 
   return { enrichedA, enrichedB }
 }

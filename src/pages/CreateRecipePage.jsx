@@ -40,6 +40,7 @@ export default function CreateRecipePage() {
   const [image, setImage] = useState(null) // { preview, url, uploading }
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [forkLoadError, setForkLoadError] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -49,17 +50,25 @@ export default function CreateRecipePage() {
   // Load parent recipe when forking
   useEffect(() => {
     if (!isFork || !id) return
-    getDoc(doc(db, 'recipes', id)).then((snap) => {
-      if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() }
-        setParent(data)
-        // Pre-populate inherited ingredients (copies of parent's active/modified ones)
-        setIngredients(
-          (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
-        )
+    const load = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'recipes', id))
+        if (snap.exists()) {
+          const data = { id: snap.id, ...snap.data() }
+          setParent(data)
+          setIngredients(
+            (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
+          )
+        } else {
+          setForkLoadError('Original recipe not found.')
+        }
+      } catch {
+        setForkLoadError('Failed to load recipe. Please go back and try again.')
+      } finally {
+        setParentLoading(false)
       }
-      setParentLoading(false)
-    })
+    }
+    load()
   }, [id, isFork])
 
   if (!isAdmin) return null
@@ -67,6 +76,16 @@ export default function CreateRecipePage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  if (forkLoadError) {
+    return (
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-bark font-semibold">{forkLoadError}</p>
+        <button onClick={() => navigate('/recipes')} className="text-sm text-hearth font-semibold">
+          ← Back to Recipes
+        </button>
       </div>
     )
   }

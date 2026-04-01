@@ -8,7 +8,7 @@ import {
   getDoc,
   doc,
   addDoc,
-  deleteDoc,
+  writeBatch,
   serverTimestamp,
   where,
 } from 'firebase/firestore'
@@ -58,7 +58,15 @@ export function useRecipes(familyId) {
   }
 
   const deleteRecipe = async (id) => {
-    await deleteDoc(doc(db, 'recipes', id))
+    const batch = writeBatch(db)
+    // Cascade-delete all forks in this lineage
+    const forksSnap = await getDocs(
+      query(collection(db, 'recipes'), where('rootId', '==', id))
+    )
+    forksSnap.docs.forEach((d) => batch.delete(d.ref))
+    // Delete the root itself
+    batch.delete(doc(db, 'recipes', id))
+    await batch.commit()
   }
 
   return { recipes, loading, addRecipe, deleteRecipe }
@@ -80,11 +88,12 @@ export function useRecipeLineage(rootId, familyId) {
         const rootSnap = await getDoc(doc(db, 'recipes', rootId))
         const rootDoc = rootSnap.exists() ? { id: rootSnap.id, ...rootSnap.data() } : null
 
-        // Fetch all forks in this lineage
+        // Fetch all forks in this lineage, scoped to same family.
+        // No orderBy here — client-side sort below avoids needing a new composite index.
         const forksQuery = query(
           collection(db, 'recipes'),
-          where('rootId', '==', rootId),
-          orderBy('year', 'asc')
+          where('familyId', '==', familyId),
+          where('rootId', '==', rootId)
         )
         const forksSnap = await getDocs(forksQuery)
         const forks = forksSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))

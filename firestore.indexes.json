@@ -46,8 +46,9 @@
       "collectionGroup": "recipes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "rootId", "order": "ASCENDING" },
-        { "fieldPath": "year", "order": "ASCENDING" }
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "rootId",   "order": "ASCENDING" },
+        { "fieldPath": "year",     "order": "ASCENDING" }
       ]
     }
   ],
