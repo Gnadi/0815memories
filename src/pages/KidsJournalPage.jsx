@@ -49,7 +49,7 @@ export default function KidsJournalPage() {
           className="btn-hearth mt-5 flex items-center gap-2"
         >
           <PenLine className="w-4 h-4" />
-          Start a New Letter
+          Add New Kid
         </button>
       </div>
 
