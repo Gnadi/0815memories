@@ -59,7 +59,7 @@ export default function LandingPage() {
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?admin=1')}
               className="btn-hearth text-sm px-5 py-2"
             >
               Login
@@ -106,7 +106,7 @@ export default function LandingPage() {
               Get Started
             </button>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?admin=1')}
               className="px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
               Login
@@ -276,7 +276,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate('/login?admin=1')}
                   className="px-5 py-2.5 rounded-full border-2 border-white/60 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
                 >
                   Compose a Legacy
@@ -432,7 +432,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?admin=1')}
               className="btn-hearth text-base px-8 py-3"
             >
               Login
@@ -447,7 +447,7 @@ export default function LandingPage() {
               Open Source
             </a>
           </div>
-          <p className="text-xs text-bark-muted">No credit card required to join the waitlist.</p>
+          <p className="text-xs text-bark-muted">No credit card required, it's free.</p>
         </div>
       </section>
 
