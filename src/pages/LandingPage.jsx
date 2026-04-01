@@ -38,10 +38,10 @@ export default function LandingPage() {
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/login')}
               className="btn-hearth text-sm px-5 py-2"
             >
-              Request an Invite
+              Login
             </button>
             <button
               className="md:hidden text-bark-light hover:text-bark"
@@ -79,7 +79,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-4">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/signup')}
               className="btn-hearth text-base px-8 py-3"
             >
               Get Started
@@ -88,7 +88,7 @@ export default function LandingPage() {
               onClick={() => navigate('/login')}
               className="px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
-              View the Demo
+              Login
             </button>
           </div>
         </div>
@@ -334,15 +334,15 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/login')}
               className="btn-hearth text-base px-8 py-3"
             >
-              Request My Invite
+              Login
             </button>
             <button
               className="px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
-              Learn about Pricing
+              Open Source
             </button>
           </div>
           <p className="text-xs text-bark-muted">No credit card required to join the waitlist.</p>
