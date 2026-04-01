@@ -31,7 +31,7 @@ export default function KidsJournalPage() {
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
         <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       {/* Header */}

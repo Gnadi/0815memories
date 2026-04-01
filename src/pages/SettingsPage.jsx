@@ -18,7 +18,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
           <h1 className="text-2xl font-bold text-bark mb-6">Settings</h1>

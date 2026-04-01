@@ -38,7 +38,7 @@ export default function MomentsAllPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream pb-20 lg:pb-0">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-cream border-b border-cream-dark px-4 py-3 flex items-center gap-3">
         <button
