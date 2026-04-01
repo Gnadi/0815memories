@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
-import { EMOTIONS } from '../admin/JournalEntryModal'
+import { EMOTIONS } from '../../constants/emotions'
 
 export default function JournalEntryCard({ entry, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false)

@@ -9,6 +9,7 @@ import MomentsAllPage from './pages/MomentsAllPage'
 import SettingsPage from './pages/SettingsPage'
 import KidsJournalPage from './pages/KidsJournalPage'
 import JournalArchivePage from './pages/JournalArchivePage'
+import JournalEntryPage from './pages/JournalEntryPage'
 import BlackBoxPage from './pages/BlackBoxPage'
 import CreateBlackBoxPage from './pages/CreateBlackBoxPage'
 
@@ -65,6 +66,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <JournalArchivePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal/:childId/new"
+            element={
+              <ProtectedRoute>
+                <JournalEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal/:childId/edit/:entryId"
+            element={
+              <ProtectedRoute>
+                <JournalEntryPage />
               </ProtectedRoute>
             }
           />
