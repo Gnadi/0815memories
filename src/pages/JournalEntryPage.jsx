@@ -234,31 +234,6 @@ export default function JournalEntryPage() {
         </div>
       )}
 
-      {/* Title + metadata */}
-      <div className="px-5 py-2 flex-shrink-0">
-        <input
-          type="text"
-          value={form.title}
-          onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-          placeholder="A Message for your Future Self"
-          className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/40 outline-none leading-tight"
-        />
-        <div className="flex items-center gap-2 mt-2">
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-            className="bg-transparent text-white/70 text-sm outline-none [color-scheme:dark]"
-          />
-          {form.volume && (
-            <>
-              <span className="text-white/40">•</span>
-              <span className="text-white/70 text-sm">{form.volume}</span>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Writing card */}
       <form
         id="journal-entry-form"
@@ -271,14 +246,32 @@ export default function JournalEntryPage() {
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto min-h-0">
 
-          {/* Volume / Chapter */}
-          <div className="px-5 pt-2">
+          {/* Title */}
+          <div className="px-5 pt-3">
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="A Message for your Future Self"
+              className="w-full bg-transparent text-stone-800 text-xl font-bold placeholder-stone-300 outline-none leading-tight"
+            />
+          </div>
+
+          {/* Date + Volume */}
+          <div className="px-5 pt-1.5 flex items-center gap-2">
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+              className="bg-transparent text-stone-400 text-xs outline-none"
+            />
+            <span className="text-stone-300">•</span>
             <input
               type="text"
               value={form.volume}
               onChange={(e) => setForm((p) => ({ ...p, volume: e.target.value }))}
-              placeholder="Volume / Chapter (optional)"
-              className="w-full text-xs text-stone-400 bg-transparent outline-none placeholder-stone-300"
+              placeholder="Volume / Chapter"
+              className="flex-1 bg-transparent text-stone-400 text-xs outline-none placeholder-stone-300"
             />
           </div>
 
