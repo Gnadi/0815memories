@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage'
 import KidsJournalPage from './pages/KidsJournalPage'
 import JournalArchivePage from './pages/JournalArchivePage'
 import BlackBoxPage from './pages/BlackBoxPage'
+import CreateBlackBoxPage from './pages/CreateBlackBoxPage'
 
 export default function App() {
   return (
@@ -72,6 +73,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <BlackBoxPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/blackbox/new"
+            element={
+              <ProtectedRoute>
+                <CreateBlackBoxPage />
               </ProtectedRoute>
             }
           />

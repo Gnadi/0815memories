@@ -1,20 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Plus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useBlackBox } from '../hooks/useBlackBox'
 import { useKids } from '../hooks/useKids'
 import BlackBoxCard from '../components/blackbox/BlackBoxCard'
-import CreateBlackBoxModal from '../components/admin/CreateBlackBoxModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function BlackBoxPage() {
   const { isAdmin, familyId } = useAuth()
   const navigate = useNavigate()
-  const { boxes, loading, addBox, deleteBox } = useBlackBox(familyId)
+  const { boxes, loading, deleteBox } = useBlackBox(familyId)
   const { kids } = useKids(familyId)
-  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')
@@ -43,7 +41,7 @@ export default function BlackBoxPage() {
           exact day you choose: a birthday, a wedding, a graduation, or whenever the time is right.
         </p>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => navigate('/blackbox/new')}
           className="mt-5 flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -68,7 +66,7 @@ export default function BlackBoxPage() {
             </p>
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => navigate('/blackbox/new')}
             className="flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -92,13 +90,6 @@ export default function BlackBoxPage() {
         </div>
       )}
 
-      {showModal && (
-        <CreateBlackBoxModal
-          kids={kids}
-          onClose={() => setShowModal(false)}
-          onSave={addBox}
-        />
-      )}
         </div>
       </div>
     </div>
