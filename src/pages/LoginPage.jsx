@@ -27,6 +27,11 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const { slug: routeSlug } = useParams()
   const urlFamilyId = searchParams.get('family')
+  const adminParam = searchParams.get('admin')
+
+  useEffect(() => {
+    if (adminParam === '1') setShowAdminLogin(true)
+  }, [adminParam])
 
   // Resolve family from slug (route param or subdomain) on mount
   useEffect(() => {
