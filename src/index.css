@@ -22,6 +22,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevent mobile browser auto-zoom on input focus (requires font-size >= 16px) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+textarea,
+select {
+  font-size: 16px;
+}
+
 .font-serif {
   font-family: var(--font-family-serif);
 }

@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useMemories } from '../../hooks/useMemories'
 import PostMemoryModal from '../admin/PostMemoryModal'
 
+const TAP = { touchAction: 'manipulation' }
+
 export default function AdminMobileBottomNav() {
   const { isAdmin, familyId } = useAuth()
   const navigate = useNavigate()
@@ -28,8 +30,10 @@ export default function AdminMobileBottomNav() {
 
   return (
     <>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-warm-white border-t border-cream-dark"
-        style={{ boxShadow: '0 -4px 20px rgba(45,27,14,0.08)' }}>
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-warm-white border-t border-cream-dark"
+        style={{ boxShadow: '0 -4px 20px rgba(45,27,14,0.08)' }}
+      >
         <div className="flex items-end justify-around px-2 pb-2 pt-1">
           {navItems.map(({ label, icon: Icon, path }) => {
             const active = isActive(path)
@@ -38,6 +42,7 @@ export default function AdminMobileBottomNav() {
                 key={path}
                 onClick={() => navigate(path)}
                 className="flex flex-col items-center gap-0.5 px-3 py-1 min-w-[56px]"
+                style={TAP}
               >
                 <Icon
                   className={`w-6 h-6 transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}
@@ -46,9 +51,7 @@ export default function AdminMobileBottomNav() {
                 <span className={`text-[10px] font-medium transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}>
                   {label}
                 </span>
-                {active && (
-                  <span className="w-1 h-1 rounded-full bg-hearth" />
-                )}
+                {active && <span className="w-1 h-1 rounded-full bg-hearth" />}
               </button>
             )
           })}
@@ -57,8 +60,9 @@ export default function AdminMobileBottomNav() {
           <div className="flex flex-col items-center -mt-5 px-1">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95"
+              className="w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-95"
               style={{
+                touchAction: 'manipulation',
                 background: 'linear-gradient(135deg, #C25A2E, #D4784A)',
                 boxShadow: '0 4px 16px rgba(194, 90, 46, 0.45)',
               }}
@@ -76,6 +80,7 @@ export default function AdminMobileBottomNav() {
                 key={path}
                 onClick={() => navigate(path)}
                 className="flex flex-col items-center gap-0.5 px-3 py-1 min-w-[56px]"
+                style={TAP}
               >
                 <Icon
                   className={`w-6 h-6 transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}
@@ -84,9 +89,7 @@ export default function AdminMobileBottomNav() {
                 <span className={`text-[10px] font-medium transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}>
                   {label}
                 </span>
-                {active && (
-                  <span className="w-1 h-1 rounded-full bg-hearth" />
-                )}
+                {active && <span className="w-1 h-1 rounded-full bg-hearth" />}
               </button>
             )
           })}
