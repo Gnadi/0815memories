@@ -237,7 +237,7 @@ export default function JournalEntryPage() {
       <form
         id="journal-entry-form"
         onSubmit={handleSubmit}
-        className="flex-1 bg-white/[0.92] backdrop-blur-md rounded-t-3xl mx-1 flex flex-col min-h-0 shadow-2xl overflow-hidden"
+        className="h-[68dvh] md:flex-1 bg-white/[0.92] backdrop-blur-md rounded-t-3xl mx-1 flex flex-col min-h-0 shadow-2xl overflow-hidden"
       >
         {/* Coral accent line */}
         <div className="w-10 h-1 rounded-full bg-hearth mx-5 mt-3 flex-shrink-0" />
