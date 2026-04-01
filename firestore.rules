@@ -50,5 +50,47 @@ service cloud.firestore {
                     && resource.data.familyId != null
                     && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
+
+    // Children — admin only (not visible to viewers)
+    match /children/{childId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+    }
+
+    // Journals — admin only (private letters to children)
+    match /journals/{journalId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+    }
+
+    // Black Box — admin only (time-release sealed messages)
+    match /blackbox/{boxId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+    }
   }
 }
