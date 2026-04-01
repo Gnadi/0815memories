@@ -24,18 +24,20 @@ export function useRecipes(familyId) {
       return
     }
 
+    // Query all recipes for the family, filter root recipes client-side.
+    // Avoids a composite index requirement for rootId == null.
     const q = query(
       collection(db, 'recipes'),
       where('familyId', '==', familyId),
-      where('rootId', '==', null),
       orderBy('createdAt', 'desc')
     )
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        setRecipes(data)
+        const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        // Root recipes have no parentId (or parentId is null/undefined)
+        setRecipes(all.filter((r) => !r.parentId))
         setLoading(false)
       },
       (err) => {
