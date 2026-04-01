@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Image as ImageIcon, Mic, Video, X } from 'lucide-react'
+import { ArrowLeft, Image as ImageIcon, Mic, Video, X, Maximize2, Minimize2 } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { EMOTIONS } from '../constants/emotions'
@@ -33,7 +33,8 @@ export default function JournalEntryPage() {
   const [videoError, setVideoError] = useState('')
   const [voiceMemos, setVoiceMemos] = useState([])
   const [showRecorder, setShowRecorder] = useState(false)
-  const [showEmotionPicker, setShowEmotionPicker] = useState(false)
+  const [showEmotionPicker, setShowEmotionPicker] = useState(true)
+  const [textExpanded, setTextExpanded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -367,7 +368,7 @@ export default function JournalEntryPage() {
             value={form.content}
             onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
             placeholder={`My dearest ${kid?.name || 'child'}, today…`}
-            className="w-full min-h-64 px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300"
+            className={`w-full px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300 transition-all duration-200 ${textExpanded ? 'min-h-64' : 'min-h-28'}`}
           />
         </div>
 
@@ -393,6 +394,14 @@ export default function JournalEntryPage() {
             className="text-stone-400 hover:text-stone-700 transition-colors"
           >
             <Video className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setTextExpanded((v) => !v)}
+            className="text-stone-400 hover:text-stone-700 transition-colors"
+            title={textExpanded ? 'Collapse text area' : 'Expand text area'}
+          >
+            {textExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
           <div className="ml-auto">
             {saving ? (
