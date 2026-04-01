@@ -216,7 +216,7 @@ export default function JournalEntryPage() {
 
       {/* Emotion picker */}
       {showEmotionPicker && (
-        <div className="mx-4 mb-1 flex flex-wrap gap-2 p-3 bg-white/88 backdrop-blur-md rounded-2xl flex-shrink-0 shadow-lg">
+        <div className="mx-4 mb-3 flex flex-wrap gap-2 p-3 pb-4 bg-white/88 backdrop-blur-md rounded-2xl flex-shrink-0 shadow-lg">
           {EMOTIONS.map((em) => (
             <button
               key={em.key}
@@ -361,7 +361,7 @@ export default function JournalEntryPage() {
             value={form.content}
             onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
             placeholder={`My dearest ${kid?.name || 'child'}, today…`}
-            className={`w-full px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300 transition-all duration-200 ${textExpanded ? 'min-h-64' : 'min-h-28'}`}
+            className={`w-full px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300 transition-all duration-200 ${textExpanded ? 'min-h-64' : 'min-h-16'}`}
           />
         </div>
 
