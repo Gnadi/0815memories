@@ -28,7 +28,7 @@ export default function JournalArchivePage() {
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
         {/* Top bar */}
         <div className="sticky top-0 z-20 bg-cream border-b border-cream-dark px-4 py-3 flex items-center gap-3">
           <button

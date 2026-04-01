@@ -11,7 +11,6 @@ import PostMemoryModal from '../components/admin/PostMemoryModal'
 import PostMomentModal from '../components/admin/PostMomentModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
-import { Plus } from 'lucide-react'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -68,7 +67,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-cream flex">
       <Sidebar onPostMemory={() => setShowPostModal(true)} />
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
 
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
@@ -87,16 +86,6 @@ export default function HomePage() {
           <AlbumGlimpse memories={memories} />
         </main>
       </div>
-
-      {/* Floating action button (mobile, admin only) */}
-      {isAdmin && (
-        <button
-          onClick={() => setShowPostModal(true)}
-          className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-hearth text-white rounded-full shadow-lg flex items-center justify-center hover:bg-hearth-dark transition-colors z-20"
-        >
-          <Plus className="w-7 h-7" />
-        </button>
-      )}
 
       {/* Post Memory Modal */}
       {showPostModal && (

@@ -180,7 +180,7 @@ export default function SettingsPanel() {
               type="text"
               value={shareLink}
               readOnly
-              className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-sm outline-none select-all"
+              className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base outline-none select-all"
             />
             <button
               type="button"
@@ -208,7 +208,7 @@ export default function SettingsPanel() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New shared password"
-            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
           />
           <button
             type="submit"
@@ -232,7 +232,7 @@ export default function SettingsPanel() {
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
             placeholder="e.g., The Millers"
-            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
           />
           <button
             type="button"

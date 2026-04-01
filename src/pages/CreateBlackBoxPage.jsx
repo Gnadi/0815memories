@@ -222,7 +222,7 @@ export default function CreateBlackBoxPage() {
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
 
         {/* Mobile sticky top bar */}
         <div className="lg:hidden sticky top-0 z-10 bg-cream border-b border-cream-dark px-4 py-3 flex items-center justify-between">

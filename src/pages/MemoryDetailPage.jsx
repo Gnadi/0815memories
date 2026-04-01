@@ -94,7 +94,7 @@ export default function MemoryDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream pb-20 lg:pb-0">
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 py-3 sticky top-0 bg-cream/80 backdrop-blur-sm z-10">
         <button

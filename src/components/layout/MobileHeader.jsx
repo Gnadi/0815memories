@@ -1,9 +1,9 @@
-import { Home, Bell, LogOut, Settings, BookHeart, Lock } from 'lucide-react'
+import { Home, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
-  const { isAdmin, logout } = useAuth()
+  const { logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -19,27 +19,9 @@ export default function MobileHeader() {
         </div>
         <h1 className="text-lg font-bold text-bark">Our Hearth</h1>
       </div>
-      <div className="flex items-center gap-3">
-        <button className="text-bark-light hover:text-hearth">
-          <Bell className="w-5 h-5" />
-        </button>
-        {isAdmin && (
-          <>
-            <button onClick={() => navigate('/journal')} className="text-bark-light hover:text-hearth">
-              <BookHeart className="w-5 h-5" />
-            </button>
-            <button onClick={() => navigate('/blackbox')} className="text-bark-light hover:text-hearth">
-              <Lock className="w-5 h-5" />
-            </button>
-            <button onClick={() => navigate('/settings')} className="text-bark-light hover:text-hearth">
-              <Settings className="w-5 h-5" />
-            </button>
-          </>
-        )}
-        <button onClick={handleLogout} className="text-bark-light hover:text-hearth">
-          <LogOut className="w-5 h-5" />
-        </button>
-      </div>
+      <button onClick={handleLogout} className="text-bark-light hover:text-hearth">
+        <LogOut className="w-5 h-5" />
+      </button>
     </header>
   )
 }
