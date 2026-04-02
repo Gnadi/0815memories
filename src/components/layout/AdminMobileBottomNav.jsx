@@ -37,6 +37,7 @@ export default function AdminMobileBottomNav() {
 
   const handleCreateScrapbook = async () => {
     setShowChoiceSheet(false)
+    if (!familyId) { alert('Not authenticated — please reload the app.'); return }
     setCreating(true)
     try {
       const id = await addScrapbook({
@@ -45,6 +46,9 @@ export default function AdminMobileBottomNav() {
         pages: [{ id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }],
       })
       navigate(`/scrapbook/${id}`)
+    } catch (err) {
+      console.error('Failed to create scrapbook:', err)
+      alert('Could not create scrapbook. Please try again.')
     } finally {
       setCreating(false)
     }

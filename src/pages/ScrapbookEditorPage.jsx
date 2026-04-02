@@ -34,7 +34,7 @@ function editorReducer(state, action) {
 
   switch (action.type) {
     case 'LOAD':
-      return { ...state, pages: action.pages, isDirty: false, history: [] }
+      return { ...state, pages: action.pages, title: action.title ?? state.title, isDirty: false, history: [] }
 
     case 'SET_TITLE':
       return { ...state, title: action.title, isDirty: true }
@@ -131,10 +131,7 @@ export default function ScrapbookEditorPage() {
     getDoc(doc(db, 'scrapbooks', id)).then((snap) => {
       if (!snap.exists()) { setLoadError('Scrapbook not found'); setLoading(false); return }
       const data = snap.data()
-      dispatch({ type: 'LOAD', pages: data.pages || [makeBlankPage()] })
-      dispatch({ type: 'SET_TITLE', title: data.title || 'My Scrapbook' })
-      // reset dirty after load
-      setTimeout(() => dispatch({ type: 'MARK_SAVED' }), 0)
+      dispatch({ type: 'LOAD', pages: data.pages || [makeBlankPage()], title: data.title || 'My Scrapbook' })
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)

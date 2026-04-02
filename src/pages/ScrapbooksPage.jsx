@@ -16,9 +16,12 @@ export default function ScrapbooksPage() {
   const { familyId } = useAuth()
   const { scrapbooks, loading, addScrapbook, deleteScrapbook } = useScrapbooks(familyId)
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleCreate = async () => {
+    if (!familyId) { setError('Not authenticated. Please reload and try again.'); return }
     setCreating(true)
+    setError(null)
     try {
       const id = await addScrapbook({
         title: 'My Scrapbook',
@@ -26,6 +29,9 @@ export default function ScrapbooksPage() {
         pages: [makeBlankPage()],
       })
       navigate(`/scrapbook/${id}`)
+    } catch (err) {
+      console.error('Failed to create scrapbook:', err)
+      setError('Could not create scrapbook. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -37,6 +43,13 @@ export default function ScrapbooksPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <MobileHeader />
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
+          {/* Error banner */}
+          {error && (
+            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
