@@ -1,4 +1,4 @@
-import { Home, LogOut } from 'lucide-react'
+import { Home, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -19,9 +19,17 @@ export default function MobileHeader() {
         </div>
         <h1 className="text-lg font-bold text-bark">Our Hearth</h1>
       </div>
-      <button onClick={handleLogout} className="text-bark-light hover:text-hearth">
-        <LogOut className="w-5 h-5" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => navigate('/settings')}
+          className="p-2 text-bark-light hover:text-hearth transition-colors"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+        <button onClick={handleLogout} className="p-2 text-bark-light hover:text-hearth transition-colors">
+          <LogOut className="w-5 h-5" />
+        </button>
+      </div>
     </header>
   )
 }

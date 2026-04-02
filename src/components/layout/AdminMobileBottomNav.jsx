@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, BookHeart, Plus, Lock, Settings } from 'lucide-react'
+import { Home, BookHeart, Plus, Lock, ChefHat } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemories } from '../../hooks/useMemories'
 import PostMemoryModal from '../admin/PostMemoryModal'
@@ -25,7 +25,7 @@ export default function AdminMobileBottomNav() {
 
   const rightItems = [
     { label: 'BlackBox', icon: Lock, path: '/blackbox' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
+    { label: 'Recipes', icon: ChefHat, path: '/recipes' },
   ]
 
   return (

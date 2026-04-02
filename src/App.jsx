@@ -15,6 +15,10 @@ import JournalEntryPage from './pages/JournalEntryPage'
 import JournalDetailPage from './pages/JournalDetailPage'
 import BlackBoxPage from './pages/BlackBoxPage'
 import CreateBlackBoxPage from './pages/CreateBlackBoxPage'
+import RecipesPage from './pages/RecipesPage'
+import RecipeJourneyPage from './pages/RecipeJourneyPage'
+import RecipeVersionDetailPage from './pages/RecipeVersionDetailPage'
+import CreateRecipePage from './pages/CreateRecipePage'
 
 export default function App() {
   return (
@@ -110,6 +114,46 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CreateBlackBoxPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes"
+            element={
+              <ProtectedRoute>
+                <RecipesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/new"
+            element={
+              <ProtectedRoute>
+                <CreateRecipePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:id"
+            element={
+              <ProtectedRoute>
+                <RecipeJourneyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:id/fork"
+            element={
+              <ProtectedRoute>
+                <CreateRecipePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:rootId/version/:versionId"
+            element={
+              <ProtectedRoute>
+                <RecipeVersionDetailPage />
               </ProtectedRoute>
             }
           />
