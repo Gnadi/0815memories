@@ -3,9 +3,10 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import bcrypt from 'bcryptjs'
-import { Settings, Save, Copy, Check, Link, Image as ImageIcon } from 'lucide-react'
+import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
+import NasExportButton from './NasExportButton'
 
 export default function SettingsPanel() {
   const { familyId } = useAuth()
@@ -244,6 +245,21 @@ export default function SettingsPanel() {
             Save
           </button>
         </div>
+      </div>
+
+      {/* NAS Export / Backup */}
+      <div className="mt-6 pt-6 border-t border-cream-dark">
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="w-4 h-4" />
+            Data Export / NAS Backup
+          </div>
+        </label>
+        <p className="text-xs text-bark-muted mb-3">
+          Download all your family's data and media as a ZIP file.
+          Save it to your NAS, external drive, or cloud storage for safekeeping.
+        </p>
+        <NasExportButton />
       </div>
     </div>
   )
