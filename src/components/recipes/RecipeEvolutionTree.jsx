@@ -1,4 +1,4 @@
-export default function RecipeEvolutionTree({ versions }) {
+export default function RecipeEvolutionTree({ versions, onVersionClick }) {
   if (!versions || versions.length === 0) return null
 
   return (
@@ -45,7 +45,10 @@ export default function RecipeEvolutionTree({ versions }) {
               />
 
               {/* Content card */}
-              <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
+              <button
+                onClick={() => onVersionClick?.(version)}
+                className="w-full text-left bg-warm-white rounded-2xl p-4 shadow-sm border border-transparent hover:border-hearth/30 hover:shadow-md transition-all"
+              >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-sm font-bold text-bark">
                     {version.year}: {isFirst ? 'Original' : version.author ? `${version.author}'s Fork` : 'Fork'}
@@ -80,7 +83,9 @@ export default function RecipeEvolutionTree({ versions }) {
                     {version.forkReason || version.description}
                   </p>
                 )}
-              </div>
+
+                <p className="text-xs text-hearth font-semibold mt-2">View details →</p>
+              </button>
             </div>
           )
         })}

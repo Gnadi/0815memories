@@ -17,6 +17,7 @@ import BlackBoxPage from './pages/BlackBoxPage'
 import CreateBlackBoxPage from './pages/CreateBlackBoxPage'
 import RecipesPage from './pages/RecipesPage'
 import RecipeJourneyPage from './pages/RecipeJourneyPage'
+import RecipeVersionDetailPage from './pages/RecipeVersionDetailPage'
 import CreateRecipePage from './pages/CreateRecipePage'
 
 export default function App() {
@@ -145,6 +146,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CreateRecipePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes/:rootId/version/:versionId"
+            element={
+              <ProtectedRoute>
+                <RecipeVersionDetailPage />
               </ProtectedRoute>
             }
           />

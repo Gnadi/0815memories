@@ -108,7 +108,10 @@ export default function RecipeJourneyPage() {
                   <GitBranch className="w-5 h-5 text-hearth" />
                   <h2 className="text-lg font-bold text-bark">The Evolution Tree</h2>
                 </div>
-                <RecipeEvolutionTree versions={versions} />
+                <RecipeEvolutionTree
+                  versions={versions}
+                  onVersionClick={(v) => navigate(`/recipes/${id}/version/${v.id}`)}
+                />
               </div>
 
               {/* Change Log (from latest version) */}
