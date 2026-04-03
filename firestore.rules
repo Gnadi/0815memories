@@ -93,6 +93,20 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
 
+    // Scrapbooks — admin only (digital scrapbook pages)
+    match /scrapbooks/{scrapbookId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUid == request.auth.uid;
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
+    }
+
     // Recipes — admin only (version-controlled family recipes)
     match /recipes/{recipeId} {
       allow read: if request.auth != null

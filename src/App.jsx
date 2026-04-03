@@ -19,6 +19,8 @@ import RecipesPage from './pages/RecipesPage'
 import RecipeJourneyPage from './pages/RecipeJourneyPage'
 import RecipeVersionDetailPage from './pages/RecipeVersionDetailPage'
 import CreateRecipePage from './pages/CreateRecipePage'
+import ScrapbooksPage from './pages/ScrapbooksPage'
+import ScrapbookEditorPage from './pages/ScrapbookEditorPage'
 
 export default function App() {
   return (
@@ -154,6 +156,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RecipeVersionDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scrapbook"
+            element={
+              <ProtectedRoute>
+                <ScrapbooksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scrapbook/:id"
+            element={
+              <ProtectedRoute>
+                <ScrapbookEditorPage />
               </ProtectedRoute>
             }
           />
