@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-cream: #FDF6EC;
   --color-cream-dark: #F5E6D0;
@@ -66,4 +68,13 @@ select {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+html.dark {
+  --color-cream: #1C1410;
+  --color-cream-dark: #2D1F16;
+  --color-bark: #F0E4D4;
+  --color-bark-light: #C4B5A8;
+  --color-bark-muted: #8A7A6E;
+  --color-warm-white: #251A12;
 }

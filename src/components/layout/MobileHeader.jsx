@@ -1,9 +1,11 @@
-import { Home, LogOut, Settings } from 'lucide-react'
+import { Home, LogOut, Settings, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
   const { logout } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -20,6 +22,13 @@ export default function MobileHeader() {
         <h1 className="text-lg font-bold text-bark">Our Hearth</h1>
       </div>
       <div className="flex items-center gap-1">
+        <button
+          onClick={toggleTheme}
+          className="p-2 text-bark-light hover:text-hearth transition-colors"
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
         <button
           onClick={() => navigate('/settings')}
           className="p-2 text-bark-light hover:text-hearth transition-colors"
