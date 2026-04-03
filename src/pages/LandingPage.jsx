@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import {
   Home,
   Shield,
@@ -38,7 +39,10 @@ function OctocatIcon({ className }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  if (isAuthenticated) return <Navigate to="/home" replace />
 
   return (
     <div className="min-h-screen bg-cream font-sans">
