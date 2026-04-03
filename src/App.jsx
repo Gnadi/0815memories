@@ -21,6 +21,7 @@ import RecipeVersionDetailPage from './pages/RecipeVersionDetailPage'
 import CreateRecipePage from './pages/CreateRecipePage'
 import ScrapbooksPage from './pages/ScrapbooksPage'
 import ScrapbookEditorPage from './pages/ScrapbookEditorPage'
+import SmartTimelinePage from './pages/SmartTimelinePage'
 
 export default function App() {
   return (
@@ -52,6 +53,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MomentsAllPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timeline"
+            element={
+              <ProtectedRoute>
+                <SmartTimelinePage />
               </ProtectedRoute>
             }
           />

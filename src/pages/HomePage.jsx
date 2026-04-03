@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import DailyMoments from '../components/home/DailyMoments'
@@ -84,6 +84,32 @@ export default function HomePage() {
             onDelete={handleDelete}
           />
           <AlbumGlimpse memories={memories} />
+
+          {/* Smart Timeline CTA */}
+          <Link
+            to="/timeline"
+            className="block mt-6 rounded-2xl overflow-hidden group"
+            style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
+          >
+            <div className="px-6 py-7 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">Explore</p>
+                <h3 className="font-serif text-xl font-bold text-white leading-snug">
+                  Travel back in time
+                </h3>
+                <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
+                  Browse every memory by year and season.
+                </p>
+              </div>
+              <div className="flex-shrink-0 ml-4">
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </Link>
         </main>
       </div>
 

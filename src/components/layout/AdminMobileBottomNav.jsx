@@ -19,8 +19,11 @@ export default function AdminMobileBottomNav() {
   const { addMemory } = useMemories(isAdmin ? familyId : null)
   const { addScrapbook } = useScrapbooks(isAdmin ? familyId : null)
 
-  // Hide entirely on the scrapbook editor (it has its own bottom toolbar)
+  // Hide on public/auth pages and the scrapbook editor
   if (!isAdmin) return null
+  const publicPaths = ['/', '/login', '/signup']
+  if (publicPaths.includes(location.pathname)) return null
+  if (location.pathname.startsWith('/family/')) return null
   if (location.pathname.match(/^\/scrapbook\/.+/)) return null
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')

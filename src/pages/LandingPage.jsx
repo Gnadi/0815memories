@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import {
   Home,
   Shield,
@@ -38,7 +39,9 @@ function OctocatIcon({ className }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
 
   return (
     <div className="min-h-screen bg-cream font-sans">
@@ -61,7 +64,7 @@ export default function LandingPage() {
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/login?admin=1')}
+              onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
               className="btn-hearth text-sm px-5 py-2"
             >
               Login
@@ -102,13 +105,13 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-4">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate(isAuthenticated ? '/home' : '/signup')}
               className="btn-hearth text-base px-8 py-3"
             >
               Get Started
             </button>
             <button
-              onClick={() => navigate('/login?admin=1')}
+              onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
               className="px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
               Login
@@ -278,7 +281,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate('/login?admin=1')}
+                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
                   className="px-5 py-2.5 rounded-full border-2 border-white/60 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
                 >
                   Compose a Legacy
@@ -343,7 +346,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => navigate('/login?admin=1')}
+                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
                   className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
                 >
                   Open Scrapbooks
@@ -515,7 +518,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate(isAuthenticated ? '/home' : '/signup')}
               className="btn-hearth text-base px-8 py-3"
             >
               Get Started
