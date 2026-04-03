@@ -17,6 +17,8 @@ import {
   Mic,
   Users,
   KeyRound,
+  Scissors,
+  Layers,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -156,11 +158,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Four Pillars ── */}
+      {/* ── Six Pillars ── */}
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Five Pillars of the Hearth</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of the Hearth</h2>
             <p className="text-bark-light max-w-md mx-auto">
               Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
             </p>
@@ -348,6 +350,87 @@ export default function LandingPage() {
                 <OctocatIcon className="w-4 h-4" />
                 View on GitHub
               </a>
+            </div>
+
+            {/* Card 6 — Create: Digital Scrapbook (full-width) */}
+            <div className="md:col-span-2 bg-[#EDE9F5] rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
+              {/* Left — text */}
+              <div className="flex-1">
+                <div className="w-10 h-10 bg-violet-600/10 rounded-xl flex items-center justify-center mb-5">
+                  <Scissors className="w-5 h-5 text-violet-700" />
+                </div>
+                <h3 className="text-xl font-bold text-bark mb-2">Create: Digital Scrapbook</h3>
+                <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
+                  Turn your family memories into handcrafted digital pages. Drag and drop polaroid photos, playful stickers, and personal notes onto a freeform canvas — then export your finished book as a PDF to print or share.
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Drag-and-drop canvas with photos, stickers & text' },
+                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Polaroid-style photo frames with rotation & resize' },
+                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Export finished scrapbooks to PDF' },
+                  ].map(({ icon, text }) => (
+                    <li key={text} className="flex items-start gap-2 text-sm text-bark">
+                      {icon}
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => navigate('/login?admin=1')}
+                  className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
+                >
+                  Open Scrapbooks
+                </button>
+              </div>
+
+              {/* Right — decorative canvas preview */}
+              <div className="lg:w-72 w-full flex-shrink-0">
+                <div
+                  className="relative rounded-2xl overflow-hidden h-52 lg:h-64"
+                  style={{
+                    backgroundColor: '#FDF6EC',
+                    backgroundImage: 'radial-gradient(circle, #C8B4A020 1.5px, transparent 1.5px)',
+                    backgroundSize: '20px 20px',
+                  }}
+                >
+                  {/* Polaroid — rotated left */}
+                  <div
+                    className="absolute bg-white shadow-lg rounded-sm p-2 pb-7 w-32"
+                    style={{ top: '20px', left: '24px', transform: 'rotate(-6deg)' }}
+                  >
+                    <div className="w-full h-20 bg-gradient-to-br from-amber-200 to-amber-400 rounded-sm" />
+                    <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
+                      Summer 2024
+                    </div>
+                  </div>
+
+                  {/* Polaroid — rotated right */}
+                  <div
+                    className="absolute bg-white shadow-md rounded-sm p-2 pb-7 w-28"
+                    style={{ top: '30px', left: '120px', transform: 'rotate(5deg)' }}
+                  >
+                    <div className="w-full h-16 bg-gradient-to-br from-violet-200 to-violet-400 rounded-sm" />
+                    <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
+                      Family Trip
+                    </div>
+                  </div>
+
+                  {/* Emoji stickers */}
+                  <div className="absolute text-2xl" style={{ top: '12px', right: '24px', transform: 'rotate(12deg)' }}>⭐</div>
+                  <div className="absolute text-xl" style={{ bottom: '40px', left: '30px', transform: 'rotate(-8deg)' }}>🌸</div>
+                  <div className="absolute text-xl" style={{ bottom: '36px', right: '32px' }}>🎀</div>
+
+                  {/* Text label element */}
+                  <div
+                    className="absolute bg-amber-100 border border-amber-300 rounded-lg px-3 py-1.5 shadow-sm"
+                    style={{ bottom: '16px', left: '50%', transform: 'translateX(-50%) rotate(2deg)' }}
+                  >
+                    <span className="text-xs font-semibold text-amber-800 whitespace-nowrap font-serif italic">
+                      Our Family Story
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
