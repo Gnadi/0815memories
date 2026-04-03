@@ -1,5 +1,6 @@
-import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked } from 'lucide-react'
+import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 
 const navItems = [
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function Sidebar({ onPostMemory }) {
   const { isAdmin, logout } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -99,6 +101,15 @@ export default function Sidebar({ onPostMemory }) {
           </button>
         </>
       )}
+
+      {/* Dark mode toggle */}
+      <button
+        onClick={toggleTheme}
+        className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
+      >
+        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        {isDark ? 'Light Mode' : 'Dark Mode'}
+      </button>
 
       {/* Logout */}
       <button
