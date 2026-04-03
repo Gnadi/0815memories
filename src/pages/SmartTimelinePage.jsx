@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useMemories } from '../hooks/useMemories'
+import Sidebar from '../components/layout/Sidebar'
+import MobileHeader from '../components/layout/MobileHeader'
 
 const SEASONS = [
   { name: 'Winter', icon: Snowflake, months: [12, 1, 2] },
@@ -154,8 +156,11 @@ export default function SmartTimelinePage() {
   const yearLabel = selectedYear ? String(selectedYear) : 'all time'
 
   return (
-    <div className="min-h-screen bg-cream">
-      <div className="max-w-2xl mx-auto px-4 pt-8 pb-28">
+    <div className="min-h-screen bg-cream flex">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
+        <MobileHeader />
+        <main className="flex-1 px-4 lg:px-8 py-6 max-w-2xl mx-auto w-full">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
@@ -267,6 +272,7 @@ export default function SmartTimelinePage() {
             ))}
           </div>
         )}
+        </main>
       </div>
     </div>
   )
