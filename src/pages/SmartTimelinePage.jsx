@@ -136,6 +136,9 @@ export default function SmartTimelinePage() {
   const [selectedYear, setSelectedYear] = useState(null)
   const [selectedSeason, setSelectedSeason] = useState(null)
 
+  // Scroll to top on mount
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+
   // Auto-select most recent year once data loads
   useEffect(() => {
     if (availableYears.length > 0 && selectedYear === null) {
