@@ -1,6 +1,6 @@
-import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked } from 'lucide-react'
+import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const navItems = [
   { icon: Home, label: 'Home', active: true },
@@ -13,6 +13,7 @@ const navItems = [
 export default function Sidebar({ onPostMemory }) {
   const { isAdmin, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logout()
@@ -47,6 +48,17 @@ export default function Sidebar({ onPostMemory }) {
             {label}
           </button>
         ))}
+        <button
+          onClick={() => navigate('/timeline')}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            location.pathname === '/timeline'
+              ? 'bg-hearth text-white'
+              : 'text-bark-light hover:bg-cream-dark hover:text-bark'
+          }`}
+        >
+          <Clock className="w-5 h-5" />
+          Timeline
+        </button>
       </nav>
 
       {/* Post Memory button (admin only) */}
