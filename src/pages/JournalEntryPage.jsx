@@ -9,6 +9,7 @@ import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
+import EncryptedVideo from '../components/media/EncryptedVideo'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -245,7 +246,11 @@ export default function JournalEntryPage() {
             <div className="px-5 pt-3 flex gap-2 overflow-x-auto pb-1">
               {images.map((img) => (
                 <div key={img.id} className="relative flex-shrink-0 w-16 h-16">
-                  <img src={img.preview} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  {img.preview?.startsWith('blob:') ? (
+                    <img src={img.preview} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  ) : (
+                    <EncryptedImage src={img.preview} className="w-16 h-16 rounded-xl object-cover" />
+                  )}
                   {img.uploading ? (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -263,7 +268,11 @@ export default function JournalEntryPage() {
               ))}
               {videos.map((v) => (
                 <div key={v.id} className="relative flex-shrink-0 w-16 h-16">
-                  <video src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" muted playsInline />
+                  {v.preview?.startsWith('blob:') ? (
+                    <video src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" muted playsInline />
+                  ) : (
+                    <EncryptedVideo src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" controls={false} muted playsInline />
+                  )}
                   {v.uploading ? (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

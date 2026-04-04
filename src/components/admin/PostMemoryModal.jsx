@@ -4,6 +4,8 @@ import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import { decryptFields } from '../../utils/encryption'
+import EncryptedImage from '../media/EncryptedImage'
+import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 
 const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
@@ -210,11 +212,18 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             <div className="flex gap-3 flex-wrap">
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
-                  <img
-                    src={img.preview}
-                    alt=""
-                    className="w-20 h-20 rounded-xl object-cover"
-                  />
+                  {img.preview?.startsWith('blob:') ? (
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <EncryptedImage
+                      src={img.preview}
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  )}
                   {img.uploading && (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -262,12 +271,22 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 {videos.map((v) => (
                   <div key={v.id} className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
                     <div className="relative w-16 h-16 flex-shrink-0">
-                      <video
-                        src={v.preview}
-                        className="w-16 h-16 rounded-lg object-cover bg-black"
-                        muted
-                        playsInline
-                      />
+                      {v.preview?.startsWith('blob:') ? (
+                        <video
+                          src={v.preview}
+                          className="w-16 h-16 rounded-lg object-cover bg-black"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <EncryptedVideo
+                          src={v.preview}
+                          className="w-16 h-16 rounded-lg object-cover bg-black"
+                          controls={false}
+                          muted
+                          playsInline
+                        />
+                      )}
                       {!v.uploading && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">

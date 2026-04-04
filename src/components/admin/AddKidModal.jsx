@@ -3,6 +3,7 @@ import { X, User } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function AddKidModal({ kid, onClose, onSave }) {
   const { encryptionKey } = useAuth()
@@ -84,7 +85,11 @@ export default function AddKidModal({ kid, onClose, onSave }) {
             >
               {photo ? (
                 <>
-                  <img src={photo.preview} alt="" className="w-full h-full object-cover" />
+                  {photo.preview?.startsWith('blob:') ? (
+                    <img src={photo.preview} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <EncryptedImage src={photo.preview} className="w-full h-full object-cover" />
+                  )}
                   {photo.uploading && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -2,6 +2,8 @@ import { useState, useRef } from 'react'
 import { X, Plus, Image as ImageIcon, Video } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import EncryptedImage from '../media/EncryptedImage'
+import EncryptedVideo from '../media/EncryptedVideo'
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
   const { encryptionKey } = useAuth()
@@ -158,11 +160,18 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
             <div className={`flex gap-3 flex-wrap ${mediaError ? 'p-2 ring-2 ring-hearth rounded-xl' : ''}`}>
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
-                  <img
-                    src={img.preview}
-                    alt=""
-                    className="w-20 h-20 rounded-xl object-cover"
-                  />
+                  {img.preview?.startsWith('blob:') ? (
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <EncryptedImage
+                      src={img.preview}
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  )}
                   {img.uploading && (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -206,12 +215,22 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
             <div className="flex gap-3 flex-wrap">
               {videos.map((v) => (
                 <div key={v.id} className="relative w-20 h-20 flex-shrink-0">
-                  <video
-                    src={v.preview}
-                    className="w-20 h-20 rounded-xl object-cover bg-black"
-                    muted
-                    playsInline
-                  />
+                  {v.preview?.startsWith('blob:') ? (
+                    <video
+                      src={v.preview}
+                      className="w-20 h-20 rounded-xl object-cover bg-black"
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <EncryptedVideo
+                      src={v.preview}
+                      className="w-20 h-20 rounded-xl object-cover bg-black"
+                      controls={false}
+                      muted
+                      playsInline
+                    />
+                  )}
                   {/* Video icon overlay */}
                   {!v.uploading && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
