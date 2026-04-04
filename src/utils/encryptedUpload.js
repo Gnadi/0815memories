@@ -18,7 +18,7 @@ export async function encryptAndUpload(file, encryptionKey) {
 
   // 3. Upload encrypted blob to Cloudinary as raw
   const formData = new FormData()
-  formData.append('file', encryptedBlob, 'encrypted.bin')
+  formData.append('file', encryptedBlob, 'encrypted.dat')
   formData.append('timestamp', String(timestamp))
   formData.append('signature', signature)
   formData.append('api_key', apiKey)
