@@ -7,6 +7,7 @@ import RecipeEvolutionTree from '../components/recipes/RecipeEvolutionTree'
 import RecipeComparisonModal from '../components/recipes/RecipeComparisonModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import EncryptedImage from '../components/media/EncryptedImage'
 
 const CHANGE_TYPE_STYLES = {
   REMOVED: 'bg-red-100 text-red-700',
@@ -58,7 +59,7 @@ export default function RecipeJourneyPage() {
             {/* Hero */}
             <div className="relative w-full h-56 md:h-72 overflow-hidden shrink-0">
               {root.image ? (
-                <img
+                <EncryptedImage
                   src={root.image}
                   alt={root.title}
                   className="w-full h-full object-cover"
