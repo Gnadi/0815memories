@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import { Image, Smile, Type, LayoutGrid, Upload, Loader2, Palette, X } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
 
 const STICKER_GROUPS = {
   Hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '💖', '💝', '💗', '💓'],
@@ -101,6 +103,7 @@ const TABS = [
 ]
 
 export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBackground, isMobile, onClose, initialTab }) {
+  const { encryptionKey } = useAuth()
   const [activeTab, setActiveTab] = useState(initialTab || 'photos')
   const [stickerGroup, setStickerGroup] = useState('Hearts')
   const [uploading, setUploading] = useState(false)
@@ -109,34 +112,19 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
   const uploadPhoto = async (file) => {
     setUploading(true)
     try {
-      const res = await fetch('/api/cloudinary-sign')
-      const { timestamp, signature, folder, apiKey } = await res.json()
-      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'demo'
-      const form = new FormData()
-      form.append('file', file)
-      form.append('api_key', apiKey)
-      form.append('timestamp', timestamp)
-      form.append('signature', signature)
-      form.append('folder', folder)
-      const upRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: form,
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      onAddElement({
+        type: 'photo',
+        url,
+        x: 60,
+        y: 60,
+        width: 300,
+        height: 240,
+        rotation: 0,
+        polaroid: false,
+        caption: '',
+        zIndex: Date.now(),
       })
-      const data = await upRes.json()
-      if (data.secure_url) {
-        onAddElement({
-          type: 'photo',
-          url: data.secure_url,
-          x: 60,
-          y: 60,
-          width: 300,
-          height: 240,
-          rotation: 0,
-          polaroid: false,
-          caption: '',
-          zIndex: Date.now(),
-        })
-      }
     } catch (err) {
       console.error('Upload error', err)
     } finally {

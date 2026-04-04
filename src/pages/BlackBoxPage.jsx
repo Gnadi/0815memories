@@ -9,10 +9,10 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function BlackBoxPage() {
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { boxes, loading, deleteBox } = useBlackBox(familyId)
-  const { kids } = useKids(familyId)
+  const { boxes, loading, deleteBox } = useBlackBox(familyId, encryptionKey)
+  const { kids } = useKids(familyId, encryptionKey)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')

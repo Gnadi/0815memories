@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Mic, Play, Pause } from 'lucide-react'
+import EncryptedAudio from '../media/EncryptedAudio'
 
 function SingleMemoPlayer({ memo }) {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -55,7 +56,7 @@ function SingleMemoPlayer({ memo }) {
 
   return (
     <div className="flex items-center gap-3 bg-cream-dark rounded-xl px-4 py-3">
-      <audio ref={audioRef} src={memo.url} preload="metadata" />
+      <EncryptedAudio src={memo.url} audioRef={audioRef} preload="metadata" />
 
       <button
         onClick={togglePlay}

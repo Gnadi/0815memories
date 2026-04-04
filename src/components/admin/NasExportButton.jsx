@@ -6,7 +6,7 @@ import { runNasExport } from '../../utils/nasExport'
 import { HardDrive, X } from 'lucide-react'
 
 export default function NasExportButton() {
-  const { familyId } = useAuth()
+  const { familyId, encryptionKey } = useAuth()
   const [familyName, setFamilyName] = useState('')
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ phase: '', current: 0, total: 0, message: '' })
@@ -39,6 +39,7 @@ export default function NasExportButton() {
       await runNasExport({
         familyId,
         familyName,
+        encryptionKey,
         onProgress: setProgress,
         signal: controller.signal,
       })

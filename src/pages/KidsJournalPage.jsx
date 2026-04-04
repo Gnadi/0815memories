@@ -10,10 +10,10 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function KidsJournalPage() {
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { kids, loading, addKid, updateKid } = useKids(familyId)
-  const { journals } = useAllJournals(familyId)
+  const { kids, loading, addKid, updateKid } = useKids(familyId, encryptionKey)
+  const { journals } = useAllJournals(familyId, encryptionKey)
   const [showAddKid, setShowAddKid] = useState(false)
   const [editingKid, setEditingKid] = useState(null)
 

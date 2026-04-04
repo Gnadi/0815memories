@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Trash2, RotateCw } from 'lucide-react'
+import EncryptedImage from '../media/EncryptedImage'
 
 const HANDLE_SIZE = 10
 
@@ -108,7 +109,7 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
       const isPolaroid = element.polaroid
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col`}>
-          <img
+          <EncryptedImage
             src={element.url}
             alt=""
             crossOrigin="anonymous"

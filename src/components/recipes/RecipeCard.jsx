@@ -1,5 +1,6 @@
 import { GitFork, ChefHat, MoreVertical, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function RecipeCard({ recipe, onClick, onDelete }) {
   const [showMenu, setShowMenu] = useState(false)
@@ -12,7 +13,7 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
       {/* Hero image */}
       {recipe.image ? (
         <div className="h-40 w-full overflow-hidden">
-          <img
+          <EncryptedImage
             src={recipe.image}
             alt={recipe.title}
             className="w-full h-full object-cover"

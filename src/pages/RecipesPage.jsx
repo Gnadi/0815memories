@@ -8,9 +8,9 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function RecipesPage() {
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { recipes, loading, deleteRecipe } = useRecipes(familyId)
+  const { recipes, loading, deleteRecipe } = useRecipes(familyId, encryptionKey)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')

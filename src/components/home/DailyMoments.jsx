@@ -1,6 +1,7 @@
 import { Plus, Video } from 'lucide-react'
 import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
   const { isAdmin } = useAuth()
@@ -38,7 +39,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
             <div className="story-ring">
               <div className="story-ring-inner relative">
                 {moment.images?.[0] ? (
-                  <img
+                  <EncryptedImage
                     src={moment.images[0]}
                     alt={moment.caption}
                     className="w-16 h-16 rounded-full object-cover"

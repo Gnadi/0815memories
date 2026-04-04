@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { Mic, Square, Play, Pause, Trash2, Upload, Check, X } from 'lucide-react'
-import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
+import { useAuth } from '../../context/AuthContext'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
 
 export default function VoiceMemoRecorder({ onMemoAdded }) {
+  const { encryptionKey } = useAuth()
   const [mode, setMode] = useState('idle') // idle | recording | recorded | uploading
   const [isPlaying, setIsPlaying] = useState(false)
   const [title, setTitle] = useState('')
@@ -91,27 +93,8 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
     setMode('uploading')
     setError('')
     try {
-      const signRes = await fetch('/api/cloudinary-sign?resource_type=video')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', blobRef.current, 'voice-memo.webm')
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: 'POST', body: formData }
-      )
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${res.status})`)
-      }
-      const data = await res.json()
-      onMemoAdded({ url: data.secure_url, publicId: data.public_id, title, duration })
+      const { url, publicId } = await encryptAndUpload(blobRef.current, encryptionKey)
+      onMemoAdded({ url, publicId, title, duration })
       discard()
     } catch (err) {
       setError(err.message || 'Upload failed')
@@ -126,31 +109,12 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
     setError('')
     setMode('uploading')
     try {
-      const signRes = await fetch('/api/cloudinary-sign?resource_type=video')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: 'POST', body: formData }
-      )
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${res.status})`)
-      }
-      const data = await res.json()
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
       onMemoAdded({
-        url: data.secure_url,
-        publicId: data.public_id,
+        url,
+        publicId,
         title: file.name.replace(/\.[^.]+$/, ''),
-        duration: Math.round(data.duration || 0),
+        duration: 0,
       })
       setMode('idle')
     } catch (err) {
@@ -238,7 +202,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       {mode === 'uploading' && (
         <div className="flex items-center gap-2 text-sm text-bark-muted">
           <div className="w-4 h-4 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
-          Uploading voice memo…
+          Uploading voice memo...
         </div>
       )}
 

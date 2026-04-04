@@ -4,6 +4,7 @@ import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
+import { generateEncryptionKey, importEncryptionKey } from '../utils/encryption'
 
 const AuthContext = createContext(null)
 
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
   const [familyId, setFamilyId] = useState(() => localStorage.getItem('fh_familyId'))
+  const [encryptionKey, setEncryptionKey] = useState(null)
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
@@ -33,6 +35,26 @@ export function AuthProvider({ children }) {
 
     return unsubscribe
   }, [])
+
+  // Load encryption key whenever familyId is set (admin or viewer)
+  useEffect(() => {
+    if (!familyId || !db) return
+    async function loadKey() {
+      try {
+        const familyDoc = await getDoc(doc(db, 'families', familyId))
+        if (familyDoc.exists()) {
+          const data = familyDoc.data()
+          if (data.encryptionKeyJwk) {
+            const key = await importEncryptionKey(data.encryptionKeyJwk)
+            setEncryptionKey(key)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load encryption key:', err)
+      }
+    }
+    loadKey()
+  }, [familyId])
 
   const resolveFamilyId = async (uid) => {
     const q = query(collection(db, 'families'), where('adminUid', '==', uid))
@@ -89,11 +111,17 @@ export function AuthProvider({ children }) {
     if (displayName) {
       await updateProfile(result.user, { displayName })
     }
-    // Create the family document
+
+    // Generate a per-family encryption key
+    const { key, jwk } = await generateEncryptionKey()
+    setEncryptionKey(key)
+
+    // Create the family document with the encryption key
     const familyRef = await addDoc(collection(db, 'families'), {
       adminUid: result.user.uid,
       familyName: name,
       familySlug: slug,
+      encryptionKeyJwk: jwk,
       createdAt: serverTimestamp(),
     })
     setFamilyId(familyRef.id)
@@ -106,6 +134,7 @@ export function AuthProvider({ children }) {
     }
     setIsViewer(false)
     setFamilyId(null)
+    setEncryptionKey(null)
     localStorage.removeItem('fh_viewer')
     localStorage.removeItem('fh_familyId')
   }
@@ -120,6 +149,7 @@ export function AuthProvider({ children }) {
       isAdmin,
       isAuthenticated,
       familyId,
+      encryptionKey,
       loading,
       firebaseReady,
       loginAsViewer,

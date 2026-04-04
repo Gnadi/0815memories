@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Lock, Unlock, Trash2, MoreVertical, Calendar, Star, BookOpen } from 'lucide-react'
 import { isUnlocked } from '../../hooks/useBlackBox'
+import EncryptedImage from '../media/EncryptedImage'
+import EncryptedVideo from '../media/EncryptedVideo'
+import EncryptedAudio from '../media/EncryptedAudio'
 
 const MILESTONE_LABELS = {
   '18thBirthday': '18th Birthday',
@@ -127,17 +130,17 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
               {box.photos?.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {box.photos.map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-24 h-24 rounded-xl object-cover" />
+                    <EncryptedImage key={i} src={url} alt="" className="w-24 h-24 rounded-xl object-cover" />
                   ))}
                 </div>
               )}
               {box.voiceNote?.url && (
-                <audio controls src={box.voiceNote.url} className="w-full mt-2" />
+                <EncryptedAudio src={box.voiceNote.url} controls className="w-full mt-2" />
               )}
               {box.videos?.length > 0 && (
                 <div className="space-y-2 mt-2">
                   {box.videos.map((v, i) => (
-                    <video
+                    <EncryptedVideo
                       key={v.publicId || i}
                       src={v.url}
                       controls

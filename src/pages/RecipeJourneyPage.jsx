@@ -16,9 +16,9 @@ const CHANGE_TYPE_STYLES = {
 
 export default function RecipeJourneyPage() {
   const { id } = useParams()
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { versions, loading } = useRecipeLineage(id, familyId)
+  const { versions, loading } = useRecipeLineage(id, familyId, encryptionKey)
   const [showComparison, setShowComparison] = useState(false)
 
   useEffect(() => {

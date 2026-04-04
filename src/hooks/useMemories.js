@@ -13,8 +13,21 @@ import {
   limit,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { encryptFields, decryptFields } from '../utils/encryption'
 
-export function useMemories(familyId) {
+const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
+
+async function decryptMemory(key, data) {
+  if (!key) return data
+  return decryptFields(key, data, ENCRYPTED_FIELDS)
+}
+
+async function encryptMemoryData(key, data) {
+  if (!key) return data
+  return encryptFields(key, data, ENCRYPTED_FIELDS)
+}
+
+export function useMemories(familyId, encryptionKey) {
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -29,28 +42,31 @@ export function useMemories(familyId) {
       where('familyId', '==', familyId),
       orderBy('date', 'desc')
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }))
-      setMemories(data)
+      const decrypted = await Promise.all(docs.map((d) => decryptMemory(encryptionKey, d)))
+      setMemories(decrypted)
       setLoading(false)
     })
 
     return unsubscribe
-  }, [familyId])
+  }, [familyId, encryptionKey])
 
   const addMemory = async (memory) => {
+    const encrypted = await encryptMemoryData(encryptionKey, memory)
     await addDoc(collection(db, 'memories'), {
-      ...memory,
+      ...encrypted,
       familyId,
       createdAt: serverTimestamp(),
     })
   }
 
   const updateMemory = async (id, updates) => {
-    await updateDoc(doc(db, 'memories', id), updates)
+    const encrypted = await encryptMemoryData(encryptionKey, updates)
+    await updateDoc(doc(db, 'memories', id), encrypted)
   }
 
   const deleteMemory = async (id) => {

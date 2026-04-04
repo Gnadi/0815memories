@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import MomentViewer from '../components/home/MomentViewer'
 import PostMomentModal from '../components/admin/PostMomentModal'
 import { formatRelativeDate } from '../utils/helpers'
+import EncryptedImage from '../components/media/EncryptedImage'
 
 export default function MomentsAllPage() {
   const navigate = useNavigate()
@@ -66,7 +67,7 @@ export default function MomentsAllPage() {
               className="relative rounded-2xl overflow-hidden aspect-[9/16] bg-cream-dark group"
             >
               {moment.images?.[0] ? (
-                <img
+                <EncryptedImage
                   src={moment.images[0]}
                   alt={moment.caption}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

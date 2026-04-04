@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { X, Plus, Image as ImageIcon, Video } from 'lucide-react'
-import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
+import { useAuth } from '../../context/AuthContext'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
+  const { encryptionKey } = useAuth()
   const getInitialImages = () => {
     if (moment?.images?.length) {
       return moment.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
@@ -49,31 +51,10 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     setMediaError(false)
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
-      }
-
-      const data = await response.json()
+      const { url } = await encryptAndUpload(file, encryptionKey)
       setImages((prev) =>
         prev.map((img) =>
-          img.id === tempId ? { ...img, url: data.secure_url, uploading: false } : img
+          img.id === tempId ? { ...img, url, uploading: false } : img
         )
       )
     } catch (err) {
@@ -101,31 +82,10 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     setMediaError(false)
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: 'POST', body: formData }
-      )
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
-      }
-
-      const data = await response.json()
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
       setVideos((prev) =>
         prev.map((v) =>
-          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
         )
       )
     } catch (err) {

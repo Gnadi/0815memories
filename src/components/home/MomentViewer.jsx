@@ -13,6 +13,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { timeAgo } from '../../utils/helpers'
+import EncryptedImage from '../media/EncryptedImage'
+import EncryptedVideo from '../media/EncryptedVideo'
 
 // Build a unified media list from a moment's images and videos
 function buildMediaItems(moment) {
@@ -233,7 +235,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       >
         {/* Background media */}
         {currentItem?.type === 'video' ? (
-          <video
+          <EncryptedVideo
             ref={videoRef}
             key={currentItem.url}
             src={currentItem.url}
@@ -245,7 +247,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             onEnded={handleVideoEnded}
           />
         ) : currentItem?.url ? (
-          <img
+          <EncryptedImage
             src={currentItem.url}
             alt={moment.caption}
             className="absolute inset-0 w-full h-full object-cover"
@@ -460,7 +462,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             onPointerCancel={() => setPaused(false)}
           >
             {currentItem?.type === 'video' ? (
-              <video
+              <EncryptedVideo
                 ref={videoRef}
                 key={currentItem.url}
                 src={currentItem.url}
@@ -472,7 +474,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
                 onEnded={handleVideoEnded}
               />
             ) : currentItem?.url ? (
-              <img
+              <EncryptedImage
                 src={currentItem.url}
                 alt={moment.caption}
                 className="w-full aspect-[4/5] object-cover pointer-events-none"

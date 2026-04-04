@@ -1,8 +1,15 @@
 import { useState, useRef } from 'react'
 import { X, Image as ImageIcon } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
+import { useAuth } from '../../context/AuthContext'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
 
-export default function UploadWidget({ onUpload, currentUrl }) {
+/**
+ * Pass unencrypted={true} for public-facing images (e.g. login header)
+ * that must be viewable without decryption.
+ */
+export default function UploadWidget({ onUpload, currentUrl, unencrypted = false }) {
+  const { encryptionKey } = useAuth()
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(currentUrl || '')
   const fileInputRef = useRef(null)
@@ -16,31 +23,32 @@ export default function UploadWidget({ onUpload, currentUrl }) {
     setUploading(true)
 
     try {
-      // Get signed upload credentials from Vercel serverless function
-      const signRes = await fetch('/api/cloudinary-sign')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
+      if (unencrypted) {
+        // Plain Cloudinary upload (no encryption)
+        const signRes = await fetch('/api/cloudinary-sign')
+        if (!signRes.ok) throw new Error('Failed to get upload signature')
+        const { timestamp, signature, folder, apiKey } = await signRes.json()
 
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('timestamp', String(timestamp))
+        formData.append('signature', signature)
+        formData.append('api_key', apiKey)
+        formData.append('folder', folder)
 
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+          { method: 'POST', body: formData }
+        )
+        if (!response.ok) throw new Error('Upload failed')
+        const data = await response.json()
+        setPreview(data.secure_url)
+        onUpload(data.secure_url, data.public_id)
+      } else {
+        const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+        setPreview(url)
+        onUpload(url, publicId)
       }
-
-      const data = await response.json()
-      setPreview(data.secure_url)
-      onUpload(data.secure_url, data.public_id)
     } catch (err) {
       console.error('Upload failed:', err)
       setPreview('')

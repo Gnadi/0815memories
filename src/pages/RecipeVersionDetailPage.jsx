@@ -6,6 +6,7 @@ import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import EncryptedImage from '../components/media/EncryptedImage'
 
 const STATUS_STYLES = {
   removed: 'text-bark-muted line-through',
@@ -19,7 +20,7 @@ const STATUS_TAG = {
 
 export default function RecipeVersionDetailPage() {
   const { rootId, versionId } = useParams()
-  const { isAdmin } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
 
   const [recipe, setRecipe] = useState(null)
@@ -36,7 +37,14 @@ export default function RecipeVersionDetailPage() {
       try {
         const snap = await getDoc(doc(db, 'recipes', versionId))
         if (snap.exists()) {
-          setRecipe({ id: snap.id, ...snap.data() })
+          let data = { id: snap.id, ...snap.data() }
+          if (data.familyId !== familyId) { setLoadError('Recipe version not found.'); setLoading(false); return }
+          if (encryptionKey) {
+            const { decryptFields, decryptJSON } = await import('../utils/encryption')
+            data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
+            if (typeof data.ingredients === 'string') data.ingredients = await decryptJSON(encryptionKey, data.ingredients)
+          }
+          setRecipe(data)
         } else {
           setLoadError('Recipe version not found.')
         }
@@ -79,7 +87,7 @@ export default function RecipeVersionDetailPage() {
             {/* Hero */}
             <div className="relative w-full h-48 md:h-60 overflow-hidden shrink-0">
               {recipe.image ? (
-                <img
+                <EncryptedImage
                   src={recipe.image}
                   alt={recipe.title}
                   className="w-full h-full object-cover"

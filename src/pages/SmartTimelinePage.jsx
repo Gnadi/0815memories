@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useMemories } from '../hooks/useMemories'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import EncryptedImage from '../components/media/EncryptedImage'
 
 const SEASONS = [
   { name: 'Winter', icon: Snowflake, months: [12, 1, 2] },
@@ -55,7 +56,7 @@ function TimelineCard({ memory }) {
         {/* Image */}
         {image && (
           <div className="relative w-full aspect-[4/3] overflow-hidden">
-            <img
+            <EncryptedImage
               src={image}
               alt={memory.title}
               className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
@@ -124,8 +125,8 @@ function SkeletonCard() {
 }
 
 export default function SmartTimelinePage() {
-  const { familyId } = useAuth()
-  const { memories, loading } = useMemories(familyId)
+  const { familyId, encryptionKey } = useAuth()
+  const { memories, loading } = useMemories(familyId, encryptionKey)
   const navigate = useNavigate()
 
   const availableYears = useMemo(() => {
