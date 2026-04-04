@@ -1,9 +1,12 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Plus, Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { decryptFields } from '../../utils/encryption'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
+
+const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
 
 export default function PostMemoryModal({ memory, onClose, onSave }) {
   const { encryptionKey } = useAuth()
@@ -45,6 +48,28 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           .split('T')[0]
       : new Date().toISOString().split('T')[0],
   })
+
+  // Ensure form fields are plaintext even if the caller passes an
+  // encrypted memory (e.g. direct getDoc reads that bypass the hooks).
+  useEffect(() => {
+    if (!memory || !encryptionKey) return
+    let cancelled = false
+    decryptFields(encryptionKey, memory, ENCRYPTED_FIELDS).then((decrypted) => {
+      if (cancelled) return
+      setForm((prev) => ({
+        ...prev,
+        title: decrypted.title || '',
+        content: decrypted.content || '',
+        quote: decrypted.quote || '',
+        category: decrypted.category || '',
+        location: decrypted.location || '',
+        authorName: decrypted.authorName || '',
+      }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [memory, encryptionKey])
   const [images, setImages] = useState(getInitialImages)
   const [videos, setVideos] = useState(getInitialVideos)
   const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
