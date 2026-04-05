@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -197,6 +198,7 @@ export default function App() {
           </Routes>
         </Suspense>
         <AdminMobileBottomNav />
+        <PWAInstallPrompt />
       </AuthProvider>
     </BrowserRouter>
   )
