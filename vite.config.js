@@ -61,23 +61,19 @@ export default defineConfig({
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
             },
           },
-          // Cloudinary CDN images — stale-while-revalidate (fast loads)
+          // Cloudinary — NetworkOnly: blobs are AES-256-GCM encrypted; the SW
+          // can't serve them usefully from cache (the browser can't render raw
+          // ciphertext), and serving a stale/opaque cached response breaks the
+          // fetch→arrayBuffer()→decrypt pipeline in useDecryptedMedia.
+          // The JS-layer module-level cache already handles in-session dedup.
           {
             urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'cloudinary-images',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            },
+            handler: 'NetworkOnly',
           },
-          // Firebase Storage — cache-first (encrypted blobs rarely change)
+          // Firebase Storage — same reasoning as Cloudinary above.
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'firebase-storage',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
+            handler: 'NetworkOnly',
           },
         ],
       },
