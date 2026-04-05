@@ -2,9 +2,85 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary SEO -->
+    <title>FamilyHearth — Private Family Memory App</title>
+    <meta name="description" content="FamilyHearth is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling. Just your stories, preserved forever." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://familyhearth.app/" />
+    <meta name="author" content="FamilyHearth" />
+    <meta name="keywords" content="family memories, private photo sharing, encrypted family app, family journal, recipe keeper, digital scrapbook" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FamilyHearth" />
+    <meta property="og:title" content="FamilyHearth — Your Private Digital Hearth" />
+    <meta property="og:description" content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever." />
+    <meta property="og:image" content="https://familyhearth.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="FamilyHearth — Your Private Digital Hearth" />
+    <meta property="og:url" content="https://familyhearth.app/" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FamilyHearth — Your Private Digital Hearth" />
+    <meta name="twitter:description" content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories." />
+    <meta name="twitter:image" content="https://familyhearth.app/og-image.png" />
+    <meta name="twitter:image:alt" content="FamilyHearth — Your Private Digital Hearth" />
+
+    <!-- PWA / App -->
+    <meta name="theme-color" content="#C25A2E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FamilyHearth" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="msapplication-TileColor" content="#C25A2E" />
+    <meta name="msapplication-config" content="none" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>FamilyHearth - Your Digital Living Room</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/pwa-192x192.png" />
+
+    <!-- Performance hints -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" />
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+    <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "FamilyHearth",
+      "description": "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
+      "url": "https://familyhearth.app",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "End-to-end encrypted memory storage",
+        "Private family photo and video sharing",
+        "Family recipe tree with version history",
+        "Digital scrapbook with PDF export",
+        "Scheduled future letters to family members",
+        "Zero-knowledge encrypted vault"
+      ],
+      "publisher": {
+        "@type": "Organization",
+        "name": "FamilyHearth",
+        "url": "https://familyhearth.app"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
