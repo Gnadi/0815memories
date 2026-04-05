@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react'
-import { X, Plus, Image as ImageIcon, Video } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { X, Plus, Image as ImageIcon, Video, Baby } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
+import { useKids } from '../../hooks/useKids'
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
-  const { encryptionKey } = useAuth()
+  const { encryptionKey, familyId } = useAuth()
   const getInitialImages = () => {
     if (moment?.images?.length) {
       return moment.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
@@ -36,6 +38,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
   const videoFileInputRef = useRef(null)
 
   const isEditing = !!moment?.id
+  const { kids, loading: kidsLoading } = useKids(isEditing ? null : familyId, encryptionKey)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -152,6 +155,20 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* No children banner */}
+          {!isEditing && !kidsLoading && kids.length === 0 && (
+            <div className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
+              <Baby className="w-5 h-5 text-bark-muted mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-bark-muted">
+                No children added yet.{' '}
+                <Link to="/journal" onClick={onClose} className="text-hearth underline underline-offset-2 hover:opacity-80">
+                  Add a child
+                </Link>{' '}
+                to start preserving moments for them.
+              </p>
+            </div>
+          )}
+
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">

@@ -67,23 +67,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
           </button>
         ))}
 
-        {/* Show placeholders if no moments */}
-        {moments.length === 0 && (
-          <>
-            {['Today', 'Yesterday', 'Oct 12', 'Oct 8'].map((label, i) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                <div className={i === 0 ? 'story-ring' : ''}>
-                  <div className={i === 0 ? 'story-ring-inner' : ''}>
-                    <div className="w-16 h-16 rounded-full bg-cream-dark flex items-center justify-center">
-                      <MomentPlaceholder index={i} />
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs text-bark-light">{label}</span>
-              </div>
-            ))}
-          </>
-        )}
+
       </div>
     </section>
   )
