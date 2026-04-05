@@ -138,7 +138,7 @@ export default function SettingsPanel() {
   }
 
   return (
-    <div className="bg-warm-white rounded-2xl p-6 shadow-sm">
+    <div className="bg-warm-white rounded-2xl p-4 lg:p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="w-5 h-5 text-hearth" />
         <h2 className="text-lg font-bold text-bark">Admin Settings</h2>
@@ -181,7 +181,7 @@ export default function SettingsPanel() {
               type="text"
               value={shareLink}
               readOnly
-              className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base outline-none select-all"
+              className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base outline-none select-all"
             />
             <button
               type="button"
@@ -209,7 +209,7 @@ export default function SettingsPanel() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New shared password"
-            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
           />
           <button
             type="submit"
@@ -233,7 +233,7 @@ export default function SettingsPanel() {
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
             placeholder="e.g., The Millers"
-            className="flex-1 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
           />
           <button
             type="button"
