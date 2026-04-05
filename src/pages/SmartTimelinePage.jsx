@@ -203,36 +203,58 @@ export default function SmartTimelinePage() {
         </div>
 
         {/* Season Selector */}
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-3 mb-5">
-          <button
-            onClick={() => setSelectedSeason(null)}
-            className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all"
-            style={
-              !selectedSeason
-                ? { backgroundColor: '#A04420', color: '#FFFDF9' }
-                : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
-            }
-          >
-            All
-          </button>
-          {SEASONS.map(({ name, icon: Icon }) => {
-            const active = selectedSeason === name
-            return (
-              <button
-                key={name}
-                onClick={() => setSelectedSeason(active ? null : name)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all"
-                style={
-                  active
-                    ? { backgroundColor: '#F5C518', color: '#2D1B0E' }
-                    : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
-                }
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {name}
-              </button>
-            )
-          })}
+        <div className="flex flex-col gap-2 pb-3 mb-5">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedSeason(null)}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all"
+              style={
+                !selectedSeason
+                  ? { backgroundColor: '#A04420', color: '#FFFDF9' }
+                  : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
+              }
+            >
+              All
+            </button>
+            {SEASONS.slice(0, 2).map(({ name, icon: Icon }) => {
+              const active = selectedSeason === name
+              return (
+                <button
+                  key={name}
+                  onClick={() => setSelectedSeason(active ? null : name)}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all"
+                  style={
+                    active
+                      ? { backgroundColor: '#F5C518', color: '#2D1B0E' }
+                      : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
+                  }
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex gap-2">
+            {SEASONS.slice(2).map(({ name, icon: Icon }) => {
+              const active = selectedSeason === name
+              return (
+                <button
+                  key={name}
+                  onClick={() => setSelectedSeason(active ? null : name)}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all"
+                  style={
+                    active
+                      ? { backgroundColor: '#F5C518', color: '#2D1B0E' }
+                      : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
+                  }
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {name}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Stats bar */}
