@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+
+Disallow: /home
+Disallow: /memory/
+Disallow: /moments
+Disallow: /timeline
+Disallow: /settings
+Disallow: /journal
+Disallow: /blackbox
+Disallow: /recipes
+Disallow: /scrapbook
+
+Sitemap: https://familyhearth.app/sitemap.xml
