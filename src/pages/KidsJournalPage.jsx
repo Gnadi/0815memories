@@ -12,7 +12,7 @@ import MobileHeader from '../components/layout/MobileHeader'
 export default function KidsJournalPage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { kids, loading, addKid, updateKid } = useKids(familyId, encryptionKey)
+  const { kids, loading, addKid, updateKid, deleteKid } = useKids(familyId, encryptionKey)
   const { journals } = useAllJournals(familyId, encryptionKey)
   const [showAddKid, setShowAddKid] = useState(false)
   const [editingKid, setEditingKid] = useState(null)
@@ -86,6 +86,11 @@ export default function KidsJournalPage() {
               onEdit={() => {
                 setEditingKid(kid)
                 setShowAddKid(true)
+              }}
+              onDelete={() => {
+                if (confirm(`Delete ${kid.name}? This will permanently remove the child and cannot be undone.`)) {
+                  deleteKid(kid.id)
+                }
               }}
             />
           ))}

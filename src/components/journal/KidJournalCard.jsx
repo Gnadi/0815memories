@@ -1,7 +1,7 @@
 import { User, BookOpen, Star, ChevronRight, Plus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
-export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdit }) {
+export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdit, onDelete }) {
   const birthdate = kid.birthdate?.toDate ? kid.birthdate.toDate() : new Date(kid.birthdate)
   const age = Math.floor((new Date() - birthdate) / (365.25 * 24 * 60 * 60 * 1000))
   const formattedBirth = birthdate.toLocaleDateString('en-US', {
@@ -28,12 +28,20 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
             {age >= 0 && ` · ${age} yr${age !== 1 ? 's' : ''} old`}
           </p>
         </div>
-        <button
-          onClick={onEdit}
-          className="text-bark-muted hover:text-bark text-xs underline underline-offset-2"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={onEdit}
+            className="text-bark-muted hover:text-bark text-xs underline underline-offset-2"
+          >
+            Edit
+          </button>
+          <button
+            onClick={onDelete}
+            className="text-red-400 hover:text-red-600 text-xs underline underline-offset-2"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
