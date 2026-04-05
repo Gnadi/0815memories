@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
   const [isViewer, setIsViewer] = useState(false)
   const [familyId, setFamilyId] = useState(() => localStorage.getItem('fh_familyId'))
   const [encryptionKey, setEncryptionKey] = useState(null)
+  const [keyLoading, setKeyLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
@@ -28,17 +29,27 @@ export function AuthProvider({ children }) {
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
+      // If a Firebase session is restored but fh_familyId was cleared (e.g. logged out
+      // on another tab), resolve it now so the key-loading effect can run.
+      if (firebaseUser && !localStorage.getItem('fh_familyId')) {
+        await resolveFamilyId(firebaseUser.uid)
+      }
       setLoading(false)
     })
 
     return unsubscribe
   }, [])
 
-  // Load encryption key whenever familyId is set (admin or viewer)
+  // Load encryption key whenever familyId or auth state changes.
+  // Depending on user ensures a retry when Firebase Auth is restored after the
+  // initial mount, which fixes the race where familyId was set from localStorage
+  // before the auth token was ready and the first Firestore read failed silently.
   useEffect(() => {
     if (!familyId || !db) return
+    setKeyLoading(true)
+    setEncryptionKey(null)
     async function loadKey() {
       try {
         const familyDoc = await getDoc(doc(db, 'families', familyId))
@@ -51,10 +62,12 @@ export function AuthProvider({ children }) {
         }
       } catch (err) {
         console.error('Failed to load encryption key:', err)
+      } finally {
+        setKeyLoading(false)
       }
     }
     loadKey()
-  }, [familyId])
+  }, [familyId, user])
 
   const resolveFamilyId = async (uid) => {
     const q = query(collection(db, 'families'), where('adminUid', '==', uid))
@@ -151,6 +164,7 @@ export function AuthProvider({ children }) {
       familyId,
       encryptionKey,
       loading,
+      keyLoading,
       firebaseReady,
       loginAsViewer,
       loginAsAdmin,

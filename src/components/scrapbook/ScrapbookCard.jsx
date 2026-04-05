@@ -1,5 +1,6 @@
 import { BookOpen, Trash2, Edit2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function ScrapbookCard({ scrapbook, onDelete }) {
   const navigate = useNavigate()
@@ -21,7 +22,7 @@ export default function ScrapbookCard({ scrapbook, onDelete }) {
       {/* Cover image or placeholder */}
       <div className="aspect-[4/3] relative overflow-hidden bg-cream">
         {coverUrl ? (
-          <img
+          <EncryptedImage
             src={coverUrl}
             alt={scrapbook.title}
             className="w-full h-full object-cover"
