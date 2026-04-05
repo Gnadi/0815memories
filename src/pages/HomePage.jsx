@@ -19,8 +19,8 @@ export default function HomePage() {
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
   const [showMomentModal, setShowMomentModal] = useState(false)
   const [editingMoment, setEditingMoment] = useState(null)
-  const { isAdmin, familyId } = useAuth()
-  const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId)
+  const { isAdmin, familyId, encryptionKey } = useAuth()
+  const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId, encryptionKey)
   const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId)
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)

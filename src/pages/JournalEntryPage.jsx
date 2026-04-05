@@ -2,21 +2,23 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Image as ImageIcon, Mic, Video, X } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
-import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { EMOTIONS } from '../constants/emotions'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
 import { useAuth } from '../context/AuthContext'
+import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
+import EncryptedImage from '../components/media/EncryptedImage'
+import EncryptedVideo from '../components/media/EncryptedVideo'
 
 const today = new Date().toISOString().split('T')[0]
 
 export default function JournalEntryPage() {
   const { childId, entryId } = useParams()
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { kids } = useKids(familyId)
-  const { journals, addJournal, updateJournal } = useJournals(familyId, childId)
+  const { kids } = useKids(familyId, encryptionKey)
+  const { journals, addJournal, updateJournal } = useJournals(familyId, childId, encryptionKey)
 
   const kid = kids.find((k) => k.id === childId)
   const entry = entryId ? journals.find((j) => j.id === entryId) : null
@@ -79,25 +81,9 @@ export default function JournalEntryPage() {
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
-      if (!response.ok) throw new Error('Upload failed')
-      const data = await response.json()
+      const { url } = await encryptAndUpload(file, encryptionKey)
       setImages((prev) =>
-        prev.map((img) => (img.id === tempId ? { ...img, url: data.secure_url, uploading: false } : img))
+        prev.map((img) => (img.id === tempId ? { ...img, url, uploading: false } : img))
       )
     } catch (err) {
       console.error('Upload failed:', err)
@@ -122,29 +108,10 @@ export default function JournalEntryPage() {
     setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: 'POST', body: formData }
-      )
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
-      }
-      const data = await response.json()
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
       setVideos((prev) =>
         prev.map((v) =>
-          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
         )
       )
     } catch (err) {
@@ -188,7 +155,7 @@ export default function JournalEntryPage() {
       {/* Background */}
       <div className="absolute inset-0 -z-10">
         {kid?.profilePhoto ? (
-          <img src={kid.profilePhoto} className="w-full h-full object-cover" alt="" />
+          <EncryptedImage src={kid.profilePhoto} className="w-full h-full object-cover" alt="" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-rose-200 via-orange-100 to-amber-200" />
         )}
@@ -279,7 +246,11 @@ export default function JournalEntryPage() {
             <div className="px-5 pt-3 flex gap-2 overflow-x-auto pb-1">
               {images.map((img) => (
                 <div key={img.id} className="relative flex-shrink-0 w-16 h-16">
-                  <img src={img.preview} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  {img.preview?.startsWith('blob:') ? (
+                    <img src={img.preview} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  ) : (
+                    <EncryptedImage src={img.preview} className="w-16 h-16 rounded-xl object-cover" />
+                  )}
                   {img.uploading ? (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -297,7 +268,11 @@ export default function JournalEntryPage() {
               ))}
               {videos.map((v) => (
                 <div key={v.id} className="relative flex-shrink-0 w-16 h-16">
-                  <video src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" muted playsInline />
+                  {v.preview?.startsWith('blob:') ? (
+                    <video src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" muted playsInline />
+                  ) : (
+                    <EncryptedVideo src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" controls={false} muted playsInline />
+                  )}
                   {v.uploading ? (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

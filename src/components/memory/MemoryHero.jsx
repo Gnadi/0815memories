@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+import EncryptedImage from '../media/EncryptedImage'
 
 function useSwipe(onPrev, onNext) {
   const startX = useRef(null)
@@ -49,7 +50,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
       >
         {allImages.length > 0 ? (
           <>
-            <img
+            <EncryptedImage
               key={allImages[index]}
               src={allImages[index]}
               alt=""
@@ -130,7 +131,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
             </span>
           )}
 
-          <img
+          <EncryptedImage
             src={allImages[index]}
             alt=""
             className="max-w-full max-h-full object-contain select-none"

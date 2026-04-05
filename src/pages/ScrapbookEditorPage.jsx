@@ -109,8 +109,8 @@ const initialState = {
 export default function ScrapbookEditorPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { familyId } = useAuth()
-  const { updateScrapbook } = useScrapbooks(familyId)
+  const { familyId, encryptionKey } = useAuth()
+  const { updateScrapbook } = useScrapbooks(familyId, encryptionKey)
 
   const [state, dispatch] = useReducer(editorReducer, initialState)
   const { pages, currentPageIndex, selectedId, isDirty, title, history } = state
@@ -128,16 +128,25 @@ export default function ScrapbookEditorPage() {
   // Load scrapbook once on mount
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
-    getDoc(doc(db, 'scrapbooks', id)).then((snap) => {
+    getDoc(doc(db, 'scrapbooks', id)).then(async (snap) => {
       if (!snap.exists()) { setLoadError('Scrapbook not found'); setLoading(false); return }
-      const data = snap.data()
-      dispatch({ type: 'LOAD', pages: data.pages || [makeBlankPage()], title: data.title || 'My Scrapbook' })
+      const raw = snap.data()
+      if (raw.familyId !== familyId) { setLoadError('Scrapbook not found'); setLoading(false); return }
+      // Decrypt title and pages
+      let title = raw.title || 'My Scrapbook'
+      let pages = raw.pages || [makeBlankPage()]
+      if (encryptionKey) {
+        const { decryptText, decryptJSON } = await import('../utils/encryption')
+        if (typeof title === 'string') title = await decryptText(encryptionKey, title)
+        if (typeof pages === 'string') pages = await decryptJSON(encryptionKey, pages)
+      }
+      dispatch({ type: 'LOAD', pages, title })
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)
       setLoading(false)
     })
-  }, [id])
+  }, [id, familyId, encryptionKey])
 
   // Debounced auto-save
   const save = useCallback(async (pagesData, currentTitle) => {

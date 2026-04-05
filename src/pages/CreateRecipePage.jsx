@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork } from 'lucide-react'
 import { getDoc, doc } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { useAuth } from '../context/AuthContext'
+import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useRecipes } from '../hooks/useRecipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
@@ -20,9 +20,9 @@ const CHANGE_TYPES = ['ADDED', 'REMOVED', 'MODIFIED']
 export default function CreateRecipePage() {
   const { id } = useParams()
   const isFork = !!id
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { addRecipe } = useRecipes(familyId)
+  const { addRecipe } = useRecipes(familyId, encryptionKey)
 
   const [parent, setParent] = useState(null)
   const [parentLoading, setParentLoading] = useState(isFork)
@@ -54,7 +54,13 @@ export default function CreateRecipePage() {
       try {
         const snap = await getDoc(doc(db, 'recipes', id))
         if (snap.exists()) {
-          const data = { id: snap.id, ...snap.data() }
+          let data = { id: snap.id, ...snap.data() }
+          if (data.familyId !== familyId) { setForkLoadError('Recipe not found.'); setParentLoading(false); return }
+          if (encryptionKey) {
+            const { decryptFields, decryptJSON } = await import('../utils/encryption')
+            data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
+            if (typeof data.ingredients === 'string') data.ingredients = await decryptJSON(encryptionKey, data.ingredients)
+          }
           setParent(data)
           setIngredients(
             (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
@@ -130,24 +136,8 @@ export default function CreateRecipePage() {
     setImage({ preview, url: '', uploading: true })
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
-      if (!response.ok) throw new Error('Upload failed')
-      const data = await response.json()
-      setImage({ preview, url: data.secure_url, uploading: false })
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      setImage({ preview, url, uploading: false })
     } catch (err) {
       console.error('Image upload failed:', err)
       setImage(null)

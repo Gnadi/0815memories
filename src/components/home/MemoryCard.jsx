@@ -3,6 +3,7 @@ import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video }
 import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function MemoryCard({ memory, onEdit, onDelete }) {
   const [showMenu, setShowMenu] = useState(false)
@@ -47,7 +48,7 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
           onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
           onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
         >
-          <img
+          <EncryptedImage
             src={allImages[imgIndex]}
             alt={memory.title}
             className="w-full h-64 object-cover"

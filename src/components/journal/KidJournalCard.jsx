@@ -1,4 +1,5 @@
 import { User, BookOpen, Star, ChevronRight, Plus } from 'lucide-react'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdit }) {
   const birthdate = kid.birthdate?.toDate ? kid.birthdate.toDate() : new Date(kid.birthdate)
@@ -15,7 +16,7 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
       <div className="flex items-center gap-3">
         <div className="w-16 h-16 rounded-full overflow-hidden bg-cream-dark flex-shrink-0 flex items-center justify-center">
           {kid.profilePhoto ? (
-            <img src={kid.profilePhoto} alt={kid.name} className="w-full h-full object-cover" />
+            <EncryptedImage src={kid.profilePhoto} alt={kid.name} className="w-full h-full object-cover" />
           ) : (
             <User className="w-8 h-8 text-bark-muted" />
           )}

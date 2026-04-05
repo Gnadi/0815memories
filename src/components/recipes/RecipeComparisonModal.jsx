@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, ChefHat, GitFork, Copy, Share2 } from 'lucide-react'
+import EncryptedImage from '../media/EncryptedImage'
 
 function computeDiffTags(versA, versB) {
   // Map A ingredients by normalized name for O(1) lookup and full-text comparison
@@ -156,7 +157,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
             {/* Left: Version A */}
             <div className="bg-warm-white rounded-2xl overflow-hidden shadow-sm">
               {localA.image ? (
-                <img src={localA.image} alt={localA.title} className="w-full h-36 object-cover" />
+                <EncryptedImage src={localA.image} alt={localA.title} className="w-full h-36 object-cover" />
               ) : (
                 <div className="w-full h-36 bg-gradient-to-br from-amber-50 to-stone-100 flex items-center justify-center">
                   <ChefHat className="w-10 h-10 text-stone-300" />
@@ -261,7 +262,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
             {/* Right: Version B */}
             <div className="bg-warm-white rounded-2xl overflow-hidden shadow-sm">
               {localB.image ? (
-                <img src={localB.image} alt={localB.title} className="w-full h-36 object-cover" />
+                <EncryptedImage src={localB.image} alt={localB.title} className="w-full h-36 object-cover" />
               ) : (
                 <div className="w-full h-36 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
                   <ChefHat className="w-10 h-10 text-green-200" />

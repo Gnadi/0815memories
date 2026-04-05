@@ -1,10 +1,17 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Plus, Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
-import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
+import { useAuth } from '../../context/AuthContext'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { decryptFields } from '../../utils/encryption'
+import EncryptedImage from '../media/EncryptedImage'
+import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 
+const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
+
 export default function PostMemoryModal({ memory, onClose, onSave }) {
+  const { encryptionKey } = useAuth()
   const getInitialImages = () => {
     if (memory?.images?.length) {
       return memory.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
@@ -43,6 +50,28 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           .split('T')[0]
       : new Date().toISOString().split('T')[0],
   })
+
+  // Ensure form fields are plaintext even if the caller passes an
+  // encrypted memory (e.g. direct getDoc reads that bypass the hooks).
+  useEffect(() => {
+    if (!memory || !encryptionKey) return
+    let cancelled = false
+    decryptFields(encryptionKey, memory, ENCRYPTED_FIELDS).then((decrypted) => {
+      if (cancelled) return
+      setForm((prev) => ({
+        ...prev,
+        title: decrypted.title || '',
+        content: decrypted.content || '',
+        quote: decrypted.quote || '',
+        category: decrypted.category || '',
+        location: decrypted.location || '',
+        authorName: decrypted.authorName || '',
+      }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [memory, encryptionKey])
   const [images, setImages] = useState(getInitialImages)
   const [videos, setVideos] = useState(getInitialVideos)
   const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
@@ -70,31 +99,10 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
-      }
-
-      const data = await response.json()
+      const { url } = await encryptAndUpload(file, encryptionKey)
       setImages((prev) =>
         prev.map((img) =>
-          img.id === tempId ? { ...img, url: data.secure_url, uploading: false } : img
+          img.id === tempId ? { ...img, url, uploading: false } : img
         )
       )
     } catch (err) {
@@ -120,31 +128,10 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
 
     try {
-      const signRes = await fetch('/api/cloudinary-sign?type=video_clip')
-      if (!signRes.ok) throw new Error('Failed to get upload signature')
-      const { timestamp, signature, folder, apiKey } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
-      formData.append('api_key', apiKey)
-      formData.append('folder', folder)
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: 'POST', body: formData }
-      )
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
-      }
-
-      const data = await response.json()
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
       setVideos((prev) =>
         prev.map((v) =>
-          v.id === tempId ? { ...v, url: data.secure_url, publicId: data.public_id, uploading: false } : v
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
         )
       )
     } catch (err) {
@@ -225,11 +212,18 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             <div className="flex gap-3 flex-wrap">
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
-                  <img
-                    src={img.preview}
-                    alt=""
-                    className="w-20 h-20 rounded-xl object-cover"
-                  />
+                  {img.preview?.startsWith('blob:') ? (
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <EncryptedImage
+                      src={img.preview}
+                      className="w-20 h-20 rounded-xl object-cover"
+                    />
+                  )}
                   {img.uploading && (
                     <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -277,12 +271,22 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 {videos.map((v) => (
                   <div key={v.id} className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
                     <div className="relative w-16 h-16 flex-shrink-0">
-                      <video
-                        src={v.preview}
-                        className="w-16 h-16 rounded-lg object-cover bg-black"
-                        muted
-                        playsInline
-                      />
+                      {v.preview?.startsWith('blob:') ? (
+                        <video
+                          src={v.preview}
+                          className="w-16 h-16 rounded-lg object-cover bg-black"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <EncryptedVideo
+                          src={v.preview}
+                          className="w-16 h-16 rounded-lg object-cover bg-black"
+                          controls={false}
+                          muted
+                          playsInline
+                        />
+                      )}
                       {!v.uploading && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">

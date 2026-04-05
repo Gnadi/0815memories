@@ -5,13 +5,16 @@ import { EMOTIONS } from '../constants/emotions'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
+import EncryptedImage from '../components/media/EncryptedImage'
+import EncryptedVideo from '../components/media/EncryptedVideo'
+import EncryptedAudio from '../components/media/EncryptedAudio'
 
 export default function JournalDetailPage() {
   const { childId, entryId } = useParams()
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { kids } = useKids(familyId)
-  const { journals, deleteJournal } = useJournals(familyId, childId)
+  const { kids } = useKids(familyId, encryptionKey)
+  const { journals, deleteJournal } = useJournals(familyId, childId, encryptionKey)
 
   const kid = kids.find((k) => k.id === childId)
   const entry = journals.find((j) => j.id === entryId)
@@ -41,7 +44,7 @@ export default function JournalDetailPage() {
       {/* Background */}
       <div className="absolute inset-0 -z-10">
         {kid?.profilePhoto ? (
-          <img src={kid.profilePhoto} className="w-full h-full object-cover" alt="" />
+          <EncryptedImage src={kid.profilePhoto} className="w-full h-full object-cover" alt="" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-rose-200 via-orange-100 to-amber-200" />
         )}
@@ -113,7 +116,7 @@ export default function JournalDetailPage() {
             {entry.photos?.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {entry.photos.map((url, i) => (
-                  <img key={i} src={url} alt="" className="rounded-xl object-cover w-full aspect-square" />
+                  <EncryptedImage key={i} src={url} alt="" className="rounded-xl object-cover w-full aspect-square" />
                 ))}
               </div>
             )}
@@ -123,7 +126,7 @@ export default function JournalDetailPage() {
               <div className="space-y-3">
                 {entry.videos.map((v, i) => (
                   <div key={i}>
-                    <video
+                    <EncryptedVideo
                       src={v.url}
                       controls
                       playsInline
@@ -143,7 +146,7 @@ export default function JournalDetailPage() {
                     <p className="text-xs text-stone-500 mb-1.5">
                       🎙 {memo.title || `Voice note ${i + 1}`}
                     </p>
-                    <audio src={memo.url} controls className="w-full h-8" />
+                    <EncryptedAudio src={memo.url} controls className="w-full h-8" />
                   </div>
                 ))}
               </div>

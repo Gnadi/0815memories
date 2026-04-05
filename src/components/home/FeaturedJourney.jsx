@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { timeAgo } from '../../utils/helpers'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function FeaturedJourney({ memory }) {
   const navigate = useNavigate()
@@ -13,7 +14,7 @@ export default function FeaturedJourney({ memory }) {
     >
       <div className="relative rounded-2xl overflow-hidden h-80 lg:h-[480px]">
         {memory.imageUrl ? (
-          <img
+          <EncryptedImage
             src={memory.imageUrl}
             alt={memory.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

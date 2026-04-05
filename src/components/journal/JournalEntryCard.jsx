@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../../constants/emotions'
+import EncryptedImage from '../media/EncryptedImage'
 
 export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -20,7 +21,7 @@ export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
       {entry.photos?.length > 0 && (
         <div className="flex gap-1 h-36 overflow-hidden">
           {entry.photos.slice(0, 3).map((url, i) => (
-            <img
+            <EncryptedImage
               key={i}
               src={url}
               alt=""

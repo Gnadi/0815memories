@@ -13,8 +13,8 @@ function makeBlankPage() {
 
 export default function ScrapbooksPage() {
   const navigate = useNavigate()
-  const { familyId } = useAuth()
-  const { scrapbooks, loading, addScrapbook, deleteScrapbook } = useScrapbooks(familyId)
+  const { familyId, encryptionKey } = useAuth()
+  const { scrapbooks, loading, addScrapbook, deleteScrapbook } = useScrapbooks(familyId, encryptionKey)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
 

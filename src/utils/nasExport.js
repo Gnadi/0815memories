@@ -10,6 +10,7 @@ import {
   getDoc,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { decryptFields, decryptJSON, decryptBlob } from './encryption'
 
 /**
  * Recursively convert Firestore Timestamps to ISO strings.
@@ -112,7 +113,7 @@ function collectMediaUrls(data, prefix) {
 /**
  * Download media blobs with concurrency limit.
  */
-async function downloadMedia(mediaEntries, onProgress, signal, concurrency = 4) {
+async function downloadMedia(mediaEntries, onProgress, signal, encKey, concurrency = 4) {
   const results = []
   const failed = []
   let completed = 0
@@ -123,7 +124,16 @@ async function downloadMedia(mediaEntries, onProgress, signal, concurrency = 4) 
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       const response = await fetch(entry.url, { signal })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const blob = await response.blob()
+      let blob = await response.blob()
+      // Decrypt encrypted media blobs
+      if (encKey) {
+        try {
+          const buffer = await blob.arrayBuffer()
+          blob = await decryptBlob(encKey, buffer, blob.type || 'application/octet-stream')
+        } catch {
+          // If decryption fails, file may not be encrypted - use as-is
+        }
+      }
       results.push({ zipPath: entry.zipPath, blob })
     } catch (err) {
       if (err.name === 'AbortError') throw err
@@ -152,7 +162,35 @@ async function downloadMedia(mediaEntries, onProgress, signal, concurrency = 4) 
 /**
  * Run a full NAS export: fetch all data, download media, build ZIP, trigger download.
  */
-export async function runNasExport({ familyId, familyName, onProgress, signal }) {
+/**
+ * Decrypt all text fields for exported data collections.
+ */
+async function decryptCollectionData(data, collectionName, encryptionKey) {
+  if (!encryptionKey) return data
+  const fieldMap = {
+    memories: ['title', 'content', 'quote', 'location', 'authorName', 'category'],
+    journals: ['content'],
+    children: ['name'],
+    blackbox: ['content'],
+    recipes: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'],
+    scrapbooks: ['title'],
+  }
+  const fields = fieldMap[collectionName]
+  if (!fields) return data
+  return Promise.all(data.map(async (item) => {
+    let decrypted = await decryptFields(encryptionKey, item, fields)
+    // Handle JSON-encoded fields
+    if (collectionName === 'recipes' && typeof decrypted.ingredients === 'string') {
+      decrypted.ingredients = await decryptJSON(encryptionKey, decrypted.ingredients)
+    }
+    if (collectionName === 'scrapbooks' && typeof decrypted.pages === 'string') {
+      decrypted.pages = await decryptJSON(encryptionKey, decrypted.pages)
+    }
+    return decrypted
+  }))
+}
+
+export async function runNasExport({ familyId, familyName, encryptionKey, onProgress, signal }) {
   if (!familyId || !db) throw new Error('Not authenticated')
 
   const dateStr = new Date().toISOString().slice(0, 10)
@@ -173,24 +211,34 @@ export async function runNasExport({ familyId, familyName, onProgress, signal })
 
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
+  // Decrypt text fields
+  const [decMemories, decMoments, decJournals, decChildren, decBlackbox, decRecipes] = await Promise.all([
+    decryptCollectionData(memories, 'memories', encryptionKey),
+    Promise.resolve(moments), // moments have no encrypted text fields
+    decryptCollectionData(journals, 'journals', encryptionKey),
+    decryptCollectionData(children, 'children', encryptionKey),
+    decryptCollectionData(blackbox, 'blackbox', encryptionKey),
+    decryptCollectionData(recipes, 'recipes', encryptionKey),
+  ])
+
   // Sanitize family doc (strip sensitive fields)
   let familyData = {}
   if (familySnap.exists()) {
     const raw = serializeTimestamps(familySnap.data())
-    const { sharedPassword, adminUid, ...safe } = raw
+    const { sharedPassword, adminUid, encryptionKeyJwk, ...safe } = raw
     familyData = { id: familyId, ...safe }
   }
 
   onProgress({ phase: 'data', current: 1, total: 1, message: 'Family data fetched.' })
 
-  // Phase 2: Collect and download media
+  // Phase 2: Collect and download media (use original URLs for download, not decrypted text)
   const allMedia = [
-    ...collectMediaUrls(memories, 'memories'),
-    ...collectMediaUrls(moments, 'moments'),
-    ...collectMediaUrls(journals, 'journals'),
-    ...collectMediaUrls(children, 'children'),
-    ...collectMediaUrls(recipes, 'recipes'),
-    ...collectMediaUrls(blackbox, 'blackbox'),
+    ...collectMediaUrls(decMemories, 'memories'),
+    ...collectMediaUrls(decMoments, 'moments'),
+    ...collectMediaUrls(decJournals, 'journals'),
+    ...collectMediaUrls(decChildren, 'children'),
+    ...collectMediaUrls(decRecipes, 'recipes'),
+    ...collectMediaUrls(decBlackbox, 'blackbox'),
   ]
 
   // Deduplicate by URL
@@ -211,7 +259,7 @@ export async function runNasExport({ familyId, familyName, onProgress, signal })
       total: uniqueMedia.length,
       message: `Downloading ${uniqueMedia.length} media files...`,
     })
-    const result = await downloadMedia(uniqueMedia, onProgress, signal)
+    const result = await downloadMedia(uniqueMedia, onProgress, signal, encryptionKey)
     mediaResults = result.results
     failedDownloads = result.failed
   }
@@ -229,12 +277,12 @@ export async function runNasExport({ familyId, familyName, onProgress, signal })
     exportDate: new Date().toISOString(),
     familyName: familyName || familyData.familyName || 'Unknown',
     counts: {
-      memories: memories.length,
-      moments: moments.length,
-      journals: journals.length,
-      children: children.length,
-      blackbox: blackbox.length,
-      recipes: recipes.length,
+      memories: decMemories.length,
+      moments: decMoments.length,
+      journals: decJournals.length,
+      children: decChildren.length,
+      blackbox: decBlackbox.length,
+      recipes: decRecipes.length,
       mediaFiles: mediaResults.length,
       failedDownloads: failedDownloads.length,
     },
@@ -245,12 +293,12 @@ export async function runNasExport({ familyId, familyName, onProgress, signal })
 
   // Data JSONs
   const dataFolder = root.folder('data')
-  dataFolder.file('memories.json', JSON.stringify(memories, null, 2))
-  dataFolder.file('moments.json', JSON.stringify(moments, null, 2))
-  dataFolder.file('journals.json', JSON.stringify(journals, null, 2))
-  dataFolder.file('children.json', JSON.stringify(children, null, 2))
-  dataFolder.file('blackbox.json', JSON.stringify(blackbox, null, 2))
-  dataFolder.file('recipes.json', JSON.stringify(recipes, null, 2))
+  dataFolder.file('memories.json', JSON.stringify(decMemories, null, 2))
+  dataFolder.file('moments.json', JSON.stringify(decMoments, null, 2))
+  dataFolder.file('journals.json', JSON.stringify(decJournals, null, 2))
+  dataFolder.file('children.json', JSON.stringify(decChildren, null, 2))
+  dataFolder.file('blackbox.json', JSON.stringify(decBlackbox, null, 2))
+  dataFolder.file('recipes.json', JSON.stringify(decRecipes, null, 2))
   dataFolder.file('family.json', JSON.stringify(familyData, null, 2))
 
   // Media files

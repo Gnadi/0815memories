@@ -9,15 +9,15 @@ import PostMemoryModal from '../admin/PostMemoryModal'
 const TAP = { touchAction: 'manipulation' }
 
 export default function AdminMobileBottomNav() {
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [showChoiceSheet, setShowChoiceSheet] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
 
-  const { addMemory } = useMemories(isAdmin ? familyId : null)
-  const { addScrapbook } = useScrapbooks(isAdmin ? familyId : null)
+  const { addMemory } = useMemories(isAdmin ? familyId : null, encryptionKey)
+  const { addScrapbook } = useScrapbooks(isAdmin ? familyId : null, encryptionKey)
 
   // Hide on public/auth pages and the scrapbook editor
   if (!isAdmin) return null

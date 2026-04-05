@@ -1,3 +1,5 @@
+import EncryptedImage from '../media/EncryptedImage'
+
 export default function AlbumGlimpse({ memories }) {
   const photos = memories
     .filter((m) => m.images?.length || m.imageUrl)
@@ -16,7 +18,7 @@ export default function AlbumGlimpse({ memories }) {
               i === 0 ? 'col-span-2 row-span-2' : ''
             }`}
           >
-            <img
+            <EncryptedImage
               src={photo.images?.[0] || photo.imageUrl}
               alt={photo.title || 'Family photo'}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"

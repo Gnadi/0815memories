@@ -12,8 +12,11 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { encryptFields, decryptFields } from '../utils/encryption'
 
-export function useJournals(familyId, childId) {
+const ENCRYPTED_FIELDS = ['content']
+
+export function useJournals(familyId, childId, encryptionKey) {
   const [journals, setJournals] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -31,9 +34,12 @@ export function useJournals(familyId, childId) {
     )
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        setJournals(data)
+      async (snapshot) => {
+        const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        const decrypted = await Promise.all(
+          docs.map((d) => decryptFields(encryptionKey, d, ENCRYPTED_FIELDS))
+        )
+        setJournals(decrypted)
         setLoading(false)
       },
       (err) => {
@@ -43,11 +49,12 @@ export function useJournals(familyId, childId) {
     )
 
     return unsubscribe
-  }, [familyId, childId])
+  }, [familyId, childId, encryptionKey])
 
   const addJournal = async (entry) => {
+    const encrypted = await encryptFields(encryptionKey, entry, ENCRYPTED_FIELDS)
     await addDoc(collection(db, 'journals'), {
-      ...entry,
+      ...encrypted,
       familyId,
       childId,
       createdAt: serverTimestamp(),
@@ -55,7 +62,8 @@ export function useJournals(familyId, childId) {
   }
 
   const updateJournal = async (id, updates) => {
-    await updateDoc(doc(db, 'journals', id), updates)
+    const encrypted = await encryptFields(encryptionKey, updates, ENCRYPTED_FIELDS)
+    await updateDoc(doc(db, 'journals', id), encrypted)
   }
 
   const deleteJournal = async (id) => {
@@ -65,7 +73,7 @@ export function useJournals(familyId, childId) {
   return { journals, loading, addJournal, updateJournal, deleteJournal }
 }
 
-export function useAllJournals(familyId) {
+export function useAllJournals(familyId, encryptionKey) {
   const [journals, setJournals] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -82,9 +90,12 @@ export function useAllJournals(familyId) {
     )
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        setJournals(data)
+      async (snapshot) => {
+        const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        const decrypted = await Promise.all(
+          docs.map((d) => decryptFields(encryptionKey, d, ENCRYPTED_FIELDS))
+        )
+        setJournals(decrypted)
         setLoading(false)
       },
       (err) => {
@@ -94,7 +105,7 @@ export function useAllJournals(familyId) {
     )
 
     return unsubscribe
-  }, [familyId])
+  }, [familyId, encryptionKey])
 
   return { journals, loading }
 }

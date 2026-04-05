@@ -8,11 +8,11 @@ import JournalEntryCard from '../components/journal/JournalEntryCard'
 import Sidebar from '../components/layout/Sidebar'
 
 export default function JournalArchivePage() {
-  const { isAdmin, familyId } = useAuth()
+  const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { childId } = useParams()
-  const { kids } = useKids(familyId)
-  const { journals, loading, deleteJournal } = useJournals(familyId, childId)
+  const { kids } = useKids(familyId, encryptionKey)
+  const { journals, loading, deleteJournal } = useJournals(familyId, childId, encryptionKey)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')

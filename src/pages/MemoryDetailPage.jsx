@@ -7,11 +7,14 @@ import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
 import PostMemoryModal from '../components/admin/PostMemoryModal'
 import { useAuth } from '../context/AuthContext'
+import { encryptFields, decryptFields } from '../utils/encryption'
+
+const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { familyId, isAdmin } = useAuth()
+  const { familyId, isAdmin, encryptionKey } = useAuth()
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
@@ -25,13 +28,14 @@ export default function MemoryDetailPage() {
         const data = docSnap.data()
         // Only show memory if it belongs to the current family
         if (data.familyId === familyId) {
-          setMemory({ id: docSnap.id, ...data })
+          const decrypted = await decryptFields(encryptionKey, data, ENCRYPTED_FIELDS)
+          setMemory({ id: docSnap.id, ...decrypted })
         }
       }
       setLoading(false)
     }
     fetchMemory()
-  }, [id, familyId])
+  }, [id, familyId, encryptionKey])
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -56,7 +60,8 @@ export default function MemoryDetailPage() {
   }
 
   const handleSaveEdit = async (memId, updates) => {
-    await updateDoc(doc(db, 'memories', memId), updates)
+    const encrypted = await encryptFields(encryptionKey, updates, ENCRYPTED_FIELDS)
+    await updateDoc(doc(db, 'memories', memId), encrypted)
     setMemory((prev) => ({ ...prev, ...updates }))
     setShowEditModal(false)
   }

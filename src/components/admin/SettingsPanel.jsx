@@ -161,7 +161,7 @@ export default function SettingsPanel() {
         <p className="text-xs text-bark-muted mb-3">
           Upload a family photo to replace the default illustration on your login page. Visitors will see it when they open your family link.
         </p>
-        <UploadWidget onUpload={handleLoginImageUpload} currentUrl={loginHeaderImage} />
+        <UploadWidget onUpload={handleLoginImageUpload} currentUrl={loginHeaderImage} unencrypted />
       </div>
 
       {/* Share link */}
