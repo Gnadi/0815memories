@@ -167,7 +167,7 @@ export default function LandingPage() {
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of Kaydo</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of Home</h2>
             <p className="text-bark-light max-w-md mx-auto">
               Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
             </p>
