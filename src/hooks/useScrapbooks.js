@@ -50,6 +50,9 @@ export function useScrapbooks(familyId, encryptionKey) {
       const decrypted = await Promise.all(docs.map((d) => decryptScrapbook(encryptionKey, d)))
       setScrapbooks(decrypted)
       setLoading(false)
+    }, (error) => {
+      console.error('Failed to load scrapbooks:', error)
+      setLoading(false)
     })
 
     return unsubscribe

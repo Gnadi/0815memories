@@ -50,8 +50,7 @@
         { "fieldPath": "rootId",   "order": "ASCENDING" },
         { "fieldPath": "year",     "order": "ASCENDING" }
       ]
-    }
-  ],
+    },
     {
       "collectionGroup": "scrapbooks",
       "queryScope": "COLLECTION",
