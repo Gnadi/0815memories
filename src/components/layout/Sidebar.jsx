@@ -1,14 +1,16 @@
-import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
+import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
 import KaydoLogo from '../KaydoLogo'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const navItems = [
-  { icon: Home, label: 'Home', active: true },
-  { icon: Compass, label: 'Discover' },
-  { icon: MessageSquare, label: 'Messages' },
-  { icon: User, label: 'Profile' },
-  { icon: BookOpen, label: 'Our Memories' },
+  { icon: Home, label: 'Home', route: '/home' },
+  { icon: Clock, label: 'Timeline', route: '/timeline' },
+  { icon: BookMarked, label: 'Scrapbooks', route: '/scrapbook' },
+  { icon: ChefHat, label: 'Recipes', route: '/recipes' },
+  { icon: BookHeart, label: 'Kid Journals', route: '/journal' },
+  { icon: Lock, label: 'Black Box', route: '/blackbox' },
+  { icon: Settings, label: 'Settings', route: '/settings' },
 ]
 
 export default function Sidebar({ onPostMemory }) {
@@ -21,6 +23,9 @@ export default function Sidebar({ onPostMemory }) {
     navigate('/')
   }
 
+  const isActive = (route) =>
+    location.pathname === route || location.pathname.startsWith(route + '/')
+
   return (
     <aside className="hidden lg:flex flex-col w-56 min-h-screen p-6 border-r border-cream-dark bg-cream">
       {/* Brand */}
@@ -32,13 +37,24 @@ export default function Sidebar({ onPostMemory }) {
         </div>
       </div>
 
+      {/* Post Memory button (admin only) */}
+      {isAdmin && (
+        <button
+          onClick={onPostMemory}
+          className="btn-kaydo w-full text-sm mb-6"
+        >
+          Post a Memory
+        </button>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map(({ icon: Icon, label, active }) => (
+        {navItems.map(({ icon: Icon, label, route }) => (
           <button
-            key={label}
+            key={route}
+            onClick={() => navigate(route)}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              active
+              isActive(route)
                 ? 'bg-kaydo text-white'
                 : 'text-bark-light hover:bg-cream-dark hover:text-bark'
             }`}
@@ -47,69 +63,7 @@ export default function Sidebar({ onPostMemory }) {
             {label}
           </button>
         ))}
-        <button
-          onClick={() => navigate('/timeline')}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname === '/timeline'
-              ? 'bg-kaydo text-white'
-              : 'text-bark-light hover:bg-cream-dark hover:text-bark'
-          }`}
-        >
-          <Clock className="w-5 h-5" />
-          Timeline
-        </button>
       </nav>
-
-      {/* Post Memory button (admin only) */}
-      {isAdmin && (
-        <button
-          onClick={onPostMemory}
-          className="btn-kaydo w-full text-sm mb-4"
-        >
-          Post a Memory
-        </button>
-      )}
-
-      {/* Admin-only links */}
-      {isAdmin && (
-        <>
-          <button
-            onClick={() => navigate('/journal')}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-          >
-            <BookHeart className="w-5 h-5" />
-            Kid Journals
-          </button>
-          <button
-            onClick={() => navigate('/recipes')}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-          >
-            <ChefHat className="w-5 h-5" />
-            Recipes
-          </button>
-          <button
-            onClick={() => navigate('/blackbox')}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-          >
-            <Lock className="w-5 h-5" />
-            Black Box
-          </button>
-          <button
-            onClick={() => navigate('/scrapbook')}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-          >
-            <BookMarked className="w-5 h-5" />
-            Scrapbooks
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="flex items-center gap-3 px-4 py-2.5 mb-2 text-sm text-bark-light hover:bg-cream-dark hover:text-bark rounded-xl transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-            Settings
-          </button>
-        </>
-      )}
 
       {/* Logout */}
       <button
