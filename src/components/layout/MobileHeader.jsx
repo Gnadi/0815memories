@@ -1,9 +1,9 @@
-import { Home, LogOut, Settings } from 'lucide-react'
+import { Home, LogOut, Settings, BookMarked } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
-  const { logout } = useAuth()
+  const { logout, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -20,6 +20,14 @@ export default function MobileHeader() {
         <h1 className="text-lg font-bold text-bark">Our Hearth</h1>
       </div>
       <div className="flex items-center gap-1">
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/scrapbook')}
+            className="p-2 text-bark-light hover:text-hearth transition-colors"
+          >
+            <BookMarked className="w-5 h-5" />
+          </button>
+        )}
         <button
           onClick={() => navigate('/settings')}
           className="p-2 text-bark-light hover:text-hearth transition-colors"
