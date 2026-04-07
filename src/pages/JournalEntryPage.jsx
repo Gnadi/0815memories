@@ -207,7 +207,7 @@ export default function JournalEntryPage() {
         className="h-[68dvh] md:flex-1 bg-white/[0.92] backdrop-blur-md rounded-t-3xl mx-1 flex flex-col min-h-0 shadow-2xl overflow-hidden"
       >
         {/* Coral accent line */}
-        <div className="w-10 h-1 rounded-full bg-hearth mx-5 mt-3 flex-shrink-0" />
+        <div className="w-10 h-1 rounded-full bg-kaydo mx-5 mt-3 flex-shrink-0" />
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto min-h-0 pb-4">
@@ -307,7 +307,7 @@ export default function JournalEntryPage() {
                   <button
                     type="button"
                     onClick={() => setVoiceMemos((prev) => prev.filter((_, i) => i !== idx))}
-                    className="text-stone-400 hover:text-hearth ml-2 transition-colors"
+                    className="text-stone-400 hover:text-kaydo ml-2 transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -351,7 +351,7 @@ export default function JournalEntryPage() {
           <button
             type="button"
             onClick={() => setShowRecorder((v) => !v)}
-            className={`transition-colors ${showRecorder ? 'text-hearth' : 'text-stone-400 hover:text-stone-700'}`}
+            className={`transition-colors ${showRecorder ? 'text-kaydo' : 'text-stone-400 hover:text-stone-700'}`}
           >
             <Mic className="w-5 h-5" />
           </button>
@@ -375,7 +375,7 @@ export default function JournalEntryPage() {
               <button
                 type="submit"
                 disabled={!form.content.trim()}
-                className="text-xs tracking-[0.2em] uppercase font-semibold text-hearth disabled:text-stone-300 transition-colors"
+                className="text-xs tracking-[0.2em] uppercase font-semibold text-kaydo disabled:text-stone-300 transition-colors"
               >
                 {entry ? 'Update' : 'Save'}
               </button>

@@ -237,7 +237,7 @@ export default function CreateBlackBoxPage() {
 
               {/* ── STEP 1: THE MESSAGE ── */}
               <div className="bg-warm-white rounded-2xl p-4 space-y-4 shadow-sm">
-                <p className="text-xs font-bold text-hearth uppercase tracking-wide">Step 1: The Message</p>
+                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">Step 1: The Message</p>
 
                 {/* For which child */}
                 {kids.length > 0 && (
@@ -246,7 +246,7 @@ export default function CreateBlackBoxPage() {
                     <select
                       value={form.childId}
                       onChange={(e) => setForm((p) => ({ ...p, childId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                      className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                     >
                       <option value="">No specific child</option>
                       {kids.map((k) => (
@@ -264,7 +264,7 @@ export default function CreateBlackBoxPage() {
                     value={form.title}
                     onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
                     placeholder={selectedKid ? `For ${selectedKid.name}…` : 'A message from the heart…'}
-                    className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                    className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                   />
                 </div>
 
@@ -276,7 +276,7 @@ export default function CreateBlackBoxPage() {
                       <button
                         type="button"
                         onClick={() => setVoiceNote(null)}
-                        className="text-bark-muted hover:text-hearth"
+                        className="text-bark-muted hover:text-kaydo"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -289,9 +289,9 @@ export default function CreateBlackBoxPage() {
                     <button
                       type="button"
                       onClick={() => setShowRecorder(true)}
-                      className="w-full border-2 border-dashed border-cream-darker rounded-xl py-5 flex flex-col items-center gap-2 text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+                      className="w-full border-2 border-dashed border-cream-darker rounded-xl py-5 flex flex-col items-center gap-2 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-full bg-hearth flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-kaydo flex items-center justify-center">
                         <Mic className="w-5 h-5 text-white" />
                       </div>
                       <span className="text-sm font-medium">Record a Voice Note</span>
@@ -306,7 +306,7 @@ export default function CreateBlackBoxPage() {
                   onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
                   placeholder="Or type your message here…"
                   rows={5}
-                  className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-hearth/30 resize-none"
+                  className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
                 />
 
                 {/* Photos */}
@@ -333,7 +333,7 @@ export default function CreateBlackBoxPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-hearth hover:text-hearth transition-colors text-xs"
+                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs"
                     >
                       <ImageIcon className="w-5 h-5" />
                       Photos
@@ -374,20 +374,20 @@ export default function CreateBlackBoxPage() {
                     <button
                       type="button"
                       onClick={() => videoFileInputRef.current?.click()}
-                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-hearth hover:text-hearth transition-colors text-xs"
+                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs"
                     >
                       <Video className="w-5 h-5" />
                       Video
                     </button>
                   </div>
-                  {videoError && <p className="text-xs text-hearth">{videoError}</p>}
+                  {videoError && <p className="text-xs text-kaydo">{videoError}</p>}
                   <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
                 </div>
               </div>
 
               {/* ── STEP 2: THE TIME TRIGGER ── */}
               <div className="bg-warm-white rounded-2xl p-4 space-y-3 shadow-sm">
-                <p className="text-xs font-bold text-hearth uppercase tracking-wide">Step 2: The Time Trigger</p>
+                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">Step 2: The Time Trigger</p>
 
                 {/* Milestone */}
                 <button
@@ -395,7 +395,7 @@ export default function CreateBlackBoxPage() {
                   onClick={() => setForm((p) => ({ ...p, triggerType: 'milestone' }))}
                   className={`w-full text-left rounded-xl p-3 border-2 transition-all ${
                     form.triggerType === 'milestone'
-                      ? 'border-hearth bg-cream'
+                      ? 'border-kaydo bg-cream'
                       : 'border-transparent bg-cream/50 hover:bg-cream'
                   }`}
                 >
@@ -408,7 +408,7 @@ export default function CreateBlackBoxPage() {
                       value={form.milestone}
                       onChange={(e) => setForm((p) => ({ ...p, milestone: e.target.value }))}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                      className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                     >
                       {MILESTONES.map((m) => (
                         <option key={m.key} value={m.key}>{m.label}</option>
@@ -423,7 +423,7 @@ export default function CreateBlackBoxPage() {
                   onClick={() => setForm((p) => ({ ...p, triggerType: 'specificDate' }))}
                   className={`w-full text-left rounded-xl p-3 border-2 transition-all ${
                     form.triggerType === 'specificDate'
-                      ? 'border-hearth bg-cream'
+                      ? 'border-kaydo bg-cream'
                       : 'border-transparent bg-cream/50 hover:bg-cream'
                   }`}
                 >
@@ -439,7 +439,7 @@ export default function CreateBlackBoxPage() {
                           type="number" min="1" max="12" placeholder="MM"
                           value={form.specificMonth}
                           onChange={(e) => setForm((p) => ({ ...p, specificMonth: e.target.value }))}
-                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                         />
                       </div>
                       <div>
@@ -448,7 +448,7 @@ export default function CreateBlackBoxPage() {
                           type="number" min="1" max="31" placeholder="DD"
                           value={form.specificDay}
                           onChange={(e) => setForm((p) => ({ ...p, specificDay: e.target.value }))}
-                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                         />
                       </div>
                       <div>
@@ -457,7 +457,7 @@ export default function CreateBlackBoxPage() {
                           type="number" min={new Date().getFullYear()} placeholder="YYYY"
                           value={form.specificYear}
                           onChange={(e) => setForm((p) => ({ ...p, specificYear: e.target.value }))}
-                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-hearth/30"
+                          className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                         />
                       </div>
                     </div>
@@ -470,7 +470,7 @@ export default function CreateBlackBoxPage() {
                   onClick={() => setForm((p) => ({ ...p, triggerType: 'legacy' }))}
                   className={`w-full text-left rounded-xl p-3 border-2 transition-all ${
                     form.triggerType === 'legacy'
-                      ? 'border-hearth bg-cream'
+                      ? 'border-kaydo bg-cream'
                       : 'border-transparent bg-cream/50 hover:bg-cream'
                   }`}
                 >
@@ -485,14 +485,14 @@ export default function CreateBlackBoxPage() {
 
                 {/* Confirmation notice */}
                 {(unlockDateStr || form.triggerType === 'legacy') && (
-                  <div className="flex items-start gap-2 bg-hearth/5 rounded-xl px-3 py-2">
-                    <div className="w-3 h-3 rounded-full bg-hearth mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-2 bg-kaydo/5 rounded-xl px-3 py-2">
+                    <div className="w-3 h-3 rounded-full bg-kaydo mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-bark-muted leading-relaxed">
                       {form.triggerType === 'legacy'
                         ? 'Once sealed, this box will only be released upon a legacy trigger. Your legacy is safe with us.'
                         : <>
                             Once sealed, this box cannot be opened until{' '}
-                            <span className="text-hearth font-semibold">{unlockDateStr}</span>.{' '}
+                            <span className="text-kaydo font-semibold">{unlockDateStr}</span>.{' '}
                             Your legacy is safe with us.
                           </>
                       }
@@ -518,7 +518,7 @@ export default function CreateBlackBoxPage() {
               <button
                 type="submit"
                 disabled={ctaDisabled}
-                className="w-full flex items-center justify-center gap-2 bg-hearth text-white py-4 rounded-2xl text-sm font-bold hover:bg-hearth/90 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-kaydo text-white py-4 rounded-2xl text-sm font-bold hover:bg-kaydo/90 transition-colors disabled:opacity-50"
               >
                 <Lock className="w-4 h-4" />
                 {saving ? 'Sealing…' : 'Seal into The Black Box'}
@@ -534,7 +534,7 @@ export default function CreateBlackBoxPage() {
             type="submit"
             form="blackbox-form"
             disabled={ctaDisabled}
-            className="w-full flex items-center justify-center gap-2 bg-hearth text-white py-4 rounded-2xl text-sm font-bold hover:bg-hearth/90 transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 bg-kaydo text-white py-4 rounded-2xl text-sm font-bold hover:bg-kaydo/90 transition-colors disabled:opacity-50"
           >
             <Lock className="w-4 h-4" />
             {saving ? 'Sealing…' : 'Seal into The Black Box'}

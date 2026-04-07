@@ -68,14 +68,14 @@ export default function NasExportButton() {
         <p className="text-sm text-bark">{progress.message}</p>
         <div className="w-full h-2.5 bg-cream-dark rounded-full overflow-hidden">
           <div
-            className="h-full bg-hearth rounded-full transition-all duration-300"
+            className="h-full bg-kaydo rounded-full transition-all duration-300"
             style={{ width: `${progress.phase === 'zip' ? 100 : progressPercent}%` }}
           />
         </div>
         <button
           type="button"
           onClick={handleCancel}
-          className="flex items-center gap-1.5 text-sm text-bark-muted hover:text-hearth transition-colors"
+          className="flex items-center gap-1.5 text-sm text-bark-muted hover:text-kaydo transition-colors"
         >
           <X className="w-3.5 h-3.5" />
           Cancel
@@ -91,7 +91,7 @@ export default function NasExportButton() {
         <button
           type="button"
           onClick={() => setProgress({ phase: '', current: 0, total: 0, message: '' })}
-          className="btn-hearth flex items-center gap-1.5 text-sm px-4"
+          className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
         >
           <HardDrive className="w-4 h-4" />
           Export Again
@@ -108,7 +108,7 @@ export default function NasExportButton() {
       <button
         type="button"
         onClick={handleExport}
-        className="btn-hearth flex items-center gap-1.5 text-sm px-4"
+        className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
       >
         <HardDrive className="w-4 h-4" />
         Download Full Backup (ZIP)

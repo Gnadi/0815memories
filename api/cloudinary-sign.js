@@ -13,7 +13,7 @@ export default function handler(req, res) {
   const isVideoClip = type === 'video_clip'
   const isRaw = req.query?.resource_type === 'raw'
   const resourceType = isRaw ? 'raw' : (isVideoClip || req.query?.resource_type === 'video') ? 'video' : 'image'
-  const folder = isRaw ? 'familyhearth/encrypted' : isVideoClip ? 'familyhearth/videos' : resourceType === 'video' ? 'familyhearth/audio' : 'familyhearth'
+  const folder = isRaw ? 'kaydo/encrypted' : isVideoClip ? 'kaydo/videos' : resourceType === 'video' ? 'kaydo/audio' : 'kaydo'
   const timestamp = Math.round(Date.now() / 1000)
 
   const signature = createHash('sha1')

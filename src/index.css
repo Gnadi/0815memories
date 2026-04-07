@@ -3,9 +3,9 @@
 @theme {
   --color-cream: #FDF6EC;
   --color-cream-dark: #F5E6D0;
-  --color-hearth: #C25A2E;
-  --color-hearth-light: #D4784A;
-  --color-hearth-dark: #A04420;
+  --color-kaydo: #C25A2E;
+  --color-kaydo-light: #D4784A;
+  --color-kaydo-dark: #A04420;
   --color-bark: #2D1B0E;
   --color-bark-light: #7A6A5E;
   --color-bark-muted: #B8A99C;
@@ -33,8 +33,8 @@ select {
   font-family: var(--font-family-serif);
 }
 
-.btn-hearth {
-  background: linear-gradient(135deg, var(--color-hearth), var(--color-hearth-light));
+.btn-kaydo {
+  background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
   color: white;
   border-radius: 9999px;
   padding: 0.75rem 2rem;
@@ -43,13 +43,13 @@ select {
   box-shadow: 0 4px 12px rgba(194, 90, 46, 0.3);
 }
 
-.btn-hearth:hover {
+.btn-kaydo:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(194, 90, 46, 0.4);
 }
 
 .story-ring {
-  background: linear-gradient(135deg, var(--color-hearth), var(--color-hearth-light));
+  background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
   padding: 3px;
   border-radius: 9999px;
 }

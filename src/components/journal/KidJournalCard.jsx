@@ -48,7 +48,7 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
       {journalCount > 0 ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 px-3 py-2 bg-cream rounded-xl text-sm text-bark">
-            <BookOpen className="w-4 h-4 text-hearth flex-shrink-0" />
+            <BookOpen className="w-4 h-4 text-kaydo flex-shrink-0" />
             <span>{journalCount} {journalCount === 1 ? 'Letter' : 'Letters'} written</span>
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
       {/* Action */}
       <button
         onClick={onViewArchive}
-        className="flex items-center gap-1 text-sm font-semibold text-hearth hover:text-hearth/80 transition-colors mt-auto"
+        className="flex items-center gap-1 text-sm font-semibold text-kaydo hover:text-kaydo/80 transition-colors mt-auto"
       >
         {journalCount > 0 ? (
           <>View Archive <ChevronRight className="w-4 h-4" /></>

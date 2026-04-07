@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Home, Mail, KeyRound, Eye, EyeOff, User, Shield } from 'lucide-react'
+import { Mail, KeyRound, Eye, EyeOff, User, Shield } from 'lucide-react'
+import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import { generateSlug } from '../utils/familySlug'
 
@@ -60,9 +61,9 @@ export default function SignupPage() {
     <div className="min-h-screen bg-cream flex flex-col">
       {/* Desktop header — hidden on mobile */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-hearth font-semibold text-lg">
-          <Home className="w-5 h-5" />
-          <span>FamilyHearth</span>
+        <div className="flex items-center gap-2 text-bark font-semibold text-lg">
+          <KaydoLogo size={22} />
+          <span>Kaydo</span>
         </div>
       </header>
 
@@ -71,8 +72,8 @@ export default function SignupPage() {
         <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
-            <Home className="w-5 h-5 text-hearth" />
-            <span className="text-lg font-bold text-bark">Our Family Hearth</span>
+            <KaydoLogo size={22} />
+            <span className="text-lg font-bold text-bark">Kaydo</span>
           </div>
 
           {/* Illustration card */}
@@ -85,7 +86,7 @@ export default function SignupPage() {
             Join the Family
           </h1>
           <p className="text-bark-light text-center mb-6">
-            Create your family hearth account.
+            Create your Kaydo account.
           </p>
 
           {!firebaseReady && <SetupBanner />}
@@ -107,7 +108,7 @@ export default function SignupPage() {
               Already have an account?{' '}
               <button
                 onClick={() => navigate('/')}
-                className="text-hearth font-semibold hover:text-hearth-dark"
+                className="text-kaydo font-semibold hover:text-kaydo-dark"
               >
                 Sign in
               </button>
@@ -132,18 +133,16 @@ export default function SignupPage() {
         {/* Right — Signup Form */}
         <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
           <div className="w-full max-w-md">
-            {/* House icon */}
+            {/* Logo mark */}
             <div className="flex justify-center mb-6">
-              <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center">
-                <Home className="w-7 h-7 text-hearth" />
-              </div>
+              <KaydoLogo size={52} />
             </div>
 
             <h1 className="text-4xl font-bold text-bark text-center mb-2">
               Join the Family
             </h1>
             <p className="text-bark-light text-center mb-8">
-              Create your family hearth account.
+              Create your Kaydo account.
             </p>
 
             {!firebaseReady && <SetupBanner />}
@@ -165,7 +164,7 @@ export default function SignupPage() {
                 Already have an account?{' '}
                 <button
                   onClick={() => navigate('/')}
-                  className="text-hearth font-semibold hover:text-hearth-dark"
+                  className="text-kaydo font-semibold hover:text-kaydo-dark"
                 >
                   Sign in
                 </button>
@@ -183,7 +182,7 @@ export default function SignupPage() {
 
       {/* Footer — desktop only */}
       <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>&copy; {new Date().getFullYear()} FamilyHearth. Designed for memories.</p>
+        <p>&copy; {new Date().getFullYear()} Kaydo. Designed for memories.</p>
         <div className="flex gap-4">
           <span className="hover:text-bark cursor-pointer">Privacy Policy</span>
           <span className="hover:text-bark cursor-pointer">Terms of Service</span>
@@ -225,7 +224,7 @@ function SignupForm({
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="e.g., Sarah Miller"
-            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
         </div>
@@ -243,13 +242,13 @@ function SignupForm({
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
             placeholder="e.g., The Millers"
-            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
         </div>
         {slugPreview && (
           <p className="text-xs text-bark-muted mt-1.5">
-            Your family URL: <span className="font-medium text-hearth">{window.location.origin}/family/{slugPreview}</span>
+            Your family URL: <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
           </p>
         )}
       </div>
@@ -265,8 +264,8 @@ function SignupForm({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="the.millers@hearth.com"
-            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            placeholder="the.millers@kaydo.com"
+            className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
         </div>
@@ -284,7 +283,7 @@ function SignupForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 6 characters"
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             minLength={6}
           />
@@ -310,7 +309,7 @@ function SignupForm({
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Repeat your password"
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             minLength={6}
           />
@@ -335,7 +334,7 @@ function SignupForm({
       <button
         type="submit"
         disabled={loading}
-        className="btn-hearth w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
+        className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
       >
         {loading ? (
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

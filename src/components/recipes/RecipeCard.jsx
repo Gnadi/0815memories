@@ -21,14 +21,14 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
         </div>
       ) : (
         <div className="h-40 w-full bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-          <ChefHat className="w-12 h-12 text-hearth/30" />
+          <ChefHat className="w-12 h-12 text-kaydo/30" />
         </div>
       )}
 
       <div className="p-4">
         {/* Top row: year pill + menu */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold bg-hearth/10 text-hearth rounded-full px-2.5 py-0.5">
+          <span className="text-xs font-semibold bg-kaydo/10 text-kaydo rounded-full px-2.5 py-0.5">
             {recipe.year}
           </span>
           <div className="relative">
@@ -76,7 +76,7 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
             <GitFork className="w-3.5 h-3.5" />
             <span>{recipe.forkCount ?? 0} fork{(recipe.forkCount ?? 0) !== 1 ? 's' : ''}</span>
           </div>
-          <span className="text-sm font-semibold text-hearth">View Journey →</span>
+          <span className="text-sm font-semibold text-kaydo">View Journey →</span>
         </div>
       </div>
     </div>

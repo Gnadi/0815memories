@@ -245,7 +245,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-hearth hover:bg-cream-dark/50 transition-colors flex-shrink-0"
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
                 {images.length === 0 ? (
                   <>
@@ -306,7 +306,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                         value={v.title}
                         onChange={(e) => handleVideoTitleChange(v.id, e.target.value)}
                         placeholder="Add a title (optional)"
-                        className="w-full px-3 py-1.5 bg-white rounded-lg text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                        className="w-full px-3 py-1.5 bg-white rounded-lg text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
                         disabled={v.uploading}
                       />
                     </div>
@@ -326,13 +326,13 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             <button
               type="button"
               onClick={() => videoFileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
             >
               <Video className="w-4 h-4" />
               Add video
             </button>
             {videoError && (
-              <p className="text-xs text-hearth mt-1">{videoError}</p>
+              <p className="text-xs text-kaydo mt-1">{videoError}</p>
             )}
           </div>
 
@@ -345,7 +345,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               <div className="space-y-2 mb-3">
                 {voiceMemos.map((memo, i) => (
                   <div key={memo.publicId || i} className="flex items-center gap-2 bg-cream-dark rounded-xl px-3 py-2">
-                    <Mic className="w-4 h-4 text-hearth flex-shrink-0" />
+                    <Mic className="w-4 h-4 text-kaydo flex-shrink-0" />
                     <span className="text-sm text-bark flex-1 truncate">
                       {memo.title || `Voice memo ${i + 1}`}
                     </span>
@@ -373,7 +373,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               <button
                 type="button"
                 onClick={() => setShowRecorder(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
               >
                 <Mic className="w-4 h-4" />
                 Add voice memo
@@ -389,7 +389,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               value={form.title}
               onChange={handleChange}
               placeholder="Give this memory a title..."
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               required
             />
           </div>
@@ -403,7 +403,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               onChange={handleChange}
               placeholder="Tell the story behind this memory..."
               rows={4}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30 resize-none"
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
             />
           </div>
 
@@ -417,7 +417,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               value={form.quote}
               onChange={handleChange}
               placeholder="A memorable quote from that day..."
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
             />
           </div>
 
@@ -430,7 +430,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 value={form.category}
                 onChange={handleChange}
                 placeholder="e.g., Summer Trip"
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
             <div>
@@ -440,7 +440,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 value={form.location}
                 onChange={handleChange}
                 placeholder="e.g., Grandpa's Orchard"
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
           </div>
@@ -454,7 +454,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 name="date"
                 value={form.date}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
             <div>
@@ -464,7 +464,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 value={form.authorName}
                 onChange={handleChange}
                 placeholder="Your name"
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
           </div>
@@ -476,7 +476,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               name="featured"
               checked={form.featured}
               onChange={handleChange}
-              className="w-4 h-4 rounded accent-hearth"
+              className="w-4 h-4 rounded accent-kaydo"
             />
             <span className="text-sm text-bark">Feature this memory on the homepage</span>
           </label>
@@ -485,7 +485,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           <button
             type="submit"
             disabled={saving || hasUploading}
-            className="btn-hearth w-full flex items-center justify-center gap-2 disabled:opacity-60"
+            className="btn-kaydo w-full flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

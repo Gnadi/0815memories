@@ -1,4 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <path d="M16 4L3 14h3v13h8v-8h4v8h8V14h3L16 4z" fill="#C25A2E"/>
-  <circle cx="16" cy="15" r="3" fill="#FDF6EC"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="18" fill="#FDF6EC"/>
+  <!-- Left roof slope — terracotta -->
+  <line x1="50" y1="8" x2="8" y2="38" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+  <!-- K vertical bar / left wall — terracotta -->
+  <line x1="8" y1="38" x2="8" y2="90" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+  <!-- K upper arm — terracotta -->
+  <line x1="8" y1="62" x2="37" y2="38" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+  <!-- K lower leg — terracotta -->
+  <line x1="8" y1="62" x2="44" y2="90" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+  <!-- 'a' arch — sage green -->
+  <path d="M 35 90 L 35 57 Q 35 12 60 12 Q 90 12 90 56 L 90 90"
+        stroke="#8B9E7E" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Counter dot — cream -->
+  <circle cx="60" cy="36" r="7" fill="#F5E6C8"/>
 </svg>

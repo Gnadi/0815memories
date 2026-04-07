@@ -68,7 +68,7 @@ export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
 
         {/* Volume */}
         {entry.volume && (
-          <p className="text-xs font-semibold text-hearth uppercase tracking-wide mb-1">{entry.volume}</p>
+          <p className="text-xs font-semibold text-kaydo uppercase tracking-wide mb-1">{entry.volume}</p>
         )}
 
         {/* Title */}

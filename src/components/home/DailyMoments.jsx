@@ -10,7 +10,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-bark">Daily Moments</h2>
-        <button onClick={onViewAll} className="text-sm font-semibold text-hearth hover:text-hearth-dark">
+        <button onClick={onViewAll} className="text-sm font-semibold text-kaydo hover:text-kaydo-dark">
           VIEW ALL
         </button>
       </div>
@@ -55,7 +55,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
                 )}
                 {/* Video badge: shown when moment has videos alongside images */}
                 {moment.images?.[0] && moment.videos?.length > 0 && (
-                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-hearth rounded-full flex items-center justify-center shadow">
+                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-kaydo rounded-full flex items-center justify-center shadow">
                     <Video className="w-3 h-3 text-white" />
                   </span>
                 )}

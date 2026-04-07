@@ -194,7 +194,7 @@ export async function runNasExport({ familyId, familyName, encryptionKey, onProg
   if (!familyId || !db) throw new Error('Not authenticated')
 
   const dateStr = new Date().toISOString().slice(0, 10)
-  const rootFolder = `FamilyHearth-Export-${dateStr}`
+  const rootFolder = `Kaydo-Export-${dateStr}`
 
   // Phase 1: Fetch all Firestore data
   onProgress({ phase: 'data', current: 0, total: 1, message: 'Fetching family data...' })

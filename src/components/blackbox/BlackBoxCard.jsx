@@ -98,10 +98,10 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
       {!unlocked ? (
         <div className="px-5 pb-4">
           <div className="bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-hearth flex-shrink-0" />
+            <div className="w-3 h-3 rounded-full bg-kaydo flex-shrink-0" />
             <p className="text-xs text-white/80">
               Sealed until{' '}
-              <span className="text-hearth font-semibold">{unlockDateStr}</span>.{' '}
+              <span className="text-kaydo font-semibold">{unlockDateStr}</span>.{' '}
               Your legacy is safe with us.
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
 
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="w-full text-left px-5 pb-4 text-sm text-hearth font-semibold hover:text-hearth/80"
+            className="w-full text-left px-5 pb-4 text-sm text-kaydo font-semibold hover:text-kaydo/80"
           >
             {expanded ? 'Hide Contents ↑' : 'View Contents ↓'}
           </button>

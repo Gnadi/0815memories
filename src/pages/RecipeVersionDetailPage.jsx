@@ -69,14 +69,14 @@ export default function RecipeVersionDetailPage() {
 
         {loading ? (
           <div className="flex items-center justify-center flex-1">
-            <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 text-center">
             <p className="font-semibold text-bark">{loadError}</p>
             <button
               onClick={() => navigate(`/recipes/${rootId}`)}
-              className="text-sm text-hearth font-semibold"
+              className="text-sm text-kaydo font-semibold"
             >
               ← Back to Journey
             </button>
@@ -110,7 +110,7 @@ export default function RecipeVersionDetailPage() {
               {/* Title overlay */}
               <div className="absolute bottom-0 left-0 right-0 p-5">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold bg-hearth/80 text-white rounded-full px-2.5 py-0.5">
+                  <span className="text-xs font-semibold bg-kaydo/80 text-white rounded-full px-2.5 py-0.5">
                     {recipe.year}
                   </span>
                   <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${isOriginal ? 'bg-stone-200/80 text-stone-700' : 'bg-amber-400/80 text-amber-900'}`}>
@@ -164,7 +164,7 @@ export default function RecipeVersionDetailPage() {
               {/* Chef's Secret Tip */}
               {recipe.chefNote && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-hearth mb-2">Chef's Secret Tip</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">Chef's Secret Tip</p>
                   <p className="text-sm text-bark italic leading-relaxed">"{recipe.chefNote}"</p>
                 </div>
               )}
@@ -172,7 +172,7 @@ export default function RecipeVersionDetailPage() {
               {/* Fork Reason */}
               {recipe.forkReason && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-hearth mb-2">Reason for the Fork</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">Reason for the Fork</p>
                   <blockquote className="text-sm text-bark italic leading-relaxed">"{recipe.forkReason}"</blockquote>
                   <p className="text-xs text-bark-muted mt-2">— {recipe.author}, {recipe.year}</p>
                 </div>
@@ -182,7 +182,7 @@ export default function RecipeVersionDetailPage() {
               <div className="flex items-center gap-3 pt-2 pb-6">
                 <button
                   onClick={() => navigate(`/recipes/${versionId}/fork`)}
-                  className="btn-hearth flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+                  className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
                 >
                   <GitFork className="w-4 h-4" />
                   Fork This Version

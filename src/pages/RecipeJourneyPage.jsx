@@ -41,7 +41,7 @@ export default function RecipeJourneyPage() {
 
         {loading ? (
           <div className="flex items-center justify-center flex-1">
-            <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
           </div>
         ) : !root ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center p-8">
@@ -49,7 +49,7 @@ export default function RecipeJourneyPage() {
             <p className="font-semibold text-bark">Recipe not found.</p>
             <button
               onClick={() => navigate('/recipes')}
-              className="text-sm text-hearth font-semibold"
+              className="text-sm text-kaydo font-semibold"
             >
               ← Back to Recipes
             </button>
@@ -98,7 +98,7 @@ export default function RecipeJourneyPage() {
                   onClick={() => setShowComparison(true)}
                   className="w-full flex items-center justify-center gap-2 bg-warm-white border border-cream-dark rounded-2xl py-3 text-sm font-semibold text-bark hover:bg-cream-dark transition-colors shadow-sm"
                 >
-                  <ArrowLeftRight className="w-4 h-4 text-hearth" />
+                  <ArrowLeftRight className="w-4 h-4 text-kaydo" />
                   Compare Versions
                 </button>
               )}
@@ -106,7 +106,7 @@ export default function RecipeJourneyPage() {
               {/* Evolution Tree */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <GitBranch className="w-5 h-5 text-hearth" />
+                  <GitBranch className="w-5 h-5 text-kaydo" />
                   <h2 className="text-lg font-bold text-bark">The Evolution Tree</h2>
                 </div>
                 <RecipeEvolutionTree
@@ -151,7 +151,7 @@ export default function RecipeJourneyPage() {
               {/* Fork Reason quote */}
               {latest?.forkReason && hasMultipleVersions && (
                 <div className="bg-warm-white rounded-2xl p-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-hearth mb-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-3">
                     Reason for the Fork
                   </p>
                   <blockquote className="text-bark italic leading-relaxed">
@@ -161,7 +161,7 @@ export default function RecipeJourneyPage() {
                     — {latest.author}, {latest.year}
                   </p>
                   <div className="mt-3 flex items-center gap-1.5 text-xs text-bark-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-hearth inline-block" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-kaydo inline-block" />
                     A Living Family Legacy · {versions.length} Generation{versions.length !== 1 ? 's' : ''} of Shared History
                   </div>
                 </div>
@@ -171,7 +171,7 @@ export default function RecipeJourneyPage() {
               <div className="pb-4">
                 <button
                   onClick={() => navigate(`/recipes/${latest.id}/fork`)}
-                  className="btn-hearth w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
+                  className="btn-kaydo w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
                 >
                   <GitFork className="w-4 h-4" />
                   Fork This Recipe

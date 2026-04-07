@@ -118,7 +118,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="e.g. Leo"
-              className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-hearth/30"
+              className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
               required
             />
           </div>
@@ -130,7 +130,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
               type="date"
               value={form.birthdate}
               onChange={(e) => setForm((p) => ({ ...p, birthdate: e.target.value }))}
-              className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-hearth/30"
+              className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
               required
             />
           </div>
@@ -139,7 +139,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
           <button
             type="submit"
             disabled={saving || photo?.uploading}
-            className="btn-hearth w-full text-sm disabled:opacity-50"
+            className="btn-kaydo w-full text-sm disabled:opacity-50"
           >
             {saving ? 'Saving...' : kid ? 'Save Changes' : 'Add Child'}
           </button>

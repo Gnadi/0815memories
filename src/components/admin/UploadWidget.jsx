@@ -85,10 +85,10 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full h-48 border-2 border-dashed border-bark-muted rounded-xl flex flex-col items-center justify-center gap-2 hover:border-hearth hover:bg-cream-dark/50 transition-colors"
+          className="w-full h-48 border-2 border-dashed border-bark-muted rounded-xl flex flex-col items-center justify-center gap-2 hover:border-kaydo hover:bg-cream-dark/50 transition-colors"
         >
           {uploading ? (
-            <div className="w-8 h-8 border-3 border-hearth border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-kaydo border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
               <ImageIcon className="w-8 h-8 text-bark-muted" />
