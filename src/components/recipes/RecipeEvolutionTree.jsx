@@ -4,7 +4,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
   return (
     <div className="relative pl-6">
       {/* Vertical line */}
-      <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-hearth/20 rounded-full" />
+      <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-kaydo/20 rounded-full" />
 
       <div className="space-y-5">
         {versions.map((version, index) => {
@@ -13,8 +13,8 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
           const isMiddle = !isFirst && !isLast
 
           let dotClass = 'bg-bark'
-          if (isLast && versions.length > 1) dotClass = 'bg-hearth'
-          else if (isMiddle) dotClass = 'bg-hearth/50'
+          if (isLast && versions.length > 1) dotClass = 'bg-kaydo'
+          else if (isMiddle) dotClass = 'bg-kaydo/50'
 
           let badge = null
           if (isFirst) {
@@ -25,7 +25,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
             )
           } else if (isLast) {
             badge = (
-              <span className="text-[10px] font-semibold bg-hearth text-white rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-semibold bg-kaydo text-white rounded-full px-2 py-0.5">
                 CURRENT
               </span>
             )
@@ -47,7 +47,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
               {/* Content card */}
               <button
                 onClick={() => onVersionClick?.(version)}
-                className="w-full text-left bg-warm-white rounded-2xl p-4 shadow-sm border border-transparent hover:border-hearth/30 hover:shadow-md transition-all"
+                className="w-full text-left bg-warm-white rounded-2xl p-4 shadow-sm border border-transparent hover:border-kaydo/30 hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-sm font-bold text-bark">
@@ -84,7 +84,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
                   </p>
                 )}
 
-                <p className="text-xs text-hearth font-semibold mt-2">View details →</p>
+                <p className="text-xs text-kaydo font-semibold mt-2">View details →</p>
               </button>
             </div>
           )

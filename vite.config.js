@@ -12,8 +12,8 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'og-image.png'],
       manifest: {
-        name: 'FamilyHearth',
-        short_name: 'FamilyHearth',
+        name: 'Kaydo',
+        short_name: 'Kaydo',
         description: 'A private, encrypted sanctuary for your family\'s memories. No ads, no AI training — just your stories, preserved forever.',
         theme_color: '#C25A2E',
         background_color: '#FDF6EC',

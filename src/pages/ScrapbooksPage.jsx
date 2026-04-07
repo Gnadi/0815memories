@@ -59,7 +59,7 @@ export default function ScrapbooksPage() {
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="btn-hearth flex items-center gap-2 text-sm"
+              className="btn-kaydo flex items-center gap-2 text-sm"
             >
               {creating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -73,7 +73,7 @@ export default function ScrapbooksPage() {
           {/* Content */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-hearth" />
+              <Loader2 className="w-8 h-8 animate-spin text-kaydo" />
             </div>
           ) : scrapbooks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -84,7 +84,7 @@ export default function ScrapbooksPage() {
               <p className="text-sm text-bark-muted mb-6 max-w-xs">
                 Create your first digital scrapbook with photos, stickers, text, and beautiful layouts.
               </p>
-              <button onClick={handleCreate} disabled={creating} className="btn-hearth flex items-center gap-2">
+              <button onClick={handleCreate} disabled={creating} className="btn-kaydo flex items-center gap-2">
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Create Scrapbook
               </button>
@@ -98,7 +98,7 @@ export default function ScrapbooksPage() {
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="aspect-[4/3] rounded-2xl border-2 border-dashed border-cream-dark hover:border-hearth hover:bg-hearth/5 transition-colors flex flex-col items-center justify-center gap-2 text-bark-muted hover:text-hearth"
+                className="aspect-[4/3] rounded-2xl border-2 border-dashed border-cream-dark hover:border-kaydo hover:bg-kaydo/5 transition-colors flex flex-col items-center justify-center gap-2 text-bark-muted hover:text-kaydo"
               >
                 {creating ? (
                   <Loader2 className="w-8 h-8 animate-spin" />

@@ -50,8 +50,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 text-bark font-bold text-lg">
-            <Home className="w-5 h-5 text-hearth" />
-            <span>FamilyHearth</span>
+            <Home className="w-5 h-5 text-kaydo" />
+            <span>Kaydo</span>
           </div>
 
           {/* Desktop nav links */}
@@ -65,7 +65,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
-              className="btn-hearth text-sm px-5 py-2"
+              className="btn-kaydo text-sm px-5 py-2"
             >
               Login
             </button>
@@ -95,11 +95,11 @@ export default function LandingPage() {
         {/* Left */}
         <div>
           <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
-            Your Private Digital Hearth
+            Your Private Digital Home
           </div>
           <h1 className="text-5xl lg:text-6xl font-bold text-bark leading-tight mb-5">
             Preserving the{' '}
-            <em className="not-italic font-serif text-hearth italic">Soul</em>{' '}
+            <em className="not-italic font-serif text-kaydo italic">Soul</em>{' '}
             of Family.
           </h1>
           <p className="text-bark-light text-lg leading-relaxed mb-8 max-w-md">
@@ -108,7 +108,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap gap-4">
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/signup')}
-              className="btn-hearth text-base px-8 py-3"
+              className="btn-kaydo text-base px-8 py-3"
             >
               Get Started
             </button>
@@ -144,7 +144,7 @@ export default function LandingPage() {
           {/* Overlay journal card */}
           <div className="absolute -bottom-4 -left-4 lg:-left-8 bg-white rounded-2xl shadow-xl p-4 w-48">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 bg-hearth rounded-lg flex items-center justify-center">
+              <div className="w-7 h-7 bg-kaydo rounded-lg flex items-center justify-center">
                 <BookOpen className="w-4 h-4 text-white" />
               </div>
               <span className="text-xs font-semibold text-bark">Family Journal</span>
@@ -155,7 +155,7 @@ export default function LandingPage() {
               ))}
             </div>
             <div className="mt-3 flex gap-1">
-              {['bg-hearth', 'bg-amber-400', 'bg-green-400'].map((c, i) => (
+              {['bg-kaydo', 'bg-amber-400', 'bg-green-400'].map((c, i) => (
                 <div key={i} className={`w-5 h-5 rounded-full ${c} border-2 border-white -ml-1 first:ml-0`} />
               ))}
             </div>
@@ -167,7 +167,7 @@ export default function LandingPage() {
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of the Hearth</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of Kaydo</h2>
             <p className="text-bark-light max-w-md mx-auto">
               Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
             </p>
@@ -178,8 +178,8 @@ export default function LandingPage() {
             <div className="md:col-span-2 bg-gradient-to-br from-amber-50 to-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
               {/* Left — text */}
               <div className="flex-1">
-                <div className="w-10 h-10 bg-hearth/10 rounded-xl flex items-center justify-center mb-5">
-                  <Camera className="w-5 h-5 text-hearth" />
+                <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center mb-5">
+                  <Camera className="w-5 h-5 text-kaydo" />
                 </div>
                 <h3 className="text-xl font-bold text-bark mb-2">Share: Moments &amp; Memories</h3>
                 <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
@@ -192,7 +192,7 @@ export default function LandingPage() {
                     'Post, pin, and curate from a simple dashboard',
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-bark">
-                      <Check className="w-4 h-4 text-hearth mt-0.5 flex-shrink-0" />
+                      <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
                       {item}
                     </li>
                   ))}
@@ -209,7 +209,7 @@ export default function LandingPage() {
                     { icon: <Mic className="w-4 h-4" />, label: 'Voice Memos' },
                   ].map(({ icon, label }) => (
                     <div key={label} className="flex items-center gap-2 bg-white rounded-full px-4 py-2 text-sm font-medium text-bark shadow-sm border border-cream-dark">
-                      <span className="text-hearth">{icon}</span>
+                      <span className="text-kaydo">{icon}</span>
                       {label}
                     </div>
                   ))}
@@ -218,8 +218,8 @@ export default function LandingPage() {
                 {/* Access card */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-dark">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-hearth/10 rounded-xl flex items-center justify-center">
-                      <Users className="w-4 h-4 text-hearth" />
+                    <div className="w-8 h-8 bg-kaydo/10 rounded-xl flex items-center justify-center">
+                      <Users className="w-4 h-4 text-kaydo" />
                     </div>
                     <span className="text-sm font-semibold text-bark">Inner Circle</span>
                   </div>
@@ -228,7 +228,7 @@ export default function LandingPage() {
                     <span>One shared family password</span>
                   </div>
                   <div className="flex gap-1">
-                    {['bg-hearth', 'bg-amber-400', 'bg-green-500', 'bg-blue-400', 'bg-purple-400'].map((c, i) => (
+                    {['bg-kaydo', 'bg-amber-400', 'bg-green-500', 'bg-blue-400', 'bg-purple-400'].map((c, i) => (
                       <div key={i} className={`w-7 h-7 rounded-full ${c} border-2 border-white -ml-1.5 first:ml-0`} />
                     ))}
                     <div className="w-7 h-7 rounded-full bg-cream-dark border-2 border-white -ml-1.5 flex items-center justify-center text-xs font-bold text-bark-light">
@@ -241,8 +241,8 @@ export default function LandingPage() {
 
             {/* Card 2 — Preserve: The Vault */}
             <div className="bg-cream-dark rounded-3xl p-8 flex flex-col gap-5">
-              <div className="w-10 h-10 bg-hearth/10 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-hearth" />
+              <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center">
+                <Shield className="w-5 h-5 text-kaydo" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-bark mb-2">Preserve: The Vault</h3>
@@ -253,7 +253,7 @@ export default function LandingPage() {
               <ul className="space-y-2">
                 {['Military-grade encryption', 'Zero-knowledge storage'].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-bark font-medium">
-                    <Check className="w-4 h-4 text-hearth" />
+                    <Check className="w-4 h-4 text-kaydo" />
                     {item}
                   </li>
                 ))}
@@ -271,7 +271,7 @@ export default function LandingPage() {
             </div>
 
             {/* Card 2 — Write: The Letters */}
-            <div className="bg-hearth rounded-3xl p-8 flex flex-col gap-5">
+            <div className="bg-kaydo rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
               </div>
@@ -311,7 +311,7 @@ export default function LandingPage() {
               {/* Avatar stack */}
               <div className="flex items-center gap-2 mt-auto">
                 <div className="flex">
-                  {['bg-hearth', 'bg-amber-400', 'bg-green-500', 'bg-blue-400'].map((c, i) => (
+                  {['bg-kaydo', 'bg-amber-400', 'bg-green-500', 'bg-blue-400'].map((c, i) => (
                     <div
                       key={i}
                       className={`w-8 h-8 rounded-full ${c} border-2 border-[#E8F5E0] -ml-2 first:ml-0 flex items-center justify-center text-white text-xs font-bold`}
@@ -413,7 +413,7 @@ export default function LandingPage() {
               <div>
                 <h3 className="text-xl font-bold text-white mb-2">Open Source</h3>
                 <p className="text-white/70 text-sm leading-relaxed">
-                  FamilyHearth is built in the open. Audit the code, contribute features, or self-host for your family. No black boxes — except the ones you create.
+                  Kaydo is built in the open. Audit the code, contribute features, or self-host for your family. No black boxes — except the ones you create.
                 </p>
               </div>
               {/* Stats row */}
@@ -453,7 +453,7 @@ export default function LandingPage() {
               </div>
               <h2 className="text-3xl lg:text-4xl font-bold text-bark leading-tight mb-6">
                 Your data is a{' '}
-                <em className="italic underline decoration-hearth decoration-2">sacred legacy</em>
+                <em className="italic underline decoration-kaydo decoration-2">sacred legacy</em>
                 , not a training set.
               </h2>
               <ul className="space-y-6">
@@ -464,7 +464,7 @@ export default function LandingPage() {
                     desc: 'We strictly prohibit the use of your private photos or text for LLM or AI generative model training. Ever.',
                   },
                   {
-                    icon: <Shield className="w-5 h-5 text-hearth" />,
+                    icon: <Shield className="w-5 h-5 text-kaydo" />,
                     title: 'Zero-Knowledge Architecture',
                     desc: "Your 'Black Box' content is encrypted locally. Even our engineers can't see your family photos.",
                   },
@@ -490,7 +490,7 @@ export default function LandingPage() {
             {/* Right — stats grid */}
             <div id="security" className="grid grid-cols-2 gap-4">
               {[
-                { value: '100%', label: 'PRIVATE OWNERSHIP', color: 'text-hearth' },
+                { value: '100%', label: 'PRIVATE OWNERSHIP', color: 'text-kaydo' },
                 { icon: <Lock className="w-8 h-8 text-amber-600" />, label: 'E2E ENCRYPTION', color: '' },
                 { icon: <Check className="w-8 h-8 text-green-600" />, label: 'VERIFIED MEMBERS ONLY', color: '' },
                 { value: '0', label: 'DATA BREACHES', color: 'text-bark' },
@@ -521,7 +521,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/signup')}
-              className="btn-hearth text-base px-8 py-3"
+              className="btn-kaydo text-base px-8 py-3"
             >
               Get Started
             </button>
@@ -544,8 +544,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-5">
           {/* Logo */}
           <div className="flex items-center gap-2 text-bark font-bold">
-            <Home className="w-4 h-4 text-hearth" />
-            <span>FamilyHearth</span>
+            <Home className="w-4 h-4 text-kaydo" />
+            <span>Kaydo</span>
           </div>
 
           {/* Links */}
@@ -564,7 +564,7 @@ export default function LandingPage() {
 
           {/* Copyright */}
           <p className="text-xs text-bark-muted text-center">
-            &copy; {new Date().getFullYear()} FamilyHearth. All rights reserved.{' '}
+            &copy; {new Date().getFullYear()} Kaydo. All rights reserved.{' '}
             <span className="text-bark-muted">Crafted for memories.</span>
           </p>
         </div>

@@ -60,7 +60,7 @@ function SingleMemoPlayer({ memo }) {
 
       <button
         onClick={togglePlay}
-        className="w-9 h-9 rounded-full bg-hearth flex items-center justify-center text-white hover:bg-hearth-dark transition-colors flex-shrink-0"
+        className="w-9 h-9 rounded-full bg-kaydo flex items-center justify-center text-white hover:bg-kaydo-dark transition-colors flex-shrink-0"
       >
         {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
       </button>
@@ -75,7 +75,7 @@ function SingleMemoPlayer({ memo }) {
           onClick={handleSeek}
         >
           <div
-            className="h-full bg-hearth rounded-full transition-all"
+            className="h-full bg-kaydo rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -94,7 +94,7 @@ export default function VoiceMemoPlayer({ voiceMemos }) {
   return (
     <div className="mt-8">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-bark mb-3">
-        <Mic className="w-4 h-4 text-hearth" />
+        <Mic className="w-4 h-4 text-kaydo" />
         Voice Memos
         <span className="text-bark-muted font-normal">({voiceMemos.length})</span>
       </h3>

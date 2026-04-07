@@ -192,7 +192,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
             onClick={() => setActiveTab(id)}
             className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
               activeTab === id
-                ? 'text-hearth border-b-2 border-hearth'
+                ? 'text-kaydo border-b-2 border-kaydo'
                 : 'text-bark-muted hover:text-bark'
             }`}
           >
@@ -212,7 +212,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-cream-dark hover:border-hearth hover:bg-hearth/5 text-sm text-bark-light hover:text-hearth transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-cream-dark hover:border-kaydo hover:bg-kaydo/5 text-sm text-bark-light hover:text-kaydo transition-colors"
             >
               {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
               {uploading ? 'Uploading…' : 'Upload Photo'}
@@ -227,7 +227,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
                   <button
                     key={String(polaroid)}
                     onClick={() => fileInputRef.current?.click()}
-                    className="relative p-2 rounded-lg border border-cream-dark hover:border-hearth bg-cream text-xs text-bark-muted hover:text-hearth transition-colors text-center"
+                    className="relative p-2 rounded-lg border border-cream-dark hover:border-kaydo bg-cream text-xs text-bark-muted hover:text-kaydo transition-colors text-center"
                     title={polaroid ? 'Upload as polaroid' : 'Upload as photo'}
                   >
                     {polaroid ? (
@@ -255,7 +255,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
                   key={g}
                   onClick={() => setStickerGroup(g)}
                   className={`px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                    stickerGroup === g ? 'bg-hearth text-white' : 'bg-cream text-bark-light hover:bg-cream-dark'
+                    stickerGroup === g ? 'bg-kaydo text-white' : 'bg-cream text-bark-light hover:bg-cream-dark'
                   }`}
                 >
                   {g}
@@ -310,7 +310,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
               <button
                 key={layout.id}
                 onClick={() => applyLayout(layout)}
-                className="aspect-[4/3] rounded-xl border border-cream-dark hover:border-hearth bg-cream hover:bg-hearth/5 transition-colors flex flex-col items-center justify-center gap-1"
+                className="aspect-[4/3] rounded-xl border border-cream-dark hover:border-kaydo bg-cream hover:bg-kaydo/5 transition-colors flex flex-col items-center justify-center gap-1"
               >
                 <span className="text-xl">{layout.preview}</span>
                 <span className="text-[10px] text-bark-muted font-medium">{layout.label}</span>
@@ -328,7 +328,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
                 <button
                   key={color}
                   onClick={() => onChangeBackground({ backgroundColor: color })}
-                  className="aspect-square rounded-lg border-2 border-cream-dark hover:border-hearth transition-colors shadow-sm"
+                  className="aspect-square rounded-lg border-2 border-cream-dark hover:border-kaydo transition-colors shadow-sm"
                   style={{ backgroundColor: color }}
                   title={color}
                 />
@@ -345,7 +345,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
                 <button
                   key={id}
                   onClick={() => onChangeBackground({ backgroundPattern: id })}
-                  className="py-2 rounded-xl border border-cream-dark hover:border-hearth bg-cream hover:bg-hearth/5 text-xs text-bark-light hover:text-hearth transition-colors font-medium"
+                  className="py-2 rounded-xl border border-cream-dark hover:border-kaydo bg-cream hover:bg-kaydo/5 text-xs text-bark-light hover:text-kaydo transition-colors font-medium"
                 >
                   {label}
                 </button>

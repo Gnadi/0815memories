@@ -161,7 +161,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               <Baby className="w-5 h-5 text-bark-muted mt-0.5 flex-shrink-0" />
               <p className="text-sm text-bark-muted">
                 No children added yet.{' '}
-                <Link to="/journal" onClick={onClose} className="text-hearth underline underline-offset-2 hover:opacity-80">
+                <Link to="/journal" onClick={onClose} className="text-kaydo underline underline-offset-2 hover:opacity-80">
                   Add a child
                 </Link>{' '}
                 to start preserving moments for them.
@@ -174,7 +174,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
             <label className="block text-sm font-medium text-bark mb-2">
               Photos
             </label>
-            <div className={`flex gap-3 flex-wrap ${mediaError ? 'p-2 ring-2 ring-hearth rounded-xl' : ''}`}>
+            <div className={`flex gap-3 flex-wrap ${mediaError ? 'p-2 ring-2 ring-kaydo rounded-xl' : ''}`}>
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
                   {img.preview?.startsWith('blob:') ? (
@@ -210,7 +210,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-hearth hover:bg-cream-dark/50 transition-colors flex-shrink-0"
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
                 {images.length === 0 && videos.length === 0 ? (
                   <>
@@ -277,7 +277,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               <button
                 type="button"
                 onClick={() => videoFileInputRef.current?.click()}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-hearth hover:bg-cream-dark/50 transition-colors flex-shrink-0"
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
                 <>
                   <Video className="w-6 h-6 text-bark-muted" />
@@ -286,18 +286,18 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               </button>
             </div>
             {videoError && (
-              <p className="text-xs text-hearth mt-1">{videoError}</p>
+              <p className="text-xs text-kaydo mt-1">{videoError}</p>
             )}
           </div>
 
           {mediaError && (
-            <p className="text-xs text-hearth -mt-2">At least one photo or video is required.</p>
+            <p className="text-xs text-kaydo -mt-2">At least one photo or video is required.</p>
           )}
 
           {/* Caption */}
           <div>
             <label className="block text-sm font-medium text-bark mb-1">
-              Caption <span className="text-hearth">*</span>
+              Caption <span className="text-kaydo">*</span>
             </label>
             <textarea
               name="caption"
@@ -305,7 +305,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               onChange={handleChange}
               placeholder="What's happening right now..."
               rows={3}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30 resize-none"
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
               required
             />
           </div>
@@ -319,7 +319,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 value={form.category}
                 onChange={handleChange}
                 placeholder="e.g., Family"
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
             <div>
@@ -329,7 +329,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 value={form.location}
                 onChange={handleChange}
                 placeholder="e.g., Back yard"
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
           </div>
@@ -344,7 +344,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
               value={form.label}
               onChange={handleChange}
               placeholder="e.g., Morning walk"
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
             />
             <p className="text-xs text-bark-muted mt-1">
               Shows under the story circle. Defaults to date if blank.
@@ -355,7 +355,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           <button
             type="submit"
             disabled={saving || hasUploading}
-            className="btn-hearth w-full flex items-center justify-center gap-2 disabled:opacity-60"
+            className="btn-kaydo w-full flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

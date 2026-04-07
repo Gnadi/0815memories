@@ -46,12 +46,12 @@ export default function EditorToolbar({
             onChange={(e) => setTitleDraft(e.target.value)}
             onBlur={commitTitle}
             onKeyDown={(e) => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(title) } }}
-            className="w-full bg-cream rounded-lg px-2 py-1 text-sm font-semibold text-bark outline-none border border-hearth"
+            className="w-full bg-cream rounded-lg px-2 py-1 text-sm font-semibold text-bark outline-none border border-kaydo"
           />
         ) : (
           <button
             onClick={() => { setTitleDraft(title); setEditingTitle(true) }}
-            className="text-sm font-semibold text-bark hover:text-hearth truncate block max-w-full text-left"
+            className="text-sm font-semibold text-bark hover:text-kaydo truncate block max-w-full text-left"
             title="Click to rename"
           >
             {title}
@@ -83,7 +83,7 @@ export default function EditorToolbar({
           className="p-0.5 ml-0.5 rounded hover:bg-cream-dark transition-colors"
           title="Add page"
         >
-          <Plus className="w-4 h-4 text-hearth" />
+          <Plus className="w-4 h-4 text-kaydo" />
         </button>
         {pages.length > 1 && (
           <button

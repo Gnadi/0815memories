@@ -13,4 +13,4 @@ Disallow: /blackbox
 Disallow: /recipes
 Disallow: /scrapbook
 
-Sitemap: https://familyhearth.app/sitemap.xml
+Sitemap: https://kaydo.app/sitemap.xml

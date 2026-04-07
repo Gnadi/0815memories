@@ -140,12 +140,12 @@ export default function SettingsPanel() {
   return (
     <div className="bg-warm-white rounded-2xl p-4 lg:p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-6">
-        <Settings className="w-5 h-5 text-hearth" />
+        <Settings className="w-5 h-5 text-kaydo" />
         <h2 className="text-lg font-bold text-bark">Admin Settings</h2>
       </div>
 
       {message && (
-        <p className="text-sm text-hearth bg-cream-dark px-4 py-2 rounded-lg mb-4">
+        <p className="text-sm text-kaydo bg-cream-dark px-4 py-2 rounded-lg mb-4">
           {message}
         </p>
       )}
@@ -186,7 +186,7 @@ export default function SettingsPanel() {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="btn-hearth flex items-center gap-1.5 text-sm px-4"
+              className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied!' : 'Copy'}
@@ -209,12 +209,12 @@ export default function SettingsPanel() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New shared password"
-            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
             type="submit"
             disabled={saving}
-            className="btn-hearth flex items-center gap-1.5 text-sm px-4"
+            className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
           >
             <Save className="w-4 h-4" />
             Save
@@ -233,13 +233,13 @@ export default function SettingsPanel() {
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
             placeholder="e.g., The Millers"
-            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
             type="button"
             onClick={handleSaveFamilyName}
             disabled={saving}
-            className="btn-hearth flex items-center gap-1.5 text-sm px-4"
+            className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
           >
             <Save className="w-4 h-4" />
             Save

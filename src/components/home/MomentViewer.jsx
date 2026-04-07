@@ -210,7 +210,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       {mediaItems.map((_, i) => (
         <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
           <div
-            className="h-full rounded-full bg-hearth"
+            className="h-full rounded-full bg-kaydo"
             style={{
               width:
                 i < currentMediaIndex ? '100%'
@@ -268,7 +268,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             <div className="flex items-center gap-2.5">
               <div className="story-ring">
                 <div className="story-ring-inner">
-                  <div className="w-8 h-8 rounded-full bg-hearth flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-kaydo flex items-center justify-center">
                     <span className="text-white text-xs font-bold">{authorInitials}</span>
                   </div>
                 </div>
@@ -407,7 +407,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           {/* User info row */}
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-hearth flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-kaydo flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-xs font-bold">{authorInitials}</span>
               </div>
               <div>
@@ -526,7 +526,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
           {/* Reaction row */}
           <div className="flex items-center gap-5 px-4 py-3 mt-1">
-            <button className="flex items-center gap-1.5 text-bark-muted hover:text-hearth transition-colors">
+            <button className="flex items-center gap-1.5 text-bark-muted hover:text-kaydo transition-colors">
               <Heart className="w-5 h-5" />
               <span className="text-xs font-medium">0</span>
             </button>

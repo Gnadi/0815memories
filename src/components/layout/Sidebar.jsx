@@ -24,7 +24,7 @@ export default function Sidebar({ onPostMemory }) {
     <aside className="hidden lg:flex flex-col w-56 min-h-screen p-6 border-r border-cream-dark bg-cream">
       {/* Brand */}
       <div className="flex items-center gap-2 mb-10">
-        <div className="w-8 h-8 bg-hearth rounded-lg flex items-center justify-center">
+        <div className="w-8 h-8 bg-kaydo rounded-lg flex items-center justify-center">
           <Home className="w-4 h-4 text-white" />
         </div>
         <div>
@@ -40,7 +40,7 @@ export default function Sidebar({ onPostMemory }) {
             key={label}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               active
-                ? 'bg-hearth text-white'
+                ? 'bg-kaydo text-white'
                 : 'text-bark-light hover:bg-cream-dark hover:text-bark'
             }`}
           >
@@ -52,7 +52,7 @@ export default function Sidebar({ onPostMemory }) {
           onClick={() => navigate('/timeline')}
           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
             location.pathname === '/timeline'
-              ? 'bg-hearth text-white'
+              ? 'bg-kaydo text-white'
               : 'text-bark-light hover:bg-cream-dark hover:text-bark'
           }`}
         >
@@ -65,7 +65,7 @@ export default function Sidebar({ onPostMemory }) {
       {isAdmin && (
         <button
           onClick={onPostMemory}
-          className="btn-hearth w-full text-sm mb-4"
+          className="btn-kaydo w-full text-sm mb-4"
         >
           Post a Memory
         </button>
@@ -115,7 +115,7 @@ export default function Sidebar({ onPostMemory }) {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-muted hover:text-hearth transition-colors"
+        className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-muted hover:text-kaydo transition-colors"
       >
         <LogOut className="w-5 h-5" />
         Leave the Room

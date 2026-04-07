@@ -25,7 +25,7 @@ export default function FeaturedJourney({ memory }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-2 mb-2">
-            <span className="bg-hearth text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
+            <span className="bg-kaydo text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
               {memory.category || 'New Journey'}
             </span>
             <span className="text-sm opacity-80">{timeAgo(memory.createdAt)}</span>
@@ -46,7 +46,7 @@ function FeaturedPlaceholder() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-2 mb-2">
-            <span className="bg-hearth text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
+            <span className="bg-kaydo text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
               New Journey
             </span>
             <span className="text-sm opacity-80">Awaiting memories...</span>

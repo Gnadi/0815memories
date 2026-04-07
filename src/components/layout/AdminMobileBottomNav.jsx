@@ -74,13 +74,13 @@ export default function AdminMobileBottomNav() {
                 style={TAP}
               >
                 <Icon
-                  className={`w-6 h-6 transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}
+                  className={`w-6 h-6 transition-colors ${active ? 'text-kaydo' : 'text-bark-muted'}`}
                   strokeWidth={active ? 2.5 : 1.8}
                 />
-                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}>
+                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-kaydo' : 'text-bark-muted'}`}>
                   {label}
                 </span>
-                {active && <span className="w-1 h-1 rounded-full bg-hearth" />}
+                {active && <span className="w-1 h-1 rounded-full bg-kaydo" />}
               </button>
             )
           })}
@@ -113,13 +113,13 @@ export default function AdminMobileBottomNav() {
                 style={TAP}
               >
                 <Icon
-                  className={`w-6 h-6 transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}
+                  className={`w-6 h-6 transition-colors ${active ? 'text-kaydo' : 'text-bark-muted'}`}
                   strokeWidth={active ? 2.5 : 1.8}
                 />
-                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-hearth' : 'text-bark-muted'}`}>
+                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-kaydo' : 'text-bark-muted'}`}>
                   {label}
                 </span>
-                {active && <span className="w-1 h-1 rounded-full bg-hearth" />}
+                {active && <span className="w-1 h-1 rounded-full bg-kaydo" />}
               </button>
             )
           })}

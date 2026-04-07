@@ -79,12 +79,12 @@ export default function JournalDetailPage() {
       <div className="h-[85dvh] md:flex-1 bg-white/[0.92] backdrop-blur-md rounded-t-3xl mx-1 flex flex-col min-h-0 shadow-2xl overflow-hidden">
 
         {/* Coral accent line */}
-        <div className="w-10 h-1 rounded-full bg-hearth mx-5 mt-3 flex-shrink-0" />
+        <div className="w-10 h-1 rounded-full bg-kaydo mx-5 mt-3 flex-shrink-0" />
 
         {/* Loading state */}
         {!entry ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 pb-8">
@@ -101,7 +101,7 @@ export default function JournalDetailPage() {
 
             {/* Volume */}
             {entry.volume && (
-              <p className="text-xs font-semibold text-hearth uppercase tracking-wide">{entry.volume}</p>
+              <p className="text-xs font-semibold text-kaydo uppercase tracking-wide">{entry.volume}</p>
             )}
 
             {/* Title */}

@@ -11,7 +11,7 @@ export default function ProtectedRoute({ children }) {
   if (loading || (isAuthenticated && familyId && keyLoading)) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-hearth border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-kaydo border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }

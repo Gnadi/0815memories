@@ -1,4 +1,4 @@
-# FamilyHearth
+# Kaydo
 
 A private family photo-sharing platform — your digital living room. Share memories, photos, and stories with your inner circle.
 

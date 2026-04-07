@@ -55,10 +55,10 @@ const ogSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" 
   </svg>
 
   <!-- Brand name -->
-  <text x="420" y="265" font-family="Georgia, serif" font-size="80" font-weight="700" fill="#2D1B0E">FamilyHearth</text>
+  <text x="420" y="265" font-family="Georgia, serif" font-size="80" font-weight="700" fill="#2D1B0E">Kaydo</text>
 
   <!-- Tagline -->
-  <text x="420" y="340" font-family="system-ui, sans-serif" font-size="34" fill="#7A6A5E">Your Private Digital Hearth</text>
+  <text x="420" y="340" font-family="system-ui, sans-serif" font-size="34" fill="#7A6A5E">Your Private Digital Home</text>
 
   <!-- Feature pills -->
   <rect x="420" y="380" width="220" height="44" rx="22" fill="#C25A2E" opacity="0.12"/>
@@ -71,7 +71,7 @@ const ogSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" 
   <text x="969" y="408" font-family="system-ui, sans-serif" font-size="18" fill="#C25A2E" text-anchor="middle">No AI Training</text>
 
   <!-- URL -->
-  <text x="420" y="480" font-family="system-ui, sans-serif" font-size="26" fill="#B8A99C">familyhearth.app</text>
+  <text x="420" y="480" font-family="system-ui, sans-serif" font-size="26" fill="#B8A99C">kaydo.app</text>
 </svg>`)
 
 await sharp(ogSvg)

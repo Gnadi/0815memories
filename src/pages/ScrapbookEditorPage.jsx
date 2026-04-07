@@ -239,7 +239,7 @@ export default function ScrapbookEditorPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-hearth" />
+        <Loader2 className="w-8 h-8 animate-spin text-kaydo" />
       </div>
     )
   }
@@ -248,7 +248,7 @@ export default function ScrapbookEditorPage() {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4">
         <p className="text-bark font-semibold">{loadError}</p>
-        <button onClick={() => navigate('/scrapbook')} className="btn-hearth">Back to Scrapbooks</button>
+        <button onClick={() => navigate('/scrapbook')} className="btn-kaydo">Back to Scrapbooks</button>
       </div>
     )
   }
@@ -301,7 +301,7 @@ export default function ScrapbookEditorPage() {
                 onClick={() => handleSwitchPage(i)}
                 className={`w-8 h-8 rounded-lg border-2 text-xs font-bold transition-colors ${
                   i === currentPageIndex
-                    ? 'border-hearth bg-hearth text-white'
+                    ? 'border-kaydo bg-kaydo text-white'
                     : 'border-cream-dark bg-warm-white text-bark-muted'
                 }`}
               >
@@ -310,7 +310,7 @@ export default function ScrapbookEditorPage() {
             ))}
             <button
               onClick={handleAddPage}
-              className="w-8 h-8 rounded-lg border-2 border-dashed border-hearth text-hearth flex items-center justify-center text-lg font-bold"
+              className="w-8 h-8 rounded-lg border-2 border-dashed border-kaydo text-kaydo flex items-center justify-center text-lg font-bold"
             >
               +
             </button>
@@ -334,7 +334,7 @@ export default function ScrapbookEditorPage() {
                 setMobileSidebarTab(tabId)
                 setShowMobileSidebar(true)
               }}
-              className="flex flex-col items-center gap-0.5 px-2 py-1 text-bark-muted hover:text-hearth transition-colors"
+              className="flex flex-col items-center gap-0.5 px-2 py-1 text-bark-muted hover:text-kaydo transition-colors"
               style={{ touchAction: 'manipulation' }}
             >
               <Icon className="w-5 h-5" />

@@ -7,7 +7,7 @@ export default function MemoryVideoPlayer({ videos }) {
   return (
     <div className="mt-8 space-y-4">
       <h3 className="flex items-center gap-2 text-lg font-semibold text-bark">
-        <Video className="w-5 h-5 text-hearth" />
+        <Video className="w-5 h-5 text-kaydo" />
         Videos
       </h3>
       {videos.map((video, i) => (

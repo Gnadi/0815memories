@@ -133,7 +133,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
           <button
             type="button"
             onClick={startRecording}
-            className="flex items-center gap-2 px-4 py-2 bg-hearth text-white rounded-xl text-sm font-medium hover:bg-hearth-dark transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-kaydo text-white rounded-xl text-sm font-medium hover:bg-kaydo-dark transition-colors"
           >
             <Mic className="w-4 h-4" /> Record
           </button>
@@ -149,8 +149,8 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
 
       {mode === 'recording' && (
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-sm text-hearth font-medium">
-            <span className="w-2 h-2 rounded-full bg-hearth animate-pulse" />
+          <span className="flex items-center gap-1.5 text-sm text-kaydo font-medium">
+            <span className="w-2 h-2 rounded-full bg-kaydo animate-pulse" />
             Recording {formatTime(elapsed)}
           </span>
           <button
@@ -169,7 +169,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
             <button
               type="button"
               onClick={togglePlay}
-              className="w-8 h-8 rounded-full bg-hearth flex items-center justify-center text-white hover:bg-hearth-dark transition-colors flex-shrink-0"
+              className="w-8 h-8 rounded-full bg-kaydo flex items-center justify-center text-white hover:bg-kaydo-dark transition-colors flex-shrink-0"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </button>
@@ -187,12 +187,12 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Label this voice memo (optional)"
-            className="w-full px-3 py-2 bg-warm-white rounded-xl text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-hearth/30"
+            className="w-full px-3 py-2 bg-warm-white rounded-xl text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
             type="button"
             onClick={uploadAndSave}
-            className="flex items-center gap-2 px-4 py-2 bg-hearth text-white rounded-xl text-sm font-medium hover:bg-hearth-dark transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-kaydo text-white rounded-xl text-sm font-medium hover:bg-kaydo-dark transition-colors"
           >
             <Check className="w-4 h-4" /> Add to memory
           </button>
@@ -201,7 +201,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
 
       {mode === 'uploading' && (
         <div className="flex items-center gap-2 text-sm text-bark-muted">
-          <div className="w-4 h-4 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
           Uploading voice memo...
         </div>
       )}

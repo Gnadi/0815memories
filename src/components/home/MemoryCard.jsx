@@ -117,7 +117,7 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <span className="text-sm text-hearth font-medium">
+        <span className="text-sm text-kaydo font-medium">
           {formatDate(memory.date)}
         </span>
         {isAdmin && (

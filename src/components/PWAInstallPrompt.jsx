@@ -54,7 +54,7 @@ export default function PWAInstallPrompt() {
         visible ? 'translate-y-0' : 'translate-y-full'
       }`}
       role="dialog"
-      aria-label="Install FamilyHearth"
+      aria-label="Install Kaydo"
     >
       <div className="max-w-lg mx-auto bg-warm-white border-t border-cream-dark shadow-2xl rounded-t-2xl p-5">
         {/* Header row */}
@@ -73,7 +73,7 @@ export default function PWAInstallPrompt() {
               </svg>
             </div>
             <div>
-              <p className="font-bold text-bark text-base leading-tight">FamilyHearth</p>
+              <p className="font-bold text-bark text-base leading-tight">Kaydo</p>
               <p className="text-bark-light text-sm mt-0.5">
                 Add to your home screen for the best experience — works offline too.
               </p>
@@ -93,7 +93,7 @@ export default function PWAInstallPrompt() {
         <div className="flex items-center gap-3 mt-4">
           <button
             onClick={handleInstall}
-            className="btn-hearth text-sm px-5 py-2.5 shrink-0"
+            className="btn-kaydo text-sm px-5 py-2.5 shrink-0"
           >
             Add to Home Screen
           </button>

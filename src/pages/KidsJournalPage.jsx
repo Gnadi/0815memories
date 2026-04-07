@@ -46,7 +46,7 @@ export default function KidsJournalPage() {
             setEditingKid(null)
             setShowAddKid(true)
           }}
-          className="btn-hearth mt-5 flex items-center gap-2"
+          className="btn-kaydo mt-5 flex items-center gap-2"
         >
           <PenLine className="w-4 h-4" />
           Add New Child
@@ -56,7 +56,7 @@ export default function KidsJournalPage() {
       {/* Kids grid */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
         </div>
       ) : kids.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
@@ -69,7 +69,7 @@ export default function KidsJournalPage() {
           </div>
           <button
             onClick={() => setShowAddKid(true)}
-            className="btn-hearth flex items-center gap-2"
+            className="btn-kaydo flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Add Your First Child
@@ -101,7 +101,7 @@ export default function KidsJournalPage() {
               setEditingKid(null)
               setShowAddKid(true)
             }}
-            className="bg-warm-white border-2 border-dashed border-cream-darker rounded-2xl p-5 flex flex-col items-center justify-center gap-3 text-bark-muted hover:border-hearth hover:text-hearth transition-colors min-h-[180px]"
+            className="bg-warm-white border-2 border-dashed border-cream-darker rounded-2xl p-5 flex flex-col items-center justify-center gap-3 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors min-h-[180px]"
           >
             <Plus className="w-8 h-8" />
             <span className="text-sm font-medium">Add Another Child</span>

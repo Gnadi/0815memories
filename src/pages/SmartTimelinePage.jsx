@@ -44,7 +44,7 @@ function TimelineCard({ memory }) {
     <div className="relative flex gap-4 pb-8 group">
       {/* Timeline dot */}
       <div className="flex flex-col items-center flex-shrink-0">
-        <div className="w-3 h-3 rounded-full bg-hearth border-2 border-cream mt-2 z-10 group-hover:scale-125 transition-transform" />
+        <div className="w-3 h-3 rounded-full bg-kaydo border-2 border-cream mt-2 z-10 group-hover:scale-125 transition-transform" />
         <div className="w-px flex-1 bg-cream-dark mt-1" />
       </div>
 
@@ -63,7 +63,7 @@ function TimelineCard({ memory }) {
             />
             {/* Date overlay */}
             <div className="absolute top-3 left-3">
-              <span className="bg-warm-white/90 backdrop-blur-sm text-hearth text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full">
+              <span className="bg-warm-white/90 backdrop-blur-sm text-kaydo text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full">
                 {formatOverlayDate(date)}
               </span>
             </div>
@@ -73,7 +73,7 @@ function TimelineCard({ memory }) {
         {/* Content */}
         <div className="p-4">
           {!image && (
-            <p className="text-xs font-bold tracking-widest text-hearth mb-2">
+            <p className="text-xs font-bold tracking-widest text-kaydo mb-2">
               {formatOverlayDate(date)}
             </p>
           )}
@@ -168,8 +168,8 @@ export default function SmartTimelinePage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-5 h-5 text-hearth" />
-            <span className="text-xs font-semibold text-hearth tracking-widest uppercase">Family Vault</span>
+            <Clock className="w-5 h-5 text-kaydo" />
+            <span className="text-xs font-semibold text-kaydo tracking-widest uppercase">Family Vault</span>
           </div>
           <h1 className="font-serif text-3xl font-bold text-bark leading-tight">Smart Timeline</h1>
           <p className="text-bark-light mt-1 text-sm">Tracing the threads of our story.</p>
@@ -286,7 +286,7 @@ export default function SmartTimelinePage() {
             </p>
             <button
               onClick={() => { setSelectedYear(null); setSelectedSeason(null) }}
-              className="mt-4 text-sm text-hearth font-medium hover:underline"
+              className="mt-4 text-sm text-kaydo font-medium hover:underline"
             >
               Clear filters
             </button>

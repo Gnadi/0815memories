@@ -58,7 +58,7 @@ export default function JournalArchivePage() {
           </div>
           <button
             onClick={() => navigate(`/journal/${childId}/new`)}
-            className="btn-hearth flex items-center gap-1.5 text-sm py-2 px-3"
+            className="btn-kaydo flex items-center gap-1.5 text-sm py-2 px-3"
           >
             <PenLine className="w-4 h-4" />
             Write
@@ -73,7 +73,7 @@ export default function JournalArchivePage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
             </div>
           ) : journals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
@@ -83,7 +83,7 @@ export default function JournalArchivePage() {
               </p>
               <button
                 onClick={() => navigate(`/journal/${childId}/new`)}
-                className="btn-hearth flex items-center gap-2"
+                className="btn-kaydo flex items-center gap-2"
               >
                 <PenLine className="w-4 h-4" />
                 Write First Letter

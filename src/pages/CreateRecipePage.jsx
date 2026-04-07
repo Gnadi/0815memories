@@ -81,7 +81,7 @@ export default function CreateRecipePage() {
   if (isFork && parentLoading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -89,7 +89,7 @@ export default function CreateRecipePage() {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-bark font-semibold">{forkLoadError}</p>
-        <button onClick={() => navigate('/recipes')} className="text-sm text-hearth font-semibold">
+        <button onClick={() => navigate('/recipes')} className="text-sm text-kaydo font-semibold">
           ← Back to Recipes
         </button>
       </div>
@@ -197,7 +197,7 @@ export default function CreateRecipePage() {
             <ArrowLeft className="w-5 h-5 text-bark" />
           </button>
           <div className="flex items-center gap-2 flex-1">
-            {isFork ? <GitFork className="w-4 h-4 text-hearth" /> : <ChefHat className="w-4 h-4 text-hearth" />}
+            {isFork ? <GitFork className="w-4 h-4 text-kaydo" /> : <ChefHat className="w-4 h-4 text-kaydo" />}
             <span className="font-semibold text-bark text-sm">
               {isFork ? `Fork of "${parent?.title}"` : 'New Recipe'}
             </span>
@@ -215,7 +215,7 @@ export default function CreateRecipePage() {
               <ArrowLeft className="w-5 h-5 text-bark" />
             </button>
             <div className="flex items-center gap-2">
-              {isFork ? <GitFork className="w-5 h-5 text-hearth" /> : <ChefHat className="w-5 h-5 text-hearth" />}
+              {isFork ? <GitFork className="w-5 h-5 text-kaydo" /> : <ChefHat className="w-5 h-5 text-kaydo" />}
               <h1 className="text-2xl font-bold text-bark">
                 {isFork ? `Fork: "${parent?.title}"` : 'New Recipe'}
               </h1>
@@ -223,8 +223,8 @@ export default function CreateRecipePage() {
           </div>
 
           {isFork && (
-            <div className="bg-hearth/10 border border-hearth/20 rounded-2xl px-4 py-3 mb-6 text-sm text-bark">
-              <span className="font-semibold text-hearth">Forking from:</span>{' '}
+            <div className="bg-kaydo/10 border border-kaydo/20 rounded-2xl px-4 py-3 mb-6 text-sm text-bark">
+              <span className="font-semibold text-kaydo">Forking from:</span>{' '}
               {parent?.title} ({parent?.year}) by {parent?.author}
             </div>
           )}
@@ -245,7 +245,7 @@ export default function CreateRecipePage() {
                     value={form.title}
                     onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
                     placeholder={isFork ? 'e.g. The Lentil & Walnut Loaf' : "e.g. Grandma's Meatloaf"}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
 
@@ -258,7 +258,7 @@ export default function CreateRecipePage() {
                     value={form.author}
                     onChange={(e) => setForm((p) => ({ ...p, author: e.target.value }))}
                     placeholder="e.g. Grandma Rose"
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
 
@@ -272,7 +272,7 @@ export default function CreateRecipePage() {
                     onChange={(e) => setForm((p) => ({ ...p, year: e.target.value }))}
                     min="1900"
                     max="2099"
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
 
@@ -285,7 +285,7 @@ export default function CreateRecipePage() {
                     onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                     placeholder="A brief description of the dish and its story..."
                     rows={2}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors resize-none"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
                 </div>
 
@@ -298,7 +298,7 @@ export default function CreateRecipePage() {
                     onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
                     placeholder="Step-by-step instructions..."
                     rows={5}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors resize-none"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
                 </div>
 
@@ -311,7 +311,7 @@ export default function CreateRecipePage() {
                     value={form.chefNote}
                     onChange={(e) => setForm((p) => ({ ...p, chefNote: e.target.value }))}
                     placeholder="e.g. The trick is to mash only half the lentils..."
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
               </div>
@@ -343,7 +343,7 @@ export default function CreateRecipePage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-cream-dark text-sm text-bark-muted hover:border-hearth hover:text-hearth transition-colors"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-cream-dark text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
                   >
                     <ImageIcon className="w-4 h-4" />
                     Upload a photo
@@ -380,7 +380,7 @@ export default function CreateRecipePage() {
                       value={ing.name}
                       onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
                       placeholder="e.g. 2 cups ground lentils"
-                      className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                      className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                     />
                     {isFork && (
                       <div className="flex gap-1 shrink-0">
@@ -414,7 +414,7 @@ export default function CreateRecipePage() {
               <button
                 type="button"
                 onClick={addIngredient}
-                className="flex items-center gap-1.5 text-sm font-medium text-hearth hover:text-hearth-dark transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium text-kaydo hover:text-kaydo-dark transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Ingredient
@@ -435,7 +435,7 @@ export default function CreateRecipePage() {
                     onChange={(e) => setForm((p) => ({ ...p, forkReason: e.target.value }))}
                     placeholder="e.g. Transitioning to a plant-based lifestyle was important for my health, but I couldn't let go of the Sunday dinners we shared at Grandma's..."
                     rows={3}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors resize-none"
+                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
                 </div>
 
@@ -447,7 +447,7 @@ export default function CreateRecipePage() {
                     <button
                       type="button"
                       onClick={addChange}
-                      className="flex items-center gap-1 text-xs font-medium text-hearth hover:text-hearth-dark transition-colors"
+                      className="flex items-center gap-1 text-xs font-medium text-kaydo hover:text-kaydo-dark transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Add Change
@@ -466,7 +466,7 @@ export default function CreateRecipePage() {
                         <select
                           value={change.type}
                           onChange={(e) => updateChange(change.id, 'type', e.target.value)}
-                          className="bg-cream rounded-xl px-3 py-2 text-xs font-semibold text-bark border border-cream-dark focus:outline-none focus:border-hearth transition-colors shrink-0"
+                          className="bg-cream rounded-xl px-3 py-2 text-xs font-semibold text-bark border border-cream-dark focus:outline-none focus:border-kaydo transition-colors shrink-0"
                         >
                           {CHANGE_TYPES.map((t) => (
                             <option key={t} value={t}>{t}</option>
@@ -477,14 +477,14 @@ export default function CreateRecipePage() {
                           value={change.ingredient}
                           onChange={(e) => updateChange(change.id, 'ingredient', e.target.value)}
                           placeholder="Ingredient name"
-                          className="w-28 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                          className="w-28 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                         />
                         <input
                           type="text"
                           value={change.description}
                           onChange={(e) => updateChange(change.id, 'description', e.target.value)}
                           placeholder="Why this change?"
-                          className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-hearth transition-colors"
+                          className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                         />
                         <button
                           type="button"
@@ -510,7 +510,7 @@ export default function CreateRecipePage() {
               <button
                 type="submit"
                 disabled={saving || image?.uploading}
-                className="btn-hearth px-6 py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-kaydo px-6 py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving
                   ? 'Saving…'

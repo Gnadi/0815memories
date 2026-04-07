@@ -69,7 +69,7 @@ export default function MemoryDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-hearth border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-kaydo border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -80,7 +80,7 @@ export default function MemoryDetailPage() {
         <p className="text-bark-light text-lg">Memory not found</p>
         <button
           onClick={() => navigate('/home')}
-          className="btn-hearth"
+          className="btn-kaydo"
         >
           Back to Home
         </button>
@@ -104,20 +104,20 @@ export default function MemoryDetailPage() {
       <header className="flex items-center justify-between px-4 py-3 sticky top-0 bg-cream/80 backdrop-blur-sm z-10">
         <button
           onClick={() => navigate('/home')}
-          className="flex items-center gap-2 text-bark hover:text-hearth transition-colors"
+          className="flex items-center gap-2 text-bark hover:text-kaydo transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Family Hearth</span>
+          <span className="text-sm font-medium">Kaydo</span>
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={handleShare} className="text-bark-light hover:text-hearth">
+          <button onClick={handleShare} className="text-bark-light hover:text-kaydo">
             <Share2 className="w-5 h-5" />
           </button>
           {isAdmin && (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((v) => !v)}
-                className="text-bark-light hover:text-hearth"
+                className="text-bark-light hover:text-kaydo"
               >
                 <MoreVertical className="w-5 h-5" />
               </button>

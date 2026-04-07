@@ -104,7 +104,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
           {/* Header */}
           <div className="flex items-start justify-between p-5 border-b border-cream-dark">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-hearth mb-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-kaydo mb-1">
                 Recipe Fork
               </p>
               <h2 className="text-2xl font-bold text-bark">Comparison View</h2>
@@ -129,7 +129,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
                   const v = allVersions.find((v) => v.id === e.target.value)
                   if (v) setLocalA(v)
                 }}
-                className="bg-cream rounded-xl px-3 py-1.5 text-sm text-bark border border-cream-dark focus:outline-none focus:border-hearth"
+                className="bg-cream rounded-xl px-3 py-1.5 text-sm text-bark border border-cream-dark focus:outline-none focus:border-kaydo"
               >
                 {allVersions.map((v) => (
                   <option key={v.id} value={v.id}>{v.year}: {v.title}</option>
@@ -142,7 +142,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
                   const v = allVersions.find((v) => v.id === e.target.value)
                   if (v) setLocalB(v)
                 }}
-                className="bg-cream rounded-xl px-3 py-1.5 text-sm text-bark border border-cream-dark focus:outline-none focus:border-hearth"
+                className="bg-cream rounded-xl px-3 py-1.5 text-sm text-bark border border-cream-dark focus:outline-none focus:border-kaydo"
               >
                 {allVersions.map((v) => (
                   <option key={v.id} value={v.id}>{v.year}: {v.title}</option>
@@ -251,7 +251,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
                 </button>
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center gap-2 w-full bg-hearth hover:bg-hearth-light text-white text-xs font-semibold py-2.5 rounded-xl transition-colors"
+                  className="flex items-center justify-center gap-2 w-full bg-kaydo hover:bg-kaydo-light text-white text-xs font-semibold py-2.5 rounded-xl transition-colors"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   Share Fork
@@ -269,7 +269,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
                 </div>
               )}
               <div className="p-4">
-                <div className="inline-block text-[10px] font-bold uppercase tracking-wider bg-hearth text-white rounded-full px-2 py-0.5 mb-2">
+                <div className="inline-block text-[10px] font-bold uppercase tracking-wider bg-kaydo text-white rounded-full px-2 py-0.5 mb-2">
                   {localB.year} Fork
                 </div>
                 <h3 className="text-lg font-bold text-bark leading-tight">{localB.title}</h3>

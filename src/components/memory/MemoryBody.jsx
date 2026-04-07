@@ -16,7 +16,7 @@ export default function MemoryBody({ memory }) {
         )}
         {memory.location && (
           <span className="flex items-center gap-1.5 text-sm text-bark-light bg-cream-dark px-3 py-1.5 rounded-full">
-            <MapPin className="w-4 h-4 text-hearth" />
+            <MapPin className="w-4 h-4 text-kaydo" />
             {memory.location}
           </span>
         )}
@@ -29,7 +29,7 @@ export default function MemoryBody({ memory }) {
 
       {/* Quote */}
       {memory.quote && (
-        <blockquote className="border-l-4 border-hearth pl-5 mb-8 italic text-bark-light text-xl leading-relaxed">
+        <blockquote className="border-l-4 border-kaydo pl-5 mb-8 italic text-bark-light text-xl leading-relaxed">
           &ldquo;{memory.quote}&rdquo;
         </blockquote>
       )}

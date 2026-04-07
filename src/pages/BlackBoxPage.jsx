@@ -52,7 +52,7 @@ export default function BlackBoxPage() {
       {/* Boxes */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-6 h-6 border-2 border-hearth border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
         </div>
       ) : boxes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">

@@ -108,9 +108,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-cream flex flex-col">
       {/* Desktop header — hidden on mobile */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-hearth font-semibold text-lg">
+        <div className="flex items-center gap-2 text-kaydo font-semibold text-lg">
           <Home className="w-5 h-5" />
-          <span>FamilyHearth</span>
+          <span>Kaydo</span>
         </div>
       </header>
 
@@ -120,8 +120,8 @@ export default function LoginPage() {
         <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
-            <Home className="w-5 h-5 text-hearth" />
-            <span className="text-lg font-bold text-bark">Our Family Hearth</span>
+            <Home className="w-5 h-5 text-kaydo" />
+            <span className="text-lg font-bold text-bark">Kaydo</span>
           </div>
 
           {/* Illustration card */}
@@ -162,7 +162,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowAdminLogin(!showAdminLogin)}
-              className="text-sm text-bark-muted hover:text-hearth transition-colors"
+              className="text-sm text-bark-muted hover:text-kaydo transition-colors"
             >
               {showAdminLogin ? 'Back to family login' : 'Admin login'}
             </button>
@@ -172,7 +172,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <button
               onClick={() => navigate('/signup')}
-              className="w-full py-3 border-2 border-cream-dark rounded-full text-hearth font-semibold hover:bg-cream-dark transition-colors"
+              className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
             >
               Create an Account
             </button>
@@ -201,7 +201,7 @@ export default function LoginPage() {
             {/* House icon */}
             <div className="flex justify-center mb-6">
               <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center">
-                <Home className="w-7 h-7 text-hearth" />
+                <Home className="w-7 h-7 text-kaydo" />
               </div>
             </div>
 
@@ -234,7 +234,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowAdminLogin(!showAdminLogin)}
-                className="text-sm text-bark-muted hover:text-hearth transition-colors"
+                className="text-sm text-bark-muted hover:text-kaydo transition-colors"
               >
                 {showAdminLogin ? 'Back to family login' : 'Admin login'}
               </button>
@@ -245,7 +245,7 @@ export default function LoginPage() {
               <p className="text-sm text-bark-light mb-3">New to the family?</p>
               <button
                 onClick={() => navigate('/signup')}
-                className="w-full py-3 border-2 border-cream-dark rounded-full text-hearth font-semibold hover:bg-cream-dark transition-colors"
+                className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
               >
                 Create an Account
               </button>
@@ -262,7 +262,7 @@ export default function LoginPage() {
 
       {/* Footer — desktop only */}
       <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>&copy; {new Date().getFullYear()} FamilyHearth. Designed for memories.</p>
+        <p>&copy; {new Date().getFullYear()} Kaydo. Designed for memories.</p>
         <div className="flex gap-4">
           <span className="hover:text-bark cursor-pointer">Privacy Policy</span>
           <span className="hover:text-bark cursor-pointer">Terms of Service</span>
@@ -302,8 +302,8 @@ function LoginForm({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="the.millers@hearth.com"
-              className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+              placeholder="the.millers@kaydo.com"
+              className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             />
           </div>
         </div>
@@ -321,7 +321,7 @@ function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your private key"
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-hearth/30"
+            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
           <button
@@ -341,13 +341,13 @@ function LoginForm({
             type="checkbox"
             checked={stayLoggedIn}
             onChange={(e) => setStayLoggedIn(e.target.checked)}
-            className="w-4 h-4 rounded border-bark-muted accent-hearth"
+            className="w-4 h-4 rounded border-bark-muted accent-kaydo"
           />
           Stay logged in
         </label>
         <button
           type="button"
-          className="text-sm text-hearth hover:text-hearth-dark font-medium"
+          className="text-sm text-kaydo hover:text-kaydo-dark font-medium"
         >
           Lost your key?
         </button>
@@ -364,7 +364,7 @@ function LoginForm({
       <button
         type="submit"
         disabled={loading}
-        className="btn-hearth w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
+        className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
       >
         {loading ? (
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
