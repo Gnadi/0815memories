@@ -1,4 +1,5 @@
-import { Home, LogOut, Settings, BookMarked } from 'lucide-react'
+import { LogOut, Settings, BookMarked } from 'lucide-react'
+import KaydoLogo from '../KaydoLogo'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -14,9 +15,7 @@ export default function MobileHeader() {
   return (
     <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-cream border-b border-cream-dark sticky top-0 z-30">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-kaydo rounded-lg flex items-center justify-center">
-          <Home className="w-4 h-4 text-white" />
-        </div>
+        <KaydoLogo size={32} />
         <h1 className="text-lg font-bold text-bark">Kaydo</h1>
       </div>
       <div className="flex items-center gap-1">

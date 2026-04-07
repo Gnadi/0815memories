@@ -1,4 +1,5 @@
 import { Home, Compass, MessageSquare, User, BookOpen, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
+import KaydoLogo from '../KaydoLogo'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -24,9 +25,7 @@ export default function Sidebar({ onPostMemory }) {
     <aside className="hidden lg:flex flex-col w-56 min-h-screen p-6 border-r border-cream-dark bg-cream">
       {/* Brand */}
       <div className="flex items-center gap-2 mb-10">
-        <div className="w-8 h-8 bg-kaydo rounded-lg flex items-center justify-center">
-          <Home className="w-4 h-4 text-white" />
-        </div>
+        <KaydoLogo size={32} />
         <div>
           <h1 className="text-base font-bold text-bark leading-tight">The Living Room</h1>
           <p className="text-xs text-bark-muted">Our Private Space</p>

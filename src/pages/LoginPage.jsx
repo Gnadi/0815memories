@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { Home, Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
+import { Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
+import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
 
@@ -108,8 +109,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-cream flex flex-col">
       {/* Desktop header — hidden on mobile */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-kaydo font-semibold text-lg">
-          <Home className="w-5 h-5" />
+        <div className="flex items-center gap-2 text-bark font-semibold text-lg">
+          <KaydoLogo size={22} />
           <span>Kaydo</span>
         </div>
       </header>
@@ -120,7 +121,7 @@ export default function LoginPage() {
         <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
-            <Home className="w-5 h-5 text-kaydo" />
+            <KaydoLogo size={22} />
             <span className="text-lg font-bold text-bark">Kaydo</span>
           </div>
 
@@ -198,11 +199,9 @@ export default function LoginPage() {
         {/* Right — Login Form */}
         <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
           <div className="w-full max-w-md">
-            {/* House icon */}
+            {/* Logo mark */}
             <div className="flex justify-center mb-6">
-              <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center">
-                <Home className="w-7 h-7 text-kaydo" />
-              </div>
+              <KaydoLogo size={52} />
             </div>
 
             <h1 className="text-4xl font-bold text-bark text-center mb-2">

@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
-  Home,
   Shield,
   Mail,
   Utensils,
@@ -22,6 +21,7 @@ import {
   Layers,
 } from 'lucide-react'
 import { useState } from 'react'
+import KaydoLogo from '../components/KaydoLogo'
 
 function OctocatIcon({ className }) {
   return (
@@ -50,7 +50,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 text-bark font-bold text-lg">
-            <Home className="w-5 h-5 text-kaydo" />
+            <KaydoLogo size={22} />
             <span>Kaydo</span>
           </div>
 
@@ -544,7 +544,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-5">
           {/* Logo */}
           <div className="flex items-center gap-2 text-bark font-bold">
-            <Home className="w-4 h-4 text-kaydo" />
+            <KaydoLogo size={18} />
             <span>Kaydo</span>
           </div>
 

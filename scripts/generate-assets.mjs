@@ -12,16 +12,17 @@ const root = join(__dirname, '..')
 
 mkdirSync(join(root, 'public/icons'), { recursive: true })
 
-// ─── House icon SVG (scaled to target size via viewBox) ───────────────────────
+// ─── Kaydo logo mark SVG (scaled to target size via viewBox) ─────────────────
 function makeIconSvg(size) {
-  const padding = Math.round(size * 0.1)
-  const inner = size - padding * 2
-  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="#FDF6EC"/>
-  <svg x="${padding}" y="${padding}" width="${inner}" height="${inner}" viewBox="0 0 32 32">
-    <path d="M16 4L3 14h3v13h8v-8h4v8h8V14h3L16 4z" fill="#C25A2E"/>
-    <circle cx="16" cy="15" r="3" fill="#FDF6EC"/>
-  </svg>
+  const r = Math.round(size * 0.18)
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="${r}" fill="#FDF6EC"/>
+  <line x1="50" y1="8" x2="8" y2="38" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+  <line x1="8" y1="38" x2="8" y2="90" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+  <line x1="8" y1="62" x2="37" y2="38" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+  <line x1="8" y1="62" x2="44" y2="90" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 35 90 L 35 57 Q 35 12 60 12 Q 90 12 90 56 L 90 90" stroke="#8B9E7E" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="60" cy="36" r="7" fill="#F5E6C8"/>
 </svg>`)
 }
 
@@ -48,10 +49,14 @@ const ogSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" 
   <rect x="0" y="0" width="1200" height="8" fill="#C25A2E"/>
   <rect x="0" y="622" width="1200" height="8" fill="#C25A2E"/>
 
-  <!-- House icon centred-left -->
-  <svg x="120" y="195" width="240" height="240" viewBox="0 0 32 32">
-    <path d="M16 4L3 14h3v13h8v-8h4v8h8V14h3L16 4z" fill="#C25A2E"/>
-    <circle cx="16" cy="15" r="3" fill="#FDF6EC"/>
+  <!-- Kaydo logo mark centred-left -->
+  <svg x="120" y="195" width="240" height="240" viewBox="0 0 100 100">
+    <line x1="50" y1="8" x2="8" y2="38" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+    <line x1="8" y1="38" x2="8" y2="90" stroke="#C25A2E" stroke-width="8" stroke-linecap="round"/>
+    <line x1="8" y1="62" x2="37" y2="38" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+    <line x1="8" y1="62" x2="44" y2="90" stroke="#C25A2E" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 35 90 L 35 57 Q 35 12 60 12 Q 90 12 90 56 L 90 90" stroke="#8B9E7E" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="60" cy="36" r="7" fill="#F5E6C8"/>
   </svg>
 
   <!-- Brand name -->
