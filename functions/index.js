@@ -7,18 +7,19 @@
  * No credentials needed — Firebase injects the service account automatically
  * when running inside Cloud Functions.
  *
+ * Uses Cloud Functions gen 1 (firebase-functions v1 API) which works on the
+ * free Firebase Spark plan. FCM is a Google service, so outbound calls to it
+ * are permitted without upgrading to Blaze.
+ *
  * Deployment (one-time):
  *   npm install -g firebase-tools
  *   firebase login
  *   firebase use <your-project-id>
  *   cd functions && npm install && cd ..
  *   firebase deploy --only functions
- *
- * Requires: Firebase Blaze (pay-as-you-go) plan.
- * Free tier within Blaze: 2M invocations/month — more than enough for a family app.
  */
 
-import { onDocumentCreated } from 'firebase-functions/v2/firestore'
+import { firestore } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
@@ -26,13 +27,13 @@ import { getMessaging } from 'firebase-admin/messaging'
 // No credentials arg — Firebase injects them automatically in the Cloud Functions runtime
 initializeApp()
 
-export const dispatchPushNotifications = onDocumentCreated(
-  'notificationsQueue/{docId}',
-  async (event) => {
-    const data = event.data?.data()
+export const dispatchPushNotifications = firestore
+  .document('notificationsQueue/{docId}')
+  .onCreate(async (snapshot) => {
+    const data = snapshot.data()
 
-    // Always clean up, even on early return
-    const cleanup = () => event.data?.ref.delete().catch(() => {})
+    // Always clean up the queue doc, even on early return
+    const cleanup = () => snapshot.ref.delete().catch(() => {})
 
     if (!data) return cleanup()
 
@@ -44,12 +45,12 @@ export const dispatchPushNotifications = onDocumentCreated(
     const messaging = getMessaging()
 
     // Fetch all FCM tokens registered for this family
-    const snapshot = await db
+    const tokenSnapshot = await db
       .collection('fcmTokens')
       .where('familyId', '==', familyId)
       .get()
 
-    const tokenDocs = snapshot.docs
+    const tokenDocs = tokenSnapshot.docs
     const tokens = tokenDocs.map((d) => d.data().token).filter(Boolean)
 
     if (tokens.length === 0) return cleanup()
@@ -77,5 +78,4 @@ export const dispatchPushNotifications = onDocumentCreated(
     console.log(`[push] sent=${sent} failed=${results.length - sent} family=${familyId}`)
 
     return cleanup()
-  }
-)
+  })
