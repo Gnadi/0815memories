@@ -132,5 +132,13 @@ service cloud.firestore {
       allow write: if true;
       allow read: if false;
     }
+
+    // Notification dispatch queue — admin writes here after posting a memory or moment.
+    // A Firebase Cloud Function triggers on each new document, sends FCM push messages,
+    // and deletes the document. Cloud Function access bypasses these rules.
+    match /notificationsQueue/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
   }
 }
