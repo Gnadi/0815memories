@@ -124,5 +124,13 @@ service cloud.firestore {
                     && resource.data.familyId != null
                     && get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUid == request.auth.uid;
     }
+
+    // FCM push tokens — any client (admin or viewer) can write their own token.
+    // Viewers are not Firebase-authenticated, so we allow unauthenticated writes.
+    // Tokens are only read server-side via Firebase Admin SDK (bypasses these rules).
+    match /fcmTokens/{tokenId} {
+      allow write: if true;
+      allow read: if false;
+    }
   }
 }

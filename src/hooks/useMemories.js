@@ -57,11 +57,22 @@ export function useMemories(familyId, encryptionKey) {
 
   const addMemory = async (memory) => {
     const encrypted = await encryptMemoryData(encryptionKey, memory)
-    await addDoc(collection(db, 'memories'), {
+    const ref = await addDoc(collection(db, 'memories'), {
       ...encrypted,
       familyId,
       createdAt: serverTimestamp(),
     })
+    // Fire-and-forget push notification — never blocks the save
+    fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        familyId,
+        title: 'New memory added',
+        body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
+        url: `/memory/${ref.id}`,
+      }),
+    }).catch(() => {})
   }
 
   const updateMemory = async (id, updates) => {
@@ -112,6 +123,17 @@ export function useMoments(familyId) {
       familyId,
       date: serverTimestamp(),
     })
+    // Fire-and-forget push notification — never blocks the save
+    fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        familyId,
+        title: 'New moment shared',
+        body: moment.caption || 'A new moment was added to the feed.',
+        url: '/',
+      }),
+    }).catch(() => {})
   }
 
   const updateMoment = async (id, updates) => {
