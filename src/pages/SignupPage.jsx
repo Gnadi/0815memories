@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, KeyRound, Eye, EyeOff, User, Shield } from 'lucide-react'
+import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import { generateSlug } from '../utils/familySlug'
