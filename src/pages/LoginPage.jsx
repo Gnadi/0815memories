@@ -337,8 +337,8 @@ function LoginForm({
         </div>
       </div>
 
-      {/* Stay logged in & Forgot */}
-      <div className="flex items-center justify-between">
+      {/* Stay logged in */}
+      <div className="flex items-center">
         <label className="flex items-center gap-2 text-sm text-bark-light cursor-pointer">
           <input
             type="checkbox"
@@ -348,12 +348,6 @@ function LoginForm({
           />
           Stay logged in
         </label>
-        <button
-          type="button"
-          className="text-sm text-kaydo hover:text-kaydo-dark font-medium"
-        >
-          Lost your key?
-        </button>
       </div>
 
       {/* Error message */}
