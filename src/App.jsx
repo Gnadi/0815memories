@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -7,6 +7,8 @@ import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import NotificationPrompt from './components/NotificationPrompt'
 import { listenForegroundMessages } from './utils/notifications'
+
+import { getSubdomainSlug } from './utils/familySlug'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -31,6 +33,14 @@ const CreateRecipePage = lazy(() => import('./pages/CreateRecipePage'))
 const ScrapbooksPage = lazy(() => import('./pages/ScrapbooksPage'))
 const ScrapbookEditorPage = lazy(() => import('./pages/ScrapbookEditorPage'))
 const SmartTimelinePage = lazy(() => import('./pages/SmartTimelinePage'))
+
+function SubdomainRedirect() {
+  const subdomain = getSubdomainSlug()
+  if (subdomain) {
+    return <Navigate to="/login" replace />
+  }
+  return <LandingPage />
+}
 
 function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
@@ -81,7 +91,7 @@ export default function App() {
       <AuthProvider>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<SubdomainRedirect />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/family/:slug" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
