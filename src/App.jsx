@@ -1,9 +1,12 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import NotificationPrompt from './components/NotificationPrompt'
+import { listenForegroundMessages } from './utils/notifications'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -31,6 +34,45 @@ const SmartTimelinePage = lazy(() => import('./pages/SmartTimelinePage'))
 
 function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
+}
+
+// Handles push notification prompt + in-app foreground toast.
+// Must be inside AuthProvider to access familyId.
+function AppNotifications() {
+  const { familyId, isAuthenticated } = useAuth()
+  const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const unsub = listenForegroundMessages(({ title, body }) => {
+      setToast({ title, body })
+      setTimeout(() => setToast(null), 5000)
+    })
+    return unsub
+  }, [isAuthenticated])
+
+  return (
+    <>
+      {isAuthenticated && <NotificationPrompt familyId={familyId} />}
+
+      {/* In-app toast for foreground push messages */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm bg-bark text-warm-white rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3 animate-fade-in">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold leading-snug">{toast.title}</p>
+            {toast.body && <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.body}</p>}
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity mt-0.5"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </>
+  )
 }
 
 export default function App() {
@@ -199,6 +241,7 @@ export default function App() {
         </Suspense>
         <AdminMobileBottomNav />
         <PWAInstallPrompt />
+        <AppNotifications />
       </AuthProvider>
     </BrowserRouter>
   )

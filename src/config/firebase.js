@@ -1,10 +1,12 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getMessaging } from 'firebase/messaging'
 
 let app = null
 let auth = null
 let db = null
+let messaging = null
 
 try {
   const firebaseConfig = {
@@ -20,6 +22,14 @@ try {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
     db = getFirestore(app)
+    // Messaging is only available in browser windows, not service workers
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        messaging = getMessaging(app)
+      } catch (e) {
+        console.warn('Firebase Messaging unavailable:', e.message)
+      }
+    }
   } else {
     console.warn('Firebase env vars not set — app running in demo mode')
   }
@@ -27,5 +37,5 @@ try {
   console.error('Firebase initialization failed:', e)
 }
 
-export { auth, db }
+export { auth, db, messaging }
 export default app

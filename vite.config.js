@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'og-image.png'],
@@ -38,42 +41,6 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        runtimeCaching: [
-          // Firebase Auth + Firestore — network-first (always fresh data)
-          {
-            urlPattern: /^https:\/\/(identitytoolkit|securetoken)\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firebase-auth-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firestore-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-            },
-          },
-          // Cloudinary — NetworkOnly: blobs are AES-256-GCM encrypted; the SW
-          // can't serve them usefully from cache (the browser can't render raw
-          // ciphertext), and serving a stale/opaque cached response breaks the
-          // fetch→arrayBuffer()→decrypt pipeline in useDecryptedMedia.
-          // The JS-layer module-level cache already handles in-session dedup.
-          {
-            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
-            handler: 'NetworkOnly',
-          },
-          // Firebase Storage — same reasoning as Cloudinary above.
-          {
-            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
-            handler: 'NetworkOnly',
           },
         ],
       },

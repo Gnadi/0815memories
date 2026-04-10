@@ -57,11 +57,18 @@ export function useMemories(familyId, encryptionKey) {
 
   const addMemory = async (memory) => {
     const encrypted = await encryptMemoryData(encryptionKey, memory)
-    await addDoc(collection(db, 'memories'), {
+    const ref = await addDoc(collection(db, 'memories'), {
       ...encrypted,
       familyId,
       createdAt: serverTimestamp(),
     })
+    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
+    addDoc(collection(db, 'notificationsQueue'), {
+      familyId,
+      title: 'New memory added',
+      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
+      url: `/memory/${ref.id}`,
+    }).catch(() => {})
   }
 
   const updateMemory = async (id, updates) => {
@@ -112,6 +119,13 @@ export function useMoments(familyId) {
       familyId,
       date: serverTimestamp(),
     })
+    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
+    addDoc(collection(db, 'notificationsQueue'), {
+      familyId,
+      title: 'New moment shared',
+      body: moment.caption || 'A new moment was added to the feed.',
+      url: '/',
+    }).catch(() => {})
   }
 
   const updateMoment = async (id, updates) => {
