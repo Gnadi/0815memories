@@ -169,15 +169,17 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Sign up */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/signup')}
-              className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
-            >
-              Create an Account
-            </button>
-          </div>
+          {/* Sign up — admin login only */}
+          {showAdminLogin && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => navigate('/signup')}
+                className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
+              >
+                Create an Account
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
@@ -239,16 +241,18 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Sign up */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-bark-light mb-3">New to the family?</p>
-              <button
-                onClick={() => navigate('/signup')}
-                className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
-              >
-                Create an Account
-              </button>
-            </div>
+            {/* Sign up — admin login only */}
+            {showAdminLogin && (
+              <div className="mt-6 text-center">
+                <p className="text-sm text-bark-light mb-3">New to the family?</p>
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
+                >
+                  Create an Account
+                </button>
+              </div>
+            )}
 
             {/* Secure badge */}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
