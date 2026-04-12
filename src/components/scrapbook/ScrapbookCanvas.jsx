@@ -2,8 +2,11 @@ import { useRef, useEffect, useState, forwardRef } from 'react'
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import CanvasElement from './CanvasElement'
 
-const CANVAS_W = 800
+const CANVAS_W = 1200
 const CANVAS_H = 600
+const SPINE_WIDTH = 28
+const SPINE_GRADIENT =
+  'linear-gradient(90deg, rgba(45,27,14,0) 0%, rgba(45,27,14,0.18) 45%, rgba(45,27,14,0.32) 50%, rgba(45,27,14,0.18) 55%, rgba(45,27,14,0) 100%)'
 
 const PATTERNS = {
   none: null,
@@ -94,6 +97,20 @@ export default forwardRef(function ScrapbookCanvas(
                 canvasScale={scale}
               />
             ))}
+            {/* Book spine / gutter */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: CANVAS_W / 2 - SPINE_WIDTH / 2,
+                width: SPINE_WIDTH,
+                height: CANVAS_H,
+                background: SPINE_GRADIENT,
+                pointerEvents: 'none',
+                zIndex: 9999,
+              }}
+            />
           </div>
         </DndContext>
       </div>

@@ -68,8 +68,10 @@ export default function EditorToolbar({
         >
           <ChevronLeft className="w-4 h-4 text-bark" />
         </button>
-        <span className="text-xs font-medium text-bark min-w-[60px] text-center">
-          {currentPageIndex + 1} / {pages.length}
+        <span className="text-xs font-medium text-bark min-w-[72px] text-center">
+          {currentPageIndex === 0
+            ? 'Cover'
+            : `Pages ${2 * currentPageIndex - 1}\u2013${2 * currentPageIndex}`}
         </span>
         <button
           onClick={() => onSwitchPage(Math.min(pages.length - 1, currentPageIndex + 1))}
@@ -88,7 +90,7 @@ export default function EditorToolbar({
         {pages.length > 1 && (
           <button
             onClick={() => {
-              if (confirm('Delete this page?')) onDeletePage(currentPageIndex)
+              if (confirm('Delete this spread?')) onDeletePage(currentPageIndex)
             }}
             className="p-0.5 rounded hover:bg-red-50 text-bark-muted hover:text-red-500 transition-colors"
             title="Delete page"

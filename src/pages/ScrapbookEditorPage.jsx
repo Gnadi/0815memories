@@ -188,7 +188,7 @@ export default function ScrapbookEditorPage() {
     setExporting(true)
     try {
       await document.fonts.ready
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1200, 600] })
 
       for (let i = 0; i < pages.length; i++) {
         // Switch page and wait for React to flush
@@ -203,8 +203,8 @@ export default function ScrapbookEditorPage() {
           logging: false,
         })
         const imgData = canvas.toDataURL('image/jpeg', 0.92)
-        if (i > 0) pdf.addPage([800, 600], 'landscape')
-        pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
+        if (i > 0) pdf.addPage([1200, 600], 'landscape')
+        pdf.addImage(imgData, 'JPEG', 0, 0, 1200, 600)
       }
 
       // Switch back to original page

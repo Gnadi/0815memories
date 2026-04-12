@@ -126,7 +126,12 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
     }
 
     if (type === 'text') {
-      const fontMap = { serif: 'Georgia, serif', sans: 'system-ui, sans-serif', mono: 'monospace' }
+      const fontMap = {
+        serif: 'Georgia, serif',
+        sans: 'system-ui, sans-serif',
+        mono: 'monospace',
+        display: "'Anton', 'Impact', sans-serif",
+      }
       const style = {
         fontSize: element.fontSize || 20,
         color: element.color || '#2D1B0E',
