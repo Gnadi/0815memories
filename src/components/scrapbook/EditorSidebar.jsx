@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Image, Smile, Type, LayoutGrid, Upload, Loader2, Palette, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { PARIS_COVER_ELEMENTS } from './layoutPresets'
 
 const STICKER_GROUPS = {
   Hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '💖', '💝', '💗', '💓'],
@@ -19,13 +20,37 @@ const LAYOUT_PRESETS = [
     elements: [],
   },
   {
+    id: 'paris-cover',
+    label: 'Travel Cover',
+    preview: '📖',
+    elements: PARIS_COVER_ELEMENTS,
+  },
+  {
+    id: 'four-plus-two',
+    label: '4 + 2 Spread',
+    preview: '📚',
+    elements: [
+      // Left page — 2 small on top, 1 large below
+      { type: 'photo', x: 30, y: 30, width: 260, height: 220, rotation: 0, zIndex: 1 },
+      { type: 'photo', x: 310, y: 30, width: 260, height: 220, rotation: 0, zIndex: 2 },
+      { type: 'photo', x: 30, y: 270, width: 540, height: 300, rotation: 0, zIndex: 3 },
+      // Right page — mirror
+      { type: 'photo', x: 630, y: 30, width: 260, height: 220, rotation: 0, zIndex: 4 },
+      { type: 'photo', x: 910, y: 30, width: 260, height: 220, rotation: 0, zIndex: 5 },
+      { type: 'photo', x: 630, y: 270, width: 540, height: 300, rotation: 0, zIndex: 6 },
+    ],
+  },
+  {
     id: 'polaroid-scatter',
     label: 'Polaroid Scatter',
     preview: '📸',
     elements: [
-      { type: 'photo', x: 60, y: 40, width: 280, height: 320, rotation: -8, polaroid: true, zIndex: 1 },
-      { type: 'photo', x: 340, y: 70, width: 260, height: 300, rotation: 5, polaroid: true, zIndex: 2 },
-      { type: 'photo', x: 190, y: 280, width: 240, height: 280, rotation: -3, polaroid: true, zIndex: 3 },
+      { type: 'photo', x: 60, y: 40, width: 260, height: 300, rotation: -8, polaroid: true, zIndex: 1 },
+      { type: 'photo', x: 340, y: 70, width: 240, height: 280, rotation: 5, polaroid: true, zIndex: 2 },
+      { type: 'photo', x: 200, y: 290, width: 240, height: 280, rotation: -3, polaroid: true, zIndex: 3 },
+      { type: 'photo', x: 660, y: 40, width: 240, height: 280, rotation: 6, polaroid: true, zIndex: 4 },
+      { type: 'photo', x: 900, y: 80, width: 260, height: 300, rotation: -6, polaroid: true, zIndex: 5 },
+      { type: 'photo', x: 760, y: 290, width: 260, height: 300, rotation: 4, polaroid: true, zIndex: 6 },
     ],
   },
   {
@@ -33,8 +58,8 @@ const LAYOUT_PRESETS = [
     label: '2 Column',
     preview: '⬛⬛',
     elements: [
-      { type: 'photo', x: 20, y: 20, width: 370, height: 560, rotation: 0, zIndex: 1 },
-      { type: 'photo', x: 410, y: 20, width: 370, height: 560, rotation: 0, zIndex: 2 },
+      { type: 'photo', x: 60, y: 20, width: 480, height: 560, rotation: 0, zIndex: 1 },
+      { type: 'photo', x: 660, y: 20, width: 480, height: 560, rotation: 0, zIndex: 2 },
     ],
   },
   {
@@ -42,9 +67,10 @@ const LAYOUT_PRESETS = [
     label: 'Strip',
     preview: '▪▪▪',
     elements: [
-      { type: 'photo', x: 20, y: 180, width: 240, height: 240, rotation: 0, zIndex: 1 },
-      { type: 'photo', x: 280, y: 180, width: 240, height: 240, rotation: 0, zIndex: 2 },
-      { type: 'photo', x: 540, y: 180, width: 240, height: 240, rotation: 0, zIndex: 3 },
+      { type: 'photo', x: 30, y: 180, width: 240, height: 240, rotation: 0, zIndex: 1 },
+      { type: 'photo', x: 310, y: 180, width: 240, height: 240, rotation: 0, zIndex: 2 },
+      { type: 'photo', x: 650, y: 180, width: 240, height: 240, rotation: 0, zIndex: 3 },
+      { type: 'photo', x: 930, y: 180, width: 240, height: 240, rotation: 0, zIndex: 4 },
     ],
   },
   {
@@ -52,7 +78,7 @@ const LAYOUT_PRESETS = [
     label: 'Full Bleed',
     preview: '🖼️',
     elements: [
-      { type: 'photo', x: 0, y: 0, width: 800, height: 600, rotation: 0, zIndex: 1 },
+      { type: 'photo', x: 0, y: 0, width: 1200, height: 600, rotation: 0, zIndex: 1 },
     ],
   },
   {
@@ -60,17 +86,17 @@ const LAYOUT_PRESETS = [
     label: 'Photo + Quote',
     preview: '📷✍️',
     elements: [
-      { type: 'photo', x: 20, y: 20, width: 380, height: 560, rotation: 0, zIndex: 1 },
+      { type: 'photo', x: 20, y: 20, width: 560, height: 560, rotation: 0, zIndex: 1 },
       {
         type: 'text',
-        x: 430,
+        x: 620,
         y: 180,
-        width: 350,
+        width: 560,
         height: 240,
         rotation: 0,
         zIndex: 2,
         text: 'Every moment is a treasure we keep forever.',
-        fontSize: 28,
+        fontSize: 32,
         color: '#2D1B0E',
         fontFamily: 'serif',
         fontWeight: 'normal',
@@ -87,6 +113,7 @@ const BG_COLORS = [
 ]
 
 const TEXT_PRESETS = [
+  { label: 'Display', fontSize: 96, fontWeight: 'bold', fontFamily: 'display', color: '#2D1B0E', textAlign: 'center' },
   { label: 'Heading', fontSize: 36, fontWeight: 'bold', fontFamily: 'serif', color: '#2D1B0E', textAlign: 'center' },
   { label: 'Quote', fontSize: 24, fontWeight: 'normal', fontFamily: 'serif', color: '#C25A2E', textAlign: 'center' },
   { label: 'Caption', fontSize: 14, fontWeight: 'normal', fontFamily: 'sans', color: '#7A6A5E', textAlign: 'center' },
@@ -292,7 +319,11 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
                     fontSize: Math.min(preset.fontSize, 20),
                     fontWeight: preset.fontWeight,
                     color: preset.color,
-                    fontFamily: preset.fontFamily === 'serif' ? 'Georgia, serif' : preset.fontFamily === 'mono' ? 'monospace' : 'system-ui',
+                    fontFamily:
+                      preset.fontFamily === 'serif' ? 'Georgia, serif'
+                      : preset.fontFamily === 'mono' ? 'monospace'
+                      : preset.fontFamily === 'display' ? "'Anton', 'Impact', sans-serif"
+                      : 'system-ui',
                   }}
                 >
                   {preset.label}

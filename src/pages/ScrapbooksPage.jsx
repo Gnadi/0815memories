@@ -6,9 +6,15 @@ import { useScrapbooks } from '../hooks/useScrapbooks'
 import ScrapbookCard from '../components/scrapbook/ScrapbookCard'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { PARIS_COVER_ELEMENTS } from '../components/scrapbook/layoutPresets'
 
-function makeBlankPage() {
-  return { id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }
+function makeCoverSpread() {
+  return {
+    id: crypto.randomUUID(),
+    backgroundColor: '#FDF6EC',
+    backgroundPattern: 'none',
+    elements: PARIS_COVER_ELEMENTS.map((el) => ({ ...el, id: crypto.randomUUID() })),
+  }
 }
 
 export default function ScrapbooksPage() {
@@ -26,7 +32,7 @@ export default function ScrapbooksPage() {
       const id = await addScrapbook({
         title: 'My Scrapbook',
         coverImageUrl: null,
-        pages: [makeBlankPage()],
+        pages: [makeCoverSpread()],
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
