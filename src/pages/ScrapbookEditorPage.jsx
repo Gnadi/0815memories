@@ -507,7 +507,7 @@ export default function ScrapbookEditorPage() {
       />
 
       {/* Editor body */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
         {/* Desktop sidebar */}
         <div className="hidden lg:flex flex-col w-64 flex-shrink-0">
           <EditorSidebar
@@ -518,9 +518,9 @@ export default function ScrapbookEditorPage() {
         </div>
 
         {/* Canvas area — book centered vertically, accessories docked below */}
-        <div className="flex-1 flex flex-col min-h-0 px-1 pt-2 pb-20 lg:px-6 lg:pt-4 lg:pb-4">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden px-1 pt-2 pb-20 lg:px-6 lg:pt-4 lg:pb-4">
           {/* Book row — grows to fill, book itself is centered in it */}
-          <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden pb-2">
+          <div className="flex-1 relative min-h-0 min-w-0 w-full overflow-hidden pb-2">
             <ScrapbookCanvas
               ref={canvasRef}
               page={currentPage}

@@ -36,23 +36,29 @@ export default forwardRef(function ScrapbookCanvas(
 ) {
   const containerRef = useRef(null)
   const pageRef = useRef(null)
-  const [scale, setScale] = useState(1)
+  // Start at 0 so we never render an oversize book before we've measured the
+  // container (otherwise a 600×900 page flashes past the viewport on mobile).
+  const [scale, setScale] = useState(0)
 
   // Fit the page within both width and height of the container.
   useEffect(() => {
     const update = () => {
-      if (!containerRef.current) return
-      const w = containerRef.current.clientWidth
-      const h = containerRef.current.clientHeight
-      const widthScale = w > 0 ? w / CANVAS_W : 1
-      const heightScale = h > 0 ? h / CANVAS_H : 1
-      const next = Math.min(1, widthScale, heightScale)
-      setScale(next > 0 ? next : 1)
+      const node = containerRef.current
+      if (!node) return
+      const rect = node.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      const next = Math.min(1, rect.width / CANVAS_W, rect.height / CANVAS_H)
+      if (next > 0) setScale(next)
     }
-    update()
+    // Defer initial measurement until after layout has settled — on first
+    // paint the flex parent can report 0 width/height.
+    const rafId = requestAnimationFrame(update)
     const ro = new ResizeObserver(update)
     if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
+    return () => {
+      cancelAnimationFrame(rafId)
+      ro.disconnect()
+    }
   }, [])
 
   // Expose the page DOM node for PDF export
@@ -95,15 +101,16 @@ export default forwardRef(function ScrapbookCanvas(
   )
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden flex items-center justify-center"
+    >
       <div
         style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
           width: CANVAS_W * scale,
           height: CANVAS_H * scale,
-          transform: 'translate(-50%, -50%)',
+          flexShrink: 0,
+          position: 'relative',
         }}
       >
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -114,7 +121,9 @@ export default forwardRef(function ScrapbookCanvas(
               height: CANVAS_H,
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
-              position: 'relative',
+              position: 'absolute',
+              top: 0,
+              left: 0,
               overflow: 'hidden',
               background,
               ...(pattern ? { backgroundImage: pattern, backgroundSize: patternSize } : {}),
