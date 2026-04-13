@@ -9,6 +9,7 @@ import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorSidebar from '../components/scrapbook/EditorSidebar'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
 import { encryptAndUpload } from '../utils/encryptedUpload'
+import { DEFAULT_NEW_PAGE_LAYOUT, cloneLayoutElements } from '../utils/layouts'
 import {
   spreadForPageIndex,
   totalSpreads,
@@ -16,6 +17,7 @@ import {
   leftPageForSpread,
   sideForPageIndex,
 } from '../utils/spread'
+import MemoryPhotoStrip from '../components/scrapbook/MemoryPhotoStrip'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -25,6 +27,18 @@ const MAX_HISTORY = 20
 
 function makeBlankPage() {
   return { id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }
+}
+
+// New pages added via the "+" button arrive with a default layout already
+// applied (empty photo slots). Users can still change the layout afterwards
+// from the Layouts tab.
+function makePrefilledPage() {
+  return {
+    id: crypto.randomUUID(),
+    backgroundColor: '#FDF6EC',
+    backgroundPattern: 'none',
+    elements: cloneLayoutElements(DEFAULT_NEW_PAGE_LAYOUT),
+  }
 }
 
 function editorReducer(state, action) {
@@ -51,8 +65,14 @@ function editorReducer(state, action) {
     case 'SWITCH_PAGE':
       return { ...state, currentPageIndex: action.index, selectedId: null }
 
-    case 'ADD_PAGE':
-      return withHistory([...pages, makeBlankPage()])
+    case 'ADD_PAGE': {
+      // Always add two pages so each tap creates a complete facing spread,
+      // both prefilled with the default layout.
+      const newPages = [...pages, makePrefilledPage(), makePrefilledPage()]
+      const next = withHistory(newPages)
+      // Jump to the first of the new pages so the user sees what was added.
+      return { ...next, currentPageIndex: pages.length, selectedId: null }
+    }
 
     case 'DELETE_PAGE': {
       if (pages.length <= 1) return state
@@ -298,6 +318,42 @@ export default function ScrapbookEditorPage() {
     }
   }
 
+  // Clicking a photo in the "Photos from memories" strip: if an empty slot is
+  // selected it fills that slot; otherwise adds a free-floating photo to the
+  // currently active page.
+  const handleAddMemoryPhoto = (url) => {
+    const activePage = pages[currentPageIndex]
+    if (selectedId && activePage) {
+      const slot = activePage.elements.find(
+        (el) => el.id === selectedId && el.type === 'photo' && !el.url
+      )
+      if (slot) {
+        dispatch({
+          type: 'UPDATE_ELEMENT',
+          pageIndex: currentPageIndex,
+          id: selectedId,
+          updates: { url },
+        })
+        return
+      }
+    }
+    dispatch({
+      type: 'ADD_ELEMENT',
+      element: {
+        type: 'photo',
+        url,
+        x: 60,
+        y: 60,
+        width: 300,
+        height: 240,
+        rotation: 0,
+        polaroid: false,
+        caption: '',
+        zIndex: Date.now(),
+      },
+    })
+  }
+
   // Derive spread state
   const spreadIdx = spreadForPageIndex(currentPageIndex)
   const { left: leftPageIndex, right: rightPageIndex } = spreadBounds(pages.length, spreadIdx)
@@ -377,6 +433,9 @@ export default function ScrapbookEditorPage() {
             onSlotClick={handleSlotClick}
             uploadingSlotId={uploadingSlotId}
           />
+
+          {/* Photos from the family's memories + moments for easy reuse */}
+          <MemoryPhotoStrip onPhotoClick={handleAddMemoryPhoto} />
 
           {/* Spread strip — mobile navigation */}
           <div className="flex items-center gap-2 mt-4 lg:hidden flex-wrap justify-center max-w-full px-2">

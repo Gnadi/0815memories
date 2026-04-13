@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Image, Smile, Type, LayoutGrid, Upload, Loader2, Palette, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { LAYOUT_PRESETS, cloneLayoutElements } from '../../utils/layouts'
 
 const STICKER_GROUPS = {
   Hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '💖', '💝', '💗', '💓'],
@@ -10,75 +11,6 @@ const STICKER_GROUPS = {
   Family: ['🏠', '🏡', '🚗', '✈️', '🍕', '🍰', '🎶', '📸', '🌅', '🐾', '👶', '🐥'],
   Fun: ['⭐', '✨', '💫', '🌟', '🔥', '🍀', '🦄', '🌺', '🍭', '🎪', '🎨', '🎭'],
 }
-
-const LAYOUT_PRESETS = [
-  {
-    id: 'blank',
-    label: 'Blank',
-    preview: '⬜',
-    elements: [],
-  },
-  {
-    id: 'polaroid-scatter',
-    label: 'Polaroid Scatter',
-    preview: '📸',
-    elements: [
-      { type: 'photo', x: 60, y: 40, width: 280, height: 320, rotation: -8, polaroid: true, zIndex: 1 },
-      { type: 'photo', x: 340, y: 70, width: 260, height: 300, rotation: 5, polaroid: true, zIndex: 2 },
-      { type: 'photo', x: 190, y: 280, width: 240, height: 280, rotation: -3, polaroid: true, zIndex: 3 },
-    ],
-  },
-  {
-    id: 'two-col',
-    label: '2 Column',
-    preview: '⬛⬛',
-    elements: [
-      { type: 'photo', x: 20, y: 20, width: 370, height: 560, rotation: 0, zIndex: 1 },
-      { type: 'photo', x: 410, y: 20, width: 370, height: 560, rotation: 0, zIndex: 2 },
-    ],
-  },
-  {
-    id: 'strip',
-    label: 'Strip',
-    preview: '▪▪▪',
-    elements: [
-      { type: 'photo', x: 20, y: 180, width: 240, height: 240, rotation: 0, zIndex: 1 },
-      { type: 'photo', x: 280, y: 180, width: 240, height: 240, rotation: 0, zIndex: 2 },
-      { type: 'photo', x: 540, y: 180, width: 240, height: 240, rotation: 0, zIndex: 3 },
-    ],
-  },
-  {
-    id: 'full-bleed',
-    label: 'Full Bleed',
-    preview: '🖼️',
-    elements: [
-      { type: 'photo', x: 0, y: 0, width: 800, height: 600, rotation: 0, zIndex: 1 },
-    ],
-  },
-  {
-    id: 'photo-quote',
-    label: 'Photo + Quote',
-    preview: '📷✍️',
-    elements: [
-      { type: 'photo', x: 20, y: 20, width: 380, height: 560, rotation: 0, zIndex: 1 },
-      {
-        type: 'text',
-        x: 430,
-        y: 180,
-        width: 350,
-        height: 240,
-        rotation: 0,
-        zIndex: 2,
-        text: 'Every moment is a treasure we keep forever.',
-        fontSize: 28,
-        color: '#2D1B0E',
-        fontFamily: 'serif',
-        fontWeight: 'normal',
-        textAlign: 'center',
-      },
-    ],
-  },
-]
 
 const BG_COLORS = [
   '#FDF6EC', '#FFFDF9', '#F5E6D0', '#FFF5F5', '#F0FFF4',
@@ -168,20 +100,7 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
 
   const applyLayout = (layout) => {
     if (layout.elements.length === 0 || confirm('Replace current page with this layout? Existing elements will be removed.')) {
-      onApplyLayout(layout.elements.map((el) => {
-        // Photo slots start empty — they render as "Tap to add photo" placeholders
-        // until a user clicks them and uploads a file.
-        if (el.type === 'photo') {
-          return {
-            url: '',
-            polaroid: false,
-            caption: '',
-            ...el,
-            id: crypto.randomUUID(),
-          }
-        }
-        return { ...el, id: crypto.randomUUID() }
-      }))
+      onApplyLayout(cloneLayoutElements(layout))
     }
   }
 
