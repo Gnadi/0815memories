@@ -2,8 +2,8 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import CanvasElement from './CanvasElement'
 
-const CANVAS_W = 600
-const CANVAS_H = 900
+const CANVAS_W = 900
+const CANVAS_H = 600
 
 const PATTERNS = {
   none: null,
@@ -127,9 +127,8 @@ export default forwardRef(function ScrapbookCanvas(
               overflow: 'hidden',
               background,
               ...(pattern ? { backgroundImage: pattern, backgroundSize: patternSize } : {}),
-              boxShadow:
-                '0 25px 50px -12px rgba(0,0,0,0.35), 0 0 0 4px #2D1B0E',
-              borderRadius: 4,
+              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.20)',
+              borderRadius: 8,
             }}
             onClick={() => onSelectElement?.(pageIndex, null)}
           >

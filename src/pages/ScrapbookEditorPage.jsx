@@ -228,7 +228,7 @@ export default function ScrapbookEditorPage() {
     const originalIndex = currentPageIndex
     try {
       await document.fonts.ready
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [600, 900] })
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [900, 600] })
 
       for (let i = 0; i < pages.length; i++) {
         // Switch to page i so the canvas renders it, then capture its DOM.
@@ -245,8 +245,8 @@ export default function ScrapbookEditorPage() {
           logging: false,
         })
         const imgData = canvas.toDataURL('image/jpeg', 0.92)
-        if (i > 0) pdf.addPage([600, 900], 'portrait')
-        pdf.addImage(imgData, 'JPEG', 0, 0, 600, 900)
+        if (i > 0) pdf.addPage([900, 600], 'landscape')
+        pdf.addImage(imgData, 'JPEG', 0, 0, 900, 600)
       }
 
       // Restore original active page
