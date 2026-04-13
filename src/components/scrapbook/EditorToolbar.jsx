@@ -59,22 +59,24 @@ export default function EditorToolbar({
         )}
       </div>
 
-      {/* Page navigation — compact on mobile */}
+      {/* Page navigation */}
       <div className="hidden sm:flex items-center gap-1 bg-cream rounded-lg px-1.5 py-1 flex-shrink-0">
         <button
           onClick={() => onSwitchPage(Math.max(0, currentPageIndex - 1))}
           disabled={currentPageIndex === 0}
           className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
+          title="Previous page"
         >
           <ChevronLeft className="w-4 h-4 text-bark" />
         </button>
-        <span className="text-xs font-medium text-bark min-w-[60px] text-center">
-          {currentPageIndex + 1} / {pages.length}
+        <span className="text-xs font-medium text-bark min-w-[70px] text-center">
+          Page {currentPageIndex + 1} / {pages.length}
         </span>
         <button
           onClick={() => onSwitchPage(Math.min(pages.length - 1, currentPageIndex + 1))}
           disabled={currentPageIndex === pages.length - 1}
           className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
+          title="Next page"
         >
           <ChevronRight className="w-4 h-4 text-bark" />
         </button>

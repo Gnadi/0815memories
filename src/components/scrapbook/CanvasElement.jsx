@@ -1,11 +1,20 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { Trash2, RotateCw } from 'lucide-react'
+import { Trash2, RotateCw, ImagePlus, ArrowLeftRight } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
 const HANDLE_SIZE = 10
 
-export default function CanvasElement({ element, isSelected, onSelect, onUpdate, onDelete, canvasScale }) {
+export default function CanvasElement({
+  element,
+  isSelected,
+  onSelect,
+  onUpdate,
+  onDelete,
+  canvasScale,
+  swapSourceId,
+  onSwapTarget,
+}) {
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -106,20 +115,47 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
 
   const renderContent = () => {
     if (type === 'photo') {
+      // Empty layout slot — render "Tap to add photo" placeholder.
+      if (!element.url) {
+        return (
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect?.(id)
+            }}
+            className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-bark-muted/60 bg-bark-muted/20 text-bark-light hover:bg-bark-muted/30 hover:border-kaydo/70 hover:text-kaydo transition-colors cursor-pointer"
+          >
+            <ImagePlus className="w-12 h-12" />
+            <span className="text-lg font-semibold leading-tight text-center px-3">
+              Tap to add photo
+            </span>
+          </div>
+        )
+      }
+
       const isPolaroid = element.polaroid
+      const flipStyle = element.flipped ? { transform: 'scaleX(-1)' } : undefined
       return (
-        <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col`}>
+        <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col relative`}>
           <EncryptedImage
             src={element.url}
             alt=""
             crossOrigin="anonymous"
             className={`flex-1 w-full object-cover ${isPolaroid ? '' : 'rounded'}`}
             draggable={false}
+            style={flipStyle}
           />
           {isPolaroid && element.caption && (
             <p className="text-center text-xs font-serif text-bark-muted mt-1 truncate px-1">
               {element.caption}
             </p>
+          )}
+          {/* Swap-target hint overlay */}
+          {swapSourceId && swapSourceId !== id && (
+            <div className="absolute inset-0 bg-kaydo/40 border-4 border-kaydo rounded flex flex-col items-center justify-center pointer-events-none">
+              <ArrowLeftRight className="w-10 h-10 text-white drop-shadow" />
+              <span className="text-white text-sm font-bold drop-shadow mt-1">Swap here</span>
+            </div>
           )}
         </div>
       )
@@ -198,6 +234,11 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
       }}
       onClick={(e) => {
         e.stopPropagation()
+        // Swap mode: tapping a different filled photo swaps with the source.
+        if (swapSourceId && swapSourceId !== id && type === 'photo' && element.url) {
+          onSwapTarget?.(id)
+          return
+        }
         onSelect(id)
       }}
       {...(isEditing ? {} : { ...listeners, ...attributes })}
