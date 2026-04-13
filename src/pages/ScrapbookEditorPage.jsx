@@ -11,13 +11,6 @@ import EditorToolbar from '../components/scrapbook/EditorToolbar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { DEFAULT_NEW_PAGE_LAYOUT, cloneLayoutElements } from '../utils/layouts'
-import {
-  spreadForPageIndex,
-  totalSpreads,
-  spreadBounds,
-  leftPageForSpread,
-  sideForPageIndex,
-} from '../utils/spread'
 import MemoryPhotoStrip from '../components/scrapbook/MemoryPhotoStrip'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -67,11 +60,9 @@ function editorReducer(state, action) {
       return { ...state, currentPageIndex: action.index, selectedId: null }
 
     case 'ADD_PAGE': {
-      // Always add two pages so each tap creates a complete facing spread,
-      // both prefilled with the default layout.
-      const newPages = [...pages, makePrefilledPage(), makePrefilledPage()]
+      // Append a single page prefilled with the default layout.
+      const newPages = [...pages, makePrefilledPage()]
       const next = withHistory(newPages)
-      // Jump to the first of the new pages so the user sees what was added.
       return { ...next, currentPageIndex: pages.length, selectedId: null }
     }
 
@@ -240,12 +231,11 @@ export default function ScrapbookEditorPage() {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [600, 900] })
 
       for (let i = 0; i < pages.length; i++) {
-        // Activate page i so the spread contains it and the imperative
-        // handle can hand us the correct side's DOM node.
+        // Switch to page i so the canvas renders it, then capture its DOM.
         dispatch({ type: 'SWITCH_PAGE', index: i })
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-        const node = canvasRef.current?.getPageNode(sideForPageIndex(i))
+        const node = canvasRef.current?.getPageNode()
         if (!node) continue
 
         const canvas = await html2canvas(node, {
@@ -277,8 +267,8 @@ export default function ScrapbookEditorPage() {
   const handleApplyLayout = (elements) => dispatch({ type: 'APPLY_LAYOUT', elements })
   const handleChangeBackground = (updates) => dispatch({ type: 'CHANGE_BACKGROUND', updates })
 
-  // Canvas actions receive the page index explicitly so either spread page can
-  // be manipulated without a stale currentPageIndex.
+  // Canvas actions receive the page index explicitly so reducer dispatches
+  // target the intended page even if currentPageIndex changes mid-action.
   const handleUpdateElement = (pageIndex, id, updates) =>
     dispatch({ type: 'UPDATE_ELEMENT', pageIndex, id, updates })
   const handleDeleteElement = (pageIndex, id) =>
@@ -328,24 +318,15 @@ export default function ScrapbookEditorPage() {
     })
   }
 
-  // Derive spread state
-  const spreadIdx = spreadForPageIndex(currentPageIndex)
-  const { left: leftPageIndex, right: rightPageIndex } = spreadBounds(pages.length, spreadIdx)
-  const leftPage = leftPageIndex != null ? pages[leftPageIndex] : null
-  const rightPage = rightPageIndex != null ? pages[rightPageIndex] : null
-  const activeSide = currentPageIndex === rightPageIndex ? 'right' : 'left'
+  // Single-page view: the current page is the only one visible/editable.
+  const currentPage = pages[currentPageIndex] || null
 
-  // Derive the currently-selected filled photo element (either from the
-  // active page's perspective, searching both sides of the spread so selection
-  // on either side shows the action bar).
+  // Derive the currently-selected filled photo element on the current page.
   const findSelectedPhoto = () => {
-    if (!selectedId) return null
-    for (const pIdx of [leftPageIndex, rightPageIndex]) {
-      if (pIdx == null) continue
-      const el = pages[pIdx]?.elements.find((e) => e.id === selectedId)
-      if (el && el.type === 'photo' && el.url) {
-        return { element: el, pageIndex: pIdx }
-      }
+    if (!selectedId || !currentPage) return null
+    const el = currentPage.elements.find((e) => e.id === selectedId)
+    if (el && el.type === 'photo' && el.url) {
+      return { element: el, pageIndex: currentPageIndex }
     }
     return null
   }
@@ -386,20 +367,18 @@ export default function ScrapbookEditorPage() {
     setSwapSourceId((prev) => (prev === selectedPhoto.element.id ? null : selectedPhoto.element.id))
   }
 
-  // Locate an element + its owning pageIndex anywhere on the visible spread.
-  const findOnSpread = (id) => {
-    for (const pIdx of [leftPageIndex, rightPageIndex]) {
-      if (pIdx == null) continue
-      const el = pages[pIdx]?.elements.find((e) => e.id === id)
-      if (el) return { element: el, pageIndex: pIdx }
-    }
+  // Locate an element + its owning pageIndex on the current page.
+  const findOnCurrent = (id) => {
+    if (!currentPage) return null
+    const el = currentPage.elements.find((e) => e.id === id)
+    if (el) return { element: el, pageIndex: currentPageIndex }
     return null
   }
 
   const handleSwapTarget = (targetId) => {
     if (!swapSourceId || targetId === swapSourceId) return
-    const src = findOnSpread(swapSourceId)
-    const tgt = findOnSpread(targetId)
+    const src = findOnCurrent(swapSourceId)
+    const tgt = findOnCurrent(targetId)
     if (!src || !tgt) {
       setSwapSourceId(null)
       return
@@ -492,15 +471,6 @@ export default function ScrapbookEditorPage() {
     dispatch({ type: 'SELECT', id: null })
   }
 
-  const handleActivateSide = (side) => {
-    const targetIdx = side === 'right' ? rightPageIndex : leftPageIndex
-    if (targetIdx != null && targetIdx !== currentPageIndex) {
-      dispatch({ type: 'SWITCH_PAGE', index: targetIdx })
-    }
-  }
-
-  const spreadCount = totalSpreads(pages.length)
-
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -553,12 +523,8 @@ export default function ScrapbookEditorPage() {
           <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden pb-2">
             <ScrapbookCanvas
               ref={canvasRef}
-              leftPage={leftPage}
-              rightPage={rightPage}
-              leftPageIndex={leftPageIndex}
-              rightPageIndex={rightPageIndex}
-              activeSide={activeSide}
-              onActivate={handleActivateSide}
+              page={currentPage}
+              pageIndex={currentPageIndex}
               selectedId={selectedId}
               onSelectElement={handleSelectElement}
               onUpdateElement={handleUpdateElement}
@@ -586,23 +552,21 @@ export default function ScrapbookEditorPage() {
               />
             )}
 
-            {/* Spread strip — mobile navigation */}
+            {/* Page strip — mobile navigation */}
             <div className="flex items-center gap-2 mt-4 lg:hidden flex-wrap justify-center max-w-full px-2">
-              {Array.from({ length: spreadCount }).map((_, i) => {
-                const { left, right } = spreadBounds(pages.length, i)
-                const label = i === 0 ? 'Cover' : right == null ? `${left + 1}` : `${left + 1}-${right + 1}`
-                const isActive = i === spreadIdx
+              {pages.map((_, i) => {
+                const isActive = i === currentPageIndex
                 return (
                   <button
                     key={i}
-                    onClick={() => handleSwitchPage(leftPageForSpread(i))}
+                    onClick={() => handleSwitchPage(i)}
                     className={`px-2 h-8 rounded-lg border-2 text-xs font-bold transition-colors whitespace-nowrap ${
                       isActive
                         ? 'border-kaydo bg-kaydo text-white'
                         : 'border-cream-dark bg-warm-white text-bark-muted'
                     }`}
                   >
-                    {label}
+                    {i + 1}
                   </button>
                 )
               })}

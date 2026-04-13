@@ -4,7 +4,6 @@ import CanvasElement from './CanvasElement'
 
 const CANVAS_W = 600
 const CANVAS_H = 900
-const SPREAD_W = CANVAS_W * 2
 
 const PATTERNS = {
   none: null,
@@ -20,97 +19,12 @@ const PATTERN_SIZE = {
   lines: '100% 24px',
 }
 
-// ─── Single page (one side of the spread) ─────────────────────────────────────
-const SinglePage = forwardRef(function SinglePage(
+// Single-page editable scrapbook canvas. The page is rendered at its native
+// 600×900 resolution and uniformly scaled to fit the parent container.
+export default forwardRef(function ScrapbookCanvas(
   {
     page,
     pageIndex,
-    canvasScale,
-    isActive,
-    onActivate,
-    selectedId,
-    onSelectElement,
-    onUpdateElement,
-    onDeleteElement,
-    swapSourceId,
-    onSwapTarget,
-  },
-  ref
-) {
-  // Blank/placeholder side (cover's right page or odd-tail right page)
-  if (page == null || pageIndex == null) {
-    return (
-      <div
-        ref={ref}
-        style={{
-          width: CANVAS_W,
-          height: CANVAS_H,
-          position: 'relative',
-          overflow: 'hidden',
-          background:
-            'repeating-linear-gradient(45deg, #F5E6D0, #F5E6D0 10px, #FDF6EC 10px, #FDF6EC 20px)',
-          opacity: 0.55,
-        }}
-        className="flex items-center justify-center select-none"
-      >
-        <span className="text-bark-muted text-sm font-medium">No page</span>
-      </div>
-    )
-  }
-
-  const background = page.backgroundColor || '#FDF6EC'
-  const pattern = PATTERNS[page.backgroundPattern] || null
-  const patternSize = PATTERN_SIZE[page.backgroundPattern] || null
-
-  const sorted = [...(page.elements || [])].sort(
-    (a, b) => (a.zIndex || 0) - (b.zIndex || 0)
-  )
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: CANVAS_W,
-        height: CANVAS_H,
-        position: 'relative',
-        overflow: 'hidden',
-        background,
-        ...(pattern ? { backgroundImage: pattern, backgroundSize: patternSize } : {}),
-        outline: isActive ? '3px solid #C25A2E' : '1px solid rgba(45,27,14,0.08)',
-        outlineOffset: '-3px',
-        transition: 'outline-color 150ms ease',
-      }}
-      onClick={() => {
-        onActivate?.()
-        onSelectElement?.(pageIndex, null)
-      }}
-    >
-      {sorted.map((el) => (
-        <CanvasElement
-          key={el.id}
-          element={el}
-          isSelected={selectedId === el.id}
-          onSelect={(id) => onSelectElement?.(pageIndex, id)}
-          onUpdate={(id, updates) => onUpdateElement?.(pageIndex, id, updates)}
-          onDelete={(id) => onDeleteElement?.(pageIndex, id)}
-          canvasScale={canvasScale}
-          swapSourceId={swapSourceId}
-          onSwapTarget={onSwapTarget}
-        />
-      ))}
-    </div>
-  )
-})
-
-// ─── Two-page spread ──────────────────────────────────────────────────────────
-export default forwardRef(function ScrapbookCanvas(
-  {
-    leftPage,
-    rightPage,
-    leftPageIndex,
-    rightPageIndex,
-    activeSide,
-    onActivate,
     selectedId,
     onSelectElement,
     onUpdateElement,
@@ -121,17 +35,16 @@ export default forwardRef(function ScrapbookCanvas(
   ref
 ) {
   const containerRef = useRef(null)
-  const leftCanvasRef = useRef(null)
-  const rightCanvasRef = useRef(null)
+  const pageRef = useRef(null)
   const [scale, setScale] = useState(1)
 
-  // Compute scale so the full spread fits within the available width AND height
+  // Fit the page within both width and height of the container.
   useEffect(() => {
     const update = () => {
       if (!containerRef.current) return
       const w = containerRef.current.clientWidth
       const h = containerRef.current.clientHeight
-      const widthScale = w > 0 ? w / SPREAD_W : 1
+      const widthScale = w > 0 ? w / CANVAS_W : 1
       const heightScale = h > 0 ? h / CANVAS_H : 1
       const next = Math.min(1, widthScale, heightScale)
       setScale(next > 0 ? next : 1)
@@ -142,15 +55,13 @@ export default forwardRef(function ScrapbookCanvas(
     return () => ro.disconnect()
   }, [])
 
-  // Expose per-page DOM refs for PDF export
+  // Expose the page DOM node for PDF export
   useImperativeHandle(
     ref,
     () => ({
-      getPageNode: (side) => (side === 'right' ? rightCanvasRef.current : leftCanvasRef.current),
-      getActiveNode: () =>
-        activeSide === 'right' ? rightCanvasRef.current : leftCanvasRef.current,
+      getPageNode: () => pageRef.current,
     }),
-    [activeSide]
+    []
   )
 
   const pointerSensor = useSensor(PointerSensor, {
@@ -162,19 +73,26 @@ export default forwardRef(function ScrapbookCanvas(
   const sensors = useSensors(pointerSensor, touchSensor)
 
   const handleDragEnd = ({ active, delta }) => {
-    if (!active) return
-    // Find which side of the spread owns this element
-    const onLeft = leftPage?.elements?.some((e) => e.id === active.id)
-    const page = onLeft ? leftPage : rightPage
-    const pageIndex = onLeft ? leftPageIndex : rightPageIndex
-    if (page == null || pageIndex == null) return
-    const el = page.elements.find((e) => e.id === active.id)
+    if (!active || page == null || pageIndex == null) return
+    const el = page.elements?.find((e) => e.id === active.id)
     if (!el) return
     onUpdateElement?.(pageIndex, active.id, {
       x: el.x + delta.x / scale,
       y: el.y + delta.y / scale,
     })
   }
+
+  if (page == null) {
+    return <div ref={containerRef} className="relative w-full h-full overflow-hidden" />
+  }
+
+  const background = page.backgroundColor || '#FDF6EC'
+  const pattern = PATTERNS[page.backgroundPattern] || null
+  const patternSize = PATTERN_SIZE[page.backgroundPattern] || null
+
+  const sorted = [...(page.elements || [])].sort(
+    (a, b) => (a.zIndex || 0) - (b.zIndex || 0)
+  )
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden">
@@ -183,70 +101,42 @@ export default forwardRef(function ScrapbookCanvas(
           position: 'absolute',
           top: '50%',
           left: '50%',
-          width: SPREAD_W * scale,
+          width: CANVAS_W * scale,
           height: CANVAS_H * scale,
           transform: 'translate(-50%, -50%)',
         }}
       >
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
+            ref={pageRef}
             style={{
-              width: SPREAD_W,
+              width: CANVAS_W,
               height: CANVAS_H,
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
-              display: 'flex',
               position: 'relative',
+              overflow: 'hidden',
+              background,
+              ...(pattern ? { backgroundImage: pattern, backgroundSize: patternSize } : {}),
               boxShadow:
                 '0 25px 50px -12px rgba(0,0,0,0.35), 0 0 0 4px #2D1B0E',
               borderRadius: 4,
             }}
+            onClick={() => onSelectElement?.(pageIndex, null)}
           >
-            <SinglePage
-              ref={leftCanvasRef}
-              page={leftPage}
-              pageIndex={leftPageIndex}
-              canvasScale={scale}
-              isActive={activeSide === 'left' && leftPage != null}
-              onActivate={() => leftPage != null && onActivate?.('left')}
-              selectedId={selectedId}
-              onSelectElement={onSelectElement}
-              onUpdateElement={onUpdateElement}
-              onDeleteElement={onDeleteElement}
-              swapSourceId={swapSourceId}
-              onSwapTarget={onSwapTarget}
-            />
-
-            {/* Spine / gutter shadow overlay straddling the seam */}
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: CANVAS_W - 18,
-                width: 36,
-                background:
-                  'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0) 100%)',
-                pointerEvents: 'none',
-                zIndex: 20,
-              }}
-            />
-
-            <SinglePage
-              ref={rightCanvasRef}
-              page={rightPage}
-              pageIndex={rightPageIndex}
-              canvasScale={scale}
-              isActive={activeSide === 'right' && rightPage != null}
-              onActivate={() => rightPage != null && onActivate?.('right')}
-              selectedId={selectedId}
-              onSelectElement={onSelectElement}
-              onUpdateElement={onUpdateElement}
-              onDeleteElement={onDeleteElement}
-              swapSourceId={swapSourceId}
-              onSwapTarget={onSwapTarget}
-            />
+            {sorted.map((el) => (
+              <CanvasElement
+                key={el.id}
+                element={el}
+                isSelected={selectedId === el.id}
+                onSelect={(id) => onSelectElement?.(pageIndex, id)}
+                onUpdate={(id, updates) => onUpdateElement?.(pageIndex, id, updates)}
+                onDelete={(id) => onDeleteElement?.(pageIndex, id)}
+                canvasScale={scale}
+                swapSourceId={swapSourceId}
+                onSwapTarget={onSwapTarget}
+              />
+            ))}
           </div>
         </DndContext>
       </div>
