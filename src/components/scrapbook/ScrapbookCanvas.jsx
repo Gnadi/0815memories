@@ -125,12 +125,16 @@ export default forwardRef(function ScrapbookCanvas(
   const rightCanvasRef = useRef(null)
   const [scale, setScale] = useState(1)
 
-  // Compute scale so the full spread fills available width
+  // Compute scale so the full spread fits within the available width AND height
   useEffect(() => {
     const update = () => {
       if (!containerRef.current) return
-      const available = containerRef.current.clientWidth
-      setScale(Math.min(1, available / SPREAD_W))
+      const w = containerRef.current.clientWidth
+      const h = containerRef.current.clientHeight
+      const widthScale = w > 0 ? w / SPREAD_W : 1
+      const heightScale = h > 0 ? h / CANVAS_H : 1
+      const next = Math.min(1, widthScale, heightScale)
+      setScale(next > 0 ? next : 1)
     }
     update()
     const ro = new ResizeObserver(update)
@@ -173,12 +177,13 @@ export default forwardRef(function ScrapbookCanvas(
   }
 
   return (
-    <div ref={containerRef} className="w-full">
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
       <div
         style={{
-          width: '100%',
+          width: SPREAD_W * scale,
           height: CANVAS_H * scale,
           position: 'relative',
+          flexShrink: 0,
         }}
       >
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>

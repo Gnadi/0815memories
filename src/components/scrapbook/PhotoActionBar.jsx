@@ -78,10 +78,13 @@ export default function PhotoActionBar({
         </div>
       )}
 
-      <div className="w-full bg-warm-white border border-cream-dark rounded-xl px-3 py-3 flex items-center gap-3 overflow-x-auto hide-scrollbar">
+      <div
+        className="w-full bg-warm-white border border-cream-dark rounded-xl px-3 py-3 flex flex-nowrap items-center gap-3 overflow-x-auto hide-scrollbar"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+      >
         <button
           onClick={onDone}
-          className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-bark text-warm-white min-w-[64px] active:scale-95 transition-transform"
+          className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-bark text-warm-white min-w-[64px] active:scale-95 transition-transform"
         >
           <Check className="w-6 h-6" />
           <span className="text-[11px] font-semibold">Done</span>
@@ -90,7 +93,7 @@ export default function PhotoActionBar({
           <button
             key={label}
             onClick={onClick}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[64px] transition-colors active:scale-95 ${
+            className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[64px] transition-colors active:scale-95 ${
               active
                 ? 'bg-kaydo/15 text-kaydo'
                 : 'text-bark-muted hover:text-kaydo hover:bg-cream'
