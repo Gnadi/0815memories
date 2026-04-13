@@ -2,8 +2,8 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import CanvasElement from './CanvasElement'
 
-const CANVAS_W = 800
-const CANVAS_H = 600
+const CANVAS_W = 600
+const CANVAS_H = 900
 const SPREAD_W = CANVAS_W * 2
 
 const PATTERNS = {

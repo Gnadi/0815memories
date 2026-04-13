@@ -235,7 +235,7 @@ export default function ScrapbookEditorPage() {
     const originalIndex = currentPageIndex
     try {
       await document.fonts.ready
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [600, 900] })
 
       for (let i = 0; i < pages.length; i++) {
         // Activate page i so the spread contains it and the imperative
@@ -253,8 +253,8 @@ export default function ScrapbookEditorPage() {
           logging: false,
         })
         const imgData = canvas.toDataURL('image/jpeg', 0.92)
-        if (i > 0) pdf.addPage([800, 600], 'landscape')
-        pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
+        if (i > 0) pdf.addPage([600, 900], 'portrait')
+        pdf.addImage(imgData, 'JPEG', 0, 0, 600, 900)
       }
 
       // Restore original active page
@@ -343,9 +343,9 @@ export default function ScrapbookEditorPage() {
         type: 'photo',
         url,
         x: 60,
-        y: 60,
+        y: 80,
         width: 300,
-        height: 240,
+        height: 300,
         rotation: 0,
         polaroid: false,
         caption: '',
@@ -417,7 +417,7 @@ export default function ScrapbookEditorPage() {
         </div>
 
         {/* Canvas area */}
-        <div className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 lg:p-6 pb-20 lg:pb-6">
+        <div className="flex-1 flex flex-col items-center justify-start overflow-auto px-1 pt-2 pb-20 lg:px-6 lg:pt-6 lg:pb-6">
           <ScrapbookCanvas
             ref={canvasRef}
             leftPage={leftPage}
