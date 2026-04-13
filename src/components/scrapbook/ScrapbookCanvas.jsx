@@ -177,13 +177,15 @@ export default forwardRef(function ScrapbookCanvas(
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
       <div
         style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
           width: SPREAD_W * scale,
           height: CANVAS_H * scale,
-          position: 'relative',
-          flexShrink: 0,
+          transform: 'translate(-50%, -50%)',
         }}
       >
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>

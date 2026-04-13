@@ -550,7 +550,7 @@ export default function ScrapbookEditorPage() {
         {/* Canvas area — book centered vertically, accessories docked below */}
         <div className="flex-1 flex flex-col min-h-0 px-1 pt-2 pb-20 lg:px-6 lg:pt-4 lg:pb-4">
           {/* Book row — grows to fill, book itself is centered in it */}
-          <div className="flex-1 flex items-center justify-center pb-2 min-h-0 min-w-0">
+          <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden pb-2">
             <ScrapbookCanvas
               ref={canvasRef}
               leftPage={leftPage}
