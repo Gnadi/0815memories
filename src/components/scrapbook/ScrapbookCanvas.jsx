@@ -32,8 +32,8 @@ const SinglePage = forwardRef(function SinglePage(
     onSelectElement,
     onUpdateElement,
     onDeleteElement,
-    onSlotClick,
-    uploadingSlotId,
+    swapSourceId,
+    onSwapTarget,
   },
   ref
 ) {
@@ -93,9 +93,9 @@ const SinglePage = forwardRef(function SinglePage(
           onSelect={(id) => onSelectElement?.(pageIndex, id)}
           onUpdate={(id, updates) => onUpdateElement?.(pageIndex, id, updates)}
           onDelete={(id) => onDeleteElement?.(pageIndex, id)}
-          onSlotClick={(id) => onSlotClick?.(pageIndex, id)}
-          isUploading={uploadingSlotId === el.id}
           canvasScale={canvasScale}
+          swapSourceId={swapSourceId}
+          onSwapTarget={onSwapTarget}
         />
       ))}
     </div>
@@ -115,8 +115,8 @@ export default forwardRef(function ScrapbookCanvas(
     onSelectElement,
     onUpdateElement,
     onDeleteElement,
-    onSlotClick,
-    uploadingSlotId,
+    swapSourceId,
+    onSwapTarget,
   },
   ref
 ) {
@@ -206,8 +206,8 @@ export default forwardRef(function ScrapbookCanvas(
               onSelectElement={onSelectElement}
               onUpdateElement={onUpdateElement}
               onDeleteElement={onDeleteElement}
-              onSlotClick={onSlotClick}
-              uploadingSlotId={uploadingSlotId}
+              swapSourceId={swapSourceId}
+              onSwapTarget={onSwapTarget}
             />
 
             {/* Spine / gutter shadow overlay straddling the seam */}
@@ -237,8 +237,8 @@ export default forwardRef(function ScrapbookCanvas(
               onSelectElement={onSelectElement}
               onUpdateElement={onUpdateElement}
               onDeleteElement={onDeleteElement}
-              onSlotClick={onSlotClick}
-              uploadingSlotId={uploadingSlotId}
+              swapSourceId={swapSourceId}
+              onSwapTarget={onSwapTarget}
             />
           </div>
         </DndContext>

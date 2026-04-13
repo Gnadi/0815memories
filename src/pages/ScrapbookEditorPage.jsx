@@ -8,6 +8,7 @@ import { useScrapbooks } from '../hooks/useScrapbooks'
 import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorSidebar from '../components/scrapbook/EditorSidebar'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
+import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { DEFAULT_NEW_PAGE_LAYOUT, cloneLayoutElements } from '../utils/layouts'
 import {
@@ -167,9 +168,10 @@ export default function ScrapbookEditorPage() {
 
   const canvasRef = useRef(null)
   const saveTimerRef = useRef(null)
-  const slotFileInputRef = useRef(null)
-  const pendingSlotRef = useRef(null) // { pageIndex, elementId }
-  const [uploadingSlotId, setUploadingSlotId] = useState(null)
+  // Hidden input + pending target for the PhotoActionBar "Change photos" action.
+  const changePhotoInputRef = useRef(null)
+  const pendingChangeRef = useRef(null) // { pageIndex, elementId }
+  const [swapSourceId, setSwapSourceId] = useState(null)
 
   // Load scrapbook once on mount
   useEffect(() => {
@@ -290,34 +292,6 @@ export default function ScrapbookEditorPage() {
   const handleSwitchPage = (index) => dispatch({ type: 'SWITCH_PAGE', index })
   const handleTitleChange = (newTitle) => dispatch({ type: 'SET_TITLE', title: newTitle })
 
-  // Tapping a layout slot (empty photo element) triggers the file picker.
-  const handleSlotClick = (pageIndex, elementId) => {
-    if (uploadingSlotId) return
-    pendingSlotRef.current = { pageIndex, elementId }
-    slotFileInputRef.current?.click()
-  }
-
-  const handleSlotFileChange = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    const pending = pendingSlotRef.current
-    pendingSlotRef.current = null
-    if (!file || !pending) return
-    const { pageIndex, elementId } = pending
-    setUploadingSlotId(elementId)
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      // URL is all we change — slot x/y/width/height are preserved so the
-      // photo fills the tapped box exactly.
-      dispatch({ type: 'UPDATE_ELEMENT', pageIndex, id: elementId, updates: { url } })
-    } catch (err) {
-      console.error('Slot upload failed', err)
-      alert('Upload failed. Please try again.')
-    } finally {
-      setUploadingSlotId(null)
-    }
-  }
-
   // Clicking a photo in the "Photos from memories" strip: if an empty slot is
   // selected it fills that slot; otherwise adds a free-floating photo to the
   // currently active page.
@@ -360,6 +334,163 @@ export default function ScrapbookEditorPage() {
   const leftPage = leftPageIndex != null ? pages[leftPageIndex] : null
   const rightPage = rightPageIndex != null ? pages[rightPageIndex] : null
   const activeSide = currentPageIndex === rightPageIndex ? 'right' : 'left'
+
+  // Derive the currently-selected filled photo element (either from the
+  // active page's perspective, searching both sides of the spread so selection
+  // on either side shows the action bar).
+  const findSelectedPhoto = () => {
+    if (!selectedId) return null
+    for (const pIdx of [leftPageIndex, rightPageIndex]) {
+      if (pIdx == null) continue
+      const el = pages[pIdx]?.elements.find((e) => e.id === selectedId)
+      if (el && el.type === 'photo' && el.url) {
+        return { element: el, pageIndex: pIdx }
+      }
+    }
+    return null
+  }
+  const selectedPhoto = findSelectedPhoto()
+
+  // ── Photo action-bar handlers ─────────────────────────────────────────────
+  const handleChangeSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    pendingChangeRef.current = {
+      pageIndex: selectedPhoto.pageIndex,
+      elementId: selectedPhoto.element.id,
+    }
+    changePhotoInputRef.current?.click()
+  }
+
+  const handleChangePhotoFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    const pending = pendingChangeRef.current
+    pendingChangeRef.current = null
+    if (!file || !pending) return
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      dispatch({
+        type: 'UPDATE_ELEMENT',
+        pageIndex: pending.pageIndex,
+        id: pending.elementId,
+        updates: { url },
+      })
+    } catch (err) {
+      console.error('Change photo failed', err)
+      alert('Upload failed. Please try again.')
+    }
+  }
+
+  const handleSwapSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    setSwapSourceId((prev) => (prev === selectedPhoto.element.id ? null : selectedPhoto.element.id))
+  }
+
+  // Locate an element + its owning pageIndex anywhere on the visible spread.
+  const findOnSpread = (id) => {
+    for (const pIdx of [leftPageIndex, rightPageIndex]) {
+      if (pIdx == null) continue
+      const el = pages[pIdx]?.elements.find((e) => e.id === id)
+      if (el) return { element: el, pageIndex: pIdx }
+    }
+    return null
+  }
+
+  const handleSwapTarget = (targetId) => {
+    if (!swapSourceId || targetId === swapSourceId) return
+    const src = findOnSpread(swapSourceId)
+    const tgt = findOnSpread(targetId)
+    if (!src || !tgt) {
+      setSwapSourceId(null)
+      return
+    }
+    const srcPayload = {
+      url: src.element.url,
+      flipped: !!src.element.flipped,
+      caption: src.element.caption || '',
+    }
+    const tgtPayload = {
+      url: tgt.element.url,
+      flipped: !!tgt.element.flipped,
+      caption: tgt.element.caption || '',
+    }
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex: src.pageIndex,
+      id: src.element.id,
+      updates: tgtPayload,
+    })
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex: tgt.pageIndex,
+      id: tgt.element.id,
+      updates: srcPayload,
+    })
+    setSwapSourceId(null)
+  }
+
+  const handleScaleSelectedPhoto = (factor) => {
+    if (!selectedPhoto || !factor || factor === 1) return
+    const { element, pageIndex } = selectedPhoto
+    const newW = Math.max(40, element.width * factor)
+    const newH = Math.max(40, element.height * factor)
+    const newX = element.x + (element.width - newW) / 2
+    const newY = element.y + (element.height - newH) / 2
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex,
+      id: element.id,
+      updates: { width: newW, height: newH, x: newX, y: newY },
+    })
+  }
+
+  const handleRotateSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    const rot = ((selectedPhoto.element.rotation || 0) + 90) % 360
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex: selectedPhoto.pageIndex,
+      id: selectedPhoto.element.id,
+      updates: { rotation: rot },
+    })
+  }
+
+  const handleFlipSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex: selectedPhoto.pageIndex,
+      id: selectedPhoto.element.id,
+      updates: { flipped: !selectedPhoto.element.flipped },
+    })
+  }
+
+  const handleRemoveImageSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    // Clear the URL so the element reverts to a "Tap to add photo" slot at the
+    // same position/size/rotation — the layout is preserved.
+    dispatch({
+      type: 'UPDATE_ELEMENT',
+      pageIndex: selectedPhoto.pageIndex,
+      id: selectedPhoto.element.id,
+      updates: { url: '' },
+    })
+  }
+
+  const handleRemoveSelectedPhoto = () => {
+    if (!selectedPhoto) return
+    dispatch({
+      type: 'DELETE_ELEMENT',
+      pageIndex: selectedPhoto.pageIndex,
+      id: selectedPhoto.element.id,
+    })
+    dispatch({ type: 'SELECT', id: null })
+  }
+
+  const handleDonePhoto = () => {
+    setSwapSourceId(null)
+    dispatch({ type: 'SELECT', id: null })
+  }
 
   const handleActivateSide = (side) => {
     const targetIdx = side === 'right' ? rightPageIndex : leftPageIndex
@@ -416,65 +547,84 @@ export default function ScrapbookEditorPage() {
           />
         </div>
 
-        {/* Canvas area */}
-        <div className="flex-1 flex flex-col items-center justify-start overflow-auto px-1 pt-2 pb-20 lg:px-6 lg:pt-6 lg:pb-6">
-          <ScrapbookCanvas
-            ref={canvasRef}
-            leftPage={leftPage}
-            rightPage={rightPage}
-            leftPageIndex={leftPageIndex}
-            rightPageIndex={rightPageIndex}
-            activeSide={activeSide}
-            onActivate={handleActivateSide}
-            selectedId={selectedId}
-            onSelectElement={handleSelectElement}
-            onUpdateElement={handleUpdateElement}
-            onDeleteElement={handleDeleteElement}
-            onSlotClick={handleSlotClick}
-            uploadingSlotId={uploadingSlotId}
-          />
+        {/* Canvas area — book centered vertically, accessories docked below */}
+        <div className="flex-1 flex flex-col min-h-0 px-1 pt-2 pb-20 lg:px-6 lg:pt-4 lg:pb-4">
+          {/* Book row — grows to fill, book itself is centered in it */}
+          <div className="flex-1 flex items-center justify-center overflow-auto pb-2 min-h-0">
+            <ScrapbookCanvas
+              ref={canvasRef}
+              leftPage={leftPage}
+              rightPage={rightPage}
+              leftPageIndex={leftPageIndex}
+              rightPageIndex={rightPageIndex}
+              activeSide={activeSide}
+              onActivate={handleActivateSide}
+              selectedId={selectedId}
+              onSelectElement={handleSelectElement}
+              onUpdateElement={handleUpdateElement}
+              onDeleteElement={handleDeleteElement}
+              swapSourceId={swapSourceId}
+              onSwapTarget={handleSwapTarget}
+            />
+          </div>
 
-          {/* Photos from the family's memories + moments for easy reuse */}
-          <MemoryPhotoStrip onPhotoClick={handleAddMemoryPhoto} />
+          {/* Docked accessories */}
+          <div className="flex-shrink-0">
+            <MemoryPhotoStrip onPhotoClick={handleAddMemoryPhoto} />
 
-          {/* Spread strip — mobile navigation */}
-          <div className="flex items-center gap-2 mt-4 lg:hidden flex-wrap justify-center max-w-full px-2">
-            {Array.from({ length: spreadCount }).map((_, i) => {
-              const { left, right } = spreadBounds(pages.length, i)
-              const label = i === 0 ? 'Cover' : right == null ? `${left + 1}` : `${left + 1}-${right + 1}`
-              const isActive = i === spreadIdx
-              return (
-                <button
-                  key={i}
-                  onClick={() => handleSwitchPage(leftPageForSpread(i))}
-                  className={`px-2 h-8 rounded-lg border-2 text-xs font-bold transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'border-kaydo bg-kaydo text-white'
-                      : 'border-cream-dark bg-warm-white text-bark-muted'
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            })}
-            <button
-              onClick={handleAddPage}
-              className="w-8 h-8 rounded-lg border-2 border-dashed border-kaydo text-kaydo flex items-center justify-center text-lg font-bold"
-              title="Add page"
-            >
-              +
-            </button>
+            {selectedPhoto && (
+              <PhotoActionBar
+                onDone={handleDonePhoto}
+                onChange={handleChangeSelectedPhoto}
+                onSwap={handleSwapSelectedPhoto}
+                onScale={handleScaleSelectedPhoto}
+                onRotate={handleRotateSelectedPhoto}
+                onFlip={handleFlipSelectedPhoto}
+                onRemoveImage={handleRemoveImageSelectedPhoto}
+                onRemove={handleRemoveSelectedPhoto}
+                swapActive={swapSourceId === selectedPhoto.element.id}
+              />
+            )}
+
+            {/* Spread strip — mobile navigation */}
+            <div className="flex items-center gap-2 mt-4 lg:hidden flex-wrap justify-center max-w-full px-2">
+              {Array.from({ length: spreadCount }).map((_, i) => {
+                const { left, right } = spreadBounds(pages.length, i)
+                const label = i === 0 ? 'Cover' : right == null ? `${left + 1}` : `${left + 1}-${right + 1}`
+                const isActive = i === spreadIdx
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSwitchPage(leftPageForSpread(i))}
+                    className={`px-2 h-8 rounded-lg border-2 text-xs font-bold transition-colors whitespace-nowrap ${
+                      isActive
+                        ? 'border-kaydo bg-kaydo text-white'
+                        : 'border-cream-dark bg-warm-white text-bark-muted'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+              <button
+                onClick={handleAddPage}
+                className="w-8 h-8 rounded-lg border-2 border-dashed border-kaydo text-kaydo flex items-center justify-center text-lg font-bold"
+                title="Add page"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Hidden file input used by layout slot "Tap to add photo" taps */}
+      {/* Hidden file input for the PhotoActionBar "Change photos" action */}
       <input
-        ref={slotFileInputRef}
+        ref={changePhotoInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={handleSlotFileChange}
+        onChange={handleChangePhotoFile}
       />
 
       {/* Mobile bottom toolbar */}

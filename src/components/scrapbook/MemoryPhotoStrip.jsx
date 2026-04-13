@@ -1,15 +1,20 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Upload, Loader2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemories, useAllMoments } from '../../hooks/useMemories'
+import { encryptAndUpload } from '../../utils/encryptedUpload'
 import EncryptedImage from '../media/EncryptedImage'
 
 // Horizontal strip of recent photos from the family's memories + moments.
 // Tapping a thumbnail adds the photo to the scrapbook — either filling the
-// currently-selected empty slot or adding a free-floating photo.
+// currently-selected empty slot or adding a free-floating photo. The leading
+// "Add photos" button uploads a brand-new image through the same pipeline.
 export default function MemoryPhotoStrip({ onPhotoClick }) {
   const { familyId, encryptionKey } = useAuth()
   const { moments } = useAllMoments(familyId)
   const { memories } = useMemories(familyId, encryptionKey)
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
 
   const photos = useMemo(() => {
     const all = []
@@ -35,17 +40,53 @@ export default function MemoryPhotoStrip({ onPhotoClick }) {
     return unique.slice(0, 40)
   }, [moments, memories])
 
-  if (photos.length === 0) return null
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      onPhotoClick?.(url)
+    } catch (err) {
+      console.error('Upload failed', err)
+      alert('Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="w-full mt-4 bg-warm-white border border-cream-dark rounded-xl p-3">
       <div className="flex items-baseline justify-between mb-2 px-1">
-        <p className="text-xs font-semibold text-bark">Photos from your memories</p>
+        <p className="text-xs font-semibold text-bark">Photos</p>
         <p className="text-[10px] text-bark-muted">
-          Tap to add to the active page
+          Upload new or reuse from your memories
         </p>
       </div>
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+      <div className="flex gap-2 items-center overflow-x-auto hide-scrollbar pb-1">
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-kaydo bg-kaydo/10 text-kaydo flex flex-col items-center justify-center gap-1 hover:bg-kaydo/20 transition-colors active:scale-95 disabled:opacity-60"
+          title="Upload a new photo"
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Upload className="w-5 h-5" />
+          )}
+          <span className="text-[10px] font-semibold leading-tight text-center px-1">
+            {uploading ? 'Uploading…' : 'Add photos'}
+          </span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFile}
+        />
         {photos.map((p) => (
           <button
             key={p.key}
