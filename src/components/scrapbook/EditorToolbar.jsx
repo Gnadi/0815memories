@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { ArrowLeft, Undo2, FileDown, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import {
+  spreadForPageIndex,
+  totalSpreads,
+  spreadBounds,
+  leftPageForSpread,
+} from '../../utils/spread'
 
 export default function EditorToolbar({
   title,
@@ -59,44 +65,60 @@ export default function EditorToolbar({
         )}
       </div>
 
-      {/* Page navigation — compact on mobile */}
-      <div className="hidden sm:flex items-center gap-1 bg-cream rounded-lg px-1.5 py-1 flex-shrink-0">
-        <button
-          onClick={() => onSwitchPage(Math.max(0, currentPageIndex - 1))}
-          disabled={currentPageIndex === 0}
-          className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4 text-bark" />
-        </button>
-        <span className="text-xs font-medium text-bark min-w-[60px] text-center">
-          {currentPageIndex + 1} / {pages.length}
-        </span>
-        <button
-          onClick={() => onSwitchPage(Math.min(pages.length - 1, currentPageIndex + 1))}
-          disabled={currentPageIndex === pages.length - 1}
-          className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
-        >
-          <ChevronRight className="w-4 h-4 text-bark" />
-        </button>
-        <button
-          onClick={onAddPage}
-          className="p-0.5 ml-0.5 rounded hover:bg-cream-dark transition-colors"
-          title="Add page"
-        >
-          <Plus className="w-4 h-4 text-kaydo" />
-        </button>
-        {pages.length > 1 && (
-          <button
-            onClick={() => {
-              if (confirm('Delete this page?')) onDeletePage(currentPageIndex)
-            }}
-            className="p-0.5 rounded hover:bg-red-50 text-bark-muted hover:text-red-500 transition-colors"
-            title="Delete page"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      {/* Spread (two-page) navigation */}
+      {(() => {
+        const spreadIdx = spreadForPageIndex(currentPageIndex)
+        const totalS = totalSpreads(pages.length)
+        const { left, right } = spreadBounds(pages.length, spreadIdx)
+        const label =
+          spreadIdx === 0
+            ? 'Cover'
+            : right == null
+              ? `Page ${left + 1}`
+              : `Page ${left + 1}-${right + 1}`
+        const goToSpread = (idx) => onSwitchPage(leftPageForSpread(idx))
+        return (
+          <div className="hidden sm:flex items-center gap-1 bg-cream rounded-lg px-1.5 py-1 flex-shrink-0">
+            <button
+              onClick={() => goToSpread(Math.max(0, spreadIdx - 1))}
+              disabled={spreadIdx === 0}
+              className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
+              title="Previous spread"
+            >
+              <ChevronLeft className="w-4 h-4 text-bark" />
+            </button>
+            <span className="text-xs font-medium text-bark min-w-[70px] text-center">
+              {label}
+            </span>
+            <button
+              onClick={() => goToSpread(Math.min(totalS - 1, spreadIdx + 1))}
+              disabled={spreadIdx === totalS - 1}
+              className="p-0.5 rounded disabled:opacity-30 hover:bg-cream-dark transition-colors"
+              title="Next spread"
+            >
+              <ChevronRight className="w-4 h-4 text-bark" />
+            </button>
+            <button
+              onClick={onAddPage}
+              className="p-0.5 ml-0.5 rounded hover:bg-cream-dark transition-colors"
+              title="Add page"
+            >
+              <Plus className="w-4 h-4 text-kaydo" />
+            </button>
+            {pages.length > 1 && (
+              <button
+                onClick={() => {
+                  if (confirm('Delete this page?')) onDeletePage(currentPageIndex)
+                }}
+                className="p-0.5 rounded hover:bg-red-50 text-bark-muted hover:text-red-500 transition-colors"
+                title="Delete page"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Save status */}
       <div className="flex-shrink-0 hidden sm:flex items-center gap-1 text-xs text-bark-muted">

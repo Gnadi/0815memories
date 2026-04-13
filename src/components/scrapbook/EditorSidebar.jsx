@@ -168,7 +168,20 @@ export default function EditorSidebar({ onAddElement, onApplyLayout, onChangeBac
 
   const applyLayout = (layout) => {
     if (layout.elements.length === 0 || confirm('Replace current page with this layout? Existing elements will be removed.')) {
-      onApplyLayout(layout.elements.map((el) => ({ ...el, id: crypto.randomUUID() })))
+      onApplyLayout(layout.elements.map((el) => {
+        // Photo slots start empty — they render as "Tap to add photo" placeholders
+        // until a user clicks them and uploads a file.
+        if (el.type === 'photo') {
+          return {
+            url: '',
+            polaroid: false,
+            caption: '',
+            ...el,
+            id: crypto.randomUUID(),
+          }
+        }
+        return { ...el, id: crypto.randomUUID() }
+      }))
     }
   }
 

@@ -8,6 +8,14 @@ import { useScrapbooks } from '../hooks/useScrapbooks'
 import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorSidebar from '../components/scrapbook/EditorSidebar'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
+import { encryptAndUpload } from '../utils/encryptedUpload'
+import {
+  spreadForPageIndex,
+  totalSpreads,
+  spreadBounds,
+  leftPageForSpread,
+  sideForPageIndex,
+} from '../utils/spread'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -27,8 +35,9 @@ function editorReducer(state, action) {
     return { ...state, pages: newPages, history, isDirty: true }
   }
 
-  const updateCurrentPage = (updater) => {
-    const newPages = pages.map((p, i) => i === currentPageIndex ? updater(p) : p)
+  const updatePageAt = (idx, updater) => {
+    if (idx == null || idx < 0 || idx >= pages.length) return state
+    const newPages = pages.map((p, i) => (i === idx ? updater(p) : p))
     return withHistory(newPages)
   }
 
@@ -52,34 +61,48 @@ function editorReducer(state, action) {
       return { ...withHistory(newPages), currentPageIndex: newIndex, selectedId: null }
     }
 
-    case 'ADD_ELEMENT':
-      return updateCurrentPage((p) => ({
+    case 'ADD_ELEMENT': {
+      const idx = action.pageIndex ?? currentPageIndex
+      return updatePageAt(idx, (p) => ({
         ...p,
         elements: [...p.elements, { id: crypto.randomUUID(), ...action.element }],
       }))
+    }
 
-    case 'UPDATE_ELEMENT':
-      return updateCurrentPage((p) => ({
+    case 'UPDATE_ELEMENT': {
+      const idx = action.pageIndex ?? currentPageIndex
+      return updatePageAt(idx, (p) => ({
         ...p,
         elements: p.elements.map((el) =>
           el.id === action.id ? { ...el, ...action.updates } : el
         ),
       }))
+    }
 
-    case 'DELETE_ELEMENT':
-      return updateCurrentPage((p) => ({
+    case 'DELETE_ELEMENT': {
+      const idx = action.pageIndex ?? currentPageIndex
+      return updatePageAt(idx, (p) => ({
         ...p,
         elements: p.elements.filter((el) => el.id !== action.id),
       }))
+    }
 
-    case 'APPLY_LAYOUT':
-      return updateCurrentPage((p) => ({ ...p, elements: action.elements }))
+    case 'APPLY_LAYOUT': {
+      const idx = action.pageIndex ?? currentPageIndex
+      return updatePageAt(idx, (p) => ({ ...p, elements: action.elements }))
+    }
 
-    case 'CHANGE_BACKGROUND':
-      return updateCurrentPage((p) => ({ ...p, ...action.updates }))
+    case 'CHANGE_BACKGROUND': {
+      const idx = action.pageIndex ?? currentPageIndex
+      return updatePageAt(idx, (p) => ({ ...p, ...action.updates }))
+    }
 
     case 'SELECT':
-      return { ...state, selectedId: action.id }
+      return {
+        ...state,
+        selectedId: action.id,
+        currentPageIndex: action.pageIndex ?? state.currentPageIndex,
+      }
 
     case 'UNDO': {
       if (state.history.length === 0) return state
@@ -124,6 +147,9 @@ export default function ScrapbookEditorPage() {
 
   const canvasRef = useRef(null)
   const saveTimerRef = useRef(null)
+  const slotFileInputRef = useRef(null)
+  const pendingSlotRef = useRef(null) // { pageIndex, elementId }
+  const [uploadingSlotId, setUploadingSlotId] = useState(null)
 
   // Load scrapbook once on mount
   useEffect(() => {
@@ -186,17 +212,21 @@ export default function ScrapbookEditorPage() {
   const handleExportPDF = async () => {
     if (!canvasRef.current) return
     setExporting(true)
+    const originalIndex = currentPageIndex
     try {
       await document.fonts.ready
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
       for (let i = 0; i < pages.length; i++) {
-        // Switch page and wait for React to flush
-        if (i !== currentPageIndex) {
-          dispatch({ type: 'SWITCH_PAGE', index: i })
-          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-        }
-        const canvas = await html2canvas(canvasRef.current, {
+        // Activate page i so the spread contains it and the imperative
+        // handle can hand us the correct side's DOM node.
+        dispatch({ type: 'SWITCH_PAGE', index: i })
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+        const node = canvasRef.current?.getPageNode(sideForPageIndex(i))
+        if (!node) continue
+
+        const canvas = await html2canvas(node, {
           useCORS: true,
           scale: 2,
           backgroundColor: null,
@@ -207,10 +237,8 @@ export default function ScrapbookEditorPage() {
         pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
       }
 
-      // Switch back to original page
-      if (currentPageIndex !== pages.length - 1) {
-        dispatch({ type: 'SWITCH_PAGE', index: currentPageIndex })
-      }
+      // Restore original active page
+      dispatch({ type: 'SWITCH_PAGE', index: originalIndex })
 
       pdf.save(`${title}.pdf`)
     } catch (err) {
@@ -222,19 +250,69 @@ export default function ScrapbookEditorPage() {
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  // Sidebar actions target the currently-active page (currentPageIndex)
   const handleAddElement = (element) => dispatch({ type: 'ADD_ELEMENT', element })
-  const handleUpdateElement = (id, updates) => dispatch({ type: 'UPDATE_ELEMENT', id, updates })
-  const handleDeleteElement = (id) => dispatch({ type: 'DELETE_ELEMENT', id })
   const handleApplyLayout = (elements) => dispatch({ type: 'APPLY_LAYOUT', elements })
   const handleChangeBackground = (updates) => dispatch({ type: 'CHANGE_BACKGROUND', updates })
-  const handleSelectElement = (id) => dispatch({ type: 'SELECT', id })
+
+  // Canvas actions receive the page index explicitly so either spread page can
+  // be manipulated without a stale currentPageIndex.
+  const handleUpdateElement = (pageIndex, id, updates) =>
+    dispatch({ type: 'UPDATE_ELEMENT', pageIndex, id, updates })
+  const handleDeleteElement = (pageIndex, id) =>
+    dispatch({ type: 'DELETE_ELEMENT', pageIndex, id })
+  const handleSelectElement = (pageIndex, id) =>
+    dispatch({ type: 'SELECT', pageIndex, id })
+
   const handleUndo = () => dispatch({ type: 'UNDO' })
   const handleAddPage = () => dispatch({ type: 'ADD_PAGE' })
   const handleDeletePage = (index) => dispatch({ type: 'DELETE_PAGE', index })
   const handleSwitchPage = (index) => dispatch({ type: 'SWITCH_PAGE', index })
   const handleTitleChange = (newTitle) => dispatch({ type: 'SET_TITLE', title: newTitle })
 
-  const currentPage = pages[currentPageIndex] || pages[0]
+  // Tapping a layout slot (empty photo element) triggers the file picker.
+  const handleSlotClick = (pageIndex, elementId) => {
+    if (uploadingSlotId) return
+    pendingSlotRef.current = { pageIndex, elementId }
+    slotFileInputRef.current?.click()
+  }
+
+  const handleSlotFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    const pending = pendingSlotRef.current
+    pendingSlotRef.current = null
+    if (!file || !pending) return
+    const { pageIndex, elementId } = pending
+    setUploadingSlotId(elementId)
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      // URL is all we change — slot x/y/width/height are preserved so the
+      // photo fills the tapped box exactly.
+      dispatch({ type: 'UPDATE_ELEMENT', pageIndex, id: elementId, updates: { url } })
+    } catch (err) {
+      console.error('Slot upload failed', err)
+      alert('Upload failed. Please try again.')
+    } finally {
+      setUploadingSlotId(null)
+    }
+  }
+
+  // Derive spread state
+  const spreadIdx = spreadForPageIndex(currentPageIndex)
+  const { left: leftPageIndex, right: rightPageIndex } = spreadBounds(pages.length, spreadIdx)
+  const leftPage = leftPageIndex != null ? pages[leftPageIndex] : null
+  const rightPage = rightPageIndex != null ? pages[rightPageIndex] : null
+  const activeSide = currentPageIndex === rightPageIndex ? 'right' : 'left'
+
+  const handleActivateSide = (side) => {
+    const targetIdx = side === 'right' ? rightPageIndex : leftPageIndex
+    if (targetIdx != null && targetIdx !== currentPageIndex) {
+      dispatch({ type: 'SWITCH_PAGE', index: targetIdx })
+    }
+  }
+
+  const spreadCount = totalSpreads(pages.length)
 
   if (loading) {
     return (
@@ -286,37 +364,59 @@ export default function ScrapbookEditorPage() {
         <div className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 lg:p-6 pb-20 lg:pb-6">
           <ScrapbookCanvas
             ref={canvasRef}
-            page={currentPage}
+            leftPage={leftPage}
+            rightPage={rightPage}
+            leftPageIndex={leftPageIndex}
+            rightPageIndex={rightPageIndex}
+            activeSide={activeSide}
+            onActivate={handleActivateSide}
             selectedId={selectedId}
             onSelectElement={handleSelectElement}
             onUpdateElement={handleUpdateElement}
             onDeleteElement={handleDeleteElement}
+            onSlotClick={handleSlotClick}
+            uploadingSlotId={uploadingSlotId}
           />
 
-          {/* Page strip — mobile page navigation */}
-          <div className="flex items-center gap-2 mt-4 lg:hidden">
-            {pages.map((p, i) => (
-              <button
-                key={p.id}
-                onClick={() => handleSwitchPage(i)}
-                className={`w-8 h-8 rounded-lg border-2 text-xs font-bold transition-colors ${
-                  i === currentPageIndex
-                    ? 'border-kaydo bg-kaydo text-white'
-                    : 'border-cream-dark bg-warm-white text-bark-muted'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
+          {/* Spread strip — mobile navigation */}
+          <div className="flex items-center gap-2 mt-4 lg:hidden flex-wrap justify-center max-w-full px-2">
+            {Array.from({ length: spreadCount }).map((_, i) => {
+              const { left, right } = spreadBounds(pages.length, i)
+              const label = i === 0 ? 'Cover' : right == null ? `${left + 1}` : `${left + 1}-${right + 1}`
+              const isActive = i === spreadIdx
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleSwitchPage(leftPageForSpread(i))}
+                  className={`px-2 h-8 rounded-lg border-2 text-xs font-bold transition-colors whitespace-nowrap ${
+                    isActive
+                      ? 'border-kaydo bg-kaydo text-white'
+                      : 'border-cream-dark bg-warm-white text-bark-muted'
+                  }`}
+                >
+                  {label}
+                </button>
+              )
+            })}
             <button
               onClick={handleAddPage}
               className="w-8 h-8 rounded-lg border-2 border-dashed border-kaydo text-kaydo flex items-center justify-center text-lg font-bold"
+              title="Add page"
             >
               +
             </button>
           </div>
         </div>
       </div>
+
+      {/* Hidden file input used by layout slot "Tap to add photo" taps */}
+      <input
+        ref={slotFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSlotFileChange}
+      />
 
       {/* Mobile bottom toolbar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-warm-white border-t border-cream-dark">

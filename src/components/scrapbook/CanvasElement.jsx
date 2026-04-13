@@ -1,11 +1,11 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { Trash2, RotateCw } from 'lucide-react'
+import { Trash2, RotateCw, ImagePlus, Loader2 } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
 const HANDLE_SIZE = 10
 
-export default function CanvasElement({ element, isSelected, onSelect, onUpdate, onDelete, canvasScale }) {
+export default function CanvasElement({ element, isSelected, onSelect, onUpdate, onDelete, onSlotClick, isUploading, canvasScale }) {
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -106,6 +106,35 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
 
   const renderContent = () => {
     if (type === 'photo') {
+      // Empty layout slot — render "Tap to add photo" placeholder.
+      if (!element.url) {
+        return (
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isUploading) return
+              onSelect?.(id)
+              onSlotClick?.(id)
+            }}
+            className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-bark-muted/60 bg-bark-muted/20 text-bark-light hover:bg-bark-muted/30 hover:border-kaydo/70 hover:text-kaydo transition-colors cursor-pointer"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-xs font-medium">Uploading…</span>
+              </>
+            ) : (
+              <>
+                <ImagePlus className="w-6 h-6" />
+                <span className="text-xs font-semibold leading-tight text-center px-2">
+                  Tap to add photo
+                </span>
+              </>
+            )}
+          </div>
+        )
+      }
+
       const isPolaroid = element.polaroid
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col`}>
