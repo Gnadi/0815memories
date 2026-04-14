@@ -1,9 +1,49 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Trash2, RotateCw, ImagePlus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import useDecryptedMedia from '../media/useDecryptedMedia'
 
 const HANDLE_SIZE = 10
+
+// Draw an image onto a canvas exactly as the editor shows it:
+// object-cover behaviour (fill container, crop to centre) + imageScale zoom.
+// This bypasses html2canvas's broken overflow:hidden handling entirely.
+function drawImageCoveredAndScaled(ctx, img, w, h, imageScale, flipped) {
+  const iw = img.naturalWidth
+  const ih = img.naturalHeight
+  if (!iw || !ih) return
+
+  // --- object-cover: find the source rect that fills w×h ---
+  let coverW, coverH
+  if (iw / ih > w / h) {
+    // image wider than container: fit height, crop sides
+    coverH = ih
+    coverW = (w / h) * ih
+  } else {
+    // image taller than container: fit width, crop top/bottom
+    coverW = iw
+    coverH = (h / w) * iw
+  }
+  const coverX = (iw - coverW) / 2
+  const coverY = (ih - coverH) / 2
+
+  // --- imageScale zoom: show centre 1/imageScale of the covered area ---
+  const srcW = coverW / imageScale
+  const srcH = coverH / imageScale
+  const srcX = coverX + (coverW - srcW) / 2
+  const srcY = coverY + (coverH - srcH) / 2
+
+  if (flipped) {
+    ctx.save()
+    ctx.translate(w, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h)
+    ctx.restore()
+  } else {
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h)
+  }
+}
 
 export default function CanvasElement({
   element,
@@ -17,7 +57,33 @@ export default function CanvasElement({
 }) {
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
+  const exportCanvasRef = useRef(null)
   const [isEditing, setIsEditing] = useState(false)
+
+  // Always decrypt the image URL so it's warm in the cache before export starts.
+  // (EncryptedImage does the same internally; the shared cache avoids double-fetching.)
+  const { decryptedUrl } = useDecryptedMedia(
+    type === 'photo' ? element.url : null,
+    'image/*'
+  )
+
+  // When exporting, draw the correctly-cropped image onto the canvas element.
+  // html2canvas reads <canvas> pixel data directly, so no overflow/clip tricks needed.
+  useEffect(() => {
+    if (!exporting || type !== 'photo' || !exportCanvasRef.current || !decryptedUrl) return
+    const canvas = exportCanvasRef.current
+    const cw = canvas.offsetWidth || width
+    const ch = canvas.offsetHeight || height
+    if (!cw || !ch) return
+    canvas.width = cw
+    canvas.height = ch
+    const imageScale = element.imageScale || 1
+    const flipped = !!element.flipped
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    img.onload = () => drawImageCoveredAndScaled(ctx, img, cw, ch, imageScale, flipped)
+    img.src = decryptedUrl
+  }, [exporting, type, decryptedUrl, element.imageScale, element.flipped, width, height])
 
   // Photos are "slots" when they have no url yet. Slots are always selectable
   // (so users can fill them via the PhotoBar) but are never draggable/resizable
@@ -148,7 +214,28 @@ export default function CanvasElement({
       const isPolaroid = element.polaroid
       const imageScale = element.imageScale || 1
       const flipped = !!element.flipped
-      const innerTransform = `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`
+
+      if (exporting) {
+        // During PDF export, render onto a <canvas> element using Canvas 2D API.
+        // html2canvas reads canvas pixels verbatim, completely bypassing the
+        // overflow:hidden + transform clipping issues that plague <img> elements.
+        return (
+          <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col`}>
+            <div className="flex-1 w-full relative">
+              <canvas
+                ref={exportCanvasRef}
+                className={`absolute inset-0 w-full h-full${isPolaroid ? '' : ' rounded'}`}
+                style={{ display: 'block' }}
+              />
+            </div>
+            {isPolaroid && element.caption && (
+              <p className="text-center text-xs font-serif text-bark-muted mt-1 truncate px-1">
+                {element.caption}
+              </p>
+            )}
+          </div>
+        )
+      }
 
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col overflow-hidden`}>
@@ -157,8 +244,8 @@ export default function CanvasElement({
               src={element.url}
               alt=""
               crossOrigin="anonymous"
-              className={`absolute inset-0 w-full h-full object-cover ${isPolaroid ? '' : 'rounded'}`}
-              style={{ transform: innerTransform, transformOrigin: 'center center' }}
+              className={`absolute inset-0 w-full h-full object-cover${isPolaroid ? '' : ' rounded'}`}
+              style={{ transform: `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`, transformOrigin: 'center center' }}
               draggable={false}
             />
           </div>
