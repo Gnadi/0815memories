@@ -81,9 +81,14 @@ export default forwardRef(function ScrapbookCanvas(
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
             ref={ref}
-            style={{ ...canvasStyle, position: 'relative', overflow: 'hidden' }}
+            style={{
+              ...canvasStyle,
+              position: 'relative',
+              overflow: 'hidden',
+              border: '2px solid var(--color-bark)',
+              boxSizing: 'border-box',
+            }}
             onClick={() => onSelectElement(null)}
-            className="shadow-xl"
           >
             {sorted.map((el) => (
               <CanvasElement
