@@ -78,6 +78,17 @@ export const LAYOUT_PRESETS = [
       displayText('2025', { x: 400, y: 240, width: 380, height: 100, fontSize: 56, color: '#C25A2E', textAlign: 'left', zIndex: 6 }),
     ],
   },
+  {
+    id: 'cover-magazine',
+    label: 'Cover: Magazine',
+    preview: '📖',
+    group: 'cover',
+    elements: [
+      displayText('TITLE', { x: 0, y: 30, width: 800, height: 200, fontSize: 160, color: '#FFFFFF', zIndex: 1 }),
+      displayText('2025',  { x: 0, y: 210, width: 800, height: 80,  fontSize: 68,  color: '#E91E8C', zIndex: 2 }),
+      slot(140, 275, 520, 295, 0, 3),
+    ],
+  },
 
   // ─── Spreads / Interior pages ───────────────────────────────────────────
   {
@@ -191,5 +202,5 @@ export const LAYOUT_PRESETS = [
 export const BG_COLORS = [
   '#FDF6EC', '#FFFDF9', '#F5E6D0', '#FFF5F5', '#F0FFF4',
   '#EFF6FF', '#FAF5FF', '#FEFCE8', '#F8F8F8', '#2D1B0E',
-  '#C25A2E', '#3B5E8A', '#4A7C59', '#7B3F6E',
+  '#C25A2E', '#3B5E8A', '#4A7C59', '#7B3F6E', '#FBCFE8',
 ]

@@ -6,9 +6,23 @@ import { useScrapbooks } from '../hooks/useScrapbooks'
 import ScrapbookCard from '../components/scrapbook/ScrapbookCard'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { LAYOUT_PRESETS } from '../components/scrapbook/layoutPresets'
 
-function makeBlankPage() {
-  return { id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }
+function makeCoverPage() {
+  const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
+  const currentYear = new Date().getFullYear().toString()
+  const elements = preset.elements.map((el) => ({
+    ...el,
+    id: crypto.randomUUID(),
+    ...(el.type === 'text' && el.text === '2025' ? { text: currentYear } : {}),
+  }))
+  return {
+    id: crypto.randomUUID(),
+    backgroundColor: '#FBCFE8',
+    backgroundPattern: 'none',
+    elements,
+    customizable: false,
+  }
 }
 
 export default function ScrapbooksPage() {
@@ -26,7 +40,7 @@ export default function ScrapbooksPage() {
       const id = await addScrapbook({
         title: 'My Scrapbook',
         coverImageUrl: null,
-        pages: [makeBlankPage()],
+        pages: [makeCoverPage()],
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
