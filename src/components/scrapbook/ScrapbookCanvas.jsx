@@ -82,7 +82,7 @@ export default forwardRef(function ScrapbookCanvas(
     <div ref={containerRef} className="w-full h-full flex items-center justify-center">
       {/* Wrapper sized to the scaled canvas dimensions so the scaled content
           keeps its layout footprint (transform doesn't affect layout). */}
-      <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale, position: 'relative' }}>
+      <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale, position: 'relative', boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)' }}>
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
             ref={ref}
