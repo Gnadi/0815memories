@@ -13,7 +13,9 @@ export default function PageNavBar({
   onDeletePage,
 }) {
   const [open, setOpen] = useState(false)
-  const pageLabel = `Page ${currentPageIndex + 1} / ${pages.length}`
+  const pageLabel = currentPageIndex === 0
+    ? `Cover / ${pages.length}`
+    : `Page ${currentPageIndex + 1} / ${pages.length}`
 
   return (
     <>
@@ -74,7 +76,7 @@ export default function PageNavBar({
                         : 'border-cream-dark bg-cream text-bark hover:border-kaydo'
                     }`}
                   >
-                    Page {i + 1}
+                    {i === 0 ? 'Cover' : `Page ${i + 1}`}
                   </button>
                   {pages.length > 1 && (
                     <button
