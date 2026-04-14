@@ -26,12 +26,16 @@ export default forwardRef(function ScrapbookCanvas(
   const containerRef = useRef(null)
   const [scale, setScale] = useState(1)
 
-  // Compute scale so canvas fills available width
+  // Compute scale so canvas fits the available space, respecting both width
+  // AND height so the whole editor fits on screen without scrolling.
   useEffect(() => {
     const update = () => {
       if (!containerRef.current) return
-      const available = containerRef.current.clientWidth
-      setScale(Math.min(1, available / CANVAS_W))
+      const w = containerRef.current.clientWidth
+      const h = containerRef.current.clientHeight
+      const byW = w > 0 ? w / CANVAS_W : 1
+      const byH = h > 0 ? h / CANVAS_H : 1
+      setScale(Math.min(1, byW, byH))
     }
     update()
     const ro = new ResizeObserver(update)
@@ -75,9 +79,10 @@ export default forwardRef(function ScrapbookCanvas(
   const sorted = [...(page.elements || [])].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 
   return (
-    <div ref={containerRef} className="w-full">
-      {/* Outer container sized by scaled canvas */}
-      <div style={{ height: CANVAS_H * scale, position: 'relative' }}>
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+      {/* Wrapper sized to the scaled canvas dimensions so the scaled content
+          keeps its layout footprint (transform doesn't affect layout). */}
+      <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale, position: 'relative' }}>
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div
             ref={ref}

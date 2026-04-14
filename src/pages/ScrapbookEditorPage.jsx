@@ -400,7 +400,7 @@ export default function ScrapbookEditorPage() {
     : undefined
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-cream">
+    <div className="h-dvh flex flex-col overflow-hidden bg-cream">
       {/* Top toolbar */}
       <EditorToolbar
         title={title}
@@ -417,20 +417,18 @@ export default function ScrapbookEditorPage() {
         exporting={exporting}
       />
 
-      {/* Canvas area (scrolls if needed) */}
-      <div className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 lg:p-6">
-        <div className="w-full max-w-5xl">
-          <ScrapbookCanvas
-            ref={canvasRef}
-            page={currentPage}
-            selectedId={selectedId}
-            onSelectElement={handleSelectElement}
-            onUpdateElement={handleUpdateElement}
-            onDeleteElement={handleDeleteElement}
-            editable={editable}
-            exporting={exporting}
-          />
-        </div>
+      {/* Canvas area — fits available space, no scroll */}
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-3 lg:p-6">
+        <ScrapbookCanvas
+          ref={canvasRef}
+          page={currentPage}
+          selectedId={selectedId}
+          onSelectElement={handleSelectElement}
+          onUpdateElement={handleUpdateElement}
+          onDeleteElement={handleDeleteElement}
+          editable={editable}
+          exporting={exporting}
+        />
       </div>
 
       {/* Bottom stack: page nav → context bar → tools */}
