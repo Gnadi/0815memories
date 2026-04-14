@@ -235,9 +235,9 @@ export default function ScrapbookEditorPage() {
         flushSync(() => {
           dispatch({ type: 'SWITCH_PAGE', index: i })
         })
-        // Give the browser a paint cycle + a chance to decode any newly
-        // mounted images before capturing.
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+        // Wait 3 frames: one for the React commit to paint, one for passive
+        // effects (canvas draw useEffect) to flush, one spare for img.onload.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))
 
         // The canvas element has a viewport-fit transform (e.g. scale(0.4) on
         // mobile). html2canvas uses getBoundingClientRect() to size its output,
@@ -250,18 +250,21 @@ export default function ScrapbookEditorPage() {
         el.style.transform = 'none'
         el.style.transformOrigin = 'top left'
 
-        const canvas = await html2canvas(el, {
-          useCORS: true,
-          scale: 2,
-          width: 800,
-          height: 600,
-          backgroundColor: null,
-          logging: false,
-        })
-
-        el.style.transform = savedTransform
-        el.style.transformOrigin = savedTransformOrigin
-        const imgData = canvas.toDataURL('image/jpeg', 0.92)
+        let pageCanvas
+        try {
+          pageCanvas = await html2canvas(el, {
+            useCORS: true,
+            scale: 2,
+            width: 800,
+            height: 600,
+            backgroundColor: null,
+            logging: false,
+          })
+        } finally {
+          el.style.transform = savedTransform
+          el.style.transformOrigin = savedTransformOrigin
+        }
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.92)
         if (i > 0) pdf.addPage([800, 600], 'landscape')
         pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
       }
