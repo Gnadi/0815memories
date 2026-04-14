@@ -20,7 +20,7 @@ const PATTERN_SIZE = {
 }
 
 export default forwardRef(function ScrapbookCanvas(
-  { page, selectedId, onSelectElement, onUpdateElement, onDeleteElement },
+  { page, selectedId, onSelectElement, onUpdateElement, onDeleteElement, editable = true, exporting = false },
   ref
 ) {
   const containerRef = useRef(null)
@@ -51,6 +51,8 @@ export default forwardRef(function ScrapbookCanvas(
     if (!active) return
     const el = page.elements.find((e) => e.id === active.id)
     if (!el) return
+    // Photos with isSlot or with customize disabled do not move
+    if (el.type === 'photo' && !editable) return
     onUpdateElement(active.id, {
       x: el.x + delta.x / scale,
       y: el.y + delta.y / scale,
@@ -92,6 +94,8 @@ export default forwardRef(function ScrapbookCanvas(
                 onUpdate={onUpdateElement}
                 onDelete={onDeleteElement}
                 canvasScale={scale}
+                editable={editable}
+                exporting={exporting}
               />
             ))}
           </div>

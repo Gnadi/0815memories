@@ -1,13 +1,18 @@
-import { useState, useEffect, useRef, useCallback, useReducer } from 'react'
+import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Image, Smile, Type, LayoutGrid, Palette, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useScrapbooks } from '../hooks/useScrapbooks'
+import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
+import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
 import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
-import EditorSidebar from '../components/scrapbook/EditorSidebar'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
+import PhotoBar from '../components/scrapbook/PhotoBar'
+import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
+import BottomToolRow from '../components/scrapbook/BottomToolRow'
+import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -16,7 +21,13 @@ import html2canvas from 'html2canvas'
 const MAX_HISTORY = 20
 
 function makeBlankPage() {
-  return { id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }
+  return {
+    id: crypto.randomUUID(),
+    backgroundColor: '#FDF6EC',
+    backgroundPattern: 'none',
+    elements: [],
+    customizable: false,
+  }
 }
 
 function editorReducer(state, action) {
@@ -43,7 +54,7 @@ function editorReducer(state, action) {
       return { ...state, currentPageIndex: action.index, selectedId: null }
 
     case 'ADD_PAGE':
-      return withHistory([...pages, makeBlankPage()])
+      return { ...withHistory([...pages, makeBlankPage()]), currentPageIndex: pages.length, selectedId: null }
 
     case 'DELETE_PAGE': {
       if (pages.length <= 1) return state
@@ -72,11 +83,31 @@ function editorReducer(state, action) {
         elements: p.elements.filter((el) => el.id !== action.id),
       }))
 
+    case 'SWAP_PHOTOS': {
+      const { idA, idB } = action
+      return updateCurrentPage((p) => {
+        const a = p.elements.find((e) => e.id === idA)
+        const b = p.elements.find((e) => e.id === idB)
+        if (!a || !b) return p
+        return {
+          ...p,
+          elements: p.elements.map((el) => {
+            if (el.id === idA) return { ...el, url: b.url, isSlot: !b.url, imageScale: b.imageScale || 1, flipped: !!b.flipped }
+            if (el.id === idB) return { ...el, url: a.url, isSlot: !a.url, imageScale: a.imageScale || 1, flipped: !!a.flipped }
+            return el
+          }),
+        }
+      })
+    }
+
     case 'APPLY_LAYOUT':
       return updateCurrentPage((p) => ({ ...p, elements: action.elements }))
 
     case 'CHANGE_BACKGROUND':
       return updateCurrentPage((p) => ({ ...p, ...action.updates }))
+
+    case 'TOGGLE_CUSTOMIZE':
+      return updateCurrentPage((p) => ({ ...p, customizable: !p.customizable }))
 
     case 'SELECT':
       return { ...state, selectedId: action.id }
@@ -117,10 +148,14 @@ export default function ScrapbookEditorPage() {
 
   const [loadError, setLoadError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved'
+  const [saveStatus, setSaveStatus] = useState('idle')
   const [exporting, setExporting] = useState(false)
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
-  const [mobileSidebarTab, setMobileSidebarTab] = useState('photos')
+  // Photo bar interaction mode: 'idle' | 'fill' | 'replace' | 'swap'
+  const [photoMode, setPhotoMode] = useState('idle')
+
+  // Family memory photos + session uploads
+  const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
+  const { upload, uploading, session: sessionPhotos } = useScrapbookPhotoUpload()
 
   const canvasRef = useRef(null)
   const saveTimerRef = useRef(null)
@@ -132,15 +167,22 @@ export default function ScrapbookEditorPage() {
       if (!snap.exists()) { setLoadError('Scrapbook not found'); setLoading(false); return }
       const raw = snap.data()
       if (raw.familyId !== familyId) { setLoadError('Scrapbook not found'); setLoading(false); return }
-      // Decrypt title and pages
-      let title = raw.title || 'My Scrapbook'
-      let pages = raw.pages || [makeBlankPage()]
+      let nextTitle = raw.title || 'My Scrapbook'
+      let nextPages = raw.pages || [makeBlankPage()]
       if (encryptionKey) {
         const { decryptText, decryptJSON } = await import('../utils/encryption')
-        if (typeof title === 'string') title = await decryptText(encryptionKey, title)
-        if (typeof pages === 'string') pages = await decryptJSON(encryptionKey, pages)
+        if (typeof nextTitle === 'string') nextTitle = await decryptText(encryptionKey, nextTitle)
+        if (typeof nextPages === 'string') nextPages = await decryptJSON(encryptionKey, nextPages)
       }
-      dispatch({ type: 'LOAD', pages, title })
+      // Migration: pages without an explicit `customizable` flag predate the
+      // photobook redesign and should default to customizable so existing
+      // freely-placed photos remain draggable/resizable.
+      nextPages = nextPages.map((p) => (
+        Object.prototype.hasOwnProperty.call(p, 'customizable')
+          ? p
+          : { ...p, customizable: true }
+      ))
+      dispatch({ type: 'LOAD', pages: nextPages, title: nextTitle })
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)
@@ -153,7 +195,6 @@ export default function ScrapbookEditorPage() {
     if (!id) return
     setSaveStatus('saving')
     try {
-      // Find first photo URL for cover
       let coverImageUrl = null
       for (const page of pagesData) {
         const photo = page.elements.find((el) => el.type === 'photo' && el.url)
@@ -175,12 +216,7 @@ export default function ScrapbookEditorPage() {
     return () => clearTimeout(saveTimerRef.current)
   }, [isDirty, pages, title, save])
 
-  // Save on unmount if dirty
-  useEffect(() => {
-    return () => {
-      clearTimeout(saveTimerRef.current)
-    }
-  }, [])
+  useEffect(() => () => clearTimeout(saveTimerRef.current), [])
 
   // ── PDF export ──────────────────────────────────────────────────────────────
   const handleExportPDF = async () => {
@@ -191,7 +227,6 @@ export default function ScrapbookEditorPage() {
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
       for (let i = 0; i < pages.length; i++) {
-        // Switch page and wait for React to flush
         if (i !== currentPageIndex) {
           dispatch({ type: 'SWITCH_PAGE', index: i })
           await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
@@ -207,7 +242,6 @@ export default function ScrapbookEditorPage() {
         pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
       }
 
-      // Switch back to original page
       if (currentPageIndex !== pages.length - 1) {
         dispatch({ type: 'SWITCH_PAGE', index: currentPageIndex })
       }
@@ -222,19 +256,115 @@ export default function ScrapbookEditorPage() {
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const currentPage = pages[currentPageIndex] || pages[0]
+  const selectedElement = currentPage?.elements.find((el) => el.id === selectedId) || null
+  const isPhotoSelected = selectedElement?.type === 'photo' && !!selectedElement?.url
+  const isSlotSelected = selectedElement?.type === 'photo' && !selectedElement?.url
+  const editable = !!currentPage?.customizable
+
   const handleAddElement = (element) => dispatch({ type: 'ADD_ELEMENT', element })
-  const handleUpdateElement = (id, updates) => dispatch({ type: 'UPDATE_ELEMENT', id, updates })
-  const handleDeleteElement = (id) => dispatch({ type: 'DELETE_ELEMENT', id })
+  const handleUpdateElement = (elementId, updates) => dispatch({ type: 'UPDATE_ELEMENT', id: elementId, updates })
+  const handleDeleteElement = (elementId) => {
+    dispatch({ type: 'DELETE_ELEMENT', id: elementId })
+    setPhotoMode('idle')
+  }
   const handleApplyLayout = (elements) => dispatch({ type: 'APPLY_LAYOUT', elements })
   const handleChangeBackground = (updates) => dispatch({ type: 'CHANGE_BACKGROUND', updates })
-  const handleSelectElement = (id) => dispatch({ type: 'SELECT', id })
+
+  const handleSelectElement = (elementId) => {
+    dispatch({ type: 'SELECT', id: elementId })
+    // Auto switch mode: if the new selection is an empty slot, enter fill mode
+    if (!elementId) {
+      setPhotoMode('idle')
+      return
+    }
+    const el = currentPage.elements.find((e) => e.id === elementId)
+    if (el?.type === 'photo' && !el.url) setPhotoMode('fill')
+    else setPhotoMode('idle')
+  }
+
   const handleUndo = () => dispatch({ type: 'UNDO' })
   const handleAddPage = () => dispatch({ type: 'ADD_PAGE' })
-  const handleDeletePage = (index) => dispatch({ type: 'DELETE_PAGE', index })
-  const handleSwitchPage = (index) => dispatch({ type: 'SWITCH_PAGE', index })
+  const handleDeletePage = (pageIndex) => dispatch({ type: 'DELETE_PAGE', index: pageIndex })
+  const handleSwitchPage = (pageIndex) => dispatch({ type: 'SWITCH_PAGE', index: pageIndex })
   const handleTitleChange = (newTitle) => dispatch({ type: 'SET_TITLE', title: newTitle })
+  const handleToggleCustomize = () => dispatch({ type: 'TOGGLE_CUSTOMIZE' })
 
-  const currentPage = pages[currentPageIndex] || pages[0]
+  // ── Photo picker behaviour ──────────────────────────────────────────────────
+  const handlePickPhoto = (url) => {
+    if (isSlotSelected && (photoMode === 'fill' || photoMode === 'idle')) {
+      handleUpdateElement(selectedId, { url, isSlot: false })
+      setPhotoMode('idle')
+      return
+    }
+    if (isPhotoSelected && photoMode === 'replace') {
+      handleUpdateElement(selectedId, { url })
+      setPhotoMode('idle')
+      return
+    }
+    // No matching selection — add as a new floating photo element
+    handleAddElement({
+      type: 'photo',
+      url,
+      x: 60,
+      y: 60,
+      width: 300,
+      height: 240,
+      rotation: 0,
+      polaroid: false,
+      caption: '',
+      imageScale: 1,
+      flipped: false,
+      zIndex: Date.now(),
+    })
+  }
+
+  const handleUpload = async (file) => {
+    const url = await upload(file)
+    if (!url) return
+    handlePickPhoto(url)
+  }
+
+  // Swap-mode: pick any other photo on the canvas to swap urls with the selected one
+  const swapCandidates = useMemo(() => {
+    if (photoMode !== 'swap' || !selectedId) return []
+    return (currentPage?.elements || []).filter((el) => el.type === 'photo' && el.id !== selectedId && el.url)
+  }, [photoMode, selectedId, currentPage])
+
+  const handlePickSwapTarget = (otherId) => {
+    if (!selectedId) return
+    dispatch({ type: 'SWAP_PHOTOS', idA: selectedId, idB: otherId })
+    setPhotoMode('idle')
+  }
+
+  // Action bar handlers
+  const handleActionDone = () => {
+    dispatch({ type: 'SELECT', id: null })
+    setPhotoMode('idle')
+  }
+  const handleActionChange = () => setPhotoMode((m) => (m === 'replace' ? 'idle' : 'replace'))
+  const handleActionSwap = () => setPhotoMode((m) => (m === 'swap' ? 'idle' : 'swap'))
+  const handleActionRotate = () => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { rotation: ((selectedElement.rotation || 0) + 90) % 360 })
+  }
+  const handleActionFlip = () => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { flipped: !selectedElement.flipped })
+  }
+  const handleActionScale = (newScale) => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { imageScale: newScale })
+  }
+  const handleActionRemovePicture = () => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { url: null, isSlot: true, imageScale: 1, flipped: false })
+    setPhotoMode('fill')
+  }
+  const handleActionRemove = () => {
+    if (!selectedElement) return
+    handleDeleteElement(selectedId)
+  }
 
   if (loading) {
     return (
@@ -252,6 +382,13 @@ export default function ScrapbookEditorPage() {
       </div>
     )
   }
+
+  // When in swap mode, the action bar asks "pick another photo on the page to swap".
+  const swapHint = photoMode === 'swap'
+    ? (swapCandidates.length > 0
+        ? 'Tap another photo on the page to swap'
+        : 'No other photos on this page to swap with')
+    : undefined
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-cream">
@@ -271,19 +408,9 @@ export default function ScrapbookEditorPage() {
         exporting={exporting}
       />
 
-      {/* Editor body */}
-      <div className="flex flex-1 min-h-0">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:flex flex-col w-64 flex-shrink-0">
-          <EditorSidebar
-            onAddElement={handleAddElement}
-            onApplyLayout={handleApplyLayout}
-            onChangeBackground={handleChangeBackground}
-          />
-        </div>
-
-        {/* Canvas area */}
-        <div className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 lg:p-6 pb-20 lg:pb-6">
+      {/* Canvas area (scrolls if needed) */}
+      <div className="flex-1 flex flex-col items-center justify-start overflow-auto p-4 lg:p-6">
+        <div className="w-full max-w-5xl">
           <ScrapbookCanvas
             ref={canvasRef}
             page={currentPage}
@@ -291,87 +418,81 @@ export default function ScrapbookEditorPage() {
             onSelectElement={handleSelectElement}
             onUpdateElement={handleUpdateElement}
             onDeleteElement={handleDeleteElement}
+            editable={editable}
+            exporting={exporting}
           />
+        </div>
+      </div>
 
-          {/* Page strip — mobile page navigation */}
-          <div className="flex items-center gap-2 mt-4 lg:hidden">
-            {pages.map((p, i) => (
+      {/* Bottom stack: page nav → context bar → tools */}
+      <div className="flex-shrink-0">
+        <PageNavBar
+          pages={pages}
+          currentPageIndex={currentPageIndex}
+          onSwitchPage={handleSwitchPage}
+          onAddPage={handleAddPage}
+          onDeletePage={handleDeletePage}
+        />
+
+        {photoMode === 'replace' && isPhotoSelected ? (
+          <PhotoBar
+            memoryPhotos={memoryPhotos}
+            sessionPhotos={sessionPhotos}
+            onUpload={handleUpload}
+            onPick={handlePickPhoto}
+            uploading={uploading}
+            mode="replace"
+          />
+        ) : isPhotoSelected ? (
+          <PhotoActionBar
+            element={selectedElement}
+            onDone={handleActionDone}
+            onChange={handleActionChange}
+            onSwap={handleActionSwap}
+            onRotate={handleActionRotate}
+            onFlip={handleActionFlip}
+            onScale={handleActionScale}
+            onRemovePicture={handleActionRemovePicture}
+            onRemove={handleActionRemove}
+            mode={photoMode}
+          />
+        ) : (
+          <PhotoBar
+            memoryPhotos={memoryPhotos}
+            sessionPhotos={sessionPhotos}
+            onUpload={handleUpload}
+            onPick={handlePickPhoto}
+            uploading={uploading}
+            mode={isSlotSelected ? 'fill' : 'idle'}
+          />
+        )}
+
+        {/* Swap helper strip — shown when selecting a swap target */}
+        {photoMode === 'swap' && (
+          <div className="bg-warm-white border-t border-cream-dark px-4 py-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+            <span className="text-[11px] font-medium text-kaydo whitespace-nowrap">{swapHint}</span>
+            {swapCandidates.map((el) => (
               <button
-                key={p.id}
-                onClick={() => handleSwitchPage(i)}
-                className={`w-8 h-8 rounded-lg border-2 text-xs font-bold transition-colors ${
-                  i === currentPageIndex
-                    ? 'border-kaydo bg-kaydo text-white'
-                    : 'border-cream-dark bg-warm-white text-bark-muted'
-                }`}
+                key={el.id}
+                type="button"
+                onClick={() => handlePickSwapTarget(el.id)}
+                className="flex-shrink-0 px-2 py-1 rounded-lg border border-cream-dark bg-cream hover:border-kaydo hover:bg-kaydo/5 text-[11px] text-bark"
               >
-                {i + 1}
+                Photo {(currentPage.elements.indexOf(el) + 1)}
               </button>
             ))}
-            <button
-              onClick={handleAddPage}
-              className="w-8 h-8 rounded-lg border-2 border-dashed border-kaydo text-kaydo flex items-center justify-center text-lg font-bold"
-            >
-              +
-            </button>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Mobile bottom toolbar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-warm-white border-t border-cream-dark">
-        <div className="flex items-center justify-around px-4 py-2">
-          {[
-            { id: 'photos', icon: Image, label: 'Photos' },
-            { id: 'stickers', icon: Smile, label: 'Stickers' },
-            { id: 'text', icon: Type, label: 'Text' },
-            { id: 'layouts', icon: LayoutGrid, label: 'Layouts' },
-            { id: 'background', icon: Palette, label: 'BG' },
-          ].map(({ id: tabId, icon: Icon, label }) => (
-            <button
-              key={tabId}
-              onClick={() => {
-                setMobileSidebarTab(tabId)
-                setShowMobileSidebar(true)
-              }}
-              className="flex flex-col items-center gap-0.5 px-2 py-1 text-bark-muted hover:text-kaydo transition-colors"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[9px] font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
+        <BottomToolRow
+          currentPage={currentPage}
+          customizable={editable}
+          onToggleCustomize={handleToggleCustomize}
+          onAddElement={handleAddElement}
+          onApplyLayout={handleApplyLayout}
+          onChangeBackground={handleChangeBackground}
+        />
       </div>
-
-      {/* Mobile sidebar bottom sheet */}
-      {showMobileSidebar && (
-        <>
-          <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/30"
-            onClick={() => setShowMobileSidebar(false)}
-          />
-          <div
-            className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-warm-white rounded-t-2xl"
-            style={{ maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-cream-dark" />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <EditorSidebar
-                onAddElement={(el) => { handleAddElement(el); setShowMobileSidebar(false) }}
-                onApplyLayout={(els) => { handleApplyLayout(els); setShowMobileSidebar(false) }}
-                onChangeBackground={(updates) => { handleChangeBackground(updates); setShowMobileSidebar(false) }}
-                isMobile
-                onClose={() => setShowMobileSidebar(false)}
-                initialTab={mobileSidebarTab}
-              />
-            </div>
-          </div>
-        </>
-      )}
     </div>
   )
 }

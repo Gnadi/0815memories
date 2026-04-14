@@ -11,6 +11,7 @@
   --color-bark-muted: #B8A99C;
   --color-warm-white: #FFFDF9;
   --font-family-serif: 'Georgia', 'Times New Roman', serif;
+  --font-family-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
 }
 
 body {
@@ -31,6 +32,11 @@ select {
 
 .font-serif {
   font-family: var(--font-family-serif);
+}
+
+.font-display {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.01em;
 }
 
 .btn-kaydo {
