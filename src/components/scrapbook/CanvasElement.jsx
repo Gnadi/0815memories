@@ -1,18 +1,35 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { Trash2, RotateCw } from 'lucide-react'
+import { Trash2, RotateCw, ImagePlus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
 const HANDLE_SIZE = 10
 
-export default function CanvasElement({ element, isSelected, onSelect, onUpdate, onDelete, canvasScale }) {
+export default function CanvasElement({
+  element,
+  isSelected,
+  onSelect,
+  onUpdate,
+  onDelete,
+  canvasScale,
+  editable = true,
+  exporting = false,
+}) {
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
   const [isEditing, setIsEditing] = useState(false)
-  const resizeRef = useRef(null)
-  const rotateRef = useRef(null)
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id })
+  // Photos are "slots" when they have no url yet. Slots are always selectable
+  // (so users can fill them via the PhotoBar) but are never draggable/resizable
+  // unless the page has been put into "customize" mode.
+  const isEmptySlot = type === 'photo' && !element.url
+
+  // When `editable` is false (fixed layout) and this is a photo, freeze
+  // position/size. Text and stickers remain free-form regardless.
+  const allowDrag = editable || type !== 'photo'
+  const allowResize = editable || type !== 'photo'
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !allowDrag })
 
   const currentX = x + (transform?.x ?? 0) / canvasScale
   const currentY = y + (transform?.y ?? 0) / canvasScale
@@ -106,16 +123,45 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
 
   const renderContent = () => {
     if (type === 'photo') {
+      // Empty slot: placeholder with "Tap to add photo"
+      if (isEmptySlot) {
+        if (exporting) return <div className="w-full h-full" />
+        return (
+          <div
+            className={`w-full h-full flex items-center justify-center select-none transition-colors ${
+              isSelected
+                ? 'bg-kaydo/10 border-2 border-kaydo'
+                : 'bg-bark-muted/20 border-2 border-dashed border-bark-muted/60 hover:border-kaydo'
+            }`}
+            style={{ borderRadius: 6 }}
+          >
+            <div className="flex flex-col items-center gap-1 text-center px-2">
+              <ImagePlus className="w-6 h-6 text-bark-muted" />
+              <span className="text-[11px] font-medium text-bark-light leading-tight">
+                Tap to add photo
+              </span>
+            </div>
+          </div>
+        )
+      }
+
       const isPolaroid = element.polaroid
+      const imageScale = element.imageScale || 1
+      const flipped = !!element.flipped
+      const innerTransform = `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`
+
       return (
-        <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col`}>
-          <EncryptedImage
-            src={element.url}
-            alt=""
-            crossOrigin="anonymous"
-            className={`flex-1 w-full object-cover ${isPolaroid ? '' : 'rounded'}`}
-            draggable={false}
-          />
+        <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col overflow-hidden`}>
+          <div className="flex-1 w-full relative overflow-hidden">
+            <EncryptedImage
+              src={element.url}
+              alt=""
+              crossOrigin="anonymous"
+              className={`absolute inset-0 w-full h-full object-cover ${isPolaroid ? '' : 'rounded'}`}
+              style={{ transform: innerTransform, transformOrigin: 'center center' }}
+              draggable={false}
+            />
+          </div>
           {isPolaroid && element.caption && (
             <p className="text-center text-xs font-serif text-bark-muted mt-1 truncate px-1">
               {element.caption}
@@ -126,14 +172,24 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
     }
 
     if (type === 'text') {
-      const fontMap = { serif: 'Georgia, serif', sans: 'system-ui, sans-serif', mono: 'monospace' }
+      const fontMap = {
+        serif: "Georgia, 'Times New Roman', serif",
+        sans: 'system-ui, -apple-system, sans-serif',
+        mono: 'ui-monospace, monospace',
+        display: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
+      }
+      const isDisplay = element.fontFamily === 'display'
       const style = {
         fontSize: element.fontSize || 20,
         color: element.color || '#2D1B0E',
-        fontFamily: fontMap[element.fontFamily] || fontMap.serif,
+        fontFamily: fontMap[element.fontFamily] || fontMap.display,
         fontWeight: element.fontWeight || 'normal',
         textAlign: element.textAlign || 'center',
-        lineHeight: 1.3,
+        // Display fonts (Anton) render with tall caps and extended ascenders
+        // that html2canvas clips with a tight line-height, so we give them
+        // more vertical breathing room.
+        lineHeight: isDisplay ? 1.35 : 1.25,
+        letterSpacing: isDisplay ? '0.02em' : 'normal',
       }
 
       if (isEditing) {
@@ -152,8 +208,10 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
 
       return (
         <div
-          className="w-full h-full overflow-hidden flex items-center justify-center"
-          style={style}
+          // overflow: visible so tall display glyphs (Anton) aren't clipped
+          // by the bounding box during html2canvas capture.
+          className="w-full h-full flex items-center justify-center"
+          style={{ ...style, overflow: 'visible' }}
           onDoubleClick={handleDoubleClick}
         >
           <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -177,6 +235,8 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
   const translateX = isDragging ? currentX : x
   const translateY = isDragging ? currentY : y
 
+  const showHandles = isSelected && !isDragging && allowResize && !isEmptySlot && !exporting
+
   return (
     <div
       ref={(node) => {
@@ -191,7 +251,7 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
         height,
         transform: `rotate(${rotation}deg)`,
         zIndex: isSelected ? 1000 : zIndex,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : allowDrag ? 'grab' : 'pointer',
         userSelect: 'none',
         touchAction: 'none',
         opacity: isDragging ? 0.85 : 1,
@@ -200,17 +260,22 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
         e.stopPropagation()
         onSelect(id)
       }}
-      {...(isEditing ? {} : { ...listeners, ...attributes })}
+      {...(isEditing || !allowDrag ? {} : { ...listeners, ...attributes })}
     >
       {/* Element content */}
       <div className="w-full h-full">
         {renderContent()}
       </div>
 
+      {/* Selection ring for empty slots (inner ring rendered by placeholder) */}
+      {isSelected && !isDragging && isEmptySlot && !exporting && (
+        <div className="absolute inset-0 ring-2 ring-kaydo pointer-events-none rounded" />
+      )}
+
       {/* Selection ring + handles */}
-      {isSelected && !isDragging && (
+      {showHandles && (
         <>
-          <div className="absolute inset-0 border-2 border-blue-400 pointer-events-none rounded" />
+          <div className="absolute inset-0 border-2 border-kaydo pointer-events-none rounded" />
 
           {/* Delete button */}
           <button
@@ -224,10 +289,10 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
           {/* Rotate handle */}
           <div
             onPointerDown={handleRotatePointerDown}
-            className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-2 border-blue-400 rounded-full flex items-center justify-center cursor-grab shadow z-10"
+            className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 bg-white border-2 border-kaydo rounded-full flex items-center justify-center cursor-grab shadow z-10"
             style={{ touchAction: 'none' }}
           >
-            <RotateCw className="w-3 h-3 text-blue-500" />
+            <RotateCw className="w-3 h-3 text-kaydo" />
           </div>
 
           {/* Resize corners */}
@@ -240,7 +305,7 @@ export default function CanvasElement({ element, isSelected, onSelect, onUpdate,
             <div
               key={corner}
               onPointerDown={(e) => handleResizePointerDown(e, corner)}
-              className="absolute w-[10px] h-[10px] bg-white border-2 border-blue-400 rounded-sm z-10"
+              className="absolute w-[10px] h-[10px] bg-white border-2 border-kaydo rounded-sm z-10"
               style={{ ...style, touchAction: 'none' }}
             />
           ))}
