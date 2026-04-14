@@ -148,7 +148,27 @@ export default function CanvasElement({
       const isPolaroid = element.polaroid
       const imageScale = element.imageScale || 1
       const flipped = !!element.flipped
-      const innerTransform = `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`
+
+      // During PDF export, html2canvas doesn't respect overflow:hidden on elements
+      // with CSS transforms, causing the full zoomed image to appear un-clipped.
+      // Use layout-based scaling instead so the browser's native overflow clipping
+      // is preserved in the captured canvas and the PDF matches the editor exactly.
+      const imgClassName = exporting
+        ? `absolute object-cover${isPolaroid ? '' : ' rounded'}`
+        : `absolute inset-0 w-full h-full object-cover${isPolaroid ? '' : ' rounded'}`
+      const imgStyle = exporting
+        ? {
+            left: `${-(imageScale - 1) * 50}%`,
+            top: `${-(imageScale - 1) * 50}%`,
+            width: `${imageScale * 100}%`,
+            height: `${imageScale * 100}%`,
+            transform: flipped ? 'scaleX(-1)' : 'none',
+            transformOrigin: 'center center',
+          }
+        : {
+            transform: `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`,
+            transformOrigin: 'center center',
+          }
 
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col overflow-hidden`}>
@@ -157,8 +177,8 @@ export default function CanvasElement({
               src={element.url}
               alt=""
               crossOrigin="anonymous"
-              className={`absolute inset-0 w-full h-full object-cover ${isPolaroid ? '' : 'rounded'}`}
-              style={{ transform: innerTransform, transformOrigin: 'center center' }}
+              className={imgClassName}
+              style={imgStyle}
               draggable={false}
             />
           </div>
