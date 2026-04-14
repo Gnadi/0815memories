@@ -178,14 +178,18 @@ export default function CanvasElement({
         mono: 'ui-monospace, monospace',
         display: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
       }
+      const isDisplay = element.fontFamily === 'display'
       const style = {
         fontSize: element.fontSize || 20,
         color: element.color || '#2D1B0E',
         fontFamily: fontMap[element.fontFamily] || fontMap.display,
         fontWeight: element.fontWeight || 'normal',
         textAlign: element.textAlign || 'center',
-        lineHeight: 1.1,
-        letterSpacing: element.fontFamily === 'display' ? '0.02em' : 'normal',
+        // Display fonts (Anton) render with tall caps and extended ascenders
+        // that html2canvas clips with a tight line-height, so we give them
+        // more vertical breathing room.
+        lineHeight: isDisplay ? 1.35 : 1.25,
+        letterSpacing: isDisplay ? '0.02em' : 'normal',
       }
 
       if (isEditing) {
@@ -204,8 +208,10 @@ export default function CanvasElement({
 
       return (
         <div
-          className="w-full h-full overflow-hidden flex items-center justify-center"
-          style={style}
+          // overflow: visible so tall display glyphs (Anton) aren't clipped
+          // by the bounding box during html2canvas capture.
+          className="w-full h-full flex items-center justify-center"
+          style={{ ...style, overflow: 'visible' }}
           onDoubleClick={handleDoubleClick}
         >
           <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

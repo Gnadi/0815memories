@@ -44,9 +44,9 @@ export const LAYOUT_PRESETS = [
     preview: '🅰️🖼️',
     group: 'cover',
     elements: [
-      displayText('YOUR TITLE', { x: 40, y: 60, width: 720, height: 110, fontSize: 84, color: '#2D1B0E', zIndex: 1 }),
-      slot(40, 200, 720, 360, 0, 2),
-      displayText('2025', { x: 40, y: 470, width: 720, height: 80, fontSize: 56, color: '#C25A2E', zIndex: 3 }),
+      displayText('YOUR TITLE', { x: 40, y: 50, width: 720, height: 140, fontSize: 84, color: '#2D1B0E', zIndex: 1 }),
+      slot(40, 210, 720, 350, 0, 2),
+      displayText('2025', { x: 40, y: 470, width: 720, height: 100, fontSize: 56, color: '#C25A2E', zIndex: 3 }),
     ],
   },
   {
@@ -59,7 +59,7 @@ export const LAYOUT_PRESETS = [
       slot(410, 40, 350, 260, 0, 2),
       slot(40, 310, 360, 250, 0, 3),
       slot(410, 310, 350, 250, 0, 4),
-      displayText('TITLE', { x: 40, y: 245, width: 720, height: 80, fontSize: 64, color: '#FFFFFF', zIndex: 5 }),
+      displayText('TITLE', { x: 40, y: 240, width: 720, height: 110, fontSize: 64, color: '#FFFFFF', zIndex: 5 }),
     ],
   },
   {
@@ -74,8 +74,8 @@ export const LAYOUT_PRESETS = [
       slot(40, 270, 170, 200, 0, 3),
       slot(220, 270, 170, 200, 0, 4),
       // Right: big title (Anton) + year
-      displayText('PARIS', { x: 400, y: 80, width: 380, height: 140, fontSize: 120, color: '#2D1B0E', textAlign: 'left', zIndex: 5 }),
-      displayText('2025', { x: 400, y: 240, width: 380, height: 80, fontSize: 56, color: '#C25A2E', textAlign: 'left', zIndex: 6 }),
+      displayText('PARIS', { x: 400, y: 70, width: 380, height: 180, fontSize: 120, color: '#2D1B0E', textAlign: 'left', zIndex: 5 }),
+      displayText('2025', { x: 400, y: 240, width: 380, height: 100, fontSize: 56, color: '#C25A2E', textAlign: 'left', zIndex: 6 }),
     ],
   },
 
