@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
@@ -221,16 +222,23 @@ export default function ScrapbookEditorPage() {
   // ── PDF export ──────────────────────────────────────────────────────────────
   const handleExportPDF = async () => {
     if (!canvasRef.current) return
+    const originalPageIndex = currentPageIndex
+    const totalPages = pages.length
     setExporting(true)
     try {
       await document.fonts.ready
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
-      for (let i = 0; i < pages.length; i++) {
-        if (i !== currentPageIndex) {
+      for (let i = 0; i < totalPages; i++) {
+        // Force the page switch to commit synchronously so html2canvas reads
+        // the freshly-rendered DOM instead of whatever was mounted before.
+        flushSync(() => {
           dispatch({ type: 'SWITCH_PAGE', index: i })
-          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-        }
+        })
+        // Give the browser a paint cycle + a chance to decode any newly
+        // mounted images before capturing.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+
         const canvas = await html2canvas(canvasRef.current, {
           useCORS: true,
           scale: 2,
@@ -242,9 +250,10 @@ export default function ScrapbookEditorPage() {
         pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
       }
 
-      if (currentPageIndex !== pages.length - 1) {
-        dispatch({ type: 'SWITCH_PAGE', index: currentPageIndex })
-      }
+      // Restore the page the user was viewing before export.
+      flushSync(() => {
+        dispatch({ type: 'SWITCH_PAGE', index: originalPageIndex })
+      })
 
       pdf.save(`${title}.pdf`)
     } catch (err) {
