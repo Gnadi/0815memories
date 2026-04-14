@@ -239,12 +239,28 @@ export default function ScrapbookEditorPage() {
         // mounted images before capturing.
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-        const canvas = await html2canvas(canvasRef.current, {
+        // The canvas element has a viewport-fit transform (e.g. scale(0.4) on
+        // mobile). html2canvas uses getBoundingClientRect() to size its output,
+        // which returns the *visual* size, so the capture would be undersized
+        // and then stretched to fill the PDF page. Reset the transform to none
+        // for the duration of the capture so html2canvas always sees 800×600.
+        const el = canvasRef.current
+        const savedTransform = el.style.transform
+        const savedTransformOrigin = el.style.transformOrigin
+        el.style.transform = 'none'
+        el.style.transformOrigin = 'top left'
+
+        const canvas = await html2canvas(el, {
           useCORS: true,
           scale: 2,
+          width: 800,
+          height: 600,
           backgroundColor: null,
           logging: false,
         })
+
+        el.style.transform = savedTransform
+        el.style.transformOrigin = savedTransformOrigin
         const imgData = canvas.toDataURL('image/jpeg', 0.92)
         if (i > 0) pdf.addPage([800, 600], 'landscape')
         pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
