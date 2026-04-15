@@ -62,12 +62,16 @@ export function useMemories(familyId, encryptionKey) {
       familyId,
       createdAt: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New memory added',
-      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
-      url: `/memory/${ref.id}`,
+    // Fire-and-forget: call Vercel API route → Firebase Admin SDK sends the push
+    fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        familyId,
+        title: 'New memory added',
+        body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
+        url: `/memory/${ref.id}`,
+      }),
     }).catch(() => {})
   }
 
@@ -119,12 +123,16 @@ export function useMoments(familyId) {
       familyId,
       date: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New moment shared',
-      body: moment.caption || 'A new moment was added to the feed.',
-      url: '/',
+    // Fire-and-forget: call Vercel API route → Firebase Admin SDK sends the push
+    fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        familyId,
+        title: 'New moment shared',
+        body: moment.caption || 'A new moment was added to the feed.',
+        url: '/',
+      }),
     }).catch(() => {})
   }
 
