@@ -6,7 +6,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import NotificationPrompt from './components/NotificationPrompt'
-import { listenForegroundMessages } from './utils/notifications'
+import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
 
@@ -60,6 +60,17 @@ function AppNotifications() {
     })
     return unsub
   }, [isAuthenticated])
+
+  // Silently refresh the FCM token on each app load when the user already
+  // granted notification permission (covers return visits where the prompt
+  // won't show again because permission is no longer 'default').
+  useEffect(() => {
+    if (!isAuthenticated || !familyId) return
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    if (Notification.permission === 'granted') {
+      requestAndSaveFCMToken(familyId).catch(() => {})
+    }
+  }, [isAuthenticated, familyId])
 
   return (
     <>
