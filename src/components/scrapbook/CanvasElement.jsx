@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { Trash2, RotateCw, ImagePlus } from 'lucide-react'
+import { Trash2, RotateCw, ImagePlus, ChevronsUp } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import useDecryptedMedia from '../media/useDecryptedMedia'
 
@@ -381,6 +381,27 @@ export default function CanvasElement({
           >
             <RotateCw className="w-3 h-3 text-kaydo" />
           </div>
+
+          {/* Bring to front button */}
+          <button
+            onPointerDown={(e) => { e.stopPropagation(); onUpdate(id, { zIndex: Date.now() }) }}
+            className="absolute -top-3 -right-3 w-6 h-6 bg-white border-2 border-kaydo text-kaydo rounded-full flex items-center justify-center shadow z-10 hover:bg-kaydo hover:text-white"
+            style={{ touchAction: 'manipulation' }}
+            title="Bring to front"
+          >
+            <ChevronsUp className="w-3 h-3" />
+          </button>
+
+          {/* Remove button for text elements */}
+          {type === 'text' && (
+            <button
+              onPointerDown={(e) => { e.stopPropagation(); onDelete(id) }}
+              className="absolute -bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-red-500 text-white text-xs rounded shadow z-10 hover:bg-red-600 whitespace-nowrap"
+              style={{ touchAction: 'manipulation' }}
+            >
+              Remove
+            </button>
+          )}
 
           {/* Resize corners */}
           {[
