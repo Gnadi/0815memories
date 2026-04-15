@@ -132,5 +132,12 @@ service cloud.firestore {
       allow write: if true;
       allow read: if false;
     }
+
+    // Notification queue — admin writes a doc here to trigger the Cloud Function.
+    // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
+    match /notificationsQueue/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
   }
 }
