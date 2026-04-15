@@ -40,14 +40,17 @@ registerRoute(
 
 // Handle incoming FCM push messages when the app is in the background or closed.
 // The backend sends data-only messages so we control the notification display here.
+// FCM wraps the payload under a 'data' key: { data: { title, body, url } }
+// Fall back to the flat structure in case the format changes.
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {}
-  const title = data.title || 'Kaydo'
+  const payload = event.data?.json() ?? {}
+  const d = payload.data ?? payload
+  const title = d.title || 'Kaydo'
   const options = {
-    body: data.body || '',
+    body: d.body || '',
     icon: '/icons/pwa-192x192.png',
     badge: '/icons/pwa-192x192.png',
-    data: { url: data.url || '/' },
+    data: { url: d.url || '/' },
   }
   event.waitUntil(self.registration.showNotification(title, options))
 })
