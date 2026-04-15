@@ -5,6 +5,24 @@ import { useAuth } from '../../context/AuthContext'
 import { useMemories } from '../../hooks/useMemories'
 import { useScrapbooks } from '../../hooks/useScrapbooks'
 import PostMemoryModal from '../admin/PostMemoryModal'
+import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
+
+function makeCoverPage() {
+  const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
+  const currentYear = new Date().getFullYear().toString()
+  const elements = preset.elements.map((el) => ({
+    ...el,
+    id: crypto.randomUUID(),
+    ...(el.type === 'text' && el.text === '2025' ? { text: currentYear } : {}),
+  }))
+  return {
+    id: crypto.randomUUID(),
+    backgroundColor: '#FBCFE8',
+    backgroundPattern: 'none',
+    elements,
+    customizable: false,
+  }
+}
 
 const TAP = { touchAction: 'manipulation' }
 
@@ -46,7 +64,7 @@ export default function AdminMobileBottomNav() {
       const id = await addScrapbook({
         title: 'My Scrapbook',
         coverImageUrl: null,
-        pages: [{ id: crypto.randomUUID(), backgroundColor: '#FDF6EC', backgroundPattern: 'none', elements: [] }],
+        pages: [makeCoverPage()],
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
