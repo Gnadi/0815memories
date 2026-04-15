@@ -8,8 +8,6 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { LAYOUT_PRESETS } from '../components/scrapbook/layoutPresets'
 
-const COVER_PRESET_IDS = ['cover-magazine', 'cover-title-hero', 'cover-paris', 'cover-4grid']
-
 const COVER_SCHEMES = [
   // Light backgrounds → dark titles
   { bg: '#FDF6EC', titleColor: '#2D1B0E', accentColor: '#C25A2E' }, // cream + bark + kaydo
@@ -29,19 +27,16 @@ const COVER_SCHEMES = [
 
 function makeCoverPage() {
   const currentYear = new Date().getFullYear().toString()
-  const presetId = COVER_PRESET_IDS[Math.floor(Math.random() * COVER_PRESET_IDS.length)]
   const scheme = COVER_SCHEMES[Math.floor(Math.random() * COVER_SCHEMES.length)]
-  const isPhotoOverlay = presetId === 'cover-4grid'
 
-  const preset = LAYOUT_PRESETS.find((p) => p.id === presetId)
+  const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
   const elements = preset.elements.map((el) => {
     if (el.type !== 'text') return { ...el, id: crypto.randomUUID() }
     const isYear = el.text === '2025'
-    const color = isPhotoOverlay ? '#FFFFFF' : isYear ? scheme.accentColor : scheme.titleColor
     return {
       ...el,
       id: crypto.randomUUID(),
-      color,
+      color: isYear ? scheme.accentColor : scheme.titleColor,
       ...(isYear ? { text: currentYear } : {}),
     }
   })
