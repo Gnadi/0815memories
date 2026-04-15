@@ -8,17 +8,42 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { LAYOUT_PRESETS } from '../components/scrapbook/layoutPresets'
 
+const COVER_SCHEMES = [
+  // Light backgrounds → dark titles
+  { bg: '#FDF6EC', titleColor: '#2D1B0E', accentColor: '#C25A2E' }, // cream + bark + kaydo
+  { bg: '#FBCFE8', titleColor: '#4A1942', accentColor: '#7B3F6E' }, // blush + dark purple + mauve
+  { bg: '#EFF6FF', titleColor: '#1E3A5F', accentColor: '#3B5E8A' }, // ice blue + navy + blue
+  { bg: '#F0FFF4', titleColor: '#1B4332', accentColor: '#4A7C59' }, // mint + dark forest + green
+  { bg: '#FAF5FF', titleColor: '#3B0764', accentColor: '#7B3F6E' }, // lavender + deep violet + mauve
+  { bg: '#FEFCE8', titleColor: '#451A03', accentColor: '#C25A2E' }, // warm yellow + dark brown + orange
+  { bg: '#FFF5F5', titleColor: '#7F1D1D', accentColor: '#C25A2E' }, // blush white + dark red + orange
+  // Dark backgrounds → light titles
+  { bg: '#2D1B0E', titleColor: '#FFFDF9', accentColor: '#D4784A' }, // dark bark + white + light orange
+  { bg: '#3B5E8A', titleColor: '#FFFDF9', accentColor: '#BFDBFE' }, // dark blue + white + sky
+  { bg: '#C25A2E', titleColor: '#FFFDF9', accentColor: '#FEFCE8' }, // kaydo orange + white + pale yellow
+  { bg: '#4A7C59', titleColor: '#FFFDF9', accentColor: '#DCFCE7' }, // forest green + white + mint
+  { bg: '#7B3F6E', titleColor: '#FFFDF9', accentColor: '#FBCFE8' }, // mauve + white + blush
+]
+
 function makeCoverPage() {
-  const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
   const currentYear = new Date().getFullYear().toString()
-  const elements = preset.elements.map((el) => ({
-    ...el,
-    id: crypto.randomUUID(),
-    ...(el.type === 'text' && el.text === '2025' ? { text: currentYear } : {}),
-  }))
+  const scheme = COVER_SCHEMES[Math.floor(Math.random() * COVER_SCHEMES.length)]
+
+  const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
+  const elements = preset.elements.map((el) => {
+    if (el.type !== 'text') return { ...el, id: crypto.randomUUID() }
+    const isYear = el.text === '2025'
+    return {
+      ...el,
+      id: crypto.randomUUID(),
+      color: isYear ? scheme.accentColor : scheme.titleColor,
+      ...(isYear ? { text: currentYear } : {}),
+    }
+  })
+
   return {
     id: crypto.randomUUID(),
-    backgroundColor: '#FBCFE8',
+    backgroundColor: scheme.bg,
     backgroundPattern: 'none',
     elements,
     customizable: false,
