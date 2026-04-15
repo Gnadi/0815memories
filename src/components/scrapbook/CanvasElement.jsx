@@ -392,11 +392,11 @@ export default function CanvasElement({
             <ChevronsUp className="w-3 h-3" />
           </button>
 
-          {/* Remove button for text elements */}
-          {type === 'text' && (
+          {/* Remove button for text and sticker elements */}
+          {(type === 'text' || type === 'sticker') && (
             <button
               onPointerDown={(e) => { e.stopPropagation(); onDelete(id) }}
-              className="absolute -bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-red-500 text-white text-xs rounded shadow z-10 hover:bg-red-600 whitespace-nowrap"
+              className="absolute -bottom-9 left-1/2 -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-sm font-medium rounded-md shadow z-10 hover:bg-red-600 whitespace-nowrap"
               style={{ touchAction: 'manipulation' }}
             >
               Remove
