@@ -12,6 +12,7 @@ import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
 import PhotoBar from '../components/scrapbook/PhotoBar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
+import TextActionBar from '../components/scrapbook/TextActionBar'
 import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
@@ -288,6 +289,7 @@ export default function ScrapbookEditorPage() {
   const selectedElement = currentPage?.elements.find((el) => el.id === selectedId) || null
   const isPhotoSelected = selectedElement?.type === 'photo' && !!selectedElement?.url
   const isSlotSelected = selectedElement?.type === 'photo' && !selectedElement?.url
+  const isTextSelected = selectedElement?.type === 'text'
   const editable = !!currentPage?.customizable
 
   const handleAddElement = (element) => dispatch({ type: 'ADD_ELEMENT', element })
@@ -393,6 +395,14 @@ export default function ScrapbookEditorPage() {
     if (!selectedElement) return
     handleDeleteElement(selectedId)
   }
+  const handleTextUpdate = (updates) => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, updates)
+  }
+  const handleTextRemove = () => {
+    if (!selectedElement) return
+    handleDeleteElement(selectedId)
+  }
 
   if (loading) {
     return (
@@ -481,6 +491,13 @@ export default function ScrapbookEditorPage() {
             onRemovePicture={handleActionRemovePicture}
             onRemove={handleActionRemove}
             mode={photoMode}
+          />
+        ) : isTextSelected ? (
+          <TextActionBar
+            element={selectedElement}
+            onDone={handleActionDone}
+            onUpdate={handleTextUpdate}
+            onRemove={handleTextRemove}
           />
         ) : (
           <PhotoBar
