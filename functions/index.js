@@ -1,17 +1,20 @@
 /**
- * Firebase Cloud Function — FCM Push Dispatcher
+ * Firebase Cloud Functions — FCM Push Dispatcher + Scheduled Anniversary Reminder
  *
- * Triggered when a document is created in the `notificationsQueue` collection.
- * Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
+ * dispatchPushNotifications:
+ *   Triggered when a document is created in the `notificationsQueue` collection.
+ *   Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
+ *
+ * scheduledAnniversaryNotification:
+ *   Runs daily at 09:00 Europe/Berlin.  Finds every family that has memories from
+ *   exactly 3 years ago and writes one entry per family to `notificationsQueue`,
+ *   which in turn triggers dispatchPushNotifications automatically.
+ *   Requires Firebase Blaze plan (Google Cloud Scheduler).
  *
  * No credentials needed — Firebase injects the service account automatically
  * when running inside Cloud Functions.
  *
- * Uses Cloud Functions gen 1 (firebase-functions v1 API) which works on the
- * free Firebase Spark plan. FCM is a Google service, so outbound calls to it
- * are permitted without upgrading to Blaze.
- *
- * Deployment (one-time):
+ * Deployment:
  *   npm install -g firebase-tools
  *   firebase login
  *   firebase use <your-project-id>
@@ -19,13 +22,20 @@
  *   firebase deploy --only functions
  */
 
-import { firestore } from 'firebase-functions'
+import { firestore, pubsub } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { buildAnniversaryPayloads } from './anniversaryHelpers.js'
+
+export { buildAnniversaryPayloads }
 
 // No credentials arg — Firebase injects them automatically in the Cloud Functions runtime
 initializeApp()
+
+// ---------------------------------------------------------------------------
+// Cloud Function 1: dispatch FCM when a notificationsQueue doc is created
+// ---------------------------------------------------------------------------
 
 export const dispatchPushNotifications = firestore
   .document('notificationsQueue/{docId}')
@@ -78,4 +88,54 @@ export const dispatchPushNotifications = firestore
     console.log(`[push] sent=${sent} failed=${results.length - sent} family=${familyId}`)
 
     return cleanup()
+  })
+
+// ---------------------------------------------------------------------------
+// Cloud Function 2: daily anniversary reminder (requires Firebase Blaze plan)
+// ---------------------------------------------------------------------------
+
+export const scheduledAnniversaryNotification = pubsub
+  .schedule('every day 09:00')
+  .timeZone('Europe/Berlin')
+  .onRun(async () => {
+    const db = getFirestore()
+
+    // Calculate the date range for exactly 3 years ago (midnight-to-midnight)
+    const today = new Date()
+    const threeYearsAgo = new Date(today.getFullYear() - 3, today.getMonth(), today.getDate())
+    const start = new Date(threeYearsAgo)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(threeYearsAgo)
+    end.setHours(23, 59, 59, 999)
+
+    // Find all memories from exactly 3 years ago (date field is NOT encrypted)
+    const snapshot = await db
+      .collection('memories')
+      .where('date', '>=', Timestamp.fromDate(start))
+      .where('date', '<=', Timestamp.fromDate(end))
+      .get()
+
+    if (snapshot.empty) {
+      console.log('[anniversary] no memories found for', start.toDateString())
+      return null
+    }
+
+    const payloads = buildAnniversaryPayloads(snapshot.docs, threeYearsAgo)
+
+    // Write one notificationsQueue entry per family →
+    // dispatchPushNotifications picks them up and sends FCM messages
+    await Promise.allSettled(
+      payloads.map(({ familyId, count, year }) =>
+        db.collection('notificationsQueue').add({
+          familyId,
+          title: '📷 3 Jahre ist es her…',
+          body: `Du hast ${count} ${count === 1 ? 'Erinnerung' : 'Erinnerungen'} vom ${year}.`,
+          url: '/timeline?filter=onthisday',
+          createdAt: FieldValue.serverTimestamp(),
+        })
+      )
+    )
+
+    console.log(`[anniversary] notified ${payloads.length} families for ${start.toDateString()}`)
+    return null
   })

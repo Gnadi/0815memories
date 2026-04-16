@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag, Star } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useMemories } from '../hooks/useMemories'
+import { isOnThisDay } from '../utils/helpers'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
@@ -128,6 +129,7 @@ export default function SmartTimelinePage() {
   const { familyId, encryptionKey } = useAuth()
   const { memories, loading } = useMemories(familyId, encryptionKey)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const availableYears = useMemo(() => {
     const years = [...new Set(memories.map((m) => toDate(m.date).getFullYear()))]
@@ -136,28 +138,47 @@ export default function SmartTimelinePage() {
 
   const [selectedYear, setSelectedYear] = useState(null)
   const [selectedSeason, setSelectedSeason] = useState(null)
+  const [showOnThisDay, setShowOnThisDay] = useState(false)
 
   // Scroll to top on mount
   useEffect(() => { window.scrollTo(0, 0) }, [])
 
-  // Auto-select most recent year once data loads
+  // Activate "On This Day" filter when linked from the anniversary notification
   useEffect(() => {
-    if (availableYears.length > 0 && selectedYear === null) {
+    if (searchParams.get('filter') === 'onthisday') {
+      setShowOnThisDay(true)
+      setSelectedYear(null)
+      setSelectedSeason(null)
+    }
+  }, [searchParams])
+
+  // Auto-select most recent year once data loads (only when not in "On This Day" mode)
+  useEffect(() => {
+    if (!showOnThisDay && availableYears.length > 0 && selectedYear === null) {
       setSelectedYear(availableYears[0])
     }
-  }, [availableYears, selectedYear])
+  }, [availableYears, selectedYear, showOnThisDay])
 
   const filteredMemories = useMemo(() => {
     return memories.filter((m) => {
       const date = toDate(m.date)
+      if (showOnThisDay) return isOnThisDay(date)
       const yearMatch = !selectedYear || date.getFullYear() === selectedYear
       const seasonMatch = !selectedSeason || getSeason(date) === selectedSeason
       return yearMatch && seasonMatch
     })
-  }, [memories, selectedYear, selectedSeason])
+  }, [memories, selectedYear, selectedSeason, showOnThisDay])
 
+  const today = new Date()
+  const todayLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })
   const seasonLabel = selectedSeason || 'all seasons'
   const yearLabel = selectedYear ? String(selectedYear) : 'all time'
+
+  function clearFilters() {
+    setSelectedYear(null)
+    setSelectedSeason(null)
+    setShowOnThisDay(false)
+  }
 
   return (
     <div className="min-h-screen bg-cream flex">
@@ -175,8 +196,33 @@ export default function SmartTimelinePage() {
           <p className="text-bark-light mt-1 text-sm">Tracing the threads of our story.</p>
         </div>
 
+        {/* On This Day Banner */}
+        <button
+          data-testid="onthisday-toggle"
+          onClick={() => {
+            const next = !showOnThisDay
+            setShowOnThisDay(next)
+            if (next) {
+              setSelectedYear(null)
+              setSelectedSeason(null)
+            }
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-4 transition-all text-left"
+          style={
+            showOnThisDay
+              ? { backgroundColor: '#A04420', color: '#FFFDF9' }
+              : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
+          }
+        >
+          <Star className="w-4 h-4 flex-shrink-0" fill={showOnThisDay ? '#FFFDF9' : 'none'} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold leading-tight">Heute vor 3 Jahren</p>
+            <p className="text-xs opacity-75 leading-tight mt-0.5">{todayLabel} · Erinnerungen aus vergangenen Jahren</p>
+          </div>
+        </button>
+
         {/* Year Selector */}
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-3">
+        <div className={`flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-3 transition-opacity ${showOnThisDay ? 'opacity-30 pointer-events-none' : ''}`}>
           {loading ? (
             [1, 2, 3].map((i) => (
               <div key={i} className="h-9 w-16 rounded-full bg-cream-dark animate-pulse flex-shrink-0" />
@@ -203,7 +249,7 @@ export default function SmartTimelinePage() {
         </div>
 
         {/* Season Selector */}
-        <div className="flex flex-col gap-2 pb-3 mb-5">
+        <div className={`flex flex-col gap-2 pb-3 mb-5 transition-opacity ${showOnThisDay ? 'opacity-30 pointer-events-none' : ''}`}>
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedSeason(null)}
@@ -263,8 +309,9 @@ export default function SmartTimelinePage() {
             {filteredMemories.length === 0
               ? 'No memories found'
               : `${filteredMemories.length} ${filteredMemories.length === 1 ? 'memory' : 'memories'}`}
-            {selectedSeason ? ` in ${seasonLabel}` : ''}
-            {selectedYear ? ` · ${yearLabel}` : ''}
+            {showOnThisDay ? ` · On this day · ${todayLabel}` : ''}
+            {!showOnThisDay && selectedSeason ? ` in ${seasonLabel}` : ''}
+            {!showOnThisDay && selectedYear ? ` · ${yearLabel}` : ''}
           </p>
         )}
 
@@ -280,12 +327,14 @@ export default function SmartTimelinePage() {
             </div>
             <p className="font-serif text-lg font-semibold text-bark mb-1">No memories here yet</p>
             <p className="text-sm text-bark-muted max-w-xs">
-              {selectedSeason
-                ? `No ${selectedSeason.toLowerCase()} memories found${selectedYear ? ` for ${selectedYear}` : ''}.`
-                : `No memories found${selectedYear ? ` for ${selectedYear}` : ''}.`}
+              {showOnThisDay
+                ? `Noch keine Erinnerungen vom ${todayLabel} aus vergangenen Jahren.`
+                : selectedSeason
+                  ? `No ${selectedSeason.toLowerCase()} memories found${selectedYear ? ` for ${selectedYear}` : ''}.`
+                  : `No memories found${selectedYear ? ` for ${selectedYear}` : ''}.`}
             </p>
             <button
-              onClick={() => { setSelectedYear(null); setSelectedSeason(null) }}
+              onClick={clearFilters}
               className="mt-4 text-sm text-kaydo font-medium hover:underline"
             >
               Clear filters
