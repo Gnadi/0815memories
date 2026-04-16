@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, ArrowLeft } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, ArrowLeft, Baby } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
@@ -32,7 +32,7 @@ function computeMilestoneDate(birthdate, milestone) {
 export default function CreateBlackBoxPage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { kids } = useKids(familyId, encryptionKey)
+  const { kids, loading: kidsLoading } = useKids(familyId, encryptionKey)
   const { addBox } = useBlackBox(familyId, encryptionKey)
 
   const [form, setForm] = useState({
@@ -240,6 +240,18 @@ export default function CreateBlackBoxPage() {
                 <p className="text-xs font-bold text-kaydo uppercase tracking-wide">Step 1: The Message</p>
 
                 {/* For which child */}
+                {!kidsLoading && kids.length === 0 && (
+                  <div className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
+                    <Baby className="w-5 h-5 text-bark-muted mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-bark-muted">
+                      No children added yet.{' '}
+                      <Link to="/journal" className="text-kaydo underline underline-offset-2 hover:opacity-80">
+                        Add a child
+                      </Link>{' '}
+                      to start preserving moments for them.
+                    </p>
+                  </div>
+                )}
                 {kids.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-bark mb-1">For</label>
