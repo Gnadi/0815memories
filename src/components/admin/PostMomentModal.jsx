@@ -1,11 +1,10 @@
 import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { X, Plus, Image as ImageIcon, Video, Baby } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Video, Camera } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
-import { useKids } from '../../hooks/useKids'
+
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
   const { encryptionKey, familyId } = useAuth()
@@ -35,10 +34,12 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
   const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
+  const videoCameraInputRef = useRef(null)
 
   const isEditing = !!moment?.id
-  const { kids, loading: kidsLoading } = useKids(isEditing ? null : familyId, encryptionKey)
+
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -68,6 +69,29 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     }
   }
 
+  const handleCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+    setMediaError(false)
+
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === tempId ? { ...img, url, uploading: false } : img
+        )
+      )
+    } catch (err) {
+      console.error('Upload failed:', err)
+      setImages((prev) => prev.filter((img) => img.id !== tempId))
+    }
+  }
+
   const handleVideoFileChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -75,6 +99,36 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     setVideoError('')
 
     // Validate duration before uploading
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
+    setMediaError(false)
+
+    try {
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
+    setVideoError('')
+
     const duration = await getVideoDuration(file)
     if (duration > 60) {
       setVideoError('Video must be 60 seconds or shorter.')
@@ -155,20 +209,6 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* No children banner */}
-          {!isEditing && !kidsLoading && kids.length === 0 && (
-            <div className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
-              <Baby className="w-5 h-5 text-bark-muted mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-bark-muted">
-                No children added yet.{' '}
-                <Link to="/journal" onClick={onClose} className="text-kaydo underline underline-offset-2 hover:opacity-80">
-                  Add a child
-                </Link>{' '}
-                to start preserving moments for them.
-              </p>
-            </div>
-          )}
-
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
@@ -220,6 +260,16 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 ) : (
                   <Plus className="w-5 h-5 text-bark-muted" />
                 )}
+              </button>
+
+              {/* Take photo button - mobile only */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
+              >
+                <Camera className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Camera</span>
               </button>
             </div>
           </div>
@@ -279,10 +329,18 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 onClick={() => videoFileInputRef.current?.click()}
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
-                <>
-                  <Video className="w-6 h-6 text-bark-muted" />
-                  <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
-                </>
+                <Video className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
+              </button>
+
+              {/* Record video button - mobile only */}
+              <button
+                type="button"
+                onClick={() => videoCameraInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
+              >
+                <Camera className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Record</span>
               </button>
             </div>
             {videoError && (
@@ -381,10 +439,26 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         className="hidden"
       />
       <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraChange}
+        className="hidden"
+      />
+      <input
         ref={videoFileInputRef}
         type="file"
         accept="video/*"
         onChange={handleVideoFileChange}
+        className="hidden"
+      />
+      <input
+        ref={videoCameraInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        onChange={handleVideoCameraChange}
         className="hidden"
       />
     </div>

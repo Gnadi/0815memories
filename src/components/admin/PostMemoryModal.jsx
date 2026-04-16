@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Plus, Image as ImageIcon, Mic, Video } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
@@ -79,7 +79,9 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
   const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
+  const videoCameraInputRef = useRef(null)
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -111,10 +113,61 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     }
   }
 
+  const handleCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === tempId ? { ...img, url, uploading: false } : img
+        )
+      )
+    } catch (err) {
+      console.error('Upload failed:', err)
+      setImages((prev) => prev.filter((img) => img.id !== tempId))
+    }
+  }
+
   const handleVideoFileChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
+
+    try {
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
     setVideoError('')
 
     const duration = await getVideoDuration(file)
@@ -256,6 +309,16 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                   <Plus className="w-6 h-6 text-bark-muted" />
                 )}
               </button>
+
+              {/* Take photo button - mobile only */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
+              >
+                <Camera className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Camera</span>
+              </button>
             </div>
           </div>
 
@@ -322,15 +385,27 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               </div>
             )}
 
-            {/* Add video button */}
-            <button
-              type="button"
-              onClick={() => videoFileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
-            >
-              <Video className="w-4 h-4" />
-              Add video
-            </button>
+            {/* Add video / Record video buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => videoFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
+              >
+                <Video className="w-4 h-4" />
+                Add video
+              </button>
+
+              {/* Record video button - mobile only */}
+              <button
+                type="button"
+                onClick={() => videoCameraInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors lg:hidden"
+              >
+                <Camera className="w-4 h-4" />
+                Record video
+              </button>
+            </div>
             {videoError && (
               <p className="text-xs text-kaydo mt-1">{videoError}</p>
             )}
@@ -509,10 +584,26 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         className="hidden"
       />
       <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraChange}
+        className="hidden"
+      />
+      <input
         ref={videoFileInputRef}
         type="file"
         accept="video/*"
         onChange={handleVideoFileChange}
+        className="hidden"
+      />
+      <input
+        ref={videoCameraInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        onChange={handleVideoCameraChange}
         className="hidden"
       />
     </div>
