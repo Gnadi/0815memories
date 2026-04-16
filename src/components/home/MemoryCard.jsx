@@ -44,16 +44,24 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
       {/* Image slider */}
       {allImages.length > 0 ? (
         <div
-          className="relative overflow-hidden rounded-t-2xl"
+          className="relative aspect-square bg-cream-dark overflow-hidden rounded-t-2xl"
           onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
           onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
         >
+          {/* Blurred backdrop fills letterbox space around the photo */}
+          <EncryptedImage
+            src={allImages[imgIndex]}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70"
+          />
+          {/* Actual photo, fully visible */}
           <EncryptedImage
             src={allImages[imgIndex]}
             alt={memory.title}
-            className="w-full h-64 object-cover"
+            className="relative z-[1] w-full h-full object-contain"
           />
-          <div className="absolute bottom-2 left-2 flex gap-1.5">
+          <div className="absolute bottom-2 left-2 z-10 flex gap-1.5">
             {memory.voiceMemos?.length > 0 && (
               <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
                 <Mic className="w-3 h-3" /> {memory.voiceMemos.length}
@@ -70,22 +78,22 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
             <>
               <button
                 onClick={prevImg}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={nextImg}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
 
-              <span className="absolute top-2 right-2 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+              <span className="absolute top-2 right-2 z-10 bg-black/50 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                 {imgIndex + 1} / {allImages.length}
               </span>
 
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
                 {allImages.map((_, i) => (
                   <button
                     key={i}
@@ -180,7 +188,7 @@ function MemoryPlaceholderImage({ title }) {
   const hue = title ? title.charCodeAt(0) * 5 % 360 : 30
   return (
     <div
-      className="w-full h-64 flex items-center justify-center"
+      className="w-full aspect-square flex items-center justify-center"
       style={{ background: `hsl(${hue}, 30%, 85%)` }}
     >
       <svg viewBox="0 0 100 100" className="w-16 h-16 opacity-40">

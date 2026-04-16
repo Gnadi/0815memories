@@ -4,6 +4,8 @@ import { decryptBlob } from '../../utils/encryption'
 
 // Session-level cache: encrypted URL -> decrypted object URL
 const cache = new Map()
+// Dedupe concurrent fetches: encrypted URL -> Promise<object URL>
+const inflight = new Map()
 
 export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/octet-stream') {
   const { encryptionKey } = useAuth()
@@ -39,17 +41,26 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
 
     async function fetchAndDecrypt() {
       try {
-        const response = await fetch(encryptedUrl)
-        if (!response.ok) throw new Error(`Fetch failed (${response.status})`)
+        let promise = inflight.get(encryptedUrl)
+        if (!promise) {
+          promise = (async () => {
+            const response = await fetch(encryptedUrl)
+            if (!response.ok) throw new Error(`Fetch failed (${response.status})`)
+            const encryptedBuffer = await response.arrayBuffer()
+            const decryptedBlob = await decryptBlob(encryptionKey, encryptedBuffer, mimeType)
+            const url = URL.createObjectURL(decryptedBlob)
+            cache.set(encryptedUrl, url)
+            return url
+          })()
+          inflight.set(encryptedUrl, promise)
+          promise.finally(() => inflight.delete(encryptedUrl))
+        }
 
-        const encryptedBuffer = await response.arrayBuffer()
-        const decryptedBlob = await decryptBlob(encryptionKey, encryptedBuffer, mimeType)
+        const url = await promise
 
         if (cancelled) return
 
-        const url = URL.createObjectURL(decryptedBlob)
         objectUrlRef.current = url
-        cache.set(encryptedUrl, url)
         setDecryptedUrl(url)
       } catch (err) {
         if (cancelled) return
