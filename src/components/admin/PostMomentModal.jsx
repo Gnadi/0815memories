@@ -37,6 +37,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
+  const videoCameraInputRef = useRef(null)
 
   const isEditing = !!moment?.id
   const { kids, loading: kidsLoading } = useKids(isEditing ? null : familyId, encryptionKey)
@@ -99,6 +100,36 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     setVideoError('')
 
     // Validate duration before uploading
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
+    setMediaError(false)
+
+    try {
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
+    setVideoError('')
+
     const duration = await getVideoDuration(file)
     if (duration > 60) {
       setVideoError('Video must be 60 seconds or shorter.')
@@ -313,10 +344,18 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 onClick={() => videoFileInputRef.current?.click()}
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
-                <>
-                  <Video className="w-6 h-6 text-bark-muted" />
-                  <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
-                </>
+                <Video className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
+              </button>
+
+              {/* Record video button - mobile only */}
+              <button
+                type="button"
+                onClick={() => videoCameraInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
+              >
+                <Camera className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Record</span>
               </button>
             </div>
             {videoError && (
@@ -427,6 +466,14 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         type="file"
         accept="video/*"
         onChange={handleVideoFileChange}
+        className="hidden"
+      />
+      <input
+        ref={videoCameraInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        onChange={handleVideoCameraChange}
         className="hidden"
       />
     </div>

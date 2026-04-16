@@ -81,6 +81,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
+  const videoCameraInputRef = useRef(null)
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -138,6 +139,35 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
+
+    try {
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
     setVideoError('')
 
     const duration = await getVideoDuration(file)
@@ -355,15 +385,27 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               </div>
             )}
 
-            {/* Add video button */}
-            <button
-              type="button"
-              onClick={() => videoFileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
-            >
-              <Video className="w-4 h-4" />
-              Add video
-            </button>
+            {/* Add video / Record video buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => videoFileInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
+              >
+                <Video className="w-4 h-4" />
+                Add video
+              </button>
+
+              {/* Record video button - mobile only */}
+              <button
+                type="button"
+                onClick={() => videoCameraInputRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors lg:hidden"
+              >
+                <Camera className="w-4 h-4" />
+                Record video
+              </button>
+            </div>
             {videoError && (
               <p className="text-xs text-kaydo mt-1">{videoError}</p>
             )}
@@ -554,6 +596,14 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         type="file"
         accept="video/*"
         onChange={handleVideoFileChange}
+        className="hidden"
+      />
+      <input
+        ref={videoCameraInputRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        onChange={handleVideoCameraChange}
         className="hidden"
       />
     </div>
