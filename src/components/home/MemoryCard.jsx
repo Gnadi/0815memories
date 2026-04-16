@@ -38,13 +38,13 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
 
   return (
     <div
-      className="bg-warm-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-warm-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => navigate(`/memory/${memory.id}`)}
     >
       {/* Image slider */}
       {allImages.length > 0 ? (
         <div
-          className="relative"
+          className="relative overflow-hidden rounded-t-2xl"
           onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
           onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
         >
@@ -98,7 +98,7 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
           )}
         </div>
       ) : (
-        <div className="relative">
+        <div className="relative overflow-hidden rounded-t-2xl">
           <MemoryPlaceholderImage title={memory.title} />
           <div className="absolute bottom-2 left-2 flex gap-1.5">
             {memory.voiceMemos?.length > 0 && (
@@ -132,7 +132,7 @@ export default function MemoryCard({ memory, onEdit, onDelete }) {
               <MoreHorizontal className="w-5 h-5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-10 min-w-[140px]">
+              <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-50 min-w-[140px]">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
