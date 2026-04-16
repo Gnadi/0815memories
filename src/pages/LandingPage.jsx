@@ -19,6 +19,7 @@ import {
   KeyRound,
   Scissors,
   Layers,
+  Download,
 } from 'lucide-react'
 import { useState } from 'react'
 import KaydoLogo from '../components/KaydoLogo'
@@ -167,7 +168,7 @@ export default function LandingPage() {
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Six Pillars of Home</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Seven Pillars of Home</h2>
             <p className="text-bark-light max-w-md mx-auto">
               Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
             </p>
@@ -405,7 +406,58 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 6 — Open Source */}
+            {/* Card 6 — Own: Data Export */}
+            <div className="bg-[#E0F4F8] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center">
+                <Download className="w-5 h-5 text-teal-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">Own: Your Data, Your Way</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  Your memories belong to you — forever. Download a full archive of every photo, video, and journal entry at any time. No lock-in, no bureaucracy, no questions asked.
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {[
+                  'Full ZIP export of all photos & videos',
+                  'Memories and journal entries as structured data',
+                  'One-click download — no questions asked',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-sm text-bark font-medium">
+                    <Check className="w-4 h-4 text-teal-600" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {/* Decorative download mockup */}
+              <div className="mt-2 rounded-2xl bg-white/60 border border-teal-100 p-4 space-y-2.5">
+                {[
+                  { name: 'family_photos.zip', size: '2.4 GB', progress: 100 },
+                  { name: 'memories_export.json', size: '18 KB', progress: 100 },
+                  { name: 'scrapbooks.pdf', size: '340 MB', progress: 72 },
+                ].map(({ name, size, progress }) => (
+                  <div key={name} className="flex items-center gap-3">
+                    <div className="w-6 h-6 flex-shrink-0 bg-teal-100 rounded-md flex items-center justify-center">
+                      <Download className="w-3 h-3 text-teal-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] font-medium text-bark truncate">{name}</span>
+                        <span className="text-[10px] text-bark-muted ml-2 flex-shrink-0">{size}</span>
+                      </div>
+                      <div className="h-1 bg-teal-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card 7 — Open Source */}
             <div className="bg-bark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
                 <OctocatIcon className="w-5 h-5 text-white" />
