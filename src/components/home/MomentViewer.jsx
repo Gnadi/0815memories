@@ -290,7 +290,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
                     <MoreHorizontal className="w-6 h-6" />
                   </button>
                   {showMenu && (
-                    <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]">
+                    <div
+                      className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={handleEdit}
                         className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
