@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Plus, Image as ImageIcon, Mic, Video } from 'lucide-react'
+import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
@@ -79,6 +79,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
   const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
 
   const handleChange = (e) => {
@@ -93,6 +94,28 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (fileInputRef.current) fileInputRef.current.value = ''
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === tempId ? { ...img, url, uploading: false } : img
+        )
+      )
+    } catch (err) {
+      console.error('Upload failed:', err)
+      setImages((prev) => prev.filter((img) => img.id !== tempId))
+    }
+  }
+
+  const handleCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
 
     const preview = URL.createObjectURL(file)
     const tempId = Date.now()
@@ -255,6 +278,16 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 ) : (
                   <Plus className="w-6 h-6 text-bark-muted" />
                 )}
+              </button>
+
+              {/* Take photo button - mobile only */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
+              >
+                <Camera className="w-6 h-6 text-bark-muted" />
+                <span className="text-xs text-bark-muted text-center leading-tight">Camera</span>
               </button>
             </div>
           </div>
@@ -506,6 +539,14 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         type="file"
         accept="image/*"
         onChange={handleFileChange}
+        className="hidden"
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraChange}
         className="hidden"
       />
       <input
