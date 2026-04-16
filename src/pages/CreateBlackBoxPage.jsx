@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, ArrowLeft, Baby } from 'lucide-react'
+import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, Camera, ArrowLeft, Baby } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
@@ -53,7 +53,9 @@ export default function CreateBlackBoxPage() {
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
+  const videoCameraInputRef = useRef(null)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')
@@ -109,10 +111,59 @@ export default function CreateBlackBoxPage() {
     }
   }
 
+  const handleCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setPhotos((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+
+    try {
+      const { url } = await encryptAndUpload(file, encryptionKey)
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === tempId ? { ...p, url, uploading: false } : p))
+      )
+    } catch (err) {
+      console.error('Upload failed:', err)
+      setPhotos((prev) => prev.filter((p) => p.id !== tempId))
+    }
+  }
+
   const handleVideoFileChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (videoFileInputRef.current) videoFileInputRef.current.value = ''
+    setVideoError('')
+
+    const duration = await getVideoDuration(file)
+    if (duration > 60) {
+      setVideoError('Video must be 60 seconds or shorter.')
+      return
+    }
+
+    const preview = URL.createObjectURL(file)
+    const tempId = Date.now()
+    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
+
+    try {
+      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
+        )
+      )
+    } catch (err) {
+      console.error('Video upload failed:', err)
+      setVideos((prev) => prev.filter((v) => v.id !== tempId))
+    }
+  }
+
+  const handleVideoCameraChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
     setVideoError('')
 
     const duration = await getVideoDuration(file)
@@ -350,8 +401,18 @@ export default function CreateBlackBoxPage() {
                       <ImageIcon className="w-5 h-5" />
                       Photos
                     </button>
+                    {/* Take photo - mobile only */}
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs lg:hidden"
+                    >
+                      <Camera className="w-5 h-5" />
+                      Camera
+                    </button>
                   </div>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraChange} />
                 </div>
 
                 {/* Videos */}
@@ -391,9 +452,19 @@ export default function CreateBlackBoxPage() {
                       <Video className="w-5 h-5" />
                       Video
                     </button>
+                    {/* Record video - mobile only */}
+                    <button
+                      type="button"
+                      onClick={() => videoCameraInputRef.current?.click()}
+                      className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs lg:hidden"
+                    >
+                      <Camera className="w-5 h-5" />
+                      Record
+                    </button>
                   </div>
                   {videoError && <p className="text-xs text-kaydo">{videoError}</p>}
                   <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
+                  <input ref={videoCameraInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleVideoCameraChange} />
                 </div>
               </div>
 
