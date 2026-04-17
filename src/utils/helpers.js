@@ -1,3 +1,15 @@
+/**
+ * Returns true if `date` falls on the same month and day as `referenceDate`
+ * (year-independent). Handles Firestore Timestamps, JS Dates, and date strings.
+ *
+ * @param {Date|{toDate:()=>Date}|string} date
+ * @param {Date} [referenceDate]
+ */
+export function isOnThisDay(date, referenceDate = new Date()) {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.getMonth() === referenceDate.getMonth() && d.getDate() === referenceDate.getDate()
+}
+
 export function formatDate(date) {
   if (!date) return ''
   const d = date.toDate ? date.toDate() : new Date(date)

@@ -1,17 +1,17 @@
 /**
- * Firebase Cloud Function — FCM Push Dispatcher
+ * Firebase Cloud Functions — FCM Push Dispatcher
  *
- * Triggered when a document is created in the `notificationsQueue` collection.
- * Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
+ * dispatchPushNotifications:
+ *   Triggered when a document is created in the `notificationsQueue` collection.
+ *   Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
+ *
+ * The daily anniversary reminder is handled by a Vercel Cron Job (api/anniversary-cron.js)
+ * instead of a Firebase Scheduled Function — no Blaze plan required.
  *
  * No credentials needed — Firebase injects the service account automatically
  * when running inside Cloud Functions.
  *
- * Uses Cloud Functions gen 1 (firebase-functions v1 API) which works on the
- * free Firebase Spark plan. FCM is a Google service, so outbound calls to it
- * are permitted without upgrading to Blaze.
- *
- * Deployment (one-time):
+ * Deployment:
  *   npm install -g firebase-tools
  *   firebase login
  *   firebase use <your-project-id>
@@ -26,6 +26,10 @@ import { getMessaging } from 'firebase-admin/messaging'
 
 // No credentials arg — Firebase injects them automatically in the Cloud Functions runtime
 initializeApp()
+
+// ---------------------------------------------------------------------------
+// Cloud Function 1: dispatch FCM when a notificationsQueue doc is created
+// ---------------------------------------------------------------------------
 
 export const dispatchPushNotifications = firestore
   .document('notificationsQueue/{docId}')
@@ -79,3 +83,4 @@ export const dispatchPushNotifications = firestore
 
     return cleanup()
   })
+
