@@ -43,7 +43,7 @@ export function useJournals(familyId, childId, encryptionKey) {
         setLoading(false)
       },
       (err) => {
-        console.error('useJournals snapshot error:', err)
+        if (import.meta.env.DEV) console.error('useJournals snapshot error:', err)
         setLoading(false)
       }
     )
@@ -99,7 +99,7 @@ export function useAllJournals(familyId, encryptionKey) {
         setLoading(false)
       },
       (err) => {
-        console.error('useAllJournals snapshot error:', err)
+        if (import.meta.env.DEV) console.error('useAllJournals snapshot error:', err)
         setLoading(false)
       }
     )

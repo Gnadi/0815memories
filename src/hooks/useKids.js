@@ -42,7 +42,7 @@ export function useKids(familyId, encryptionKey) {
         setLoading(false)
       },
       (err) => {
-        console.error('useKids snapshot error:', err)
+        if (import.meta.env.DEV) console.error('useKids snapshot error:', err)
         setLoading(false)
       }
     )

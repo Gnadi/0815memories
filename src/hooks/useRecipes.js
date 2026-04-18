@@ -63,7 +63,7 @@ export function useRecipes(familyId, encryptionKey) {
         setLoading(false)
       },
       (err) => {
-        console.error('useRecipes snapshot error:', err)
+        if (import.meta.env.DEV) console.error('useRecipes snapshot error:', err)
         setLoading(false)
       }
     )
@@ -134,7 +134,7 @@ export function useRecipeLineage(rootId, familyId, encryptionKey) {
         all.sort((a, b) => (a.year || 0) - (b.year || 0))
         setVersions(all)
       } catch (err) {
-        console.error('useRecipeLineage error:', err)
+        if (import.meta.env.DEV) console.error('useRecipeLineage error:', err)
       } finally {
         setLoading(false)
       }

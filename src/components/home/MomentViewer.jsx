@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   X,
   ChevronLeft,
@@ -37,7 +37,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const videoRef = useRef(null)
 
   const moment = moments[currentMomentIndex]
-  const mediaItems = buildMediaItems(moment)
+  const mediaItems = useMemo(() => buildMediaItems(moment), [moment])
   const currentItem = mediaItems[currentMediaIndex]
   const isVideo = currentItem?.type === 'video'
 
@@ -48,12 +48,12 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const isAtStart = isFirstMoment && isFirstMedia
   const isAtEnd = isLastMoment && isLastMedia
 
-  // Keep stable refs to avoid stale closures
+  // Stable refs let the keyboard listener + progress effect call the latest
+  // goNext/goPrev/onClose without re-subscribing on every render.
   const goNextRef = useRef(null)
+  const goPrevRef = useRef(null)
   const isAtEndRef = useRef(isAtEnd)
   const onCloseRef = useRef(onClose)
-  isAtEndRef.current = isAtEnd
-  onCloseRef.current = onClose
 
   const goNext = () => {
     if (!isLastMedia) {
@@ -76,7 +76,12 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
   }
 
-  goNextRef.current = goNext
+  useEffect(() => {
+    goNextRef.current = goNext
+    goPrevRef.current = goPrev
+    isAtEndRef.current = isAtEnd
+    onCloseRef.current = onClose
+  })
 
   // Body scroll lock
   useEffect(() => {
@@ -136,16 +141,16 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
   }, [progress, isVideo]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyboard navigation
+  // Keyboard navigation (registered once; delegates through refs to stay fresh)
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'ArrowRight') goNext()
-      else if (e.key === 'ArrowLeft') goPrev()
-      else if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') goNextRef.current?.()
+      else if (e.key === 'ArrowLeft') goPrevRef.current?.()
+      else if (e.key === 'Escape') onCloseRef.current?.()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  })
+  }, [])
 
   const handleEdit = () => {
     setShowMenu(false)
@@ -175,15 +180,13 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
   }
 
-  if (!moment) return null
+  const authorName = moment?.authorName || 'Family'
+  const authorInitials = useMemo(
+    () => authorName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
+    [authorName]
+  )
 
-  const authorName = moment.authorName || 'Family'
-  const authorInitials = authorName
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
+  if (!moment) return null
 
   // Progress bar segments — one per media item in the current moment
   const ProgressBarMobile = () => (

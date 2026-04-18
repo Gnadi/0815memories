@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
-        console.error('Failed to load encryption key:', err)
+        if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
       } finally {
         setKeyLoading(false)
       }

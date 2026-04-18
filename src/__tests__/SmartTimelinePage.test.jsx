@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -78,6 +78,16 @@ async function SmartTimelinePageLoader() {
 // ---------------------------------------------------------------------------
 
 describe('SmartTimelinePage', () => {
+  // "On This Day" tests assume today is April 16 — pin system time so the
+  // suite doesn't start failing on other calendar days.
+  beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 3, 16, 12, 0, 0))
+  })
+  afterAll(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(async () => {
     vi.clearAllMocks()
     // Default: return all memories, not loading

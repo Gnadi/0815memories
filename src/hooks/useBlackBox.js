@@ -42,7 +42,7 @@ export function useBlackBox(familyId, encryptionKey) {
         setLoading(false)
       },
       (err) => {
-        console.error('useBlackBox snapshot error:', err)
+        if (import.meta.env.DEV) console.error('useBlackBox snapshot error:', err)
         setLoading(false)
       }
     )

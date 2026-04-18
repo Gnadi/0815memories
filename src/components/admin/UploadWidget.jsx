@@ -3,6 +3,7 @@ import { X, Image as ImageIcon } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { devError } from '../../utils/devLog'
 
 /**
  * Pass unencrypted={true} for public-facing images (e.g. login header)
@@ -50,7 +51,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
         onUpload(url, publicId)
       }
     } catch (err) {
-      console.error('Upload failed:', err)
+      devError('Upload failed:', err)
       setPreview('')
     } finally {
       setUploading(false)

@@ -7,6 +7,7 @@ import ScrapbookCard from '../components/scrapbook/ScrapbookCard'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { LAYOUT_PRESETS } from '../components/scrapbook/layoutPresets'
+import { devError } from '../utils/devLog'
 
 const COVER_SCHEMES = [
   // Light backgrounds → dark titles
@@ -69,7 +70,7 @@ export default function ScrapbooksPage() {
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
-      console.error('Failed to create scrapbook:', err)
+      devError('Failed to create scrapbook:', err)
       setError('Could not create scrapbook. Please try again.')
     } finally {
       setCreating(false)

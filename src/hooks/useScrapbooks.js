@@ -51,7 +51,7 @@ export function useScrapbooks(familyId, encryptionKey) {
       setScrapbooks(decrypted)
       setLoading(false)
     }, (error) => {
-      console.error('Failed to load scrapbooks:', error)
+      if (import.meta.env.DEV) console.error('Failed to load scrapbooks:', error)
       setLoading(false)
     })
 

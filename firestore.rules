@@ -126,10 +126,18 @@ service cloud.firestore {
     }
 
     // FCM push tokens — any client (admin or viewer) can write their own token.
-    // Viewers are not Firebase-authenticated, so we allow unauthenticated writes.
-    // Tokens are only read server-side via Firebase Admin SDK (bypasses these rules).
+    // Viewers are not Firebase-authenticated, so we allow unauthenticated writes,
+    // but we still require a well-formed shape so the collection can't be abused
+    // as anonymous scratch storage. Tokens are only read server-side via Firebase
+    // Admin SDK (bypasses these rules).
     match /fcmTokens/{tokenId} {
-      allow write: if true;
+      allow create, update: if request.resource.data.familyId is string
+                            && request.resource.data.familyId.size() > 0
+                            && request.resource.data.familyId.size() < 128
+                            && request.resource.data.token is string
+                            && request.resource.data.token.size() > 0
+                            && request.resource.data.token.size() < 4096;
+      allow delete: if false;
       allow read: if false;
     }
 

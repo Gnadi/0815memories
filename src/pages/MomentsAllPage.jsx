@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Camera } from 'lucide-react'
 import { useAllMoments } from '../hooks/useMemories'
@@ -8,6 +8,40 @@ import PostMomentModal from '../components/admin/PostMomentModal'
 import { formatRelativeDate } from '../utils/helpers'
 import EncryptedImage from '../components/media/EncryptedImage'
 
+const MomentCard = memo(function MomentCard({ moment, onOpen }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="relative rounded-2xl overflow-hidden aspect-[9/16] bg-cream-dark group"
+    >
+      {moment.images?.[0] ? (
+        <EncryptedImage
+          src={moment.images[0]}
+          alt={moment.caption}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Camera className="w-8 h-8 text-bark-muted opacity-40" />
+        </div>
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+
+      <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 pointer-events-none">
+        {moment.caption && (
+          <p className="text-white text-xs leading-snug line-clamp-2 mb-0.5 font-medium drop-shadow">
+            {moment.caption}
+          </p>
+        )}
+        <p className="text-white/70 text-[10px] font-medium drop-shadow">
+          {moment.label || formatRelativeDate(moment.date)}
+        </p>
+      </div>
+    </button>
+  )
+})
+
 export default function MomentsAllPage() {
   const navigate = useNavigate()
   const { familyId, isAdmin } = useAuth()
@@ -16,19 +50,21 @@ export default function MomentsAllPage() {
   const [editingMoment, setEditingMoment] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
-  const handleEditMoment = (moment) => {
+  const handleEditMoment = useCallback((moment) => {
     setEditingMoment(moment)
     setShowEditModal(true)
-  }
+  }, [])
 
-  const handleDeleteMoment = async (id) => {
+  const handleDeleteMoment = useCallback(async (id) => {
     await deleteMoment(id)
-  }
+  }, [deleteMoment])
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = useCallback(() => {
     setShowEditModal(false)
     setEditingMoment(null)
-  }
+  }, [])
+
+  const handleCloseViewer = useCallback(() => setViewingMomentIndex(null), [])
 
   if (loading) {
     return (
@@ -61,39 +97,12 @@ export default function MomentsAllPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-3">
           {moments.map((moment, index) => (
-            <button
+            <MomentCardContainer
               key={moment.id}
-              onClick={() => setViewingMomentIndex(index)}
-              className="relative rounded-2xl overflow-hidden aspect-[9/16] bg-cream-dark group"
-            >
-              {moment.images?.[0] ? (
-                <EncryptedImage
-                  src={moment.images[0]}
-                  alt={moment.caption}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-bark-muted opacity-40" />
-                </div>
-              )}
-
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-
-              {/* Bottom label */}
-              <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 pointer-events-none">
-                {moment.caption && (
-                  <p className="text-white text-xs leading-snug line-clamp-2 mb-0.5 font-medium drop-shadow">
-                    {moment.caption}
-                  </p>
-                )}
-                <p className="text-white/70 text-[10px] font-medium drop-shadow">
-                  {moment.label || formatRelativeDate(moment.date)}
-                </p>
-              </div>
-
-            </button>
+              moment={moment}
+              index={index}
+              onOpen={setViewingMomentIndex}
+            />
           ))}
         </div>
       )}
@@ -103,7 +112,7 @@ export default function MomentsAllPage() {
         <MomentViewer
           moments={moments}
           initialIndex={viewingMomentIndex}
-          onClose={() => setViewingMomentIndex(null)}
+          onClose={handleCloseViewer}
           isAdmin={isAdmin}
           onEdit={handleEditMoment}
           onDelete={handleDeleteMoment}
@@ -121,3 +130,10 @@ export default function MomentsAllPage() {
     </div>
   )
 }
+
+// Wraps MomentCard so `onOpen` is memoized per-index, allowing React.memo to
+// skip re-renders of unchanged cards when the viewer opens or moments re-arrive.
+const MomentCardContainer = memo(function MomentCardContainer({ moment, index, onOpen }) {
+  const handleOpen = useCallback(() => onOpen(index), [onOpen, index])
+  return <MomentCard moment={moment} onOpen={handleOpen} />
+})

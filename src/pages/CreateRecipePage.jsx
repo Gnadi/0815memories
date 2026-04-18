@@ -8,6 +8,7 @@ import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useRecipes } from '../hooks/useRecipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { devError } from '../utils/devLog'
 
 const STATUS_LABELS = { active: 'Active', removed: 'Removed', modified: 'Modified' }
 const STATUS_STYLES = {
@@ -139,7 +140,7 @@ export default function CreateRecipePage() {
       const { url } = await encryptAndUpload(file, encryptionKey)
       setImage({ preview, url, uploading: false })
     } catch (err) {
-      console.error('Image upload failed:', err)
+      devError('Image upload failed:', err)
       setImage(null)
     }
   }
@@ -175,7 +176,7 @@ export default function CreateRecipePage() {
       const targetRootId = rootId ?? ref.id
       navigate(`/recipes/${targetRootId}`)
     } catch (err) {
-      console.error('Save error:', err)
+      devError('Save error:', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setSaving(false)

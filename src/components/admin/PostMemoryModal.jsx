@@ -2,39 +2,55 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
-import { encryptAndUpload } from '../../utils/encryptedUpload'
 import { decryptFields } from '../../utils/encryption'
+import { devError } from '../../utils/devLog'
+import { useMediaUploader } from '../../hooks/useMediaUploader'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 
 const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
 
+function buildInitialImages(memory) {
+  if (memory?.images?.length) {
+    return memory.images.map((url, i) => ({ id: `init-img-${i}`, preview: url, url, uploading: false }))
+  }
+  if (memory?.imageUrl) {
+    return [{ id: 'init-img-0', preview: memory.imageUrl, url: memory.imageUrl, uploading: false }]
+  }
+  return []
+}
+
+function buildInitialVideos(memory) {
+  if (memory?.videos?.length) {
+    return memory.videos.map((v, i) => ({
+      id: `init-vid-${i}`,
+      preview: v.url,
+      url: v.url,
+      publicId: v.publicId,
+      title: v.title || '',
+      uploading: false,
+    }))
+  }
+  return []
+}
+
 export default function PostMemoryModal({ memory, onClose, onSave }) {
   const { encryptionKey } = useAuth()
-  const getInitialImages = () => {
-    if (memory?.images?.length) {
-      return memory.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
-    }
-    if (memory?.imageUrl) {
-      return [{ id: 0, preview: memory.imageUrl, url: memory.imageUrl, uploading: false }]
-    }
-    return []
-  }
-
-  const getInitialVideos = () => {
-    if (memory?.videos?.length) {
-      return memory.videos.map((v, i) => ({
-        id: i,
-        preview: v.url,
-        url: v.url,
-        publicId: v.publicId,
-        title: v.title || '',
-        uploading: false,
-      }))
-    }
-    return []
-  }
+  const {
+    images,
+    videos,
+    setVideos,
+    addImage,
+    addVideo,
+    removeImage,
+    removeVideo,
+    videoError,
+    hasUploading,
+  } = useMediaUploader(encryptionKey, {
+    initialImages: buildInitialImages(memory),
+    initialVideos: buildInitialVideos(memory),
+  })
 
   const [form, setForm] = useState({
     title: memory?.title || '',
@@ -72,11 +88,8 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       cancelled = true
     }
   }, [memory, encryptionKey])
-  const [images, setImages] = useState(getInitialImages)
-  const [videos, setVideos] = useState(getInitialVideos)
   const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
   const [showRecorder, setShowRecorder] = useState(false)
-  const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -91,118 +104,22 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     }))
   }
 
-  const handleFileChange = async (e) => {
+  const handleImagePick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (fileInputRef.current) fileInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === tempId ? { ...img, url, uploading: false } : img
-        )
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setImages((prev) => prev.filter((img) => img.id !== tempId))
-    }
+    if (inputRef?.current) inputRef.current.value = ''
+    await addImage(file)
   }
 
-  const handleCameraChange = async (e) => {
+  const handleVideoPick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (cameraInputRef.current) cameraInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === tempId ? { ...img, url, uploading: false } : img
-        )
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setImages((prev) => prev.filter((img) => img.id !== tempId))
-    }
-  }
-
-  const handleVideoFileChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
-  }
-
-  const handleVideoCameraChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
+    if (inputRef?.current) inputRef.current.value = ''
+    await addVideo(file)
   }
 
   const handleVideoTitleChange = (id, title) => {
     setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, title } : v)))
-  }
-
-  const handleRemoveImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id))
-  }
-
-  const handleRemoveVideo = (id) => {
-    setVideos((prev) => prev.filter((v) => v.id !== id))
   }
 
   const handleSubmit = async (e) => {
@@ -230,13 +147,11 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       }
       onClose()
     } catch (err) {
-      console.error('Failed to save:', err)
+      devError('Failed to save memory:', err)
     } finally {
       setSaving(false)
     }
   }
-
-  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -285,7 +200,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                   {!img.uploading && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveImage(img.id)}
+                      onClick={() => removeImage(img.id)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
                     >
                       <X className="w-3 h-3" />
@@ -375,7 +290,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveVideo(v.id)}
+                      onClick={() => removeVideo(v.id)}
                       className="text-bark-muted hover:text-red-500 transition-colors mt-1 flex-shrink-0"
                     >
                       <X className="w-4 h-4" />
@@ -580,7 +495,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileChange}
+        onChange={(e) => handleImagePick(e, fileInputRef)}
         className="hidden"
       />
       <input
@@ -588,14 +503,14 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={handleCameraChange}
+        onChange={(e) => handleImagePick(e, cameraInputRef)}
         className="hidden"
       />
       <input
         ref={videoFileInputRef}
         type="file"
         accept="video/*"
-        onChange={handleVideoFileChange}
+        onChange={(e) => handleVideoPick(e, videoFileInputRef)}
         className="hidden"
       />
       <input
@@ -603,26 +518,9 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         type="file"
         accept="video/*"
         capture="environment"
-        onChange={handleVideoCameraChange}
+        onChange={(e) => handleVideoPick(e, videoCameraInputRef)}
         className="hidden"
       />
     </div>
   )
-}
-
-function getVideoDuration(file) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url)
-      resolve(video.duration)
-    }
-    video.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(0)
-    }
-    video.src = url
-  })
 }

@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, Camera, ArrowLeft, Baby } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
-import { encryptAndUpload } from '../utils/encryptedUpload'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
 import Sidebar from '../components/layout/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import { useBlackBox } from '../hooks/useBlackBox'
 import { useKids } from '../hooks/useKids'
+import { useMediaUploader } from '../hooks/useMediaUploader'
+import { devError } from '../utils/devLog'
 
 const MILESTONES = [
   { key: '18thBirthday', label: '18th Birthday' },
@@ -34,6 +35,16 @@ export default function CreateBlackBoxPage() {
   const navigate = useNavigate()
   const { kids, loading: kidsLoading } = useKids(familyId, encryptionKey)
   const { addBox } = useBlackBox(familyId, encryptionKey)
+  const {
+    images: photos,
+    videos,
+    addImage,
+    addVideo,
+    removeImage,
+    removeVideo,
+    videoError,
+    hasUploading,
+  } = useMediaUploader(encryptionKey)
 
   const [form, setForm] = useState({
     title: '',
@@ -45,9 +56,6 @@ export default function CreateBlackBoxPage() {
     specificDay: '',
     specificYear: '',
   })
-  const [photos, setPhotos] = useState([])
-  const [videos, setVideos] = useState([])
-  const [videoError, setVideoError] = useState('')
   const [voiceNote, setVoiceNote] = useState(null)
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -91,105 +99,20 @@ export default function CreateBlackBoxPage() {
     ? unlockDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
-  const handleFileChange = async (e) => {
+  const handleImagePick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (fileInputRef.current) fileInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setPhotos((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === tempId ? { ...p, url, uploading: false } : p))
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setPhotos((prev) => prev.filter((p) => p.id !== tempId))
-    }
+    if (inputRef?.current) inputRef.current.value = ''
+    await addImage(file)
   }
 
-  const handleCameraChange = async (e) => {
+  const handleVideoPick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (cameraInputRef.current) cameraInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setPhotos((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === tempId ? { ...p, url, uploading: false } : p))
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setPhotos((prev) => prev.filter((p) => p.id !== tempId))
-    }
+    if (inputRef?.current) inputRef.current.value = ''
+    await addVideo(file)
   }
 
-  const handleVideoFileChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
-  }
-
-  const handleVideoCameraChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
-  }
-
-  const hasUploading = photos.some((p) => p.uploading) || videos.some((v) => v.uploading)
   const hasContent = form.message.trim() || photos.length > 0 || videos.length > 0 || voiceNote
 
   const handleSubmit = async (e) => {
@@ -226,7 +149,7 @@ export default function CreateBlackBoxPage() {
       await addBox(data)
       navigate('/blackbox')
     } catch (err) {
-      console.error('Failed to seal black box:', err)
+      devError('Failed to seal black box:', err)
       setSubmitError(err.message || 'Failed to seal. Please try again.')
     } finally {
       setSaving(false)
@@ -385,7 +308,7 @@ export default function CreateBlackBoxPage() {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
+                            onClick={() => removeImage(p.id)}
                             className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark text-white rounded-full flex items-center justify-center"
                           >
                             <X className="w-3 h-3" />
@@ -411,8 +334,8 @@ export default function CreateBlackBoxPage() {
                       Camera
                     </button>
                   </div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraChange} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImagePick(e, fileInputRef)} />
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImagePick(e, cameraInputRef)} />
                 </div>
 
                 {/* Videos */}
@@ -436,7 +359,7 @@ export default function CreateBlackBoxPage() {
                         {!v.uploading && (
                           <button
                             type="button"
-                            onClick={() => setVideos((prev) => prev.filter((x) => x.id !== v.id))}
+                            onClick={() => removeVideo(v.id)}
                             className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark text-white rounded-full flex items-center justify-center"
                           >
                             <X className="w-3 h-3" />
@@ -463,8 +386,8 @@ export default function CreateBlackBoxPage() {
                     </button>
                   </div>
                   {videoError && <p className="text-xs text-kaydo">{videoError}</p>}
-                  <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
-                  <input ref={videoCameraInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={handleVideoCameraChange} />
+                  <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => handleVideoPick(e, videoFileInputRef)} />
+                  <input ref={videoCameraInputRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => handleVideoPick(e, videoCameraInputRef)} />
                 </div>
               </div>
 
@@ -627,15 +550,4 @@ export default function CreateBlackBoxPage() {
       </div>
     </div>
   )
-}
-
-function getVideoDuration(file) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration) }
-    video.onerror = () => { URL.revokeObjectURL(url); resolve(0) }
-    video.src = url
-  })
 }

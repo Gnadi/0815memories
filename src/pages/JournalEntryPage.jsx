@@ -5,11 +5,12 @@ import { Timestamp } from 'firebase/firestore'
 import { EMOTIONS } from '../constants/emotions'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
 import { useAuth } from '../context/AuthContext'
-import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
+import { useMediaUploader } from '../hooks/useMediaUploader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
+import { devError } from '../utils/devLog'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -30,9 +31,18 @@ export default function JournalEntryPage() {
     emotion: 'love',
     date: today,
   })
-  const [images, setImages] = useState([])
-  const [videos, setVideos] = useState([])
-  const [videoError, setVideoError] = useState('')
+  const {
+    images,
+    videos,
+    setImages,
+    setVideos,
+    addImage,
+    addVideo,
+    removeImage,
+    removeVideo,
+    videoError,
+    hasUploading,
+  } = useMediaUploader(encryptionKey)
   const [voiceMemos, setVoiceMemos] = useState([])
   const [showRecorder, setShowRecorder] = useState(false)
   const [showEmotionPicker, setShowEmotionPicker] = useState(true)
@@ -65,7 +75,7 @@ export default function JournalEntryPage() {
       )
       setVoiceMemos(entry.voiceMemos || [])
     }
-  }, [entry?.id])
+  }, [entry?.id, setImages, setVideos])
 
   if (!isAdmin) return null
 
@@ -73,51 +83,14 @@ export default function JournalEntryPage() {
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
-    if (!file) return
     if (fileInputRef.current) fileInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setImages((prev) =>
-        prev.map((img) => (img.id === tempId ? { ...img, url, uploading: false } : img))
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setImages((prev) => prev.filter((img) => img.id !== tempId))
-    }
+    await addImage(file)
   }
 
   const handleVideoFileChange = async (e) => {
     const file = e.target.files?.[0]
-    if (!file) return
     if (videoFileInputRef.current) videoFileInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', title: '', uploading: true }])
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
+    await addVideo(file)
   }
 
   const handleSubmit = async (e) => {
@@ -140,14 +113,12 @@ export default function JournalEntryPage() {
       }
       navigate(`/journal/${childId}`)
     } catch (err) {
-      console.error('Failed to save journal entry:', err)
+      devError('Failed to save journal entry:', err)
       setError(err.message || 'Failed to save. Please try again.')
     } finally {
       setSaving(false)
     }
   }
-
-  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="h-[100dvh] flex flex-col relative overflow-hidden">
@@ -258,7 +229,7 @@ export default function JournalEntryPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setImages((prev) => prev.filter((i) => i.id !== img.id))}
+                      onClick={() => removeImage(img.id)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
                     >
                       <X className="w-3 h-3" />
@@ -286,7 +257,7 @@ export default function JournalEntryPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setVideos((prev) => prev.filter((x) => x.id !== v.id))}
+                        onClick={() => removeVideo(v.id)}
                         className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
                       >
                         <X className="w-3 h-3" />
@@ -389,15 +360,4 @@ export default function JournalEntryPage() {
       <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
     </div>
   )
-}
-
-function getVideoDuration(file) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration) }
-    video.onerror = () => { URL.revokeObjectURL(url); resolve(0) }
-    video.src = url
-  })
 }
