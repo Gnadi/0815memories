@@ -27,14 +27,14 @@ try {
       try {
         messaging = getMessaging(app)
       } catch (e) {
-        console.warn('Firebase Messaging unavailable:', e.message)
+        if (import.meta.env.DEV) console.warn('Firebase Messaging unavailable:', e.message)
       }
     }
-  } else {
+  } else if (import.meta.env.DEV) {
     console.warn('Firebase env vars not set — app running in demo mode')
   }
 } catch (e) {
-  console.error('Firebase initialization failed:', e)
+  if (import.meta.env.DEV) console.error('Firebase initialization failed:', e)
 }
 
 export { auth, db, messaging }

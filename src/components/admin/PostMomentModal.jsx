@@ -1,26 +1,46 @@
 import { useState, useRef } from 'react'
 import { X, Plus, Image as ImageIcon, Video, Camera } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { devError } from '../../utils/devLog'
+import { useMediaUploader } from '../../hooks/useMediaUploader'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 
+function buildInitialImages(moment) {
+  if (moment?.images?.length) {
+    return moment.images.map((url, i) => ({ id: `init-img-${i}`, preview: url, url, uploading: false }))
+  }
+  return []
+}
+
+function buildInitialVideos(moment) {
+  if (moment?.videos?.length) {
+    return moment.videos.map((v, i) => ({
+      id: `init-vid-${i}`,
+      preview: v.url,
+      url: v.url,
+      publicId: v.publicId,
+      uploading: false,
+    }))
+  }
+  return []
+}
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
-  const { encryptionKey, familyId } = useAuth()
-  const getInitialImages = () => {
-    if (moment?.images?.length) {
-      return moment.images.map((url, i) => ({ id: i, preview: url, url, uploading: false }))
-    }
-    return []
-  }
-
-  const getInitialVideos = () => {
-    if (moment?.videos?.length) {
-      return moment.videos.map((v, i) => ({ id: i, preview: v.url, url: v.url, publicId: v.publicId, uploading: false }))
-    }
-    return []
-  }
+  const { encryptionKey } = useAuth()
+  const {
+    images,
+    videos,
+    addImage,
+    addVideo,
+    removeImage,
+    removeVideo,
+    videoError,
+    hasUploading,
+  } = useMediaUploader(encryptionKey, {
+    initialImages: buildInitialImages(moment),
+    initialVideos: buildInitialVideos(moment),
+  })
 
   const [form, setForm] = useState({
     caption: moment?.caption || '',
@@ -28,10 +48,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     location: moment?.location || '',
     label: moment?.label || '',
   })
-  const [images, setImages] = useState(getInitialImages)
-  const [videos, setVideos] = useState(getInitialVideos)
   const [mediaError, setMediaError] = useState(false)
-  const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -40,125 +57,25 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
 
   const isEditing = !!moment?.id
 
-
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleFileChange = async (e) => {
+  const handleImagePick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (fileInputRef.current) fileInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+    if (inputRef?.current) inputRef.current.value = ''
     setMediaError(false)
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === tempId ? { ...img, url, uploading: false } : img
-        )
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setImages((prev) => prev.filter((img) => img.id !== tempId))
-    }
+    await addImage(file)
   }
 
-  const handleCameraChange = async (e) => {
+  const handleVideoPick = async (e, inputRef) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (cameraInputRef.current) cameraInputRef.current.value = ''
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+    if (inputRef?.current) inputRef.current.value = ''
     setMediaError(false)
-
-    try {
-      const { url } = await encryptAndUpload(file, encryptionKey)
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === tempId ? { ...img, url, uploading: false } : img
-        )
-      )
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setImages((prev) => prev.filter((img) => img.id !== tempId))
-    }
-  }
-
-  const handleVideoFileChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoFileInputRef.current) videoFileInputRef.current.value = ''
-    setVideoError('')
-
-    // Validate duration before uploading
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
-    setMediaError(false)
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
-  }
-
-  const handleVideoCameraChange = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (videoCameraInputRef.current) videoCameraInputRef.current.value = ''
-    setVideoError('')
-
-    const duration = await getVideoDuration(file)
-    if (duration > 60) {
-      setVideoError('Video must be 60 seconds or shorter.')
-      return
-    }
-
-    const preview = URL.createObjectURL(file)
-    const tempId = Date.now()
-    setVideos((prev) => [...prev, { id: tempId, preview, url: '', publicId: '', uploading: true }])
-    setMediaError(false)
-
-    try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, uploading: false } : v
-        )
-      )
-    } catch (err) {
-      console.error('Video upload failed:', err)
-      setVideos((prev) => prev.filter((v) => v.id !== tempId))
-    }
-  }
-
-  const handleRemoveImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id))
-  }
-
-  const handleRemoveVideo = (id) => {
-    setVideos((prev) => prev.filter((v) => v.id !== id))
+    await addVideo(file)
   }
 
   const handleSubmit = async (e) => {
@@ -183,13 +100,11 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
       }
       onClose()
     } catch (err) {
-      console.error('Failed to save moment:', err)
+      devError('Failed to save moment:', err)
     } finally {
       setSaving(false)
     }
   }
-
-  const hasUploading = images.some((img) => img.uploading) || videos.some((v) => v.uploading)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -237,7 +152,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                   {!img.uploading && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveImage(img.id)}
+                      onClick={() => removeImage(img.id)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
                     >
                       <X className="w-3 h-3" />
@@ -314,7 +229,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                   {!v.uploading && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveVideo(v.id)}
+                      onClick={() => removeVideo(v.id)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
                     >
                       <X className="w-3 h-3" />
@@ -435,7 +350,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileChange}
+        onChange={(e) => handleImagePick(e, fileInputRef)}
         className="hidden"
       />
       <input
@@ -443,14 +358,14 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={handleCameraChange}
+        onChange={(e) => handleImagePick(e, cameraInputRef)}
         className="hidden"
       />
       <input
         ref={videoFileInputRef}
         type="file"
         accept="video/*"
-        onChange={handleVideoFileChange}
+        onChange={(e) => handleVideoPick(e, videoFileInputRef)}
         className="hidden"
       />
       <input
@@ -458,26 +373,9 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         type="file"
         accept="video/*"
         capture="environment"
-        onChange={handleVideoCameraChange}
+        onChange={(e) => handleVideoPick(e, videoCameraInputRef)}
         className="hidden"
       />
     </div>
   )
-}
-
-function getVideoDuration(file) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url)
-      resolve(video.duration)
-    }
-    video.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(0)
-    }
-    video.src = url
-  })
 }

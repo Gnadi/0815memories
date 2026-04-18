@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { memo, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag, Star } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -36,7 +36,7 @@ function formatOverlayDate(date) {
     .toUpperCase()
 }
 
-function TimelineCard({ memory }) {
+const TimelineCard = memo(function TimelineCard({ memory }) {
   const navigate = useNavigate()
   const date = toDate(memory.date)
   const image = (memory.images && memory.images[0]) || memory.imageUrl
@@ -104,7 +104,7 @@ function TimelineCard({ memory }) {
       </button>
     </div>
   )
-}
+})
 
 function SkeletonCard() {
   return (

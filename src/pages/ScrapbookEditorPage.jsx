@@ -16,6 +16,7 @@ import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { devError } from '../utils/devLog'
 
 // ─── Editor state reducer ─────────────────────────────────────────────────────
 
@@ -276,7 +277,7 @@ export default function ScrapbookEditorPage() {
 
       pdf.save(`${title}.pdf`)
     } catch (err) {
-      console.error('PDF export failed', err)
+      devError('PDF export failed', err)
       alert('PDF export failed. Please try again.')
     } finally {
       setExporting(false)

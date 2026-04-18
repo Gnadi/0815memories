@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { encryptAndUpload } from '../utils/encryptedUpload'
+import { devError } from '../utils/devLog'
 
 /**
  * Handles uploading a photo for the scrapbook editor.
@@ -21,7 +22,7 @@ export function useScrapbookPhotoUpload() {
       setSession((prev) => (prev.includes(url) ? prev : [url, ...prev]))
       return url
     } catch (err) {
-      console.error('Scrapbook upload failed', err)
+      devError('Scrapbook upload failed', err)
       return null
     } finally {
       setUploading(false)

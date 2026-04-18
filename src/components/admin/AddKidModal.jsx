@@ -4,6 +4,7 @@ import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import EncryptedImage from '../media/EncryptedImage'
+import { devError } from '../../utils/devLog'
 
 export default function AddKidModal({ kid, onClose, onSave }) {
   const { encryptionKey } = useAuth()
@@ -34,7 +35,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
       const { url, publicId } = await encryptAndUpload(file, encryptionKey)
       setPhoto({ preview, url, publicId, uploading: false })
     } catch (err) {
-      console.error('Upload failed:', err)
+      devError('Upload failed:', err)
       setPhoto(null)
     }
   }
@@ -57,7 +58,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
       }
       onClose()
     } catch (err) {
-      console.error('Failed to save kid:', err)
+      devError('Failed to save kid:', err)
       setError(err.message || 'Failed to save. Please try again.')
     } finally {
       setSaving(false)

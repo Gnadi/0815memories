@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { decryptBlob } from '../../utils/encryption'
+import { devError } from '../../utils/devLog'
 
 // Session-level cache: encrypted URL -> decrypted object URL
 const cache = new Map()
@@ -64,7 +65,7 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
         setDecryptedUrl(url)
       } catch (err) {
         if (cancelled) return
-        console.error('Media decryption failed:', err)
+        devError('Media decryption failed:', err)
         // Fallback: use the URL as-is (might be unencrypted)
         setDecryptedUrl(encryptedUrl)
         setError(err)

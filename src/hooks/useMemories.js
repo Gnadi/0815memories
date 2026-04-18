@@ -27,9 +27,13 @@ async function encryptMemoryData(key, data) {
   return encryptFields(key, data, ENCRYPTED_FIELDS)
 }
 
-export function useMemories(familyId, encryptionKey) {
+const DEFAULT_MEMORIES_LIMIT = 50
+const DEFAULT_MOMENTS_LIMIT = 10
+
+export function useMemories(familyId, encryptionKey, pageSize = DEFAULT_MEMORIES_LIMIT) {
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!familyId || !db) {
@@ -40,20 +44,29 @@ export function useMemories(familyId, encryptionKey) {
     const q = query(
       collection(db, 'memories'),
       where('familyId', '==', familyId),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(pageSize)
     )
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      const decrypted = await Promise.all(docs.map((d) => decryptMemory(encryptionKey, d)))
-      setMemories(decrypted)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      async (snapshot) => {
+        const docs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        const decrypted = await Promise.all(docs.map((d) => decryptMemory(encryptionKey, d)))
+        setMemories(decrypted)
+        setError(null)
+        setLoading(false)
+      },
+      (err) => {
+        setError(err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
-  }, [familyId, encryptionKey])
+  }, [familyId, encryptionKey, pageSize])
 
   const addMemory = async (memory) => {
     const encrypted = await encryptMemoryData(encryptionKey, memory)
@@ -83,12 +96,13 @@ export function useMemories(familyId, encryptionKey) {
 
   const featuredMemory = memories.find((m) => m.featured)
 
-  return { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory }
+  return { memories, featuredMemory, loading, error, addMemory, updateMemory, deleteMemory }
 }
 
-export function useMoments(familyId) {
+export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
   const [moments, setMoments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!familyId || !db) {
@@ -100,19 +114,27 @@ export function useMoments(familyId) {
       collection(db, 'moments'),
       where('familyId', '==', familyId),
       orderBy('date', 'desc'),
-      limit(10)
+      limit(pageSize)
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      setMoments(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        setMoments(data)
+        setError(null)
+        setLoading(false)
+      },
+      (err) => {
+        setError(err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
-  }, [familyId])
+  }, [familyId, pageSize])
 
   const addMoment = async (moment) => {
     await addDoc(collection(db, 'moments'), {
@@ -138,12 +160,15 @@ export function useMoments(familyId) {
     await deleteDoc(doc(db, 'moments', id))
   }
 
-  return { moments, loading, addMoment, updateMoment, deleteMoment }
+  return { moments, loading, error, addMoment, updateMoment, deleteMoment }
 }
 
-export function useAllMoments(familyId) {
+const DEFAULT_ALL_MOMENTS_LIMIT = 200
+
+export function useAllMoments(familyId, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
   const [moments, setMoments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!familyId || !db) {
@@ -154,19 +179,28 @@ export function useAllMoments(familyId) {
     const q = query(
       collection(db, 'moments'),
       where('familyId', '==', familyId),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(pageSize)
     )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      setMoments(data)
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        setMoments(data)
+        setError(null)
+        setLoading(false)
+      },
+      (err) => {
+        setError(err)
+        setLoading(false)
+      }
+    )
 
     return unsubscribe
-  }, [familyId])
+  }, [familyId, pageSize])
 
   const updateMoment = async (id, updates) => {
     await updateDoc(doc(db, 'moments', id), updates)
@@ -176,5 +210,5 @@ export function useAllMoments(familyId) {
     await deleteDoc(doc(db, 'moments', id))
   }
 
-  return { moments, loading, updateMoment, deleteMoment }
+  return { moments, loading, error, updateMoment, deleteMoment }
 }

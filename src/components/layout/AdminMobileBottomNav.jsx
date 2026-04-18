@@ -6,6 +6,7 @@ import { useMemories } from '../../hooks/useMemories'
 import { useScrapbooks } from '../../hooks/useScrapbooks'
 import PostMemoryModal from '../admin/PostMemoryModal'
 import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
+import { devError } from '../../utils/devLog'
 
 function makeCoverPage() {
   const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
@@ -68,7 +69,7 @@ export default function AdminMobileBottomNav() {
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
-      console.error('Failed to create scrapbook:', err)
+      devError('Failed to create scrapbook:', err)
       alert('Could not create scrapbook. Please try again.')
     } finally {
       setCreating(false)
