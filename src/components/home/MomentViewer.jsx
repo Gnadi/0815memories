@@ -7,7 +7,6 @@ import {
   MessageCircle,
   Share2,
   MapPin,
-  ChevronsUp,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -377,12 +376,6 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
                   )}
                 </div>
               )}
-              <div className="flex items-center justify-center gap-1 pt-2 border-t border-cream-dark">
-                <ChevronsUp className="w-4 h-4 text-bark-muted" />
-                <span className="text-xs font-semibold text-bark-muted tracking-widest uppercase">
-                  Swipe up to reply
-                </span>
-              </div>
             </div>
           </div>
         )}
