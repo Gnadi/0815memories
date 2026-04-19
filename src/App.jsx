@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
@@ -264,6 +265,7 @@ export default function App() {
         <PWAInstallPrompt />
         <AppNotifications />
       </AuthProvider>
+      <Analytics />
     </BrowserRouter>
   )
 }
