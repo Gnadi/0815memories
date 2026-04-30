@@ -3,10 +3,10 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
+import { Mail, KeyRound, Eye, EyeOff, Shield, Users, CheckCircle2, XCircle } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
-import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
+import { resolveFamilyBySlug, getSubdomainSlug, generateSlug } from '../utils/familySlug'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -22,6 +22,12 @@ export default function LoginPage() {
   const [resolvedFamilyName, setResolvedFamilyName] = useState(null)
   const [resolvedFamilyHeaderImage, setResolvedFamilyHeaderImage] = useState('')
   const [resolving, setResolving] = useState(false)
+
+  // Manual family name input state
+  const [manualFamilyName, setManualFamilyName] = useState('')
+  const [manualResolvedFamilyId, setManualResolvedFamilyId] = useState(null)
+  const [manualResolving, setManualResolving] = useState(false)
+  const [manualFamilyFound, setManualFamilyFound] = useState(null)
 
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
@@ -54,20 +60,55 @@ export default function LoginPage() {
       .finally(() => setResolving(false))
   }, [routeSlug])
 
-  // Load header image for families accessed via ?family= query param (no slug)
+  // Load header image and family name for families accessed via ?family= query param (no slug)
   useEffect(() => {
     if (!urlFamilyId || resolvedFamilyId || !db) return
     getDoc(doc(db, 'families', urlFamilyId))
       .then((snap) => {
         if (snap.exists()) {
           setResolvedFamilyHeaderImage(snap.data().loginHeaderImage || '')
+          setResolvedFamilyName(snap.data().familyName || '')
         }
       })
       .catch(() => {})
   }, [urlFamilyId, resolvedFamilyId])
 
-  // The effective familyId: resolved slug takes priority, then query param fallback
-  const effectiveFamilyId = resolvedFamilyId || urlFamilyId
+  // Sync resolved family name (from slug/subdomain/urlFamilyId) into the manual input
+  useEffect(() => {
+    if (resolvedFamilyName) setManualFamilyName(resolvedFamilyName)
+  }, [resolvedFamilyName])
+
+  // Whether the family was already determined from the URL (lock the name input)
+  const isPreResolved = !!(routeSlug || getSubdomainSlug() || urlFamilyId)
+
+  // Debounced resolution when user types a family name manually
+  useEffect(() => {
+    if (isPreResolved || !manualFamilyName.trim()) {
+      if (!isPreResolved) {
+        setManualResolvedFamilyId(null)
+        setManualFamilyFound(null)
+      }
+      return
+    }
+    setManualFamilyFound(null)
+    const timer = setTimeout(async () => {
+      setManualResolving(true)
+      try {
+        const family = await resolveFamilyBySlug(generateSlug(manualFamilyName))
+        setManualResolvedFamilyId(family?.id || null)
+        setManualFamilyFound(!!family)
+      } catch {
+        setManualResolvedFamilyId(null)
+        setManualFamilyFound(false)
+      } finally {
+        setManualResolving(false)
+      }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [manualFamilyName, isPreResolved])
+
+  // The effective familyId: resolved slug/subdomain → manual input → query param fallback
+  const effectiveFamilyId = resolvedFamilyId || manualResolvedFamilyId || urlFamilyId
 
   if (isAuthenticated) {
     navigate('/home', { replace: true })
@@ -84,7 +125,11 @@ export default function LoginPage() {
         await loginAsAdmin(email, password)
       } else {
         if (!effectiveFamilyId) {
-          setError('You need a family link to sign in as a viewer')
+          setError(
+            manualFamilyName && manualFamilyFound === false
+              ? 'Family not found — please check the name'
+              : 'Please enter your family name to sign in'
+          )
           setLoading(false)
           return
         }
@@ -156,6 +201,11 @@ export default function LoginPage() {
             error={error}
             loading={loading}
             handleSubmit={handleSubmit}
+            manualFamilyName={manualFamilyName}
+            setManualFamilyName={setManualFamilyName}
+            isPreResolved={isPreResolved}
+            manualResolving={manualResolving}
+            manualFamilyFound={manualFamilyFound}
           />
 
           {/* Admin toggle */}
@@ -228,6 +278,11 @@ export default function LoginPage() {
               error={error}
               loading={loading}
               handleSubmit={handleSubmit}
+              manualFamilyName={manualFamilyName}
+              setManualFamilyName={setManualFamilyName}
+              isPreResolved={isPreResolved}
+              manualResolving={manualResolving}
+              manualFamilyFound={manualFamilyFound}
             />
 
             {/* Admin toggle */}
@@ -290,9 +345,41 @@ function LoginForm({
   showAdminLogin, email, setEmail, password, setPassword,
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
   error, loading, handleSubmit,
+  manualFamilyName, setManualFamilyName, isPreResolved, manualResolving, manualFamilyFound,
 }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Family name field (viewer login only) */}
+      {!showAdminLogin && (
+        <div>
+          <label className="block text-sm font-medium text-bark mb-1.5">
+            Family Name
+          </label>
+          <div className="relative">
+            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+            <input
+              type="text"
+              value={manualFamilyName}
+              onChange={!isPreResolved ? (e) => setManualFamilyName(e.target.value) : undefined}
+              readOnly={isPreResolved}
+              placeholder="e.g. The Millers"
+              className={`w-full pl-12 pr-10 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30 ${isPreResolved ? 'opacity-75 cursor-default' : ''}`}
+            />
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+              {!isPreResolved && manualResolving && (
+                <div className="w-4 h-4 border-2 border-bark-muted border-t-transparent rounded-full animate-spin" />
+              )}
+              {!isPreResolved && !manualResolving && manualFamilyFound === true && (
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              )}
+              {!isPreResolved && !manualResolving && manualFamilyFound === false && manualFamilyName && (
+                <XCircle className="w-5 h-5 text-red-400" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Admin email field */}
       {showAdminLogin && (
         <div>
