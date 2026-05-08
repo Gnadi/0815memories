@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
-import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
@@ -70,10 +70,30 @@ export function AuthProvider({ children }) {
   }, [familyId, user])
 
   const resolveFamilyId = async (uid) => {
-    const q = query(collection(db, 'families'), where('adminUid', '==', uid))
-    const snapshot = await getDocs(q)
+    // Primary lookup: multi-admin shape.
+    const byAdmins = await getDocs(
+      query(collection(db, 'families'), where('adminUids', 'array-contains', uid))
+    )
+    let snapshot = byAdmins
+    // Fallback for families that haven't been lazily migrated yet (no adminUids field).
+    if (snapshot.empty) {
+      snapshot = await getDocs(
+        query(collection(db, 'families'), where('adminUid', '==', uid))
+      )
+    }
     if (snapshot.empty) return null
-    const id = snapshot.docs[0].id
+    const familyDoc = snapshot.docs[0]
+    const id = familyDoc.id
+    const data = familyDoc.data()
+    // Lazy migration: if the owner logs in before the family has an `adminUids`
+    // array, backfill it now so subsequent rule checks use the new shape.
+    if (data.adminUid === uid && !Array.isArray(data.adminUids)) {
+      try {
+        await updateDoc(doc(db, 'families', id), { adminUids: [uid] })
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('Lazy adminUids migration failed:', err)
+      }
+    }
     setFamilyId(id)
     localStorage.setItem('fh_familyId', id)
     return id
@@ -132,6 +152,7 @@ export function AuthProvider({ children }) {
     // Create the family document with the encryption key
     const familyRef = await addDoc(collection(db, 'families'), {
       adminUid: result.user.uid,
+      adminUids: [result.user.uid],
       familyName: name,
       familySlug: slug,
       encryptionKeyJwk: jwk,
