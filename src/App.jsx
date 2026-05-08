@@ -15,6 +15,7 @@ import { getSubdomainSlug } from './utils/familySlug'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import InviteRedeemPage from './pages/InviteRedeemPage'
 
 // Lazy loaded — protected pages, only needed after authentication
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/family/:slug" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/invite" element={<InviteRedeemPage />} />
             <Route
               path="/home"
               element={

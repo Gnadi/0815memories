@@ -127,7 +127,14 @@ export function AuthProvider({ children }) {
   const loginAsAdmin = async (email, password) => {
     if (!auth) throw new Error('Firebase not configured — add env vars and reload')
     const result = await signInWithEmailAndPassword(auth, email, password)
-    await resolveFamilyId(result.user.uid)
+    const resolved = await resolveFamilyId(result.user.uid)
+    if (!resolved) {
+      // The Firebase Auth account exists but no family lists this UID — most
+      // likely because the user was removed by another admin. Sign them back
+      // out so they don't sit in a half-authed state.
+      await signOut(auth)
+      throw new Error('This account is no longer associated with any family. Ask a family admin for a new invite link.')
+    }
   }
 
   const signup = async (email, password, displayName, familyName) => {
