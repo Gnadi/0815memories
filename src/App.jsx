@@ -7,6 +7,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import NotificationPrompt from './components/NotificationPrompt'
+import AnniversaryReminder from './components/AnniversaryReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
@@ -15,6 +16,7 @@ import { getSubdomainSlug } from './utils/familySlug'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import InviteRedeemPage from './pages/InviteRedeemPage'
 
 // Lazy loaded — protected pages, only needed after authentication
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -76,6 +78,7 @@ function AppNotifications() {
   return (
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
+      {isAuthenticated && <AnniversaryReminder />}
 
       {/* In-app toast for foreground push messages */}
       {toast && (
@@ -107,6 +110,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/family/:slug" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/invite" element={<InviteRedeemPage />} />
             <Route
               path="/home"
               element={

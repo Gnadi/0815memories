@@ -7,6 +7,7 @@ import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive } from
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
+import ManageAdminsPanel from './ManageAdminsPanel'
 
 export default function SettingsPanel() {
   const { familyId } = useAuth()
@@ -246,6 +247,9 @@ export default function SettingsPanel() {
           </button>
         </div>
       </div>
+
+      {/* Manage Admins */}
+      <ManageAdminsPanel />
 
       {/* NAS Export / Backup */}
       <div className="mt-6 pt-6 border-t border-cream-dark">
