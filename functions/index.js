@@ -5,8 +5,10 @@
  *   Triggered when a document is created in the `notificationsQueue` collection.
  *   Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
  *
- * The daily anniversary reminder is handled by a Vercel Cron Job (api/anniversary-cron.js)
- * instead of a Firebase Scheduled Function — no Blaze plan required.
+ * The daily anniversary reminder is enqueued client-side by
+ * useAnniversaryReminder when an admin opens the app — no scheduler, no
+ * service-account JSON. This function still consumes the queue and fans out
+ * to FCM tokens.
  *
  * No credentials needed — Firebase injects the service account automatically
  * when running inside Cloud Functions.

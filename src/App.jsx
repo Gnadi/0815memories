@@ -7,6 +7,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import NotificationPrompt from './components/NotificationPrompt'
+import AnniversaryReminder from './components/AnniversaryReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
@@ -77,6 +78,7 @@ function AppNotifications() {
   return (
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
+      {isAuthenticated && <AnniversaryReminder />}
 
       {/* In-app toast for foreground push messages */}
       {toast && (
