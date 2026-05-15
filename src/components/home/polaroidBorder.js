@@ -94,9 +94,12 @@ const FRAME_PATTERN_CSS = {
 }
 
 export function getPolaroidFrameStyle(border) {
+  return { backgroundColor: border.color }
+}
+
+export function getPolaroidFramePattern(border) {
   if (border.frameTheme === 'custom' && border.customImageUrl) {
     return {
-      backgroundColor: border.color,
       backgroundImage: `url("${border.customImageUrl}")`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
@@ -106,10 +109,9 @@ export function getPolaroidFrameStyle(border) {
   const pattern = FRAME_PATTERN_CSS[border.frameTheme]
   if (pattern) {
     return {
-      backgroundColor: border.color,
       backgroundImage: pattern.image(border.color),
       backgroundSize: pattern.size,
     }
   }
-  return { backgroundColor: border.color }
+  return null
 }

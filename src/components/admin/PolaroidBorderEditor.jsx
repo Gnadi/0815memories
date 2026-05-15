@@ -7,7 +7,7 @@ import {
   POLAROID_FRAME_THEMES,
   resolvePolaroidBorder,
   isLightPolaroidColor,
-  getPolaroidFrameStyle,
+  getPolaroidFramePattern,
 } from '../home/polaroidBorder'
 import UploadWidget from './UploadWidget'
 
@@ -139,6 +139,7 @@ const PREVIEW_WIDTH_PX = {
 
 function BorderPreview({ border }) {
   const preset = PREVIEW_WIDTH_PX[border.width] || PREVIEW_WIDTH_PX.medium
+  const framePattern = getPolaroidFramePattern(border)
   const lightFrame = isLightPolaroidColor(border.color)
   const contrast = lightFrame ? 'rgba(45, 27, 14, 0.45)' : 'rgba(253, 246, 236, 0.55)'
   const captionColor = lightFrame ? '#2D1B0E' : '#FDF6EC'
@@ -153,7 +154,7 @@ function BorderPreview({ border }) {
     <div
       className="relative shadow-lg"
       style={{
-        ...getPolaroidFrameStyle(border),
+        backgroundColor: border.color,
         paddingTop: preset.frame,
         paddingLeft: preset.frame,
         paddingRight: preset.frame,
@@ -162,6 +163,13 @@ function BorderPreview({ border }) {
         transform: 'rotate(-1.2deg)',
       }}
     >
+      {framePattern && (
+        <div
+          className="absolute left-0 right-0 top-0 pointer-events-none"
+          style={{ ...framePattern, bottom: preset.captionBottom }}
+          aria-hidden="true"
+        />
+      )}
       {border.decoration === 'tape' && (
         <div
           className="absolute pointer-events-none"
@@ -172,10 +180,11 @@ function BorderPreview({ border }) {
             height: 10,
             backgroundColor: 'rgba(254, 240, 138, 0.78)',
             transform: 'translateX(-50%) rotate(-4deg)',
+            zIndex: 2,
           }}
         />
       )}
-      <div className="relative" style={{ aspectRatio: '1 / 1', backgroundColor: 'hsl(30, 30%, 80%)' }}>
+      <div className="relative" style={{ aspectRatio: '1 / 1', backgroundColor: 'hsl(30, 30%, 80%)', zIndex: 1 }}>
         {innerBorder !== 'none' && (
           <div className="absolute inset-0 pointer-events-none" style={{ border: innerBorder }} />
         )}

@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video }
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
-import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFrameStyle } from './polaroidBorder'
+import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFramePattern } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
   thin: { frame: 8, captionBottom: 72 },
@@ -21,6 +21,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
 
   const border = resolvePolaroidBorder(memory.polaroidBorder)
   const preset = WIDTH_PRESETS[border.width] || WIDTH_PRESETS.medium
+  const framePattern = getPolaroidFramePattern(border)
   const lightFrame = isLightPolaroidColor(border.color)
   const contrast = lightFrame ? 'rgba(45, 27, 14, 0.45)' : 'rgba(253, 246, 236, 0.55)'
   const captionTextColor = lightFrame ? '#2D1B0E' : '#FDF6EC'
@@ -66,13 +67,22 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
       <div
         className="relative shadow-xl"
         style={{
-          ...getPolaroidFrameStyle(border),
+          backgroundColor: border.color,
           paddingTop: preset.frame,
           paddingLeft: preset.frame,
           paddingRight: preset.frame,
           paddingBottom: preset.captionBottom,
         }}
       >
+        {/* Frame texture overlay — fills the U around the photo, never the caption strip */}
+        {framePattern && (
+          <div
+            className="absolute left-0 right-0 top-0 pointer-events-none"
+            style={{ ...framePattern, bottom: preset.captionBottom }}
+            aria-hidden="true"
+          />
+        )}
+
         {/* Tape decoration */}
         {border.decoration === 'tape' && (
           <div
@@ -91,7 +101,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
 
         {/* Photo area */}
         <div
-          className="relative aspect-square overflow-hidden bg-cream-dark"
+          className="relative z-[1] aspect-square overflow-hidden bg-cream-dark"
           onTouchStart={allImages.length > 1 ? onTouchStart : undefined}
           onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
         >
