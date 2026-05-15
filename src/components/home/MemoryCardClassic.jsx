@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
@@ -20,13 +20,6 @@ function SprocketRow() {
   )
 }
 
-function tiltFor(id) {
-  if (!id) return 0
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
-  return ((h % 5) - 2) * 0.4
-}
-
 export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
   const [showMenu, setShowMenu] = useState(false)
   const [imgIndex, setImgIndex] = useState(0)
@@ -35,8 +28,6 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
   const touchStartX = useRef(null)
 
   const allImages = memory.images?.length ? memory.images : (memory.imageUrl ? [memory.imageUrl] : [])
-
-  const filmTilt = useMemo(() => tiltFor(memory.id), [memory.id])
 
   const frameNumber = allImages.length > 0 ? imgIndex + 1 : 1
   const frameTotal = allImages.length > 0 ? allImages.length : 1
@@ -68,14 +59,11 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
 
   return (
     <div
-      className="cursor-pointer py-2"
+      className="cursor-pointer py-2 transition-transform odd:-rotate-[1deg] even:rotate-[1deg]"
       onClick={() => navigate(`/memory/${memory.id}`)}
     >
       {/* Film frame */}
-      <div
-        className="relative bg-bark rounded-sm shadow-lg transition-transform"
-        style={{ transform: `rotate(${filmTilt}deg)` }}
-      >
+      <div className="relative bg-bark rounded-sm shadow-lg">
         {/* Top film strip: frame number + date · location + total */}
         <div className="flex items-center gap-3 px-3 pt-2 pb-1 text-cream/95 font-display text-[11px] tracking-[0.18em] uppercase">
           <span className="tabular-nums shrink-0">{frameNumber}</span>
