@@ -364,26 +364,27 @@ function ModernPreview() {
 
 function ClassicPreview() {
   return (
-    <div className="relative">
-      <div className="bg-bark rounded-sm shadow-md p-1 w-20" style={{ transform: 'rotate(-1.2deg)' }}>
-        <div className="flex justify-between px-0.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
-          ))}
-        </div>
-        <div className="aspect-square bg-kaydo-light/60 mx-0.5 my-0.5" />
-        <div className="flex justify-between px-0.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
-          ))}
-        </div>
+    <div className="bg-bark rounded-sm shadow-md p-1 w-20" style={{ transform: 'rotate(-1.2deg)' }}>
+      <div className="flex items-center justify-between gap-0.5 px-0.5 pt-0.5">
+        <span className="block h-0.5 w-1 bg-cream/80 rounded-[1px]" />
+        <span className="block h-0.5 w-6 bg-cream/70 rounded-[1px]" />
+        <span className="block h-0.5 w-1 bg-cream/80 rounded-[1px]" />
       </div>
-      <div
-        className="bg-warm-white rounded-sm shadow-sm w-16 mx-auto -mt-1 px-1.5 py-1"
-        style={{ transform: 'rotate(0.8deg)' }}
-      >
-        <div className="h-1 w-8 bg-bark/70 rounded-full" />
-        <div className="h-1 w-10 bg-bark-muted/40 rounded-full mt-0.5" />
+      <div className="flex justify-between px-0.5 py-0.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
+        ))}
+      </div>
+      <div className="aspect-square bg-kaydo-light/60 mx-0.5" />
+      <div className="flex justify-between px-0.5 py-0.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-0.5 px-0.5 pb-0.5">
+        <span className="block h-0.5 w-1 bg-cream/80 rounded-[1px]" />
+        <span className="block h-0.5 w-7 bg-cream/60 rounded-[1px]" />
+        <span className="block h-0.5 w-1 bg-cream/80 rounded-[1px]" />
       </div>
     </div>
   )

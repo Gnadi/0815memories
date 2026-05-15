@@ -37,11 +37,12 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
   const allImages = memory.images?.length ? memory.images : (memory.imageUrl ? [memory.imageUrl] : [])
 
   const filmTilt = useMemo(() => tiltFor(memory.id), [memory.id])
-  const captionTilt = -filmTilt * 0.6
 
   const frameNumber = allImages.length > 0 ? imgIndex + 1 : 1
   const frameTotal = allImages.length > 0 ? allImages.length : 1
   const totalLabel = `${frameTotal}A`
+
+  const captionText = memory.content || memory.quote || '0815 MEMORIES 200 PX'
 
   const prevImg = (e) => {
     e?.stopPropagation()
@@ -67,7 +68,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
 
   return (
     <div
-      className="cursor-pointer pt-2 pb-3"
+      className="cursor-pointer py-2"
       onClick={() => navigate(`/memory/${memory.id}`)}
     >
       {/* Film frame */}
@@ -75,11 +76,11 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
         className="relative bg-bark rounded-sm shadow-lg transition-transform"
         style={{ transform: `rotate(${filmTilt}deg)` }}
       >
-        {/* Top film strip: frame number + KODAK-style branding */}
-        <div className="flex items-center justify-between px-3 pt-1.5 text-cream/90 font-display text-[10px] tracking-[0.18em] uppercase">
-          <span className="tabular-nums">{frameNumber}</span>
-          <span className="opacity-90">0815&nbsp;MEMORIES&nbsp;200&nbsp;PX</span>
-          <span className="tabular-nums">{totalLabel}</span>
+        {/* Top film strip: frame number + date + total */}
+        <div className="flex items-center gap-3 px-3 pt-2 pb-1 text-cream/95 font-display text-[11px] tracking-[0.18em] uppercase">
+          <span className="tabular-nums shrink-0">{frameNumber}</span>
+          <span className="flex-1 text-center truncate">{formatDate(memory.date)}</span>
+          <span className="tabular-nums shrink-0">{totalLabel}</span>
         </div>
         <SprocketRow />
 
@@ -151,44 +152,31 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Bottom film strip */}
+        {/* Bottom film strip: caption + admin menu */}
         <SprocketRow />
-        <div className="flex items-center justify-between px-3 pb-1.5 text-cream/90 font-display text-[10px] tracking-[0.18em] uppercase">
-          <span className="tabular-nums">{frameNumber}</span>
-          <span className="opacity-80">&#9670;&nbsp;&nbsp;&#9670;&nbsp;&nbsp;&#9670;</span>
-          <span className="tabular-nums">{totalLabel}</span>
-        </div>
-      </div>
-
-      {/* Polaroid-style caption strip */}
-      <div
-        className="relative bg-warm-white rounded-sm shadow-md -mt-1 mx-3 px-4 pt-3 pb-6 transition-transform"
-        style={{ transform: `rotate(${captionTilt}deg)` }}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-serif italic text-base text-bark leading-snug">
-            {formatDate(memory.date)}
-          </p>
-          {isAdmin && (
-            <div className="relative -mr-1 -mt-1">
+        <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-cream/95 font-display text-[11px] tracking-[0.18em] uppercase">
+          <span className="tabular-nums shrink-0">{frameNumber}</span>
+          <span className="flex-1 text-center truncate">{captionText}</span>
+          {isAdmin ? (
+            <div className="relative shrink-0">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setShowMenu(!showMenu)
                 }}
-                className="text-bark-muted hover:text-bark p-1"
+                className="block text-cream/80 hover:text-cream p-0.5 -my-0.5"
               >
-                <MoreHorizontal className="w-5 h-5" />
+                <MoreHorizontal className="w-4 h-4" />
               </button>
               {showMenu && (
-                <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-50 min-w-[140px]">
+                <div className="absolute right-0 bottom-7 bg-white rounded-xl shadow-lg py-2 z-50 min-w-[140px]">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowMenu(false)
                       onEdit?.(memory)
                     }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark normal-case tracking-normal font-sans"
                   >
                     <Pencil className="w-4 h-4" /> Edit
                   </button>
@@ -198,27 +186,17 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
                       setShowMenu(false)
                       onDelete?.(memory.id)
                     }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 normal-case tracking-normal font-sans"
                   >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
                 </div>
               )}
             </div>
+          ) : (
+            <span className="tabular-nums shrink-0">{totalLabel}</span>
           )}
         </div>
-
-        {memory.content && (
-          <p className="mt-1 font-serif italic text-sm text-bark-light line-clamp-2">
-            &ldquo;{memory.content}&rdquo;
-          </p>
-        )}
-
-        {memory.quote && (
-          <p className="mt-2 font-serif italic text-xs text-bark-muted text-center">
-            {memory.quote}
-          </p>
-        )}
       </div>
     </div>
   )
