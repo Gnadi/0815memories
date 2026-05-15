@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
-import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   const [familyId, setFamilyId] = useState(() => localStorage.getItem('fh_familyId'))
   const [encryptionKey, setEncryptionKey] = useState(null)
   const [keyLoading, setKeyLoading] = useState(false)
+  const [memoryCardStyle, setMemoryCardStyle] = useState('modern')
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
@@ -59,6 +60,7 @@ export function AuthProvider({ children }) {
             const key = await importEncryptionKey(data.encryptionKeyJwk)
             setEncryptionKey(key)
           }
+          setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
         }
       } catch (err) {
         if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
@@ -68,6 +70,19 @@ export function AuthProvider({ children }) {
     }
     loadKey()
   }, [familyId, user])
+
+  // Live-subscribe to memoryCardStyle changes so admins flipping the toggle
+  // in Settings see the home feed switch without a reload.
+  useEffect(() => {
+    if (!familyId || !db) return
+    const unsub = onSnapshot(doc(db, 'families', familyId), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data()
+        setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
+      }
+    })
+    return unsub
+  }, [familyId])
 
   const resolveFamilyId = async (uid) => {
     // Primary lookup: multi-admin shape.
@@ -176,6 +191,7 @@ export function AuthProvider({ children }) {
     setIsViewer(false)
     setFamilyId(null)
     setEncryptionKey(null)
+    setMemoryCardStyle('modern')
     localStorage.removeItem('fh_viewer')
     localStorage.removeItem('fh_familyId')
   }
@@ -191,6 +207,7 @@ export function AuthProvider({ children }) {
       isAuthenticated,
       familyId,
       encryptionKey,
+      memoryCardStyle,
       loading,
       keyLoading,
       firebaseReady,

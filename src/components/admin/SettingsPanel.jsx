@@ -3,7 +3,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import bcrypt from 'bcryptjs'
-import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive } from 'lucide-react'
+import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
@@ -16,6 +16,7 @@ export default function SettingsPanel() {
   const [familySlug, setFamilySlug] = useState('')
   const [loginHeaderImage, setLoginHeaderImage] = useState('')
   const [loginHeaderImagePublicId, setLoginHeaderImagePublicId] = useState('')
+  const [memoryCardStyle, setMemoryCardStyle] = useState('modern')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -36,6 +37,7 @@ export default function SettingsPanel() {
         setFamilySlug(data.familySlug || '')
         setLoginHeaderImage(data.loginHeaderImage || '')
         setLoginHeaderImagePublicId(data.loginHeaderImagePublicId || '')
+        setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
       }
     }
     loadFamily()
@@ -118,6 +120,29 @@ export default function SettingsPanel() {
       document.body.removeChild(input)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleSelectCardStyle = async (style) => {
+    if (!familyId || saving) return
+    if (style !== 'modern' && style !== 'classic') return
+    if (style === memoryCardStyle) return
+    setSaving(true)
+    const previous = memoryCardStyle
+    setMemoryCardStyle(style)
+    try {
+      await setDoc(
+        doc(db, 'families', familyId),
+        { memoryCardStyle: style },
+        { merge: true }
+      )
+      setMessage(style === 'classic' ? 'Switched to Classic memory cards' : 'Switched to Modern memory cards')
+      setTimeout(() => setMessage(''), 3000)
+    } catch {
+      setMemoryCardStyle(previous)
+      setMessage('Failed to update memory card style')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -251,6 +276,37 @@ export default function SettingsPanel() {
       {/* Manage Admins */}
       <ManageAdminsPanel />
 
+      {/* Memory card style */}
+      <div className="mt-6 pt-6 border-t border-cream-dark">
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <Camera className="w-4 h-4" />
+            Memory Card Style
+          </div>
+        </label>
+        <p className="text-xs text-bark-muted mb-3">
+          Choose how memories look in your family home feed. Everyone in the family sees the same style.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <CardStylePreview
+            label="Modern"
+            description="Clean and bright."
+            selected={memoryCardStyle === 'modern'}
+            disabled={saving}
+            onSelect={() => handleSelectCardStyle('modern')}
+            preview={<ModernPreview />}
+          />
+          <CardStylePreview
+            label="Classic"
+            description="Vintage film look."
+            selected={memoryCardStyle === 'classic'}
+            disabled={saving}
+            onSelect={() => handleSelectCardStyle('classic')}
+            preview={<ClassicPreview />}
+          />
+        </div>
+      </div>
+
       {/* NAS Export / Backup */}
       <div className="mt-6 pt-6 border-t border-cream-dark">
         <label className="block text-sm font-medium text-bark mb-1.5">
@@ -264,6 +320,70 @@ export default function SettingsPanel() {
           Save it to your NAS, external drive, or cloud storage for safekeeping.
         </p>
         <NasExportButton />
+      </div>
+    </div>
+  )
+}
+
+function CardStylePreview({ label, description, selected, disabled, onSelect, preview }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={`text-left rounded-2xl border-2 p-3 transition-all ${
+        selected
+          ? 'border-kaydo bg-cream shadow-sm'
+          : 'border-cream-dark bg-warm-white hover:border-kaydo/50'
+      } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+      aria-pressed={selected}
+    >
+      <div className="h-28 mb-2 rounded-xl overflow-hidden bg-cream-dark/40 flex items-center justify-center">
+        {preview}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-bark">{label}</span>
+        {selected && <Check className="w-4 h-4 text-kaydo" />}
+      </div>
+      <p className="text-xs text-bark-muted mt-0.5">{description}</p>
+    </button>
+  )
+}
+
+function ModernPreview() {
+  return (
+    <div className="bg-warm-white rounded-lg shadow-sm w-20">
+      <div className="aspect-square bg-kaydo-light/50 rounded-t-lg" />
+      <div className="px-2 py-1.5">
+        <div className="h-1 w-10 bg-kaydo rounded-full" />
+        <div className="h-1 w-14 bg-bark-muted/50 rounded-full mt-1" />
+      </div>
+    </div>
+  )
+}
+
+function ClassicPreview() {
+  return (
+    <div className="relative">
+      <div className="bg-bark rounded-sm shadow-md p-1 w-20" style={{ transform: 'rotate(-1.2deg)' }}>
+        <div className="flex justify-between px-0.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
+          ))}
+        </div>
+        <div className="aspect-square bg-kaydo-light/60 mx-0.5 my-0.5" />
+        <div className="flex justify-between px-0.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span key={i} className="block w-1 h-0.5 rounded-[1px] bg-cream/80" />
+          ))}
+        </div>
+      </div>
+      <div
+        className="bg-warm-white rounded-sm shadow-sm w-16 mx-auto -mt-1 px-1.5 py-1"
+        style={{ transform: 'rotate(0.8deg)' }}
+      >
+        <div className="h-1 w-8 bg-bark/70 rounded-full" />
+        <div className="h-1 w-10 bg-bark-muted/40 rounded-full mt-0.5" />
       </div>
     </div>
   )
