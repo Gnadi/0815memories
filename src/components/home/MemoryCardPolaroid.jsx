@@ -60,7 +60,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
 
   return (
     <div
-      className="cursor-pointer relative"
+      className={`cursor-pointer relative ${showMenu ? 'z-30' : ''}`}
       onClick={() => navigate(`/memory/${memory.id}`)}
       style={{ transform: 'rotate(-1.2deg)', transition: 'transform 200ms' }}
     >
@@ -219,9 +219,9 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
 
         {/* Caption strip — fills the wide bottom margin */}
         <div
-          className="absolute left-0 right-0 flex items-start justify-between gap-2"
+          className="absolute left-0 right-0 bottom-0 flex items-center justify-between gap-2"
           style={{
-            bottom: 8,
+            height: preset.captionBottom,
             paddingLeft: preset.frame + 6,
             paddingRight: preset.frame + 6,
           }}
