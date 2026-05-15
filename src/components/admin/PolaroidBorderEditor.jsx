@@ -4,9 +4,12 @@ import {
   POLAROID_WIDTHS,
   POLAROID_STYLES,
   POLAROID_DECORATIONS,
+  POLAROID_FRAME_THEMES,
   resolvePolaroidBorder,
   isLightPolaroidColor,
+  getPolaroidFrameStyle,
 } from '../home/polaroidBorder'
+import UploadWidget from './UploadWidget'
 
 export default function PolaroidBorderEditor({ value, onChange }) {
   const border = resolvePolaroidBorder(value)
@@ -25,6 +28,32 @@ export default function PolaroidBorderEditor({ value, onChange }) {
       <div className="flex justify-center mb-4">
         <BorderPreview border={border} />
       </div>
+
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Theme</p>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {POLAROID_FRAME_THEMES.map(({ id, label }) => (
+          <ToggleButton
+            key={id}
+            active={border.frameTheme === id}
+            onClick={() => update({ frameTheme: id })}
+            label={label}
+          />
+        ))}
+      </div>
+      {border.frameTheme === 'custom' && (
+        <div className="mb-3">
+          <p className="text-xs text-bark-muted mb-2">
+            Upload a small image to use as this card's polaroid frame texture. It fills the entire frame area.
+          </p>
+          <UploadWidget
+            unencrypted
+            currentUrl={border.customImageUrl}
+            onUpload={(url, publicId) =>
+              update({ customImageUrl: url, customImagePublicId: publicId })
+            }
+          />
+        </div>
+      )}
 
       <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Color</p>
       <div className="grid grid-cols-7 gap-2 mb-3">
@@ -103,9 +132,9 @@ function ToggleButton({ active, onClick, label }) {
 }
 
 const PREVIEW_WIDTH_PX = {
-  thin: { frame: 5, captionBottom: 24 },
-  medium: { frame: 8, captionBottom: 32 },
-  thick: { frame: 12, captionBottom: 44 },
+  thin: { frame: 5, captionBottom: 36 },
+  medium: { frame: 8, captionBottom: 40 },
+  thick: { frame: 12, captionBottom: 50 },
 }
 
 function BorderPreview({ border }) {
@@ -124,7 +153,7 @@ function BorderPreview({ border }) {
     <div
       className="relative shadow-lg"
       style={{
-        backgroundColor: border.color,
+        ...getPolaroidFrameStyle(border),
         paddingTop: preset.frame,
         paddingLeft: preset.frame,
         paddingRight: preset.frame,

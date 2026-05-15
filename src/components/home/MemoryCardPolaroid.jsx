@@ -4,12 +4,12 @@ import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video }
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
-import { resolvePolaroidBorder, isLightPolaroidColor } from './polaroidBorder'
+import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFrameStyle } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
-  thin: { frame: 8, captionBottom: 48 },
-  medium: { frame: 14, captionBottom: 72 },
-  thick: { frame: 22, captionBottom: 96 },
+  thin: { frame: 8, captionBottom: 72 },
+  medium: { frame: 14, captionBottom: 84 },
+  thick: { frame: 22, captionBottom: 104 },
 }
 
 export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
@@ -66,7 +66,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
       <div
         className="relative shadow-xl"
         style={{
-          backgroundColor: border.color,
+          ...getPolaroidFrameStyle(border),
           paddingTop: preset.frame,
           paddingLeft: preset.frame,
           paddingRight: preset.frame,
@@ -227,7 +227,19 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
               className="text-[11px] mt-0.5 truncate"
               style={{ color: captionMutedColor }}
             >
-              {memory.title ? formatDate(memory.date) : memory.quote || ''}
+              {memory.title ? (
+                <>
+                  {formatDate(memory.date)}
+                  {memory.location && (
+                    <>
+                      <span className="mx-1.5 opacity-70">·</span>
+                      {memory.location}
+                    </>
+                  )}
+                </>
+              ) : (
+                memory.location || memory.quote || ''
+              )}
             </p>
           </div>
           {isAdmin && (
