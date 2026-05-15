@@ -37,7 +37,8 @@ export default function SettingsPanel() {
         setFamilySlug(data.familySlug || '')
         setLoginHeaderImage(data.loginHeaderImage || '')
         setLoginHeaderImagePublicId(data.loginHeaderImagePublicId || '')
-        setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
+        const style = data.memoryCardStyle
+        setMemoryCardStyle(style === 'classic' || style === 'polaroid' ? style : 'modern')
       }
     }
     loadFamily()
@@ -125,7 +126,7 @@ export default function SettingsPanel() {
 
   const handleSelectCardStyle = async (style) => {
     if (!familyId || saving) return
-    if (style !== 'modern' && style !== 'classic') return
+    if (style !== 'modern' && style !== 'classic' && style !== 'polaroid') return
     if (style === memoryCardStyle) return
     setSaving(true)
     const previous = memoryCardStyle
@@ -136,7 +137,12 @@ export default function SettingsPanel() {
         { memoryCardStyle: style },
         { merge: true }
       )
-      setMessage(style === 'classic' ? 'Switched to Classic memory cards' : 'Switched to Modern memory cards')
+      const messages = {
+        classic: 'Switched to Classic memory cards',
+        polaroid: 'Switched to Polaroid memory cards',
+        modern: 'Switched to Modern memory cards',
+      }
+      setMessage(messages[style])
       setTimeout(() => setMessage(''), 3000)
     } catch {
       setMemoryCardStyle(previous)
@@ -287,7 +293,7 @@ export default function SettingsPanel() {
         <p className="text-xs text-bark-muted mb-3">
           Choose how memories look in your family home feed. Everyone in the family sees the same style.
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <CardStylePreview
             label="Modern"
             description="Clean and bright."
@@ -304,7 +310,20 @@ export default function SettingsPanel() {
             onSelect={() => handleSelectCardStyle('classic')}
             preview={<ClassicPreview />}
           />
+          <CardStylePreview
+            label="Polaroid"
+            description="Instant photo with per-card border."
+            selected={memoryCardStyle === 'polaroid'}
+            disabled={saving}
+            onSelect={() => handleSelectCardStyle('polaroid')}
+            preview={<PolaroidPreview />}
+          />
         </div>
+        {memoryCardStyle === 'polaroid' && (
+          <p className="text-xs text-bark-muted mt-3">
+            Tip: customize each memory's border color, width, style, and decoration when posting or editing it.
+          </p>
+        )}
       </div>
 
       {/* NAS Export / Backup */}
@@ -358,6 +377,18 @@ function ModernPreview() {
         <div className="h-1 w-10 bg-kaydo rounded-full" />
         <div className="h-1 w-14 bg-bark-muted/50 rounded-full mt-1" />
       </div>
+    </div>
+  )
+}
+
+function PolaroidPreview() {
+  return (
+    <div
+      className="bg-warm-white shadow-md w-20"
+      style={{ transform: 'rotate(-1.2deg)', padding: '4px 4px 18px' }}
+    >
+      <div className="aspect-square bg-kaydo-light/60" />
+      <p className="text-[7px] text-bark text-center mt-1 font-display tracking-wide">Memory</p>
     </div>
   )
 }

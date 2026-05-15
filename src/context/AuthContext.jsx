@@ -8,6 +8,9 @@ import { generateEncryptionKey, importEncryptionKey } from '../utils/encryption'
 
 const AuthContext = createContext(null)
 
+const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
+const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
@@ -60,7 +63,7 @@ export function AuthProvider({ children }) {
             const key = await importEncryptionKey(data.encryptionKeyJwk)
             setEncryptionKey(key)
           }
-          setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
+          setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
         }
       } catch (err) {
         if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
@@ -78,7 +81,7 @@ export function AuthProvider({ children }) {
     const unsub = onSnapshot(doc(db, 'families', familyId), (snap) => {
       if (snap.exists()) {
         const data = snap.data()
-        setMemoryCardStyle(data.memoryCardStyle === 'classic' ? 'classic' : 'modern')
+        setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
       }
     })
     return unsub
