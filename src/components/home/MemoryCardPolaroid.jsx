@@ -7,9 +7,9 @@ import EncryptedImage from '../media/EncryptedImage'
 import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFramePattern } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
-  thin: { frame: 8, captionBottom: 72 },
-  medium: { frame: 14, captionBottom: 84 },
-  thick: { frame: 22, captionBottom: 104 },
+  thin: { frame: 8, captionBottom: 72, titleClass: 'text-base', subtitleClass: 'text-[11px]' },
+  medium: { frame: 14, captionBottom: 84, titleClass: 'text-base', subtitleClass: 'text-[11px]' },
+  thick: { frame: 22, captionBottom: 104, titleClass: 'text-xl', subtitleClass: 'text-sm' },
 }
 
 export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
@@ -228,13 +228,13 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
         >
           <div className="flex-1 min-w-0 text-center">
             <p
-              className="font-display text-base leading-tight truncate"
+              className={`font-display ${preset.titleClass} leading-tight truncate`}
               style={{ color: captionTextColor }}
             >
               {memory.title || formatDate(memory.date)}
             </p>
             <p
-              className="text-[11px] mt-0.5 truncate"
+              className={`${preset.subtitleClass} mt-0.5 truncate`}
               style={{ color: captionMutedColor }}
             >
               {memory.title ? (
