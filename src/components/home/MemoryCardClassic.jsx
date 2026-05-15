@@ -76,10 +76,18 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
         className="relative bg-bark rounded-sm shadow-lg transition-transform"
         style={{ transform: `rotate(${filmTilt}deg)` }}
       >
-        {/* Top film strip: frame number + date + total */}
+        {/* Top film strip: frame number + date · location + total */}
         <div className="flex items-center gap-3 px-3 pt-2 pb-1 text-cream/95 font-display text-[11px] tracking-[0.18em] uppercase">
           <span className="tabular-nums shrink-0">{frameNumber}</span>
-          <span className="flex-1 text-center truncate">{formatDate(memory.date)}</span>
+          <span className="flex-1 text-center truncate">
+            {formatDate(memory.date)}
+            {memory.location && (
+              <>
+                <span className="mx-2 text-cream/60">&bull;</span>
+                {memory.location}
+              </>
+            )}
+          </span>
           <span className="tabular-nums shrink-0">{totalLabel}</span>
         </div>
         <SprocketRow />
