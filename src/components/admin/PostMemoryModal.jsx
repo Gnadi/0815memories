@@ -8,6 +8,8 @@ import { useMediaUploader } from '../../hooks/useMediaUploader'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
+import PolaroidBorderEditor from './PolaroidBorderEditor'
+import { resolvePolaroidBorder } from '../home/polaroidBorder'
 
 const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
 
@@ -36,7 +38,7 @@ function buildInitialVideos(memory) {
 }
 
 export default function PostMemoryModal({ memory, onClose, onSave }) {
-  const { encryptionKey } = useAuth()
+  const { encryptionKey, memoryCardStyle } = useAuth()
   const {
     images,
     videos,
@@ -60,6 +62,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     location: memory?.location || '',
     authorName: memory?.authorName || '',
     featured: memory?.featured || false,
+    polaroidBorder: resolvePolaroidBorder(memory?.polaroidBorder),
     date: memory?.date
       ? new Date(memory.date.seconds ? memory.date.seconds * 1000 : memory.date)
           .toISOString()
@@ -470,6 +473,14 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             />
             <span className="text-sm text-bark">Feature this memory on the homepage</span>
           </label>
+
+          {/* Per-card polaroid border — only visible when polaroid style is active */}
+          {memoryCardStyle === 'polaroid' && (
+            <PolaroidBorderEditor
+              value={form.polaroidBorder}
+              onChange={(next) => setForm((prev) => ({ ...prev, polaroidBorder: next }))}
+            />
+          )}
 
           {/* Submit */}
           <button
