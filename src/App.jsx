@@ -1,6 +1,10 @@
+/* eslint-disable react-refresh/only-export-components --
+   This module is the route-config entry for vite-react-ssg: it exports the
+   `routes` table alongside the layout components it references, so the
+   fast-refresh "components-only export" rule does not apply here. */
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -37,11 +41,18 @@ const ScrapbooksPage = lazy(() => import('./pages/ScrapbooksPage'))
 const ScrapbookEditorPage = lazy(() => import('./pages/ScrapbookEditorPage'))
 const SmartTimelinePage = lazy(() => import('./pages/SmartTimelinePage'))
 
+// On a family subdomain (e.g. the-millers.kaydo.app) send visitors to /login;
+// on the apex domain show the marketing landing page. The redirect runs in an
+// effect (post-mount) so the server pre-render and the client's first render
+// both produce <LandingPage /> — avoiding a hydration mismatch on the static
+// "/" output, which is built for the apex.
 function SubdomainRedirect() {
-  const subdomain = getSubdomainSlug()
-  if (subdomain) {
-    return <Navigate to="/login" replace />
-  }
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (getSubdomainSlug()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
   return <LandingPage />
 }
 
@@ -100,176 +111,58 @@ function AppNotifications() {
   )
 }
 
-export default function App() {
+// Root layout: providers + global UI shared by every route. The active route's
+// element renders into <Outlet />. Replaces the old <BrowserRouter>/<Routes> tree
+// so vite-react-ssg can drive the data router and pre-render static routes.
+function Layout() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<SubdomainRedirect />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/family/:slug" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/invite" element={<InviteRedeemPage />} />
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/memory/:id"
-              element={
-                <ProtectedRoute>
-                  <MemoryDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/moments"
-              element={
-                <ProtectedRoute>
-                  <MomentsAllPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/timeline"
-              element={
-                <ProtectedRoute>
-                  <SmartTimelinePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal"
-              element={
-                <ProtectedRoute>
-                  <KidsJournalPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal/:childId"
-              element={
-                <ProtectedRoute>
-                  <JournalArchivePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal/:childId/new"
-              element={
-                <ProtectedRoute>
-                  <JournalEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal/:childId/edit/:entryId"
-              element={
-                <ProtectedRoute>
-                  <JournalEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/journal/:childId/view/:entryId"
-              element={
-                <ProtectedRoute>
-                  <JournalDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/blackbox"
-              element={
-                <ProtectedRoute>
-                  <BlackBoxPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/blackbox/new"
-              element={
-                <ProtectedRoute>
-                  <CreateBlackBoxPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recipes"
-              element={
-                <ProtectedRoute>
-                  <RecipesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recipes/new"
-              element={
-                <ProtectedRoute>
-                  <CreateRecipePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recipes/:id"
-              element={
-                <ProtectedRoute>
-                  <RecipeJourneyPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recipes/:id/fork"
-              element={
-                <ProtectedRoute>
-                  <CreateRecipePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recipes/:rootId/version/:versionId"
-              element={
-                <ProtectedRoute>
-                  <RecipeVersionDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/scrapbook"
-              element={
-                <ProtectedRoute>
-                  <ScrapbooksPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/scrapbook/:id"
-              element={
-                <ProtectedRoute>
-                  <ScrapbookEditorPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Suspense>
-        <AdminMobileBottomNav />
-        <PWAInstallPrompt />
-        <AppNotifications />
-      </AuthProvider>
+    <AuthProvider>
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
+      <AdminMobileBottomNav />
+      <PWAInstallPrompt />
+      <AppNotifications />
       <Analytics />
-    </BrowserRouter>
+    </AuthProvider>
   )
 }
+
+// Helper to wrap a protected page element. Keeps the route table compact.
+const protect = (element) => <ProtectedRoute>{element}</ProtectedRoute>
+
+// Route table consumed by ViteReactSSG (src/main.jsx). Only the index route ("/")
+// is pre-rendered to static HTML; all other routes stay client-side (see the
+// includedRoutes filter in main.jsx).
+export const routes = [
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      { index: true, element: <SubdomainRedirect /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'family/:slug', element: <LoginPage /> },
+      { path: 'signup', element: <SignupPage /> },
+      { path: 'invite', element: <InviteRedeemPage /> },
+      { path: 'home', element: protect(<HomePage />) },
+      { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
+      { path: 'moments', element: protect(<MomentsAllPage />) },
+      { path: 'timeline', element: protect(<SmartTimelinePage />) },
+      { path: 'settings', element: protect(<SettingsPage />) },
+      { path: 'journal', element: protect(<KidsJournalPage />) },
+      { path: 'journal/:childId', element: protect(<JournalArchivePage />) },
+      { path: 'journal/:childId/new', element: protect(<JournalEntryPage />) },
+      { path: 'journal/:childId/edit/:entryId', element: protect(<JournalEntryPage />) },
+      { path: 'journal/:childId/view/:entryId', element: protect(<JournalDetailPage />) },
+      { path: 'blackbox', element: protect(<BlackBoxPage />) },
+      { path: 'blackbox/new', element: protect(<CreateBlackBoxPage />) },
+      { path: 'recipes', element: protect(<RecipesPage />) },
+      { path: 'recipes/new', element: protect(<CreateRecipePage />) },
+      { path: 'recipes/:id', element: protect(<RecipeJourneyPage />) },
+      { path: 'recipes/:id/fork', element: protect(<CreateRecipePage />) },
+      { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
+      { path: 'scrapbook', element: protect(<ScrapbooksPage />) },
+      { path: 'scrapbook/:id', element: protect(<ScrapbookEditorPage />) },
+    ],
+  },
+]

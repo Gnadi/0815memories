@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Head } from 'vite-react-ssg'
 import { useAuth } from '../context/AuthContext'
 import {
   Shield,
@@ -46,6 +47,66 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-cream font-sans">
+      {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
+      <Head>
+        <title>Kaydo — Private, Encrypted Family Memory App</title>
+        <meta
+          name="description"
+          content="Kaydo is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling — just your stories, preserved forever."
+        />
+        <meta name="robots" content="index,follow" />
+        <link rel="canonical" href="https://kaydo.app/" />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Kaydo" />
+        <meta property="og:title" content="Kaydo — Your Private Digital Home" />
+        <meta
+          property="og:description"
+          content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever."
+        />
+        <meta property="og:url" content="https://kaydo.app/" />
+        <meta property="og:image" content="https://kaydo.app/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Kaydo — Your Private Digital Home" />
+        <meta property="og:locale" content="en_US" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Kaydo — Your Private Digital Home" />
+        <meta
+          name="twitter:description"
+          content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories."
+        />
+        <meta name="twitter:image" content="https://kaydo.app/og-image.png" />
+        <meta name="twitter:image:alt" content="Kaydo — Your Private Digital Home" />
+
+        {/* Structured data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'Kaydo',
+            description:
+              "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
+            url: 'https://kaydo.app',
+            applicationCategory: 'LifestyleApplication',
+            operatingSystem: 'Web',
+            offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            featureList: [
+              'End-to-end encrypted memory storage',
+              'Private family photo and video sharing',
+              'Family recipe tree with version history',
+              'Digital scrapbook with PDF export',
+              'Scheduled future letters to family members',
+              'Zero-knowledge encrypted vault',
+            ],
+            publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
+          })}
+        </script>
+      </Head>
+
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-cream border-b border-cream-dark">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
