@@ -248,7 +248,7 @@ function SignupForm({
         </div>
         {slugPreview && (
           <p className="text-xs text-bark-muted mt-1.5">
-            Your family URL: <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
+            Your family URL: <span className="font-medium text-kaydo">{typeof window !== 'undefined' ? window.location.origin : 'https://kaydo.app'}/family/{slugPreview}</span>
           </p>
         )}
       </div>
