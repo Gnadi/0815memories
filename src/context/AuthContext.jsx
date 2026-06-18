@@ -14,7 +14,9 @@ const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
-  const [familyId, setFamilyId] = useState(() => localStorage.getItem('fh_familyId'))
+  const [familyId, setFamilyId] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('fh_familyId') : null
+  )
   const [encryptionKey, setEncryptionKey] = useState(null)
   const [keyLoading, setKeyLoading] = useState(false)
   const [memoryCardStyle, setMemoryCardStyle] = useState('modern')

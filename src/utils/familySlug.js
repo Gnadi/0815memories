@@ -21,6 +21,8 @@ export function generateSlug(name) {
  * E.g. "the-millers.familyheart.com" → "the-millers"
  */
 export function getSubdomainSlug() {
+  // Guard for static pre-rendering (vite-react-ssg renders in Node, no window).
+  if (typeof window === 'undefined') return null
   const hostname = window.location.hostname
 
   // Skip localhost and IP addresses

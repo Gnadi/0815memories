@@ -17,7 +17,10 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // SW registration is done manually (client-only) in src/main.jsx so it
+      // never runs during the SSG prerender pass; disable auto-injection to
+      // avoid double registration.
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'og-image.png'],
       manifest: {
         name: 'Kaydo',

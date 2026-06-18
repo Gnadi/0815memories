@@ -4,30 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Primary SEO -->
-    <title>Kaydo — Private Family Memory App</title>
-    <meta name="description" content="Kaydo is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling. Just your stories, preserved forever." />
+    <!-- Primary SEO (global defaults; per-page title, description and canonical
+         are injected by react-helmet-async on the pre-rendered pages) -->
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://kaydo.app/" />
     <meta name="author" content="Kaydo" />
     <meta name="keywords" content="family memories, private photo sharing, encrypted family app, family journal, recipe keeper, digital scrapbook" />
 
-    <!-- Open Graph / Social -->
+    <!-- Open Graph / Social (shared across pages; og:title/description/url set per page) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Kaydo" />
-    <meta property="og:title" content="Kaydo — Your Private Digital Home" />
-    <meta property="og:description" content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever." />
     <meta property="og:image" content="https://kaydo.app/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Kaydo — Your Private Digital Home" />
-    <meta property="og:url" content="https://kaydo.app/" />
     <meta property="og:locale" content="en_US" />
 
-    <!-- Twitter Card -->
+    <!-- Twitter Card (shared; title/description set per page) -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Kaydo — Your Private Digital Home" />
-    <meta name="twitter:description" content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories." />
     <meta name="twitter:image" content="https://kaydo.app/og-image.png" />
     <meta name="twitter:image:alt" content="Kaydo — Your Private Digital Home" />
 
@@ -55,37 +48,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet" />
-
-    <!-- JSON-LD Structured Data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Kaydo",
-      "description": "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
-      "url": "https://kaydo.app",
-      "applicationCategory": "LifestyleApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": [
-        "End-to-end encrypted memory storage",
-        "Private family photo and video sharing",
-        "Family recipe tree with version history",
-        "Digital scrapbook with PDF export",
-        "Scheduled future letters to family members",
-        "Zero-knowledge encrypted vault"
-      ],
-      "publisher": {
-        "@type": "Organization",
-        "name": "Kaydo",
-        "url": "https://kaydo.app"
-      }
-    }
-    </script>
   </head>
   <body>
     <div id="root"></div>

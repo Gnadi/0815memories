@@ -1,0 +1,31 @@
+diff --git a/node_modules/react-router-dom/package.json b/node_modules/react-router-dom/package.json
+index 94aa2ad..6de98e3 100644
+--- a/node_modules/react-router-dom/package.json
++++ b/node_modules/react-router-dom/package.json
+@@ -38,6 +38,26 @@
+         "default": "./dist/index.js"
+       }
+     },
++    "./server": {
++      "import": {
++        "types": "./dist/index.d.mts",
++        "default": "./dist/index.mjs"
++      },
++      "default": {
++        "types": "./dist/index.d.ts",
++        "default": "./dist/index.js"
++      }
++    },
++    "./server.js": {
++      "import": {
++        "types": "./dist/index.d.mts",
++        "default": "./dist/index.mjs"
++      },
++      "default": {
++        "types": "./dist/index.d.ts",
++        "default": "./dist/index.js"
++      }
++    },
+     "./package.json": "./package.json"
+   },
+   "wireit": {
