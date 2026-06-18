@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Head } from 'vite-react-ssg'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
@@ -59,6 +60,16 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
+      <Head>
+        <title>Create your family — Kaydo</title>
+        <meta name="description" content="Create a private, encrypted Kaydo home for your family in minutes. Share memories, journals and recipes with no ads and no AI training." />
+        <link rel="canonical" href="https://kaydo.app/signup" />
+        <meta property="og:title" content="Create your family — Kaydo" />
+        <meta property="og:description" content="Create a private, encrypted Kaydo home for your family in minutes." />
+        <meta property="og:url" content="https://kaydo.app/signup" />
+        <meta name="twitter:title" content="Create your family — Kaydo" />
+        <meta name="twitter:description" content="Create a private, encrypted Kaydo home for your family in minutes." />
+      </Head>
       {/* Desktop header — hidden on mobile */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
         <div className="flex items-center gap-2 text-bark font-semibold text-lg">

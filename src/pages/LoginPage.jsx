@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Head } from 'vite-react-ssg'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
@@ -107,6 +108,16 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
+      <Head>
+        <title>Sign in — Kaydo</title>
+        <meta name="description" content="Sign in to your family's private Kaydo space — encrypted memories, journals, recipes and more, with no ads or AI training." />
+        <link rel="canonical" href="https://kaydo.app/login" />
+        <meta property="og:title" content="Sign in — Kaydo" />
+        <meta property="og:description" content="Sign in to your family's private, encrypted Kaydo space." />
+        <meta property="og:url" content="https://kaydo.app/login" />
+        <meta name="twitter:title" content="Sign in — Kaydo" />
+        <meta name="twitter:description" content="Sign in to your family's private, encrypted Kaydo space." />
+      </Head>
       {/* Desktop header — hidden on mobile */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
         <div className="flex items-center gap-2 text-bark font-semibold text-lg">
