@@ -29,6 +29,7 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 
 function OctocatIcon({ className }) {
@@ -116,6 +117,9 @@ export default function LandingPage() {
 
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
+            <div className="hidden md:inline-flex">
+              <LanguageSwitcher variant="sidebar" />
+            </div>
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
               className="btn-kaydo text-sm px-5 py-2"
@@ -139,6 +143,9 @@ export default function LandingPage() {
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.features')}</a>
             <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.privacy')}</a>
             <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.security')}</a>
+            <div className="pt-1">
+              <LanguageSwitcher variant="sidebar" />
+            </div>
           </div>
         )}
       </nav>
