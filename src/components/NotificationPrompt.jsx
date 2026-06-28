@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bell, X } from 'lucide-react'
 import { requestAndSaveFCMToken } from '../utils/notifications'
 
@@ -12,6 +13,7 @@ function isDismissed() {
 }
 
 export default function NotificationPrompt({ familyId }) {
+  const { t } = useTranslation('common')
   const [visible, setVisible] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -54,9 +56,9 @@ export default function NotificationPrompt({ familyId }) {
           <Bell className="w-4 h-4 text-kaydo" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-bark">Stay in the loop</p>
+          <p className="text-sm font-semibold text-bark">{t('notifications.title')}</p>
           <p className="text-xs text-bark-muted mt-0.5 leading-relaxed">
-            Get notified when a new memory or moment is shared.
+            {t('notifications.body')}
           </p>
           <div className="flex gap-2 mt-3">
             <button
@@ -64,20 +66,20 @@ export default function NotificationPrompt({ familyId }) {
               disabled={loading}
               className="flex-1 rounded-xl bg-kaydo text-white text-xs font-semibold py-2 hover:bg-kaydo/90 transition-colors disabled:opacity-60"
             >
-              {loading ? 'Enabling…' : 'Enable'}
+              {loading ? t('notifications.enabling') : t('notifications.enable')}
             </button>
             <button
               onClick={handleDismiss}
               className="flex-1 rounded-xl bg-cream-dark text-bark text-xs font-semibold py-2 hover:bg-cream-dark/80 transition-colors"
             >
-              Not now
+              {t('notifications.notNow')}
             </button>
           </div>
         </div>
         <button
           onClick={handleDismiss}
           className="flex-shrink-0 text-bark-muted hover:text-bark transition-colors"
-          aria-label="Dismiss"
+          aria-label={t('actions.dismiss')}
         >
           <X className="w-4 h-4" />
         </button>

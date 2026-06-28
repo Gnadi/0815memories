@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork } from 'lucide-react'
 import { getDoc, doc } from 'firebase/firestore'
@@ -10,7 +11,7 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { devError } from '../utils/devLog'
 
-const STATUS_LABELS = { active: 'Active', removed: 'Removed', modified: 'Modified' }
+const STATUS_KEYS = { active: 'active', removed: 'removed', modified: 'modified' }
 const STATUS_STYLES = {
   active: 'bg-green-100 text-green-700',
   removed: 'bg-red-100 text-red-700 line-through',
@@ -19,6 +20,7 @@ const STATUS_STYLES = {
 const CHANGE_TYPES = ['ADDED', 'REMOVED', 'MODIFIED']
 
 export default function CreateRecipePage() {
+  const { t } = useTranslation('recipes')
   const { id } = useParams()
   const isFork = !!id
   const { isAdmin, familyId, encryptionKey } = useAuth()
@@ -56,7 +58,7 @@ export default function CreateRecipePage() {
         const snap = await getDoc(doc(db, 'recipes', id))
         if (snap.exists()) {
           let data = { id: snap.id, ...snap.data() }
-          if (data.familyId !== familyId) { setForkLoadError('Recipe not found.'); setParentLoading(false); return }
+          if (data.familyId !== familyId) { setForkLoadError(t('form.forkLoadError')); setParentLoading(false); return }
           if (encryptionKey) {
             const { decryptFields, decryptJSON } = await import('../utils/encryption')
             data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
@@ -67,16 +69,16 @@ export default function CreateRecipePage() {
             (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
           )
         } else {
-          setForkLoadError('Original recipe not found.')
+          setForkLoadError(t('form.forkOriginalNotFound'))
         }
       } catch {
-        setForkLoadError('Failed to load recipe. Please go back and try again.')
+        setForkLoadError(t('form.forkLoadFailed'))
       } finally {
         setParentLoading(false)
       }
     }
     load()
-  }, [id, isFork])
+  }, [id, isFork, t])
 
   if (!isAdmin) return null
   if (isFork && parentLoading) {
@@ -91,7 +93,7 @@ export default function CreateRecipePage() {
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4 p-8 text-center">
         <p className="text-bark font-semibold">{forkLoadError}</p>
         <button onClick={() => navigate('/recipes')} className="text-sm text-kaydo font-semibold">
-          ← Back to Recipes
+          {t('journey.backToRecipes')}
         </button>
       </div>
     )
@@ -147,9 +149,9 @@ export default function CreateRecipePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.title.trim()) { setError('Recipe title is required.'); return }
-    if (!form.author.trim()) { setError('Author name is required.'); return }
-    if (image?.uploading) { setError('Please wait for the image to finish uploading.'); return }
+    if (!form.title.trim()) { setError(t('form.errors.titleRequired')); return }
+    if (!form.author.trim()) { setError(t('form.errors.authorRequired')); return }
+    if (image?.uploading) { setError(t('form.errors.imageUploading')); return }
     setError('')
     setSaving(true)
 
@@ -177,7 +179,7 @@ export default function CreateRecipePage() {
       navigate(`/recipes/${targetRootId}`)
     } catch (err) {
       devError('Save error:', err)
-      setError('Something went wrong. Please try again.')
+      setError(t('form.errors.generic'))
     } finally {
       setSaving(false)
     }
@@ -200,7 +202,7 @@ export default function CreateRecipePage() {
           <div className="flex items-center gap-2 flex-1">
             {isFork ? <GitFork className="w-4 h-4 text-kaydo" /> : <ChefHat className="w-4 h-4 text-kaydo" />}
             <span className="font-semibold text-bark text-sm">
-              {isFork ? `Fork of "${parent?.title}"` : 'New Recipe'}
+              {isFork ? t('form.forkOf', { title: parent?.title }) : t('form.newRecipe')}
             </span>
           </div>
         </div>
@@ -218,15 +220,15 @@ export default function CreateRecipePage() {
             <div className="flex items-center gap-2">
               {isFork ? <GitFork className="w-5 h-5 text-kaydo" /> : <ChefHat className="w-5 h-5 text-kaydo" />}
               <h1 className="text-2xl font-bold text-bark">
-                {isFork ? `Fork: "${parent?.title}"` : 'New Recipe'}
+                {isFork ? t('form.forkTitle', { title: parent?.title }) : t('form.newRecipe')}
               </h1>
             </div>
           </div>
 
           {isFork && (
             <div className="bg-kaydo/10 border border-kaydo/20 rounded-2xl px-4 py-3 mb-6 text-sm text-bark">
-              <span className="font-semibold text-kaydo">Forking from:</span>{' '}
-              {parent?.title} ({parent?.year}) by {parent?.author}
+              <span className="font-semibold text-kaydo">{t('form.forkingFrom')}</span>{' '}
+              {t('form.forkingFromValue', { title: parent?.title, year: parent?.year, author: parent?.author })}
             </div>
           )}
 
@@ -234,38 +236,38 @@ export default function CreateRecipePage() {
 
             {/* Card: Recipe Details */}
             <div className="bg-warm-white rounded-2xl p-5 shadow-sm space-y-4">
-              <h2 className="font-bold text-bark text-base">Recipe Details</h2>
+              <h2 className="font-bold text-bark text-base">{t('form.detailsHeading')}</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Recipe Title *
+                    {t('form.titleLabel')}
                   </label>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder={isFork ? 'e.g. The Lentil & Walnut Loaf' : "e.g. Grandma's Meatloaf"}
+                    placeholder={isFork ? t('form.titlePlaceholderFork') : t('form.titlePlaceholderNew')}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Author / Who Made It *
+                    {t('form.authorLabel')}
                   </label>
                   <input
                     type="text"
                     value={form.author}
                     onChange={(e) => setForm((p) => ({ ...p, author: e.target.value }))}
-                    placeholder="e.g. Grandma Rose"
+                    placeholder={t('form.authorPlaceholder')}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Year
+                    {t('form.yearLabel')}
                   </label>
                   <input
                     type="number"
@@ -279,12 +281,12 @@ export default function CreateRecipePage() {
 
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Description
+                    {t('form.descriptionLabel')}
                   </label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="A brief description of the dish and its story..."
+                    placeholder={t('form.descriptionPlaceholder')}
                     rows={2}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
@@ -292,12 +294,12 @@ export default function CreateRecipePage() {
 
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Instructions
+                    {t('form.instructionsLabel')}
                   </label>
                   <textarea
                     value={form.instructions}
                     onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
-                    placeholder="Step-by-step instructions..."
+                    placeholder={t('form.instructionsPlaceholder')}
                     rows={5}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
@@ -305,13 +307,13 @@ export default function CreateRecipePage() {
 
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Chef's Secret Tip <span className="font-normal normal-case">(optional)</span>
+                    {t('form.chefTipLabel')} <span className="font-normal normal-case">{t('form.optional')}</span>
                   </label>
                   <input
                     type="text"
                     value={form.chefNote}
                     onChange={(e) => setForm((p) => ({ ...p, chefNote: e.target.value }))}
-                    placeholder="e.g. The trick is to mash only half the lentils..."
+                    placeholder={t('form.chefTipPlaceholder')}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                   />
                 </div>
@@ -320,11 +322,11 @@ export default function CreateRecipePage() {
               {/* Image upload */}
               <div>
                 <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-2">
-                  Recipe Photo <span className="font-normal normal-case">(optional)</span>
+                  {t('form.photoLabel')} <span className="font-normal normal-case">{t('form.optional')}</span>
                 </label>
                 {image ? (
                   <div className="relative w-full h-40 rounded-xl overflow-hidden">
-                    <img src={image.preview} alt="preview" className="w-full h-full object-cover" />
+                    <img src={image.preview} alt={t('form.photoPreviewAlt')} className="w-full h-full object-cover" />
                     {image.uploading && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -347,7 +349,7 @@ export default function CreateRecipePage() {
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-cream-dark text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
                   >
                     <ImageIcon className="w-4 h-4" />
-                    Upload a photo
+                    {t('form.uploadPhoto')}
                   </button>
                 )}
                 <input
@@ -363,14 +365,14 @@ export default function CreateRecipePage() {
             {/* Card: Ingredients */}
             <div className="bg-warm-white rounded-2xl p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-bold text-bark text-base">Ingredients</h2>
+                <h2 className="font-bold text-bark text-base">{t('form.ingredientsHeading')}</h2>
                 {isFork && (
-                  <span className="text-xs text-bark-muted">Toggle status for each ingredient</span>
+                  <span className="text-xs text-bark-muted">{t('form.toggleStatusHint')}</span>
                 )}
               </div>
 
               {ingredients.length === 0 && (
-                <p className="text-sm text-bark-muted">No ingredients yet — add your first one below.</p>
+                <p className="text-sm text-bark-muted">{t('form.ingredientsEmpty')}</p>
               )}
 
               <div className="space-y-2">
@@ -380,7 +382,7 @@ export default function CreateRecipePage() {
                       type="text"
                       value={ing.name}
                       onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
-                      placeholder="e.g. 2 cups ground lentils"
+                      placeholder={t('form.ingredientPlaceholder')}
                       className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                     />
                     {isFork && (
@@ -396,7 +398,7 @@ export default function CreateRecipePage() {
                                 : 'bg-cream text-bark-muted hover:bg-cream-dark'
                             }`}
                           >
-                            {STATUS_LABELS[s]}
+                            {t(`form.status.${STATUS_KEYS[s]}`)}
                           </button>
                         ))}
                       </div>
@@ -418,23 +420,23 @@ export default function CreateRecipePage() {
                 className="flex items-center gap-1.5 text-sm font-medium text-kaydo hover:text-kaydo-dark transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Add Ingredient
+                {t('form.addIngredient')}
               </button>
             </div>
 
             {/* Card: Fork Story (fork mode only) */}
             {isFork && (
               <div className="bg-warm-white rounded-2xl p-5 shadow-sm space-y-4">
-                <h2 className="font-bold text-bark text-base">The Fork Story</h2>
+                <h2 className="font-bold text-bark text-base">{t('form.forkStoryHeading')}</h2>
 
                 <div>
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    Why did you change this recipe?
+                    {t('form.forkReasonLabel')}
                   </label>
                   <textarea
                     value={form.forkReason}
                     onChange={(e) => setForm((p) => ({ ...p, forkReason: e.target.value }))}
-                    placeholder="e.g. Transitioning to a plant-based lifestyle was important for my health, but I couldn't let go of the Sunday dinners we shared at Grandma's..."
+                    placeholder={t('form.forkReasonPlaceholder')}
                     rows={3}
                     className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
                   />
@@ -443,7 +445,7 @@ export default function CreateRecipePage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide">
-                      Key Changes
+                      {t('form.keyChangesLabel')}
                     </label>
                     <button
                       type="button"
@@ -451,13 +453,13 @@ export default function CreateRecipePage() {
                       className="flex items-center gap-1 text-xs font-medium text-kaydo hover:text-kaydo-dark transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Add Change
+                      {t('form.addChange')}
                     </button>
                   </div>
 
                   {changes.length === 0 && (
                     <p className="text-xs text-bark-muted">
-                      Document the key changes to tell the story of this fork.
+                      {t('form.changesEmpty')}
                     </p>
                   )}
 
@@ -469,22 +471,22 @@ export default function CreateRecipePage() {
                           onChange={(e) => updateChange(change.id, 'type', e.target.value)}
                           className="bg-cream rounded-xl px-3 py-2 text-xs font-semibold text-bark border border-cream-dark focus:outline-none focus:border-kaydo transition-colors shrink-0"
                         >
-                          {CHANGE_TYPES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                          {CHANGE_TYPES.map((type) => (
+                            <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
                         <input
                           type="text"
                           value={change.ingredient}
                           onChange={(e) => updateChange(change.id, 'ingredient', e.target.value)}
-                          placeholder="Ingredient name"
+                          placeholder={t('form.changeIngredientPlaceholder')}
                           className="w-28 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                         />
                         <input
                           type="text"
                           value={change.description}
                           onChange={(e) => updateChange(change.id, 'description', e.target.value)}
-                          placeholder="Why this change?"
+                          placeholder={t('form.changeDescriptionPlaceholder')}
                           className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                         />
                         <button
@@ -514,17 +516,17 @@ export default function CreateRecipePage() {
                 className="btn-kaydo px-6 py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving
-                  ? 'Saving…'
+                  ? t('form.saving')
                   : isFork
-                  ? 'Save Fork'
-                  : 'Add to Vault'}
+                  ? t('form.saveFork')
+                  : t('form.addToVault')}
               </button>
               <button
                 type="button"
                 onClick={() => navigate(isFork ? `/recipes/${id}` : '/recipes')}
                 className="px-4 py-3 text-sm text-bark-muted hover:text-bark transition-colors"
               >
-                Cancel
+                {t('common:buttons.cancel')}
               </button>
             </div>
           </form>

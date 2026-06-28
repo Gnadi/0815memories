@@ -1,0 +1,71 @@
+{
+  "brand": {
+    "livingRoom": "The Living Room",
+    "privateSpace": "Our Private Space"
+  },
+  "nav": {
+    "home": "Home",
+    "timeline": "Timeline",
+    "scrapbooks": "Scrapbooks",
+    "recipes": "Recipes",
+    "kidJournals": "Kid Journals",
+    "blackBox": "Black Box",
+    "settings": "Settings"
+  },
+  "buttons": {
+    "postMemory": "Post a Memory",
+    "leaveRoom": "Leave the Room",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "confirm": "Confirm",
+    "loading": "Loading…"
+  },
+  "language": {
+    "label": "Language",
+    "description": "Choose the language for the app interface.",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "actions": {
+    "dismiss": "Dismiss",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "familyIllustrationAlt": "Family gathering illustration"
+  },
+  "mobileNav": {
+    "home": "Home",
+    "journal": "Journal",
+    "blackBox": "BlackBox",
+    "recipes": "Recipes",
+    "create": "Create"
+  },
+  "createSheet": {
+    "title": "What would you like to create?",
+    "postMemory": "Post a Memory",
+    "postMemoryDesc": "Share photos, stories, videos & voice memos",
+    "createScrapbook": "Create Scrapbook",
+    "createScrapbookDesc": "Design beautiful memory pages with photos & stickers",
+    "defaultScrapbookTitle": "My Scrapbook",
+    "notAuthenticated": "Not authenticated — please reload the app.",
+    "createError": "Could not create scrapbook. Please try again."
+  },
+  "pwa": {
+    "dialogLabel": "Install Kaydo",
+    "tagline": "Add to your home screen for the best experience — works offline too.",
+    "dismiss": "Dismiss install prompt",
+    "install": "Add to Home Screen",
+    "notNow": "Not now"
+  },
+  "notifications": {
+    "title": "Stay in the loop",
+    "body": "Get notified when a new memory or moment is shared.",
+    "enable": "Enable",
+    "enabling": "Enabling…",
+    "notNow": "Not now"
+  }
+}

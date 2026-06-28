@@ -1,15 +1,17 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const STICKER_GROUPS = {
-  Hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '💖', '💝', '💗', '💓'],
-  Nature: ['🌸', '🌺', '🌻', '🌹', '🍃', '🌿', '🌈', '☁️', '⭐', '🌙', '🌞', '🦋'],
-  Events: ['🎂', '🎉', '🎊', '🎁', '🎈', '🎗️', '🏆', '🥇', '🎓', '💒', '🎠', '🎡'],
-  Family: ['🏠', '🏡', '🚗', '✈️', '🍕', '🍰', '🎶', '📸', '🌅', '🐾', '👶', '🐥'],
-  Fun: ['⭐', '✨', '💫', '🌟', '🔥', '🍀', '🦄', '🌺', '🍭', '🎪', '🎨', '🎭'],
+  hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '💖', '💝', '💗', '💓'],
+  nature: ['🌸', '🌺', '🌻', '🌹', '🍃', '🌿', '🌈', '☁️', '⭐', '🌙', '🌞', '🦋'],
+  events: ['🎂', '🎉', '🎊', '🎁', '🎈', '🎗️', '🏆', '🥇', '🎓', '💒', '🎠', '🎡'],
+  family: ['🏠', '🏡', '🚗', '✈️', '🍕', '🍰', '🎶', '📸', '🌅', '🐾', '👶', '🐥'],
+  fun: ['⭐', '✨', '💫', '🌟', '🔥', '🍀', '🦄', '🌺', '🍭', '🎪', '🎨', '🎭'],
 }
 
 export default function StickersPanel({ onAddElement }) {
-  const [group, setGroup] = useState('Hearts')
+  const { t } = useTranslation('scrapbook')
+  const [group, setGroup] = useState('hearts')
 
   const addSticker = (emoji) => {
     onAddElement({
@@ -37,7 +39,7 @@ export default function StickersPanel({ onAddElement }) {
               group === g ? 'bg-kaydo text-white' : 'bg-cream text-bark-light hover:bg-cream-dark'
             }`}
           >
-            {g}
+            {t(`stickers.groups.${g}`)}
           </button>
         ))}
       </div>
@@ -48,7 +50,7 @@ export default function StickersPanel({ onAddElement }) {
             type="button"
             onClick={() => addSticker(emoji)}
             className="text-2xl aspect-square flex items-center justify-center rounded-xl hover:bg-cream transition-colors active:scale-90"
-            title="Add sticker"
+            title={t('stickers.addSticker')}
           >
             {emoji}
           </button>

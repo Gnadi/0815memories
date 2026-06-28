@@ -1,5 +1,6 @@
 import { ViteReactSSG } from 'vite-react-ssg'
 import './index.css'
+import './i18n' // initialize i18next (runs in both Node pre-render and browser)
 import { routes } from './App.jsx'
 
 // Pre-render only the public marketing landing page to static HTML. All other

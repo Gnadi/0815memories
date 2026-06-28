@@ -1,0 +1,54 @@
+{
+  "dailyMoments": {
+    "title": "Daily Moments",
+    "viewAll": "VIEW ALL",
+    "add": "Add",
+    "empty": "No moments yet"
+  },
+  "feed": {
+    "empty": {
+      "heading": "No memories yet.",
+      "body": "Post your first memory to start filling the living room!"
+    }
+  },
+  "albumGlimpse": {
+    "title": "Family Album Glimpse",
+    "photoAlt": "Family photo"
+  },
+  "featured": {
+    "badge": "New Journey",
+    "awaiting": "Awaiting memories...",
+    "placeholderTitle": "Sunday at the Vineyard",
+    "placeholderBody": "The whole gang finally made it! Share your first memory to get started."
+  },
+  "timelineCta": {
+    "eyebrow": "Explore",
+    "title": "Travel back in time",
+    "body": "Browse every memory by year and season."
+  },
+  "card": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "filmCaptionFallback": "0815 MEMORIES 200 PX"
+  },
+  "moment": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this moment?",
+    "noMedia": "No media",
+    "author": "Family",
+    "aria": {
+      "moreOptions": "More options",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "hideInfo": "Hide info"
+    }
+  },
+  "momentsPage": {
+    "title": "Daily Moments",
+    "back": "Back",
+    "empty": "No moments yet"
+  },
+  "deleteMemoryConfirm": "Are you sure you want to delete this memory?"
+}

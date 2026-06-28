@@ -1,0 +1,76 @@
+{
+  "list": {
+    "title": "A Gift for Their Future",
+    "subtitle": "Write letters to your children that they'll only open years from now. Record the small joys, the big milestones, and the wisdom you want to share with them when they are grown.",
+    "addChild": "Add New Child",
+    "addAnotherChild": "Add Another Child",
+    "empty": {
+      "heading": "No children added yet",
+      "body": "Add a child to start writing their journal.",
+      "addFirstChild": "Add Your First Child"
+    },
+    "deleteChildConfirm": "Delete {{name}}? This will permanently remove the child and cannot be undone."
+  },
+  "card": {
+    "born": "Born {{date}}",
+    "ageSuffixOne": " · {{age}} yr old",
+    "ageSuffixOther": " · {{age}} yrs old",
+    "lettersWritten": "{{count}} {{label}} written",
+    "letter": "Letter",
+    "letters": "Letters",
+    "noLettersYet": "No letters written yet — start today.",
+    "viewArchive": "View Archive",
+    "startJournal": "Start Journal"
+  },
+  "archive": {
+    "fallbackTitle": "Journal",
+    "yearsOld": "{{age}} years old",
+    "write": "Write",
+    "letterCount": "{{count}} {{label}}",
+    "letter": "letter",
+    "letters": "letters",
+    "empty": {
+      "heading": "No letters written yet",
+      "bodyNamed": "Write your first letter to {{name}}.",
+      "bodyFallback": "your child",
+      "writeFirst": "Write First Letter"
+    },
+    "deleteLetterConfirm": "Delete this letter permanently?"
+  },
+  "entryCard": {
+    "voiceMemoCount": "{{count}} voice {{label}}",
+    "voiceMemoSingular": "memo",
+    "voiceMemoPlural": "memos",
+    "videoCount": "{{count}} {{label}}",
+    "videoSingular": "video",
+    "videoPlural": "videos"
+  },
+  "editor": {
+    "titlePlaceholder": "A Message for your Future Self",
+    "volumePlaceholder": "Volume / Chapter",
+    "contentPlaceholder": "My dearest {{name}}, today…",
+    "contentPlaceholderFallback": "child",
+    "voiceNote": "Voice note {{index}}",
+    "saving": "Saving…",
+    "uploading": "Uploading…",
+    "update": "Update",
+    "save": "Save",
+    "saveError": "Failed to save. Please try again."
+  },
+  "detail": {
+    "voiceNote": "Voice note {{index}}",
+    "deleteLetterConfirm": "Delete this letter permanently?"
+  },
+  "kidModal": {
+    "editTitle": "Edit Child",
+    "addTitle": "Add a Child",
+    "tapToAddPhoto": "Tap to add photo",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Leo",
+    "birthdayLabel": "Birthday",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "addChild": "Add Child",
+    "saveError": "Failed to save. Please try again."
+  }
+}

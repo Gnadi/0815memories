@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Camera } from 'lucide-react'
 import {
   POLAROID_COLORS,
@@ -12,6 +13,7 @@ import {
 import UploadWidget from './UploadWidget'
 
 export default function PolaroidBorderEditor({ value, onChange }) {
+  const { t } = useTranslation('memory')
   const border = resolvePolaroidBorder(value)
   const update = (patch) => onChange({ ...border, ...patch })
 
@@ -19,31 +21,31 @@ export default function PolaroidBorderEditor({ value, onChange }) {
     <div className="rounded-2xl border border-cream-dark p-4 bg-cream/40">
       <div className="flex items-center gap-1.5 mb-3">
         <Camera className="w-4 h-4 text-kaydo" />
-        <p className="text-sm font-semibold text-bark">Polaroid border</p>
+        <p className="text-sm font-semibold text-bark">{t('polaroid.heading')}</p>
       </div>
       <p className="text-xs text-bark-muted mb-4">
-        Customize how this memory looks in the polaroid feed. Each memory can have its own frame.
+        {t('polaroid.intro')}
       </p>
 
       <div className="flex justify-center mb-4">
         <BorderPreview border={border} />
       </div>
 
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Theme</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('polaroid.theme')}</p>
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {POLAROID_FRAME_THEMES.map(({ id, label }) => (
+        {POLAROID_FRAME_THEMES.map(({ id }) => (
           <ToggleButton
             key={id}
             active={border.frameTheme === id}
             onClick={() => update({ frameTheme: id })}
-            label={label}
+            label={t('polaroid.themes.' + id)}
           />
         ))}
       </div>
       {border.frameTheme === 'custom' && (
         <div className="mb-3">
           <p className="text-xs text-bark-muted mb-2">
-            Upload a small image to use as this card's polaroid frame texture. It fills the entire frame area.
+            {t('polaroid.customHint')}
           </p>
           <UploadWidget
             unencrypted
@@ -55,7 +57,7 @@ export default function PolaroidBorderEditor({ value, onChange }) {
         </div>
       )}
 
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Color</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('polaroid.color')}</p>
       <div className="grid grid-cols-7 gap-2 mb-3">
         {POLAROID_COLORS.map((color) => (
           <button
@@ -69,44 +71,44 @@ export default function PolaroidBorderEditor({ value, onChange }) {
             }`}
             style={{ backgroundColor: color }}
             title={color}
-            aria-label={`Border color ${color}`}
+            aria-label={t('polaroid.borderColorAria', { color })}
             aria-pressed={border.color === color}
           />
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Width</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('polaroid.width')}</p>
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {POLAROID_WIDTHS.map(({ id, label }) => (
+        {POLAROID_WIDTHS.map(({ id }) => (
           <ToggleButton
             key={id}
             active={border.width === id}
             onClick={() => update({ width: id })}
-            label={label}
+            label={t('polaroid.widths.' + id)}
           />
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Style</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('polaroid.style')}</p>
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {POLAROID_STYLES.map(({ id, label }) => (
+        {POLAROID_STYLES.map(({ id }) => (
           <ToggleButton
             key={id}
             active={border.style === id}
             onClick={() => update({ style: id })}
-            label={label}
+            label={t('polaroid.styles.' + id)}
           />
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Decoration</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('polaroid.decoration')}</p>
       <div className="grid grid-cols-3 gap-2">
-        {POLAROID_DECORATIONS.map(({ id, label }) => (
+        {POLAROID_DECORATIONS.map(({ id }) => (
           <ToggleButton
             key={id}
             active={border.decoration === id}
             onClick={() => update({ decoration: id })}
-            label={label}
+            label={t('polaroid.decorations.' + id)}
           />
         ))}
       </div>
@@ -138,6 +140,7 @@ const PREVIEW_WIDTH_PX = {
 }
 
 function BorderPreview({ border }) {
+  const { t } = useTranslation('memory')
   const preset = PREVIEW_WIDTH_PX[border.width] || PREVIEW_WIDTH_PX.medium
   const framePattern = getPolaroidFramePattern(border)
   const lightFrame = isLightPolaroidColor(border.color)
@@ -213,7 +216,7 @@ function BorderPreview({ border }) {
         className="absolute left-0 right-0 text-center text-[8px] font-display tracking-wide"
         style={{ bottom: 6, color: captionColor }}
       >
-        Memory
+        {t('polaroid.previewCaption')}
       </p>
     </div>
   )

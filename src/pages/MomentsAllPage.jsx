@@ -1,5 +1,6 @@
 import { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, Camera } from 'lucide-react'
 import { useAllMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
@@ -44,6 +45,7 @@ const MomentCard = memo(function MomentCard({ moment, onOpen }) {
 
 export default function MomentsAllPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation('home')
   const { familyId, isAdmin } = useAuth()
   const { moments, loading, updateMoment, deleteMoment } = useAllMoments(familyId)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
@@ -81,18 +83,18 @@ export default function MomentsAllPage() {
         <button
           onClick={() => navigate('/home')}
           className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-cream-dark transition-colors"
-          aria-label="Back"
+          aria-label={t('momentsPage.back')}
         >
           <ChevronLeft className="w-5 h-5 text-bark" />
         </button>
-        <h1 className="text-lg font-bold text-bark">Daily Moments</h1>
+        <h1 className="text-lg font-bold text-bark">{t('momentsPage.title')}</h1>
       </div>
 
       {/* Grid */}
       {moments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4 text-bark-muted">
           <Camera className="w-12 h-12 opacity-40" />
-          <p className="text-sm font-medium">No moments yet</p>
+          <p className="text-sm font-medium">{t('momentsPage.empty')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-3">

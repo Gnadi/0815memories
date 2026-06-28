@@ -1,0 +1,97 @@
+{
+  "page": {
+    "title": "Einstellungen"
+  },
+  "panel": {
+    "title": "Admin-Einstellungen"
+  },
+  "loginImage": {
+    "label": "Bild der Login-Seite",
+    "description": "Lade ein Familienfoto hoch, um die Standard-Illustration auf deiner Login-Seite zu ersetzen. Besucher sehen es, wenn sie deinen Familienlink öffnen.",
+    "updated": "Login-Bild aktualisiert!",
+    "removed": "Login-Bild entfernt.",
+    "saveFailed": "Bild konnte nicht gespeichert werden"
+  },
+  "shareLink": {
+    "label": "Familien-Teilen-Link",
+    "description": "Teile diesen Link mit Familie und Freunden, damit sie auf deine Erinnerungen zugreifen können.",
+    "copy": "Kopieren",
+    "copied": "Kopiert!"
+  },
+  "password": {
+    "label": "Geteiltes Passwort ändern (privater Schlüssel)",
+    "description": "Das ist das Passwort, mit dem Familie und Freunde auf die Seite zugreifen.",
+    "placeholder": "Neues geteiltes Passwort",
+    "tooShort": "Das Passwort muss mindestens 4 Zeichen lang sein",
+    "noFamily": "Keine Familie gefunden",
+    "updated": "Geteiltes Passwort aktualisiert!",
+    "updateFailed": "Passwort konnte nicht aktualisiert werden"
+  },
+  "familyName": {
+    "label": "Familienname",
+    "placeholder": "z. B. Die Müllers",
+    "invalidUrl": "Der Familienname ergibt eine ungültige URL — bitte verwende Buchstaben oder Zahlen",
+    "taken": "Dieser Familienname ist bereits vergeben — bitte wähle einen anderen",
+    "updated": "Familienname aktualisiert!",
+    "updateFailed": "Name konnte nicht aktualisiert werden"
+  },
+  "cardStyle": {
+    "label": "Stil der Erinnerungskarten",
+    "description": "Wähle, wie Erinnerungen in eurem Familien-Feed aussehen. Alle in der Familie sehen den gleichen Stil.",
+    "modern": "Modern",
+    "modernDesc": "Klar und hell.",
+    "classic": "Klassisch",
+    "classicDesc": "Vintage-Film-Look.",
+    "polaroid": "Polaroid",
+    "polaroidDesc": "Sofortbild mit eigenem Rand pro Karte.",
+    "previewMemory": "Erinnerung",
+    "polaroidTip": "Tipp: Passe Randfarbe, -breite, -stil und Verzierung jeder Erinnerung beim Posten oder Bearbeiten an.",
+    "switchedClassic": "Zu klassischen Erinnerungskarten gewechselt",
+    "switchedPolaroid": "Zu Polaroid-Erinnerungskarten gewechselt",
+    "switchedModern": "Zu modernen Erinnerungskarten gewechselt",
+    "updateFailed": "Stil der Erinnerungskarten konnte nicht aktualisiert werden"
+  },
+  "export": {
+    "label": "Datenexport / NAS-Backup",
+    "description": "Lade alle Daten und Medien deiner Familie als ZIP-Datei herunter. Speichere sie zur sicheren Aufbewahrung auf deinem NAS, einer externen Festplatte oder in der Cloud.",
+    "starting": "Export wird gestartet...",
+    "cancel": "Abbrechen",
+    "complete": "Export abgeschlossen! Schau in deinem Download-Ordner nach.",
+    "exportAgain": "Erneut exportieren",
+    "download": "Vollständiges Backup herunterladen (ZIP)",
+    "failed": "Export fehlgeschlagen"
+  },
+  "admins": {
+    "label": "Admins verwalten",
+    "description": "Erstelle einen einmaligen Einladungslink, um eine weitere Admin-Person hinzuzufügen. Sie legt ihr eigenes Passwort fest. Jede Admin-Person ist nur an diese Familie gebunden.",
+    "loading": "Admins werden geladen…",
+    "owner": "Eigentümer",
+    "you": "Du",
+    "familyOwner": "(Familieneigentümer)",
+    "remove": "Entfernen",
+    "removeConfirm": "{{email}} aus dieser Familie entfernen? Diese Person kann sich dann hier nicht mehr anmelden.",
+    "removeFallbackTarget": "diese Admin-Person",
+    "removed": "Admin entfernt.",
+    "removeFailed": "Admin konnte nicht entfernt werden",
+    "inviteLinkDescription": "Teile diesen Link mit der neuen Admin-Person. Er ist 7 Tage gültig und kann nur einmal verwendet werden.",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "generate": "Einladungslink erstellen",
+    "generateFailed": "Einladungslink konnte nicht erstellt werden",
+    "pendingTitle": "Ausstehende Einladungen",
+    "copyTitle": "Link kopieren",
+    "revokeTitle": "Widerrufen",
+    "revokeConfirm": "Diesen Einladungslink widerrufen? Er kann dann nicht mehr verwendet werden.",
+    "revoked": "Einladung widerrufen.",
+    "revokeFailed": "Einladung konnte nicht widerrufen werden",
+    "expiresToday": "läuft heute ab",
+    "expiresInOneDay": "läuft in 1 Tag ab",
+    "expiresInDays": "läuft in {{count}} Tagen ab"
+  },
+  "upload": {
+    "previewAlt": "Vorschau",
+    "clickToUpload": "Zum Hochladen eines Fotos klicken",
+    "signatureFailed": "Upload-Signatur konnte nicht abgerufen werden",
+    "uploadFailed": "Upload fehlgeschlagen"
+  }
+}

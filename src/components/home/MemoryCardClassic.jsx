@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
@@ -21,6 +22,7 @@ function SprocketRow() {
 }
 
 export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
+  const { t } = useTranslation('home')
   const [showMenu, setShowMenu] = useState(false)
   const [imgIndex, setImgIndex] = useState(0)
   const { isAdmin } = useAuth()
@@ -33,7 +35,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
   const frameTotal = allImages.length > 0 ? allImages.length : 1
   const totalLabel = `${frameTotal}A`
 
-  const captionText = memory.content || memory.quote || '0815 MEMORIES 200 PX'
+  const captionText = memory.content || memory.quote || t('card.filmCaptionFallback')
 
   const prevImg = (e) => {
     e?.stopPropagation()
@@ -174,7 +176,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
                     }}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark normal-case tracking-normal font-sans"
                   >
-                    <Pencil className="w-4 h-4" /> Edit
+                    <Pencil className="w-4 h-4" /> {t('card.edit')}
                   </button>
                   <button
                     onClick={(e) => {
@@ -184,7 +186,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
                     }}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 normal-case tracking-normal font-sans"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete
+                    <Trash2 className="w-4 h-4" /> {t('card.delete')}
                   </button>
                 </div>
               )}

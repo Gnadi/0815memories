@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function FeaturedJourney({ memory }) {
   const navigate = useNavigate()
+  const { t } = useTranslation('home')
 
   if (!memory) return <FeaturedPlaceholder />
 
@@ -26,7 +28,7 @@ export default function FeaturedJourney({ memory }) {
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-kaydo text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
-              {memory.category || 'New Journey'}
+              {memory.category || t('featured.badge')}
             </span>
             <span className="text-sm opacity-80">{timeAgo(memory.createdAt)}</span>
           </div>
@@ -39,6 +41,7 @@ export default function FeaturedJourney({ memory }) {
 }
 
 function FeaturedPlaceholder() {
+  const { t } = useTranslation('home')
   return (
     <section className="mb-8">
       <div className="relative rounded-2xl overflow-hidden h-80 lg:h-[480px]">
@@ -47,15 +50,15 @@ function FeaturedPlaceholder() {
         <div className="absolute bottom-6 left-6 right-6 text-white">
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-kaydo text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
-              New Journey
+              {t('featured.badge')}
             </span>
-            <span className="text-sm opacity-80">Awaiting memories...</span>
+            <span className="text-sm opacity-80">{t('featured.awaiting')}</span>
           </div>
           <h3 className="text-2xl lg:text-3xl font-bold font-serif mb-1">
-            Sunday at the Vineyard
+            {t('featured.placeholderTitle')}
           </h3>
           <p className="text-sm opacity-90">
-            The whole gang finally made it! Share your first memory to get started.
+            {t('featured.placeholderBody')}
           </p>
         </div>
       </div>

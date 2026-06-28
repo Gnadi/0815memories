@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Check,
   Camera,
@@ -39,25 +40,26 @@ export default function PhotoActionBar({
   onRemove,
   mode = 'idle',
 }) {
+  const { t } = useTranslation('scrapbook')
   const [showScale, setShowScale] = useState(false)
   const currentScale = element?.imageScale || 1
 
   const actions = [
-    { id: 'done', icon: Check, label: 'Done', onClick: onDone, primary: true },
-    { id: 'change', icon: Camera, label: 'Change', onClick: onChange, active: mode === 'replace' },
-    { id: 'swap', icon: Replace, label: 'Swap', onClick: onSwap, active: mode === 'swap' },
-    { id: 'scale', icon: Maximize2, label: 'Scale', onClick: () => setShowScale((s) => !s), active: showScale },
-    { id: 'rotate', icon: RotateCw, label: 'Rotate', onClick: onRotate },
-    { id: 'flip', icon: FlipHorizontal2, label: 'Flip', onClick: onFlip },
-    { id: 'remove-picture', icon: ImageOff, label: 'Clear', onClick: onRemovePicture, variant: 'warn' },
-    { id: 'remove', icon: Trash2, label: 'Remove', onClick: onRemove, variant: 'danger' },
+    { id: 'done', icon: Check, label: t('photoActions.done'), onClick: onDone, primary: true },
+    { id: 'change', icon: Camera, label: t('photoActions.change'), onClick: onChange, active: mode === 'replace' },
+    { id: 'swap', icon: Replace, label: t('photoActions.swap'), onClick: onSwap, active: mode === 'swap' },
+    { id: 'scale', icon: Maximize2, label: t('photoActions.scale'), onClick: () => setShowScale((s) => !s), active: showScale },
+    { id: 'rotate', icon: RotateCw, label: t('photoActions.rotate'), onClick: onRotate },
+    { id: 'flip', icon: FlipHorizontal2, label: t('photoActions.flip'), onClick: onFlip },
+    { id: 'remove-picture', icon: ImageOff, label: t('photoActions.clear'), onClick: onRemovePicture, variant: 'warn' },
+    { id: 'remove', icon: Trash2, label: t('photoActions.remove'), onClick: onRemove, variant: 'danger' },
   ]
 
   return (
     <div className="bg-warm-white border-t border-cream-dark">
       {showScale && (
         <div className="px-4 pt-3 pb-1 flex items-center gap-3">
-          <span className="text-[11px] font-medium text-bark-muted whitespace-nowrap">Zoom</span>
+          <span className="text-[11px] font-medium text-bark-muted whitespace-nowrap">{t('photoActions.zoom')}</span>
           <input
             type="range"
             min={0.5}
@@ -75,7 +77,7 @@ export default function PhotoActionBar({
             onClick={() => onScale?.(1)}
             className="text-[11px] font-medium text-kaydo hover:text-kaydo-dark"
           >
-            Reset
+            {t('photoActions.reset')}
           </button>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, GitFork, GitBranch, ArrowLeftRight, ChefHat } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useRecipeLineage } from '../hooks/useRecipes'
@@ -16,6 +17,7 @@ const CHANGE_TYPE_STYLES = {
 }
 
 export default function RecipeJourneyPage() {
+  const { t } = useTranslation('recipes')
   const { id } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
@@ -46,12 +48,12 @@ export default function RecipeJourneyPage() {
         ) : !root ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center p-8">
             <ChefHat className="w-12 h-12 text-bark-muted" />
-            <p className="font-semibold text-bark">Recipe not found.</p>
+            <p className="font-semibold text-bark">{t('journey.notFound')}</p>
             <button
               onClick={() => navigate('/recipes')}
               className="text-sm text-kaydo font-semibold"
             >
-              ← Back to Recipes
+              {t('journey.backToRecipes')}
             </button>
           </div>
         ) : (
@@ -80,11 +82,11 @@ export default function RecipeJourneyPage() {
               {/* Hero content */}
               <div className="absolute bottom-0 left-0 right-0 p-5">
                 <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-amber-300 bg-amber-900/60 rounded-full px-2.5 py-1 mb-2">
-                  The Origin
+                  {t('journey.origin')}
                 </span>
                 <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">{root.title}</h1>
                 <p className="text-white/70 text-sm mt-1">
-                  {root.year} · by {root.author}
+                  {t('journey.byline', { year: root.year, author: root.author })}
                 </p>
               </div>
             </div>
@@ -99,7 +101,7 @@ export default function RecipeJourneyPage() {
                   className="w-full flex items-center justify-center gap-2 bg-warm-white border border-cream-dark rounded-2xl py-3 text-sm font-semibold text-bark hover:bg-cream-dark transition-colors shadow-sm"
                 >
                   <ArrowLeftRight className="w-4 h-4 text-kaydo" />
-                  Compare Versions
+                  {t('journey.compareVersions')}
                 </button>
               )}
 
@@ -107,7 +109,7 @@ export default function RecipeJourneyPage() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <GitBranch className="w-5 h-5 text-kaydo" />
-                  <h2 className="text-lg font-bold text-bark">The Evolution Tree</h2>
+                  <h2 className="text-lg font-bold text-bark">{t('journey.evolutionTree')}</h2>
                 </div>
                 <RecipeEvolutionTree
                   versions={versions}
@@ -118,7 +120,7 @@ export default function RecipeJourneyPage() {
               {/* Change Log (from latest version) */}
               {latestChanges.length > 0 && (
                 <div>
-                  <h2 className="text-lg font-bold text-bark mb-4">Change Log</h2>
+                  <h2 className="text-lg font-bold text-bark mb-4">{t('journey.changeLog')}</h2>
                   <div className="space-y-3">
                     {latestChanges.map((change, i) => {
                       const styleClass = CHANGE_TYPE_STYLES[change.type] || 'bg-stone-100 text-stone-600'
@@ -133,7 +135,7 @@ export default function RecipeJourneyPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className={`text-[10px] font-bold uppercase tracking-wide ${styleClass.split(' ')[1]}`}>
-                                {change.type}
+                                {t('compare.diff.' + change.type.toLowerCase(), change.type)}
                               </span>
                               <span className="text-sm font-semibold text-bark">{change.ingredient}</span>
                             </div>
@@ -152,17 +154,17 @@ export default function RecipeJourneyPage() {
               {latest?.forkReason && hasMultipleVersions && (
                 <div className="bg-warm-white rounded-2xl p-5 shadow-sm">
                   <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-3">
-                    Reason for the Fork
+                    {t('journey.forkReasonLabel')}
                   </p>
                   <blockquote className="text-bark italic leading-relaxed">
                     "{latest.forkReason}"
                   </blockquote>
                   <p className="text-sm text-bark-muted mt-3">
-                    — {latest.author}, {latest.year}
+                    {t('journey.forkAttribution', { author: latest.author, year: latest.year })}
                   </p>
                   <div className="mt-3 flex items-center gap-1.5 text-xs text-bark-muted">
                     <span className="w-1.5 h-1.5 rounded-full bg-kaydo inline-block" />
-                    A Living Family Legacy · {versions.length} Generation{versions.length !== 1 ? 's' : ''} of Shared History
+                    {t('journey.legacy', { count: versions.length })}
                   </div>
                 </div>
               )}
@@ -174,7 +176,7 @@ export default function RecipeJourneyPage() {
                   className="btn-kaydo w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
                 >
                   <GitFork className="w-4 h-4" />
-                  Fork This Recipe
+                  {t('journey.forkRecipe')}
                 </button>
               </div>
 

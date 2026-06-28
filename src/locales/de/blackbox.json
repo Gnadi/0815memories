@@ -1,0 +1,84 @@
+{
+  "datePlaceholder": {
+    "month": "MM",
+    "day": "TT",
+    "year": "JJJJ"
+  },
+  "page": {
+    "title": "Die Black Box",
+    "description": "Ein zeitgesteuertes System für emotionale Botschaften. Versiegle heute eine Nachricht — sie wird sich erst an dem Tag öffnen, den du wählst: ein Geburtstag, eine Hochzeit, ein Abschluss oder wann immer der richtige Moment gekommen ist.",
+    "preserveMoment": "Einen Moment bewahren"
+  },
+  "empty": {
+    "heading": "Noch keine versiegelten Nachrichten",
+    "body": "Erstelle deine erste zeitgesteuerte Nachricht — ein Geschenk für die Zukunft.",
+    "cta": "Versiegle deine erste Nachricht"
+  },
+  "confirmDelete": "Diese versiegelte Nachricht endgültig löschen? Das kann nicht rückgängig gemacht werden.",
+  "create": {
+    "headerTitle": "Einen Moment bewahren",
+    "subtitle": "Erstelle ein digitales Erbstück, das versiegelt bleibt, bis der perfekte Moment in der Zukunft gekommen ist.",
+    "step1Label": "Schritt 1: Die Nachricht",
+    "step2Label": "Schritt 2: Der Zeitauslöser",
+    "noChildren": "Noch keine Kinder hinzugefügt.",
+    "addChild": "Ein Kind hinzufügen",
+    "addChildSuffix": "um anzufangen, Momente für sie zu bewahren.",
+    "forLabel": "Für",
+    "noSpecificChild": "Kein bestimmtes Kind",
+    "titleLabel": "Titel",
+    "titlePlaceholderChild": "Für {{name}}…",
+    "titlePlaceholderGeneric": "Eine Nachricht von Herzen…",
+    "voiceNoteRecorded": "🎙 Sprachnotiz aufgenommen",
+    "recordVoiceNote": "Sprachnotiz aufnehmen",
+    "speakFromHeart": "Sprich von Herzen",
+    "messagePlaceholder": "Oder tippe deine Nachricht hier…",
+    "photos": "Fotos",
+    "camera": "Kamera",
+    "video": "Video",
+    "record": "Aufnehmen",
+    "milestone": "Ein Meilenstein im Leben",
+    "specificDate": "Bestimmtes Datum",
+    "month": "Monat",
+    "day": "Tag",
+    "year": "Jahr",
+    "legacyTrigger": "Vermächtnis-Auslöser",
+    "legacyTriggerDesc": "Nach meinem Ableben freigeben",
+    "noticeLegacy": "Einmal versiegelt, wird diese Box nur durch einen Vermächtnis-Auslöser freigegeben. Dein Vermächtnis ist bei uns sicher.",
+    "noticeDatePrefix": "Einmal versiegelt, kann diese Box nicht geöffnet werden bis",
+    "noticeDateSuffix": ". Dein Vermächtnis ist bei uns sicher.",
+    "heroTitle": "Ein Geschenk für die Zukunft.",
+    "heroSubtitle": "Deine Worte werden zu den Erinnerungen, die sie morgen tragen.",
+    "seal": "In die Black Box versiegeln",
+    "sealing": "Wird versiegelt…"
+  },
+  "milestones": {
+    "18thBirthday": "18. Geburtstag",
+    "21stBirthday": "21. Geburtstag",
+    "graduation": "Abschluss",
+    "wedding": "Hochzeitstag",
+    "firstJob": "Erster Job"
+  },
+  "errors": {
+    "noContent": "Bitte füge eine Nachricht, ein Foto, ein Video oder eine Sprachnotiz hinzu.",
+    "milestoneNeedsBirthday": "Bitte wähle ein Kind mit Geburtstag, um einen Meilenstein-Auslöser zu nutzen.",
+    "incompleteDate": "Bitte gib das vollständige Freischalt-Datum an (Monat, Tag und Jahr).",
+    "noUnlockDate": "Bitte lege ein Freischalt-Datum fest.",
+    "sealFailed": "Versiegeln fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "defaultTitle": "Für {{name}}",
+  "defaultTitleFallback": "die Zukunft",
+  "card": {
+    "untitled": "Ohne Titel",
+    "for": "Für {{name}}",
+    "uponLegacyTrigger": "Bei Vermächtnis-Auslöser",
+    "unknownDate": "Unbekanntes Datum",
+    "legacyDescription": "Vermächtnis-Auslöser — Nach meinem Ableben freigeben",
+    "milestoneDescription": "Meilenstein im Leben — {{milestone}}",
+    "specificDateDescription": "Bestimmtes Datum — {{date}}",
+    "sealedUntilPrefix": "Versiegelt bis",
+    "sealedUntilSuffix": ". Dein Vermächtnis ist bei uns sicher.",
+    "unlocked": "Freigeschaltet",
+    "viewContents": "Inhalt ansehen ↓",
+    "hideContents": "Inhalt verbergen ↑"
+  }
+}

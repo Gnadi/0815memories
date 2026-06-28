@@ -27,7 +27,9 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 
 function OctocatIcon({ className }) {
@@ -47,6 +49,7 @@ function OctocatIcon({ className }) {
 export default function LandingPage() {
   const navigate = useNavigate()
   const { isAuthenticated, signup, firebaseReady } = useAuth()
+  const { t } = useTranslation('landing')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
 
@@ -54,38 +57,30 @@ export default function LandingPage() {
     <div className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
       <Head>
-        <title>Kaydo — Private, Encrypted Family Memory App</title>
-        <meta
-          name="description"
-          content="Kaydo is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling — just your stories, preserved forever."
-        />
+        <html lang={t('seo.ogLocale').slice(0, 2)} />
+        <title>{t('seo.title')}</title>
+        <meta name="description" content={t('seo.description')} />
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href="https://kaydo.app/" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Kaydo" />
-        <meta property="og:title" content="Kaydo — Your Private Digital Home" />
-        <meta
-          property="og:description"
-          content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever."
-        />
+        <meta property="og:title" content={t('seo.ogTitle')} />
+        <meta property="og:description" content={t('seo.ogDescription')} />
         <meta property="og:url" content="https://kaydo.app/" />
         <meta property="og:image" content="https://kaydo.app/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Kaydo — Your Private Digital Home" />
-        <meta property="og:locale" content="en_US" />
+        <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
+        <meta property="og:locale" content={t('seo.ogLocale')} />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Kaydo — Your Private Digital Home" />
-        <meta
-          name="twitter:description"
-          content="A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories."
-        />
+        <meta name="twitter:title" content={t('seo.twitterTitle')} />
+        <meta name="twitter:description" content={t('seo.twitterDescription')} />
         <meta name="twitter:image" content="https://kaydo.app/og-image.png" />
-        <meta name="twitter:image:alt" content="Kaydo — Your Private Digital Home" />
+        <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
         {/* Structured data */}
         <script type="application/ld+json">
@@ -93,20 +88,12 @@ export default function LandingPage() {
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
             name: 'Kaydo',
-            description:
-              "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
+            description: t('seo.ldDescription'),
             url: 'https://kaydo.app',
             applicationCategory: 'LifestyleApplication',
             operatingSystem: 'Web',
             offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-            featureList: [
-              'End-to-end encrypted memory storage',
-              'Private family photo and video sharing',
-              'Family recipe tree with version history',
-              'Digital scrapbook with PDF export',
-              'Scheduled future letters to family members',
-              'Zero-knowledge encrypted vault',
-            ],
+            featureList: t('seo.ldFeatures', { returnObjects: true }),
             publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
           })}
         </script>
@@ -123,23 +110,26 @@ export default function LandingPage() {
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-bark-light">
-            <a href="#features" className="hover:text-bark transition-colors underline-offset-4 hover:underline">Features</a>
-            <a href="#privacy" className="hover:text-bark transition-colors">Privacy</a>
-            <a href="#security" className="hover:text-bark transition-colors">Security</a>
+            <a href="#features" className="hover:text-bark transition-colors underline-offset-4 hover:underline">{t('nav.features')}</a>
+            <a href="#privacy" className="hover:text-bark transition-colors">{t('nav.privacy')}</a>
+            <a href="#security" className="hover:text-bark transition-colors">{t('nav.security')}</a>
           </div>
 
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
+            <div className="hidden md:inline-flex">
+              <LanguageSwitcher variant="sidebar" />
+            </div>
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
               className="btn-kaydo text-sm px-5 py-2"
             >
-              Login
+              {t('nav.login')}
             </button>
             <button
               className="md:hidden text-bark-light hover:text-bark"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={mobileMenuOpen ? t('common:actions.closeMenu') : t('common:actions.openMenu')}
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
@@ -150,9 +140,12 @@ export default function LandingPage() {
         {/* Mobile dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-cream border-t border-cream-dark px-5 py-4 flex flex-col gap-4 text-sm font-medium text-bark-light">
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">Features</a>
-            <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">Privacy</a>
-            <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">Security</a>
+            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.features')}</a>
+            <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.privacy')}</a>
+            <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.security')}</a>
+            <div className="pt-1">
+              <LanguageSwitcher variant="sidebar" />
+            </div>
           </div>
         )}
       </nav>
@@ -162,17 +155,17 @@ export default function LandingPage() {
         {/* Left — claim your family name */}
         <div>
           <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
-            Your Private Digital Home
+            {t('hero.badge')}
           </div>
           <h1 className="text-5xl lg:text-6xl font-bold text-bark leading-tight mb-5">
-            Claim your family's{' '}
-            <em className="not-italic font-serif text-kaydo italic">corner</em>{' '}
-            of the web.
+            {t('hero.titlePrefix')}{' '}
+            <em className="not-italic font-serif text-kaydo italic">{t('hero.titleEmphasis')}</em>{' '}
+            {t('hero.titleSuffix')}
           </h1>
           <p className="text-bark-light text-lg leading-relaxed mb-8 max-w-md">
-            Every family gets its own private address. Check if{' '}
-            <span className="font-semibold text-bark">yourname.kaydo.app</span>{' '}
-            is still available and make it yours in seconds.
+            {t('hero.subtitlePrefix')}{' '}
+            <span className="font-semibold text-bark">{t('hero.subtitleExample')}</span>{' '}
+            {t('hero.subtitleSuffix')}
           </p>
 
           <ClaimFamilyName
@@ -209,10 +202,10 @@ export default function LandingPage() {
               <div className="w-7 h-7 bg-kaydo rounded-lg flex items-center justify-center">
                 <BookOpen className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xs font-semibold text-bark">Family Journal</span>
+              <span className="text-xs font-semibold text-bark">{t('hero.journalCard.title')}</span>
             </div>
             <div className="space-y-1.5">
-              {['Summer vacation...', 'Grandma\'s recipe', 'First day of...'].map((line, i) => (
+              {t('hero.journalCard.lines', { returnObjects: true }).map((line, i) => (
                 <div key={i} className="h-2 rounded-full bg-cream-dark" style={{ width: `${[90, 70, 80][i]}%` }} />
               ))}
             </div>
@@ -229,9 +222,9 @@ export default function LandingPage() {
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">Seven Pillars of Home</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">{t('pillars.sectionTitle')}</h2>
             <p className="text-bark-light max-w-md mx-auto">
-              Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.
+              {t('pillars.sectionSubtitle')}
             </p>
           </div>
 
@@ -243,16 +236,12 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center mb-5">
                   <Camera className="w-5 h-5 text-kaydo" />
                 </div>
-                <h3 className="text-xl font-bold text-bark mb-2">Share: Moments &amp; Memories</h3>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.share.title')}</h3>
                 <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
-                  Every candid snapshot, milestone video, and voice memo — gathered in one warm, private feed. Your inner circle gets instant access with just a shared family password. No accounts, no friction, no strangers.
+                  {t('pillars.share.desc')}
                 </p>
                 <ul className="space-y-2">
-                  {[
-                    'Inner circle access — one shared password, zero sign-ups',
-                    'Family admin controls who sees what and when',
-                    'Post, pin, and curate from a simple dashboard',
-                  ].map((item) => (
+                  {t('pillars.share.bullets', { returnObjects: true }).map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-bark">
                       <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
                       {item}
@@ -266,9 +255,9 @@ export default function LandingPage() {
                 {/* Media type pills */}
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { icon: <Camera className="w-4 h-4" />, label: 'Photos' },
-                    { icon: <Video className="w-4 h-4" />, label: 'Videos' },
-                    { icon: <Mic className="w-4 h-4" />, label: 'Voice Memos' },
+                    { icon: <Camera className="w-4 h-4" />, label: t('pillars.share.pills.photos') },
+                    { icon: <Video className="w-4 h-4" />, label: t('pillars.share.pills.videos') },
+                    { icon: <Mic className="w-4 h-4" />, label: t('pillars.share.pills.voiceMemos') },
                   ].map(({ icon, label }) => (
                     <div key={label} className="flex items-center gap-2 bg-white rounded-full px-4 py-2 text-sm font-medium text-bark shadow-sm border border-cream-dark">
                       <span className="text-kaydo">{icon}</span>
@@ -283,11 +272,11 @@ export default function LandingPage() {
                     <div className="w-8 h-8 bg-kaydo/10 rounded-xl flex items-center justify-center">
                       <Users className="w-4 h-4 text-kaydo" />
                     </div>
-                    <span className="text-sm font-semibold text-bark">Inner Circle</span>
+                    <span className="text-sm font-semibold text-bark">{t('pillars.share.innerCircle')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-bark-light mb-3">
                     <KeyRound className="w-3.5 h-3.5 text-bark-muted" />
-                    <span>One shared family password</span>
+                    <span>{t('pillars.share.sharedPassword')}</span>
                   </div>
                   <div className="flex gap-1">
                     {['bg-kaydo', 'bg-amber-400', 'bg-green-500', 'bg-blue-400', 'bg-purple-400'].map((c, i) => (
@@ -307,13 +296,13 @@ export default function LandingPage() {
                 <Shield className="w-5 h-5 text-kaydo" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-bark mb-2">Preserve: The Vault</h3>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.vault.title')}</h3>
                 <p className="text-bark-light text-sm leading-relaxed">
-                  Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos, our Black Box encryption ensures they remain yours alone.
+                  {t('pillars.vault.desc')}
                 </p>
               </div>
               <ul className="space-y-2">
-                {['Military-grade encryption', 'Zero-knowledge storage'].map((item) => (
+                {t('pillars.vault.bullets', { returnObjects: true }).map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-bark font-medium">
                     <Check className="w-4 h-4 text-kaydo" />
                     {item}
@@ -338,9 +327,9 @@ export default function LandingPage() {
                 <Mail className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Write: The Letters</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{t('pillars.letters.title')}</h3>
                 <p className="text-white/80 text-sm leading-relaxed">
-                  Schedule messages for the future. Congratulate a grandchild on a wedding you might not attend, or share wisdom across decades.
+                  {t('pillars.letters.desc')}
                 </p>
               </div>
               <div className="mt-auto">
@@ -348,7 +337,7 @@ export default function LandingPage() {
                   onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
                   className="px-5 py-2.5 rounded-full border-2 border-white/60 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
                 >
-                  Compose a Legacy
+                  {t('pillars.letters.button')}
                 </button>
               </div>
               {/* Decorative envelope lines */}
@@ -365,9 +354,9 @@ export default function LandingPage() {
                 <Utensils className="w-5 h-5 text-green-700" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-bark mb-2">Evolve: Recipe Tree</h3>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.recipe.title')}</h3>
                 <p className="text-bark-light text-sm leading-relaxed">
-                  Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal.
+                  {t('pillars.recipe.desc')}
                 </p>
               </div>
               {/* Avatar stack */}
@@ -393,15 +382,15 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-violet-600/10 rounded-xl flex items-center justify-center mb-5">
                   <Scissors className="w-5 h-5 text-violet-700" />
                 </div>
-                <h3 className="text-xl font-bold text-bark mb-2">Create: Digital Scrapbook</h3>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.scrapbook.title')}</h3>
                 <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
-                  Turn your family memories into handcrafted digital pages. Drag and drop polaroid photos, playful stickers, and personal notes onto a freeform canvas — then export your finished book as a PDF to print or share.
+                  {t('pillars.scrapbook.desc')}
                 </p>
                 <ul className="space-y-2">
                   {[
-                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Drag-and-drop canvas with photos, stickers & text' },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Polaroid-style photo frames with rotation & resize' },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: 'Export finished scrapbooks to PDF' },
+                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[0] },
+                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[1] },
+                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[2] },
                   ].map(({ icon, text }) => (
                     <li key={text} className="flex items-start gap-2 text-sm text-bark">
                       {icon}
@@ -413,7 +402,7 @@ export default function LandingPage() {
                   onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
                   className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
                 >
-                  Open Scrapbooks
+                  {t('pillars.scrapbook.button')}
                 </button>
               </div>
 
@@ -434,7 +423,7 @@ export default function LandingPage() {
                   >
                     <div className="w-full h-20 bg-gradient-to-br from-amber-200 to-amber-400 rounded-sm" />
                     <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
-                      Summer 2024
+                      {t('pillars.scrapbook.previewSummer')}
                     </div>
                   </div>
 
@@ -445,7 +434,7 @@ export default function LandingPage() {
                   >
                     <div className="w-full h-16 bg-gradient-to-br from-violet-200 to-violet-400 rounded-sm" />
                     <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
-                      Family Trip
+                      {t('pillars.scrapbook.previewTrip')}
                     </div>
                   </div>
 
@@ -460,7 +449,7 @@ export default function LandingPage() {
                     style={{ bottom: '16px', left: '50%', transform: 'translateX(-50%) rotate(2deg)' }}
                   >
                     <span className="text-xs font-semibold text-amber-800 whitespace-nowrap font-serif italic">
-                      Our Family Story
+                      {t('pillars.scrapbook.previewLabel')}
                     </span>
                   </div>
                 </div>
@@ -473,17 +462,13 @@ export default function LandingPage() {
                 <Download className="w-5 h-5 text-teal-700" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-bark mb-2">Own: Your Data, Your Way</h3>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.export.title')}</h3>
                 <p className="text-bark-light text-sm leading-relaxed">
-                  Your memories belong to you — forever. Download a full archive of every photo, video, and journal entry at any time. No lock-in, no bureaucracy, no questions asked.
+                  {t('pillars.export.desc')}
                 </p>
               </div>
               <ul className="space-y-2">
-                {[
-                  'Full ZIP export of all photos & videos',
-                  'Memories and journal entries as structured data',
-                  'One-click download — no questions asked',
-                ].map((item) => (
+                {t('pillars.export.bullets', { returnObjects: true }).map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-bark font-medium">
                     <Check className="w-4 h-4 text-teal-600" />
                     {item}
@@ -524,20 +509,20 @@ export default function LandingPage() {
                 <OctocatIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Open Source</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{t('pillars.openSource.title')}</h3>
                 <p className="text-white/70 text-sm leading-relaxed">
-                  Kaydo is built in the open. Audit the code, contribute features, or self-host for your family. No black boxes — except the ones you create.
+                  {t('pillars.openSource.desc')}
                 </p>
               </div>
               {/* Stats row */}
               <div className="flex gap-4 mt-auto">
                 <div className="flex items-center gap-1.5 text-white/60 text-xs font-medium">
                   <Star className="w-3.5 h-3.5" />
-                  <span>Star us</span>
+                  <span>{t('pillars.openSource.star')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-white/60 text-xs font-medium">
                   <GitFork className="w-3.5 h-3.5" />
-                  <span>Fork &amp; self-host</span>
+                  <span>{t('pillars.openSource.fork')}</span>
                 </div>
               </div>
               <a
@@ -547,7 +532,7 @@ export default function LandingPage() {
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition-colors w-fit"
               >
                 <OctocatIcon className="w-4 h-4" />
-                View on GitHub
+                {t('pillars.openSource.viewOnGithub')}
               </a>
             </div>
 
@@ -562,30 +547,18 @@ export default function LandingPage() {
             {/* Left */}
             <div>
               <div className="inline-flex items-center gap-2 bg-bark text-cream text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
-                Our Privacy Manifesto
+                {t('privacy.badge')}
               </div>
               <h2 className="text-3xl lg:text-4xl font-bold text-bark leading-tight mb-6">
-                Your data is a{' '}
-                <em className="italic underline decoration-kaydo decoration-2">sacred legacy</em>
-                , not a training set.
+                {t('privacy.titlePrefix')}{' '}
+                <em className="italic underline decoration-kaydo decoration-2">{t('privacy.titleEmphasis')}</em>
+                {t('privacy.titleSuffix')}
               </h2>
               <ul className="space-y-6">
                 {[
-                  {
-                    icon: <Ban className="w-5 h-5 text-red-500" />,
-                    title: 'No AI Training',
-                    desc: 'We strictly prohibit the use of your private photos or text for LLM or AI generative model training. Ever.',
-                  },
-                  {
-                    icon: <Shield className="w-5 h-5 text-kaydo" />,
-                    title: 'Zero-Knowledge Architecture',
-                    desc: "Your 'Black Box' content is encrypted locally. Even our engineers can't see your family photos.",
-                  },
-                  {
-                    icon: <X className="w-5 h-5 text-bark-light" />,
-                    title: 'Ad-Free Forever',
-                    desc: 'We are funded by families, for families. We will never sell your attention to advertisers.',
-                  },
+                  { icon: <Ban className="w-5 h-5 text-red-500" />, ...t('privacy.items', { returnObjects: true })[0] },
+                  { icon: <Shield className="w-5 h-5 text-kaydo" />, ...t('privacy.items', { returnObjects: true })[1] },
+                  { icon: <X className="w-5 h-5 text-bark-light" />, ...t('privacy.items', { returnObjects: true })[2] },
                 ].map(({ icon, title, desc }) => (
                   <li key={title} className="flex gap-4">
                     <div className="flex-shrink-0 w-9 h-9 bg-cream-dark rounded-xl flex items-center justify-center mt-0.5">
@@ -603,10 +576,10 @@ export default function LandingPage() {
             {/* Right — stats grid */}
             <div id="security" className="grid grid-cols-2 gap-4">
               {[
-                { value: '100%', label: 'PRIVATE OWNERSHIP', color: 'text-kaydo' },
-                { icon: <Lock className="w-8 h-8 text-amber-600" />, label: 'E2E ENCRYPTION', color: '' },
-                { icon: <Check className="w-8 h-8 text-green-600" />, label: 'VERIFIED MEMBERS ONLY', color: '' },
-                { value: '0', label: 'DATA BREACHES', color: 'text-bark' },
+                { value: '100%', label: t('privacy.stats.ownership'), color: 'text-kaydo' },
+                { icon: <Lock className="w-8 h-8 text-amber-600" />, label: t('privacy.stats.encryption'), color: '' },
+                { icon: <Check className="w-8 h-8 text-green-600" />, label: t('privacy.stats.verified'), color: '' },
+                { value: '0', label: t('privacy.stats.breaches'), color: 'text-bark' },
               ].map(({ value, icon, label, color }, i) => (
                 <div key={i} className="bg-warm-white rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
                   {value !== undefined ? (
@@ -626,17 +599,17 @@ export default function LandingPage() {
       <section className="bg-warm-white py-24">
         <div className="max-w-2xl mx-auto px-5 text-center">
           <h2 className="text-3xl lg:text-5xl font-bold text-bark mb-4">
-            Ready to bring your family home?
+            {t('cta.title')}
           </h2>
           <p className="text-bark-light text-lg mb-10">
-            Join the exclusive circle of families preserving their stories with dignity and style. Invite-only access ensures the highest standards of safety.
+            {t('cta.subtitle')}
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/signup')}
               className="btn-kaydo text-base px-8 py-3"
             >
-              Get Started
+              {t('cta.getStarted')}
             </button>
             <a
               href="https://github.com/Gnadi/0815memories"
@@ -645,10 +618,10 @@ export default function LandingPage() {
               className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
               <OctocatIcon className="w-5 h-5" />
-              Open Source
+              {t('cta.openSource')}
             </a>
           </div>
-          <p className="text-xs text-bark-muted">No credit card required, it's free.</p>
+          <p className="text-xs text-bark-muted">{t('cta.noCreditCard')}</p>
         </div>
       </section>
 
@@ -663,7 +636,7 @@ export default function LandingPage() {
 
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-xs font-semibold text-bark-muted tracking-wider uppercase">
-            {['Terms of Service', 'Privacy Policy', 'Help Center', 'Contact Us'].map((link) => (
+            {t('footer.links', { returnObjects: true }).map((link) => (
               <a key={link} href="#" className="hover:text-bark transition-colors">
                 {link}
               </a>
@@ -672,13 +645,13 @@ export default function LandingPage() {
 
           {/* Safety guidelines */}
           <a href="#" className="text-xs text-bark-muted hover:text-bark transition-colors tracking-wider uppercase">
-            Safety Guidelines
+            {t('footer.safety')}
           </a>
 
           {/* Copyright */}
           <p className="text-xs text-bark-muted text-center">
-            &copy; {new Date().getFullYear()} Kaydo. All rights reserved.{' '}
-            <span className="text-bark-muted">Crafted for memories.</span>
+            {t('footer.copyright', { year: new Date().getFullYear() })}{' '}
+            <span className="text-bark-muted">{t('footer.crafted')}</span>
           </p>
         </div>
       </footer>
@@ -692,6 +665,7 @@ export default function LandingPage() {
  * without leaving the landing page.
  */
 function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
+  const { t } = useTranslation('landing')
   const [familyName, setFamilyName] = useState('')
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [status, setStatus] = useState('idle')
@@ -726,7 +700,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
       setStatus(available ? 'available' : 'taken')
     } catch {
       setStatus('idle')
-      setError('Could not check availability — please try again.')
+      setError(t('claim.errors.couldNotCheck'))
     }
   }
 
@@ -735,7 +709,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
     setError('')
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('claim.errors.passwordTooShort'))
       return
     }
 
@@ -745,12 +719,12 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
       navigate('/home')
     } catch (err) {
       const messages = {
-        'auth/email-already-in-use': 'An account with this email already exists',
-        'auth/invalid-email': 'Please enter a valid email address',
-        'auth/weak-password': 'Password must be at least 6 characters',
+        'auth/email-already-in-use': t('claim.errors.emailInUse'),
+        'auth/invalid-email': t('claim.errors.invalidEmail'),
+        'auth/weak-password': t('claim.errors.weakPassword'),
       }
       // If the slug was claimed between the check and now, signup throws too.
-      setError(messages[err.code] || err.message || 'Could not create account')
+      setError(messages[err.code] || t('claim.errors.generic'))
       if (/already taken/i.test(err.message || '')) setStatus('taken')
     } finally {
       setSubmitting(false)
@@ -766,8 +740,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
             type="text"
             value={familyName}
             onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="The Millers"
-            aria-label="Your family name"
+            placeholder={t('claim.namePlaceholder')}
+            aria-label={t('claim.nameAriaLabel')}
             className="flex-1 min-w-0 pl-4 py-3.5 bg-transparent border-none outline-none text-bark placeholder-bark-muted text-base"
           />
           <span className="flex items-center pr-3 text-bark-muted font-medium select-none">
@@ -783,7 +757,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
             ) : (
               <>
                 <Search className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Check</span>
+                <span className="hidden sm:inline">{t('claim.check')}</span>
               </>
             )}
           </button>
@@ -792,7 +766,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
         {/* Live preview of the resulting address */}
         {slug && status === 'idle' && (
           <p className="text-xs text-bark-muted mt-2 pl-1">
-            Your family address:{' '}
+            {t('claim.previewLabel')}{' '}
             <span className="font-medium text-kaydo">{domain}</span>
           </p>
         )}
@@ -801,7 +775,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
       {/* ── Result states ── */}
       {status === 'invalid' && (
         <p className="text-sm text-amber-700 bg-amber-50 px-4 py-2.5 rounded-xl mt-3">
-          Please use letters or numbers for your family name.
+          {t('claim.invalid')}
         </p>
       )}
 
@@ -809,7 +783,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
         <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl mt-3 flex items-center gap-2">
           <Ban className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>
-            <span className="font-semibold">{domain}</span> is already taken — try another name.
+            <span className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
           </span>
         </p>
       )}
@@ -819,15 +793,14 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
           <p className="text-sm text-green-700 bg-green-50 px-4 py-2.5 rounded-xl flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>
-              <span className="font-semibold">{domain}</span> is available!
+              <span className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
             </span>
           </p>
 
           {/* Inline claim / signup form */}
           {!firebaseReady && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mt-4">
-              <strong>Setup required:</strong> Firebase environment variables are not
-              configured, so accounts can't be created yet.
+              <strong>{t('claim.setupRequiredTitle')}</strong> {t('claim.setupRequiredBody')}
             </div>
           )}
 
@@ -838,8 +811,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name (e.g., Sarah Miller)"
-                aria-label="Your name"
+                placeholder={t('claim.displayNamePlaceholder')}
+                aria-label={t('claim.displayNameAriaLabel')}
                 className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
                 required
               />
@@ -851,8 +824,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                aria-label="Email"
+                placeholder={t('claim.emailPlaceholder')}
+                aria-label={t('claim.emailAriaLabel')}
                 className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
                 required
               />
@@ -864,8 +837,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password (at least 6 characters)"
-                aria-label="Password"
+                placeholder={t('claim.passwordPlaceholder')}
+                aria-label={t('claim.passwordAriaLabel')}
                 className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
                 required
                 minLength={6}
@@ -874,7 +847,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('claim.hidePassword') : t('claim.showPassword')}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -895,7 +868,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  Claim {domain}
+                  {t('claim.submit', { domain })}
                   <span className="text-xl">&rarr;</span>
                 </>
               )}
@@ -913,12 +886,12 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
 
       {/* Secondary path for returning users */}
       <p className="text-sm text-bark-light mt-5 pl-1">
-        Already have an account?{' '}
+        {t('claim.alreadyHaveAccount')}{' '}
         <button
           onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
           className="text-kaydo font-semibold hover:text-kaydo-dark"
         >
-          Login
+          {t('claim.login')}
         </button>
       </p>
     </div>

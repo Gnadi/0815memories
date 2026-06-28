@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
+import { useTranslation } from 'react-i18next'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Shield, Plus, Trash2, Loader2, User, Copy, Check, Link as LinkIcon } from 'lucide-react'
@@ -20,6 +21,7 @@ import { generateInviteToken, INVITE_TTL_MS, buildInviteUrl } from '../../utils/
 
 export default function ManageAdminsPanel() {
   const { familyId, user } = useAuth()
+  const { t } = useTranslation('settings')
   const [ownerUid, setOwnerUid] = useState(null)
   const [adminUids, setAdminUids] = useState([])
   const [adminMeta, setAdminMeta] = useState({})
@@ -102,7 +104,7 @@ export default function ManageAdminsPanel() {
       })
       setGeneratedLink(buildInviteUrl(familyId, token))
     } catch (err) {
-      setError(err.message || 'Failed to generate invite link')
+      setError(err.message || t('admins.generateFailed'))
     } finally {
       setGenerating(false)
     }
@@ -127,16 +129,16 @@ export default function ManageAdminsPanel() {
 
   const handleRevoke = async (token) => {
     if (!token) return
-    if (!window.confirm('Revoke this invite link? It can no longer be used.')) return
+    if (!window.confirm(t('admins.revokeConfirm'))) return
     setError('')
     setNotice('')
     setRevokingToken(token)
     try {
       await deleteDoc(doc(db, 'families', familyId, 'invites', token))
-      setNotice('Invite revoked.')
+      setNotice(t('admins.revoked'))
       setTimeout(() => setNotice(''), 4000)
     } catch (err) {
-      setError(err.message || 'Failed to revoke invite')
+      setError(err.message || t('admins.revokeFailed'))
     } finally {
       setRevokingToken(null)
     }
@@ -144,8 +146,8 @@ export default function ManageAdminsPanel() {
 
   const handleRemove = async (targetUid) => {
     if (!targetUid) return
-    const targetEmail = adminMeta[targetUid]?.email || 'this admin'
-    if (!window.confirm(`Remove ${targetEmail} from this family? They will no longer be able to sign in here.`)) return
+    const targetEmail = adminMeta[targetUid]?.email || t('admins.removeFallbackTarget')
+    if (!window.confirm(t('admins.removeConfirm', { email: targetEmail }))) return
     setError('')
     setNotice('')
     setRemovingUid(targetUid)
@@ -157,10 +159,10 @@ export default function ManageAdminsPanel() {
         adminUids: arrayRemove(targetUid),
       })
       await loadFamily()
-      setNotice('Admin removed.')
+      setNotice(t('admins.removed'))
       setTimeout(() => setNotice(''), 4000)
     } catch (err) {
-      setError(err.message || 'Failed to remove admin')
+      setError(err.message || t('admins.removeFailed'))
     } finally {
       setRemovingUid(null)
     }
@@ -172,7 +174,7 @@ export default function ManageAdminsPanel() {
     const meta = adminMeta[uid]
     const displayEmail = meta?.email
       || (isSelf ? user?.email : null)
-      || (isOwner ? '(family owner)' : `uid: ${uid.slice(0, 8)}…`)
+      || (isOwner ? t('admins.familyOwner') : `uid: ${uid.slice(0, 8)}…`)
     const canRemove = !isOwner && (!isSelf || adminUids.length > 1)
 
     return (
@@ -185,8 +187,8 @@ export default function ManageAdminsPanel() {
           <div className="min-w-0">
             <div className="text-sm text-bark truncate">{displayEmail}</div>
             <div className="text-xs text-bark-muted flex items-center gap-2">
-              {isOwner && <span className="px-1.5 py-0.5 bg-kaydo/15 text-kaydo rounded">Owner</span>}
-              {isSelf && <span className="px-1.5 py-0.5 bg-bark/10 text-bark rounded">You</span>}
+              {isOwner && <span className="px-1.5 py-0.5 bg-kaydo/15 text-kaydo rounded">{t('admins.owner')}</span>}
+              {isSelf && <span className="px-1.5 py-0.5 bg-bark/10 text-bark rounded">{t('admins.you')}</span>}
             </div>
           </div>
         </div>
@@ -198,7 +200,7 @@ export default function ManageAdminsPanel() {
             className="text-sm px-3 py-1.5 rounded-lg text-rose-700 hover:bg-rose-50 disabled:opacity-50 flex items-center gap-1.5"
           >
             {removingUid === uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Remove
+            {t('admins.remove')}
           </button>
         ) : (
           <span className="text-xs text-bark-muted">—</span>
@@ -209,9 +211,9 @@ export default function ManageAdminsPanel() {
 
   const formatExpiry = (ms) => {
     const days = Math.max(0, Math.round((ms - Date.now()) / (24 * 60 * 60 * 1000)))
-    if (days === 0) return 'expires today'
-    if (days === 1) return 'expires in 1 day'
-    return `expires in ${days} days`
+    if (days === 0) return t('admins.expiresToday')
+    if (days === 1) return t('admins.expiresInOneDay')
+    return t('admins.expiresInDays', { count: days })
   }
 
   return (
@@ -219,12 +221,11 @@ export default function ManageAdminsPanel() {
       <label className="block text-sm font-medium text-bark mb-1.5">
         <div className="flex items-center gap-1.5">
           <Shield className="w-4 h-4" />
-          Manage Admins
+          {t('admins.label')}
         </div>
       </label>
       <p className="text-xs text-bark-muted mb-3">
-        Generate a one-time invite link to add another admin. They'll set their own password.
-        Each admin is bound to this family only.
+        {t('admins.description')}
       </p>
 
       {error && (
@@ -238,7 +239,7 @@ export default function ManageAdminsPanel() {
         {loading && adminUids.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-bark-muted px-4 py-3">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Loading admins…
+            {t('admins.loading')}
           </div>
         ) : (
           adminUids.map(renderAdminRow)
@@ -248,7 +249,7 @@ export default function ManageAdminsPanel() {
       {generatedLink ? (
         <div className="p-3 bg-cream-dark rounded-xl space-y-2 mb-3">
           <p className="text-xs text-bark-muted">
-            Share this link with the new admin. It is valid for 7 days and can only be used once.
+            {t('admins.inviteLinkDescription')}
           </p>
           <div className="flex gap-2">
             <input
@@ -263,7 +264,7 @@ export default function ManageAdminsPanel() {
               className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? t('admins.copied') : t('admins.copy')}
             </button>
           </div>
         </div>
@@ -276,12 +277,12 @@ export default function ManageAdminsPanel() {
         className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
       >
         {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-        Generate invite link
+        {t('admins.generate')}
       </button>
 
       {pendingInvites.length > 0 && (
         <div className="mt-5">
-          <p className="text-xs font-medium text-bark mb-2">Pending invites</p>
+          <p className="text-xs font-medium text-bark mb-2">{t('admins.pendingTitle')}</p>
           <div className="space-y-2">
             {pendingInvites.map((invite) => {
               const url = buildInviteUrl(familyId, invite.id)
@@ -302,7 +303,7 @@ export default function ManageAdminsPanel() {
                       type="button"
                       onClick={() => handleCopy(url)}
                       className="text-sm px-2.5 py-1.5 rounded-lg text-bark hover:bg-warm-white"
-                      title="Copy link"
+                      title={t('admins.copyTitle')}
                     >
                       <Copy className="w-4 h-4" />
                     </button>
@@ -311,7 +312,7 @@ export default function ManageAdminsPanel() {
                       onClick={() => handleRevoke(invite.id)}
                       disabled={revokingToken === invite.id}
                       className="text-sm px-2.5 py-1.5 rounded-lg text-rose-700 hover:bg-rose-50 disabled:opacity-50"
-                      title="Revoke"
+                      title={t('admins.revokeTitle')}
                     >
                       {revokingToken === invite.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>

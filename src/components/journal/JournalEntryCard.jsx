@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../../constants/emotions'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
+  const { t } = useTranslation('journal')
   const [menuOpen, setMenuOpen] = useState(false)
 
   const emotion = EMOTIONS.find((e) => e.key === entry.emotion) || EMOTIONS[1]
@@ -37,7 +39,7 @@ export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
           <p className="text-xs text-bark-muted">{formattedDate}</p>
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${emotion.bg} ${emotion.text}`}>
-              {emotion.emoji} {emotion.label}
+              {emotion.emoji} {t('emotions:' + emotion.key)}
             </span>
             <div className="relative">
               <button
@@ -52,13 +54,13 @@ export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
                     onClick={() => { setMenuOpen(false); onEdit() }}
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-bark hover:bg-cream"
                   >
-                    <Pencil className="w-4 h-4" /> Edit
+                    <Pencil className="w-4 h-4" /> {t('common:buttons.edit')}
                   </button>
                   <button
                     onClick={() => { setMenuOpen(false); onDelete() }}
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete
+                    <Trash2 className="w-4 h-4" /> {t('common:buttons.delete')}
                   </button>
                 </div>
               )}
@@ -84,14 +86,14 @@ export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
         {/* Voice memo indicator */}
         {entry.voiceMemos?.length > 0 && (
           <p className="text-xs text-bark-muted mt-3">
-            🎙 {entry.voiceMemos.length} voice {entry.voiceMemos.length === 1 ? 'memo' : 'memos'}
+            🎙 {t('entryCard.voiceMemoCount', { count: entry.voiceMemos.length, label: entry.voiceMemos.length === 1 ? t('entryCard.voiceMemoSingular') : t('entryCard.voiceMemoPlural') })}
           </p>
         )}
 
         {/* Video indicator */}
         {entry.videos?.length > 0 && (
           <p className="text-xs text-bark-muted mt-1">
-            🎬 {entry.videos.length} {entry.videos.length === 1 ? 'video' : 'videos'}
+            🎬 {t('entryCard.videoCount', { count: entry.videos.length, label: entry.videos.length === 1 ? t('entryCard.videoSingular') : t('entryCard.videoPlural') })}
           </p>
         )}
       </div>

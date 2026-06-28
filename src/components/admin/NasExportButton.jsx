@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
@@ -7,6 +8,7 @@ import { HardDrive, X } from 'lucide-react'
 
 export default function NasExportButton() {
   const { familyId, encryptionKey } = useAuth()
+  const { t } = useTranslation('settings')
   const [familyName, setFamilyName] = useState('')
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ phase: '', current: 0, total: 0, message: '' })
@@ -30,7 +32,7 @@ export default function NasExportButton() {
   const handleExport = async () => {
     setExporting(true)
     setError(null)
-    setProgress({ phase: 'data', current: 0, total: 1, message: 'Starting export...' })
+    setProgress({ phase: 'data', current: 0, total: 1, message: t('export.starting') })
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -47,7 +49,7 @@ export default function NasExportButton() {
       if (err.name === 'AbortError') {
         setProgress({ phase: '', current: 0, total: 0, message: '' })
       } else {
-        setError(err.message || 'Export failed')
+        setError(err.message || t('export.failed'))
       }
     } finally {
       setExporting(false)
@@ -78,7 +80,7 @@ export default function NasExportButton() {
           className="flex items-center gap-1.5 text-sm text-bark-muted hover:text-kaydo transition-colors"
         >
           <X className="w-3.5 h-3.5" />
-          Cancel
+          {t('common:buttons.cancel')}
         </button>
       </div>
     )
@@ -87,14 +89,14 @@ export default function NasExportButton() {
   if (progress.phase === 'done') {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-green-700">Export complete! Check your downloads folder.</p>
+        <p className="text-sm text-green-700">{t('export.complete')}</p>
         <button
           type="button"
           onClick={() => setProgress({ phase: '', current: 0, total: 0, message: '' })}
           className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
         >
           <HardDrive className="w-4 h-4" />
-          Export Again
+          {t('export.exportAgain')}
         </button>
       </div>
     )
@@ -111,7 +113,7 @@ export default function NasExportButton() {
         className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
       >
         <HardDrive className="w-4 h-4" />
-        Download Full Backup (ZIP)
+        {t('export.download')}
       </button>
     </div>
   )

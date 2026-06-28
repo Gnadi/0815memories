@@ -1,0 +1,54 @@
+{
+  "dailyMoments": {
+    "title": "Tägliche Momente",
+    "viewAll": "ALLE ANSEHEN",
+    "add": "Hinzufügen",
+    "empty": "Noch keine Momente"
+  },
+  "feed": {
+    "empty": {
+      "heading": "Noch keine Erinnerungen.",
+      "body": "Teile deine erste Erinnerung und fülle das Wohnzimmer mit Leben!"
+    }
+  },
+  "albumGlimpse": {
+    "title": "Blick ins Familienalbum",
+    "photoAlt": "Familienfoto"
+  },
+  "featured": {
+    "badge": "Neue Reise",
+    "awaiting": "Warte auf Erinnerungen...",
+    "placeholderTitle": "Sonntag im Weinberg",
+    "placeholderBody": "Endlich war die ganze Bande da! Teile deine erste Erinnerung, um loszulegen."
+  },
+  "timelineCta": {
+    "eyebrow": "Entdecken",
+    "title": "Reise zurück in die Zeit",
+    "body": "Durchstöbere jede Erinnerung nach Jahr und Jahreszeit."
+  },
+  "card": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "filmCaptionFallback": "0815 MEMORIES 200 PX"
+  },
+  "moment": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Diesen Moment löschen?",
+    "noMedia": "Keine Medien",
+    "author": "Familie",
+    "aria": {
+      "moreOptions": "Weitere Optionen",
+      "close": "Schließen",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "hideInfo": "Info ausblenden"
+    }
+  },
+  "momentsPage": {
+    "title": "Tägliche Momente",
+    "back": "Zurück",
+    "empty": "Noch keine Momente"
+  },
+  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+}

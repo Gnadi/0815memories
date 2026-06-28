@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
@@ -8,9 +9,11 @@ import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import ManageAdminsPanel from './ManageAdminsPanel'
+import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
   const { familyId } = useAuth()
+  const { t } = useTranslation('settings')
   const [newPassword, setNewPassword] = useState('')
   const [familyName, setFamilyName] = useState('')
   const [familySlug, setFamilySlug] = useState('')
@@ -47,11 +50,11 @@ export default function SettingsPanel() {
   const handleSavePassword = async (e) => {
     e.preventDefault()
     if (!newPassword || newPassword.length < 4) {
-      setMessage('Password must be at least 4 characters')
+      setMessage(t('password.tooShort'))
       return
     }
     if (!familyId) {
-      setMessage('No family found')
+      setMessage(t('password.noFamily'))
       return
     }
 
@@ -64,10 +67,10 @@ export default function SettingsPanel() {
         { merge: true }
       )
       setNewPassword('')
-      setMessage('Shared password updated!')
+      setMessage(t('password.updated'))
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
-      setMessage('Failed to update password')
+      setMessage(t('password.updateFailed'))
     } finally {
       setSaving(false)
     }
@@ -79,14 +82,14 @@ export default function SettingsPanel() {
     try {
       const newSlug = generateSlug(familyName)
       if (!newSlug) {
-        setMessage('Family name produces an invalid URL — please use letters or numbers')
+        setMessage(t('familyName.invalidUrl'))
         setSaving(false)
         return
       }
 
       const available = await isSlugAvailable(newSlug, familyId)
       if (!available) {
-        setMessage('This family name is already taken — please choose another')
+        setMessage(t('familyName.taken'))
         setSaving(false)
         return
       }
@@ -97,10 +100,10 @@ export default function SettingsPanel() {
         { merge: true }
       )
       setFamilySlug(newSlug)
-      setMessage('Family name updated!')
+      setMessage(t('familyName.updated'))
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
-      setMessage('Failed to update name')
+      setMessage(t('familyName.updateFailed'))
     } finally {
       setSaving(false)
     }
@@ -138,15 +141,15 @@ export default function SettingsPanel() {
         { merge: true }
       )
       const messages = {
-        classic: 'Switched to Classic memory cards',
-        polaroid: 'Switched to Polaroid memory cards',
-        modern: 'Switched to Modern memory cards',
+        classic: t('cardStyle.switchedClassic'),
+        polaroid: t('cardStyle.switchedPolaroid'),
+        modern: t('cardStyle.switchedModern'),
       }
       setMessage(messages[style])
       setTimeout(() => setMessage(''), 3000)
     } catch {
       setMemoryCardStyle(previous)
-      setMessage('Failed to update memory card style')
+      setMessage(t('cardStyle.updateFailed'))
     } finally {
       setSaving(false)
     }
@@ -162,10 +165,10 @@ export default function SettingsPanel() {
       )
       setLoginHeaderImage(url)
       setLoginHeaderImagePublicId(publicId)
-      setMessage(url ? 'Login image updated!' : 'Login image removed.')
+      setMessage(url ? t('loginImage.updated') : t('loginImage.removed'))
       setTimeout(() => setMessage(''), 3000)
     } catch {
-      setMessage('Failed to save image')
+      setMessage(t('loginImage.saveFailed'))
     }
   }
 
@@ -173,7 +176,7 @@ export default function SettingsPanel() {
     <div className="bg-warm-white rounded-2xl p-4 lg:p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="w-5 h-5 text-kaydo" />
-        <h2 className="text-lg font-bold text-bark">Admin Settings</h2>
+        <h2 className="text-lg font-bold text-bark">{t('panel.title')}</h2>
       </div>
 
       {message && (
@@ -182,16 +185,21 @@ export default function SettingsPanel() {
         </p>
       )}
 
+      {/* Language */}
+      <div className="mb-6">
+        <LanguageSwitcher variant="settings" />
+      </div>
+
       {/* Login page header image */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-bark mb-1.5">
           <div className="flex items-center gap-1.5">
             <ImageIcon className="w-4 h-4" />
-            Login Page Image
+            {t('loginImage.label')}
           </div>
         </label>
         <p className="text-xs text-bark-muted mb-3">
-          Upload a family photo to replace the default illustration on your login page. Visitors will see it when they open your family link.
+          {t('loginImage.description')}
         </p>
         <UploadWidget onUpload={handleLoginImageUpload} currentUrl={loginHeaderImage} unencrypted />
       </div>
@@ -202,11 +210,11 @@ export default function SettingsPanel() {
           <label className="block text-sm font-medium text-bark mb-1.5">
             <div className="flex items-center gap-1.5">
               <Link className="w-4 h-4" />
-              Family Share Link
+              {t('shareLink.label')}
             </div>
           </label>
           <p className="text-xs text-bark-muted mb-3">
-            Share this link with family and friends so they can access your memories.
+            {t('shareLink.description')}
           </p>
           <div className="flex gap-2">
             <input
@@ -221,7 +229,7 @@ export default function SettingsPanel() {
               className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? t('shareLink.copied') : t('shareLink.copy')}
             </button>
           </div>
         </div>
@@ -230,17 +238,17 @@ export default function SettingsPanel() {
       {/* Change shared password */}
       <form onSubmit={handleSavePassword} className="mb-6">
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Change Shared Password (Private Key)
+          {t('password.label')}
         </label>
         <p className="text-xs text-bark-muted mb-3">
-          This is the password family and friends use to access the site.
+          {t('password.description')}
         </p>
         <div className="flex gap-2">
           <input
             type="text"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="New shared password"
+            placeholder={t('password.placeholder')}
             className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
@@ -249,7 +257,7 @@ export default function SettingsPanel() {
             className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
           >
             <Save className="w-4 h-4" />
-            Save
+            {t('common:buttons.save')}
           </button>
         </div>
       </form>
@@ -257,14 +265,14 @@ export default function SettingsPanel() {
       {/* Family name */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Family Name
+          {t('familyName.label')}
         </label>
         <div className="flex gap-2">
           <input
             type="text"
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
-            placeholder="e.g., The Millers"
+            placeholder={t('familyName.placeholder')}
             className="flex-1 min-w-0 px-4 py-2.5 bg-cream-dark rounded-xl text-bark text-base placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
@@ -274,7 +282,7 @@ export default function SettingsPanel() {
             className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
           >
             <Save className="w-4 h-4" />
-            Save
+            {t('common:buttons.save')}
           </button>
         </div>
       </div>
@@ -287,41 +295,41 @@ export default function SettingsPanel() {
         <label className="block text-sm font-medium text-bark mb-1.5">
           <div className="flex items-center gap-1.5">
             <Camera className="w-4 h-4" />
-            Memory Card Style
+            {t('cardStyle.label')}
           </div>
         </label>
         <p className="text-xs text-bark-muted mb-3">
-          Choose how memories look in your family home feed. Everyone in the family sees the same style.
+          {t('cardStyle.description')}
         </p>
         <div className="grid grid-cols-3 gap-3">
           <CardStylePreview
-            label="Modern"
-            description="Clean and bright."
+            label={t('cardStyle.modern')}
+            description={t('cardStyle.modernDesc')}
             selected={memoryCardStyle === 'modern'}
             disabled={saving}
             onSelect={() => handleSelectCardStyle('modern')}
             preview={<ModernPreview />}
           />
           <CardStylePreview
-            label="Classic"
-            description="Vintage film look."
+            label={t('cardStyle.classic')}
+            description={t('cardStyle.classicDesc')}
             selected={memoryCardStyle === 'classic'}
             disabled={saving}
             onSelect={() => handleSelectCardStyle('classic')}
             preview={<ClassicPreview />}
           />
           <CardStylePreview
-            label="Polaroid"
-            description="Instant photo with per-card border."
+            label={t('cardStyle.polaroid')}
+            description={t('cardStyle.polaroidDesc')}
             selected={memoryCardStyle === 'polaroid'}
             disabled={saving}
             onSelect={() => handleSelectCardStyle('polaroid')}
-            preview={<PolaroidPreview />}
+            preview={<PolaroidPreview label={t('cardStyle.previewMemory')} />}
           />
         </div>
         {memoryCardStyle === 'polaroid' && (
           <p className="text-xs text-bark-muted mt-3">
-            Tip: customize each memory's border color, width, style, and decoration when posting or editing it.
+            {t('cardStyle.polaroidTip')}
           </p>
         )}
       </div>
@@ -331,12 +339,11 @@ export default function SettingsPanel() {
         <label className="block text-sm font-medium text-bark mb-1.5">
           <div className="flex items-center gap-1.5">
             <HardDrive className="w-4 h-4" />
-            Data Export / NAS Backup
+            {t('export.label')}
           </div>
         </label>
         <p className="text-xs text-bark-muted mb-3">
-          Download all your family's data and media as a ZIP file.
-          Save it to your NAS, external drive, or cloud storage for safekeeping.
+          {t('export.description')}
         </p>
         <NasExportButton />
       </div>
@@ -381,14 +388,14 @@ function ModernPreview() {
   )
 }
 
-function PolaroidPreview() {
+function PolaroidPreview({ label }) {
   return (
     <div
       className="bg-warm-white shadow-md w-20"
       style={{ transform: 'rotate(-1.2deg)', padding: '4px 4px 18px' }}
     >
       <div className="aspect-square bg-kaydo-light/60" />
-      <p className="text-[7px] text-bark text-center mt-1 font-display tracking-wide">Memory</p>
+      <p className="text-[7px] text-bark text-center mt-1 font-display tracking-wide">{label}</p>
     </div>
   )
 }

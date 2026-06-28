@@ -1,0 +1,97 @@
+{
+  "page": {
+    "title": "Settings"
+  },
+  "panel": {
+    "title": "Admin Settings"
+  },
+  "loginImage": {
+    "label": "Login Page Image",
+    "description": "Upload a family photo to replace the default illustration on your login page. Visitors will see it when they open your family link.",
+    "updated": "Login image updated!",
+    "removed": "Login image removed.",
+    "saveFailed": "Failed to save image"
+  },
+  "shareLink": {
+    "label": "Family Share Link",
+    "description": "Share this link with family and friends so they can access your memories.",
+    "copy": "Copy",
+    "copied": "Copied!"
+  },
+  "password": {
+    "label": "Change Shared Password (Private Key)",
+    "description": "This is the password family and friends use to access the site.",
+    "placeholder": "New shared password",
+    "tooShort": "Password must be at least 4 characters",
+    "noFamily": "No family found",
+    "updated": "Shared password updated!",
+    "updateFailed": "Failed to update password"
+  },
+  "familyName": {
+    "label": "Family Name",
+    "placeholder": "e.g., The Millers",
+    "invalidUrl": "Family name produces an invalid URL — please use letters or numbers",
+    "taken": "This family name is already taken — please choose another",
+    "updated": "Family name updated!",
+    "updateFailed": "Failed to update name"
+  },
+  "cardStyle": {
+    "label": "Memory Card Style",
+    "description": "Choose how memories look in your family home feed. Everyone in the family sees the same style.",
+    "modern": "Modern",
+    "modernDesc": "Clean and bright.",
+    "classic": "Classic",
+    "classicDesc": "Vintage film look.",
+    "polaroid": "Polaroid",
+    "polaroidDesc": "Instant photo with per-card border.",
+    "previewMemory": "Memory",
+    "polaroidTip": "Tip: customize each memory's border color, width, style, and decoration when posting or editing it.",
+    "switchedClassic": "Switched to Classic memory cards",
+    "switchedPolaroid": "Switched to Polaroid memory cards",
+    "switchedModern": "Switched to Modern memory cards",
+    "updateFailed": "Failed to update memory card style"
+  },
+  "export": {
+    "label": "Data Export / NAS Backup",
+    "description": "Download all your family's data and media as a ZIP file. Save it to your NAS, external drive, or cloud storage for safekeeping.",
+    "starting": "Starting export...",
+    "cancel": "Cancel",
+    "complete": "Export complete! Check your downloads folder.",
+    "exportAgain": "Export Again",
+    "download": "Download Full Backup (ZIP)",
+    "failed": "Export failed"
+  },
+  "admins": {
+    "label": "Manage Admins",
+    "description": "Generate a one-time invite link to add another admin. They'll set their own password. Each admin is bound to this family only.",
+    "loading": "Loading admins…",
+    "owner": "Owner",
+    "you": "You",
+    "familyOwner": "(family owner)",
+    "remove": "Remove",
+    "removeConfirm": "Remove {{email}} from this family? They will no longer be able to sign in here.",
+    "removeFallbackTarget": "this admin",
+    "removed": "Admin removed.",
+    "removeFailed": "Failed to remove admin",
+    "inviteLinkDescription": "Share this link with the new admin. It is valid for 7 days and can only be used once.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "generate": "Generate invite link",
+    "generateFailed": "Failed to generate invite link",
+    "pendingTitle": "Pending invites",
+    "copyTitle": "Copy link",
+    "revokeTitle": "Revoke",
+    "revokeConfirm": "Revoke this invite link? It can no longer be used.",
+    "revoked": "Invite revoked.",
+    "revokeFailed": "Failed to revoke invite",
+    "expiresToday": "expires today",
+    "expiresInOneDay": "expires in 1 day",
+    "expiresInDays": "expires in {{count}} days"
+  },
+  "upload": {
+    "previewAlt": "Preview",
+    "clickToUpload": "Click to upload a photo",
+    "signatureFailed": "Failed to get upload signature",
+    "uploadFailed": "Upload failed"
+  }
+}

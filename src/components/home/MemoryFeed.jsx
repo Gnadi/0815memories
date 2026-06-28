@@ -1,13 +1,15 @@
+import { useTranslation } from 'react-i18next'
 import MemoryCard from './MemoryCard'
 
 export default function MemoryFeed({ memories, onEdit, onDelete }) {
+  const { t } = useTranslation('home')
   if (memories.length === 0) {
     return (
       <section className="mb-8">
         <div className="bg-warm-white rounded-2xl p-8 text-center">
-          <p className="text-bark-muted text-lg">No memories yet.</p>
+          <p className="text-bark-muted text-lg">{t('feed.empty.heading')}</p>
           <p className="text-bark-muted text-sm mt-1">
-            Post your first memory to start filling the living room!
+            {t('feed.empty.body')}
           </p>
         </div>
       </section>

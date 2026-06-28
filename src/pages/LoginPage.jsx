@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
@@ -9,6 +10,7 @@ import FamilyIllustration from '../components/FamilyIllustration'
 import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
 
 export default function LoginPage() {
+  const { t } = useTranslation('auth')
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -47,12 +49,12 @@ export default function LoginPage() {
           setResolvedFamilyName(family.familyName)
           setResolvedFamilyHeaderImage(family.loginHeaderImage || '')
         } else {
-          setError('Family not found — check the link and try again')
+          setError(t('login.errors.familyNotFound'))
         }
       })
-      .catch(() => setError('Could not load family'))
+      .catch(() => setError(t('login.errors.couldNotLoadFamily')))
       .finally(() => setResolving(false))
-  }, [routeSlug])
+  }, [routeSlug, t])
 
   // Load header image for families accessed via ?family= query param (no slug)
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function LoginPage() {
         await loginAsAdmin(email, password)
       } else {
         if (!effectiveFamilyId) {
-          setError('You need a family link to sign in as a viewer')
+          setError(t('login.errors.needFamilyLink'))
           setLoading(false)
           return
         }
@@ -97,8 +99,8 @@ export default function LoginPage() {
     } catch (err) {
       setError(
         err.code === 'auth/invalid-credential'
-          ? 'Invalid email or password'
-          : err.message || 'Could not sign in'
+          ? t('login.errors.invalidCredential')
+          : t('login.errors.generic')
       )
     } finally {
       setLoading(false)
@@ -128,16 +130,18 @@ export default function LoginPage() {
           {/* Illustration card */}
           <div className="rounded-2xl overflow-hidden mb-6 h-48">
             {resolvedFamilyHeaderImage
-              ? <img src={resolvedFamilyHeaderImage} alt="Family" className="w-full h-full object-cover" />
+              ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
               : <FamilyIllustration />}
           </div>
 
           {/* Welcome heading */}
           <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            {resolvedFamilyName ? `Welcome to ${resolvedFamilyName}` : 'Welcome Home'}
+            {resolvedFamilyName
+              ? t('login.welcomeFamily', { name: resolvedFamilyName })
+              : t('login.welcomeHome')}
           </h1>
           <p className="text-bark-light text-center mb-6">
-            Step inside the digital living room of your loved ones.
+            {t('login.subtitle')}
           </p>
 
           {!firebaseReady && <SetupBanner />}
@@ -165,7 +169,7 @@ export default function LoginPage() {
               onClick={() => setShowAdminLogin(!showAdminLogin)}
               className="text-sm text-bark-muted hover:text-kaydo transition-colors"
             >
-              {showAdminLogin ? 'Back to family login' : 'Admin login'}
+              {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
             </button>
           </div>
 
@@ -176,7 +180,7 @@ export default function LoginPage() {
                 onClick={() => navigate('/signup')}
                 className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
               >
-                Create an Account
+                {t('login.createAccount')}
               </button>
             </div>
           )}
@@ -186,14 +190,14 @@ export default function LoginPage() {
         {/* Left — Illustration */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
           {resolvedFamilyHeaderImage
-            ? <img src={resolvedFamilyHeaderImage} alt="Family" className="absolute inset-0 w-full h-full object-cover" />
+            ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover" />
             : <FamilyIllustration />}
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              Your digital living room awaits.
+              {t('login.asideTitle')}
             </h2>
             <p className="text-base opacity-90 drop-shadow">
-              Safe, private, and filled with the ones who matter most.
+              {t('login.asideBody')}
             </p>
           </div>
         </div>
@@ -207,10 +211,10 @@ export default function LoginPage() {
             </div>
 
             <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              Welcome Home
+              {t('login.welcomeHome')}
             </h1>
             <p className="text-bark-light text-center mb-8">
-              Step inside the digital living room of your loved ones.
+              {t('login.subtitle')}
             </p>
 
             {!firebaseReady && <SetupBanner />}
@@ -237,19 +241,19 @@ export default function LoginPage() {
                 onClick={() => setShowAdminLogin(!showAdminLogin)}
                 className="text-sm text-bark-muted hover:text-kaydo transition-colors"
               >
-                {showAdminLogin ? 'Back to family login' : 'Admin login'}
+                {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
               </button>
             </div>
 
             {/* Sign up — admin login only */}
             {showAdminLogin && (
               <div className="mt-6 text-center">
-                <p className="text-sm text-bark-light mb-3">New to the family?</p>
+                <p className="text-sm text-bark-light mb-3">{t('login.newToFamily')}</p>
                 <button
                   onClick={() => navigate('/signup')}
                   className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
                 >
-                  Create an Account
+                  {t('login.createAccount')}
                 </button>
               </div>
             )}
@@ -257,7 +261,7 @@ export default function LoginPage() {
             {/* Secure badge */}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
               <Shield className="w-4 h-4" />
-              Encrypted & Private Family Network
+              {t('secureBadge')}
             </div>
           </div>
         </div>
@@ -265,11 +269,11 @@ export default function LoginPage() {
 
       {/* Footer — desktop only */}
       <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>&copy; {new Date().getFullYear()} Kaydo. Designed for memories.</p>
+        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
         <div className="flex gap-4">
-          <span className="hover:text-bark cursor-pointer">Privacy Policy</span>
-          <span className="hover:text-bark cursor-pointer">Terms of Service</span>
-          <span className="hover:text-bark cursor-pointer">Help Center</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.terms')}</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
         </div>
       </footer>
     </div>
@@ -277,11 +281,18 @@ export default function LoginPage() {
 }
 
 function SetupBanner() {
+  const { t } = useTranslation('auth')
   return (
     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-      <strong>Setup required:</strong> Firebase environment variables are not configured.
-      Copy <code className="bg-amber-100 px-1 rounded">.env.example</code> to{' '}
-      <code className="bg-amber-100 px-1 rounded">.env.local</code> and add your Firebase credentials.
+      <strong>{t('setupBanner.title')}</strong>{' '}
+      <Trans
+        t={t}
+        i18nKey="setupBanner.body"
+        components={[
+          <code className="bg-amber-100 px-1 rounded" />,
+          <code className="bg-amber-100 px-1 rounded" />,
+        ]}
+      />
     </div>
   )
 }
@@ -291,13 +302,14 @@ function LoginForm({
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
   error, loading, handleSubmit,
 }) {
+  const { t } = useTranslation('auth')
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Admin email field */}
       {showAdminLogin && (
         <div>
           <label className="block text-sm font-medium text-bark mb-1.5">
-            Family Email
+            {t('login.form.familyEmailLabel')}
           </label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -305,7 +317,7 @@ function LoginForm({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="the.millers@kaydo.com"
+              placeholder={t('login.form.familyEmailPlaceholder')}
               className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             />
           </div>
@@ -315,7 +327,7 @@ function LoginForm({
       {/* Password field */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Private Key
+          {t('login.form.privateKeyLabel')}
         </label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -323,13 +335,14 @@ function LoginForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your private key"
+            placeholder={t('login.form.privateKeyPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -346,7 +359,7 @@ function LoginForm({
             onChange={(e) => setStayLoggedIn(e.target.checked)}
             className="w-4 h-4 rounded border-bark-muted accent-kaydo"
           />
-          Stay logged in
+          {t('login.form.stayLoggedIn')}
         </label>
       </div>
 
@@ -367,7 +380,7 @@ function LoginForm({
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            Enter the Home
+            {t('login.form.submit')}
             <span className="text-xl">&rarr;</span>
           </>
         )}

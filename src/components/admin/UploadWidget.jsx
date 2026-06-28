@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Image as ImageIcon } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import { useAuth } from '../../context/AuthContext'
@@ -11,6 +12,7 @@ import { devError } from '../../utils/devLog'
  */
 export default function UploadWidget({ onUpload, currentUrl, unencrypted = false }) {
   const { encryptionKey } = useAuth()
+  const { t } = useTranslation('settings')
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(currentUrl || '')
   const fileInputRef = useRef(null)
@@ -27,7 +29,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
       if (unencrypted) {
         // Plain Cloudinary upload (no encryption)
         const signRes = await fetch('/api/cloudinary-sign')
-        if (!signRes.ok) throw new Error('Failed to get upload signature')
+        if (!signRes.ok) throw new Error(t('upload.signatureFailed'))
         const { timestamp, signature, folder, apiKey } = await signRes.json()
 
         const formData = new FormData()
@@ -41,7 +43,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
           `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
           { method: 'POST', body: formData }
         )
-        if (!response.ok) throw new Error('Upload failed')
+        if (!response.ok) throw new Error(t('upload.uploadFailed'))
         const data = await response.json()
         setPreview(data.secure_url)
         onUpload(data.secure_url, data.public_id)
@@ -68,7 +70,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
     <div className="relative">
       {preview ? (
         <div className="relative rounded-xl overflow-hidden">
-          <img src={preview} alt="Preview" className="w-full h-48 object-cover" />
+          <img src={preview} alt={t('upload.previewAlt')} className="w-full h-48 object-cover" />
           {uploading && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
@@ -93,7 +95,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
           ) : (
             <>
               <ImageIcon className="w-8 h-8 text-bark-muted" />
-              <span className="text-sm text-bark-muted">Click to upload a photo</span>
+              <span className="text-sm text-bark-muted">{t('upload.clickToUpload')}</span>
             </>
           )}
         </button>

@@ -5,6 +5,8 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import { Outlet, useNavigate } from 'react-router-dom'
+import { I18nextProvider, useTranslation } from 'react-i18next'
+import i18n from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -64,6 +66,7 @@ function PageLoader() {
 // Must be inside AuthProvider to access familyId.
 function AppNotifications() {
   const { familyId, isAuthenticated } = useAuth()
+  const { t } = useTranslation('common')
   const [toast, setToast] = useState(null)
 
   useEffect(() => {
@@ -101,7 +104,7 @@ function AppNotifications() {
           <button
             onClick={() => setToast(null)}
             className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity mt-0.5"
-            aria-label="Dismiss"
+            aria-label={t('actions.dismiss')}
           >
             ×
           </button>
@@ -111,20 +114,40 @@ function AppNotifications() {
   )
 }
 
+// Keeps the <html lang> attribute in sync with the active language. The static
+// pre-rendered "/" stays "en" (no window during pre-render); this updates it
+// client-side after hydration and on every language change.
+function HtmlLangSync() {
+  const { i18n: i18nInstance } = useTranslation()
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const apply = (lng) => {
+      document.documentElement.lang = (lng || 'en').split('-')[0]
+    }
+    apply(i18nInstance.language)
+    i18nInstance.on('languageChanged', apply)
+    return () => i18nInstance.off('languageChanged', apply)
+  }, [i18nInstance])
+  return null
+}
+
 // Root layout: providers + global UI shared by every route. The active route's
 // element renders into <Outlet />. Replaces the old <BrowserRouter>/<Routes> tree
 // so vite-react-ssg can drive the data router and pre-render static routes.
 function Layout() {
   return (
-    <AuthProvider>
-      <Suspense fallback={<PageLoader />}>
-        <Outlet />
-      </Suspense>
-      <AdminMobileBottomNav />
-      <PWAInstallPrompt />
-      <AppNotifications />
-      <Analytics />
-    </AuthProvider>
+    <I18nextProvider i18n={i18n}>
+      <AuthProvider>
+        <HtmlLangSync />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+        <AdminMobileBottomNav />
+        <PWAInstallPrompt />
+        <AppNotifications />
+        <Analytics />
+      </AuthProvider>
+    </I18nextProvider>
   )
 }
 

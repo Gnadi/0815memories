@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
@@ -6,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function MemoryCardModern({ memory, onEdit, onDelete }) {
+  const { t } = useTranslation('home')
   const [showMenu, setShowMenu] = useState(false)
   const [imgIndex, setImgIndex] = useState(0)
   const { isAdmin } = useAuth()
@@ -149,7 +151,7 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
                 >
-                  <Pencil className="w-4 h-4" /> Edit
+                  <Pencil className="w-4 h-4" /> {t('card.edit')}
                 </button>
                 <button
                   onClick={(e) => {
@@ -159,7 +161,7 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
-                  <Trash2 className="w-4 h-4" /> Delete
+                  <Trash2 className="w-4 h-4" /> {t('card.delete')}
                 </button>
               </div>
             )}

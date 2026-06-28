@@ -1,0 +1,71 @@
+{
+  "brand": {
+    "livingRoom": "Das Wohnzimmer",
+    "privateSpace": "Unser privater Raum"
+  },
+  "nav": {
+    "home": "Start",
+    "timeline": "Zeitstrahl",
+    "scrapbooks": "Sammelalben",
+    "recipes": "Rezepte",
+    "kidJournals": "Kinder-Tagebücher",
+    "blackBox": "Black Box",
+    "settings": "Einstellungen"
+  },
+  "buttons": {
+    "postMemory": "Erinnerung teilen",
+    "leaveRoom": "Raum verlassen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "confirm": "Bestätigen",
+    "loading": "Lädt…"
+  },
+  "language": {
+    "label": "Sprache",
+    "description": "Wähle die Sprache für die App-Oberfläche.",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "actions": {
+    "dismiss": "Schließen",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "familyIllustrationAlt": "Illustration einer Familienzusammenkunft"
+  },
+  "mobileNav": {
+    "home": "Start",
+    "journal": "Tagebuch",
+    "blackBox": "BlackBox",
+    "recipes": "Rezepte",
+    "create": "Erstellen"
+  },
+  "createSheet": {
+    "title": "Was möchtest du erstellen?",
+    "postMemory": "Erinnerung teilen",
+    "postMemoryDesc": "Fotos, Geschichten, Videos & Sprachnachrichten teilen",
+    "createScrapbook": "Sammelalbum erstellen",
+    "createScrapbookDesc": "Gestalte schöne Erinnerungsseiten mit Fotos & Stickern",
+    "defaultScrapbookTitle": "Mein Sammelalbum",
+    "notAuthenticated": "Nicht angemeldet – bitte lade die App neu.",
+    "createError": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
+  "pwa": {
+    "dialogLabel": "Kaydo installieren",
+    "tagline": "Füge die App zum Startbildschirm hinzu für das beste Erlebnis – funktioniert auch offline.",
+    "dismiss": "Installationshinweis schließen",
+    "install": "Zum Startbildschirm hinzufügen",
+    "notNow": "Nicht jetzt"
+  },
+  "notifications": {
+    "title": "Bleib auf dem Laufenden",
+    "body": "Werde benachrichtigt, wenn eine neue Erinnerung oder ein Moment geteilt wird.",
+    "enable": "Aktivieren",
+    "enabling": "Wird aktiviert…",
+    "notNow": "Nicht jetzt"
+  }
+}

@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next'
+
 export default function RecipeEvolutionTree({ versions, onVersionClick }) {
+  const { t } = useTranslation('recipes')
   if (!versions || versions.length === 0) return null
 
   return (
@@ -20,19 +23,19 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
           if (isFirst) {
             badge = (
               <span className="text-[10px] font-semibold bg-stone-200 text-stone-600 rounded-full px-2 py-0.5">
-                Archive
+                {t('tree.archive')}
               </span>
             )
           } else if (isLast) {
             badge = (
               <span className="text-[10px] font-semibold bg-kaydo text-white rounded-full px-2 py-0.5">
-                CURRENT
+                {t('tree.current')}
               </span>
             )
           } else {
             badge = (
               <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">
-                MODIFIED
+                {t('tree.modified')}
               </span>
             )
           }
@@ -51,7 +54,14 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
               >
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-sm font-bold text-bark">
-                    {version.year}: {isFirst ? 'Original' : version.author ? `${version.author}'s Fork` : 'Fork'}
+                    {t('tree.rowTitle', {
+                      year: version.year,
+                      label: isFirst
+                        ? t('tree.original')
+                        : version.author
+                        ? t('tree.authorFork', { author: version.author })
+                        : t('tree.fork'),
+                    })}
                   </span>
                   {badge}
                 </div>
@@ -70,7 +80,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
                           key={i}
                           className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 ${chipClass}`}
                         >
-                          {change.type} {change.ingredient}
+                          {t('compare.diff.' + change.type.toLowerCase(), change.type)} {change.ingredient}
                         </span>
                       )
                     })}
@@ -84,7 +94,7 @@ export default function RecipeEvolutionTree({ versions, onVersionClick }) {
                   </p>
                 )}
 
-                <p className="text-xs text-kaydo font-semibold mt-2">View details →</p>
+                <p className="text-xs text-kaydo font-semibold mt-2">{t('tree.viewDetails')}</p>
               </button>
             </div>
           )

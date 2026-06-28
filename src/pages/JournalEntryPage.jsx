@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Image as ImageIcon, Mic, Video, X } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { EMOTIONS } from '../constants/emotions'
@@ -15,6 +16,7 @@ import { devError } from '../utils/devLog'
 const today = new Date().toISOString().split('T')[0]
 
 export default function JournalEntryPage() {
+  const { t } = useTranslation('journal')
   const { childId, entryId } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
@@ -114,7 +116,7 @@ export default function JournalEntryPage() {
       navigate(`/journal/${childId}`)
     } catch (err) {
       devError('Failed to save journal entry:', err)
-      setError(err.message || 'Failed to save. Please try again.')
+      setError(t('editor.saveError'))
     } finally {
       setSaving(false)
     }
@@ -147,7 +149,7 @@ export default function JournalEntryPage() {
           onClick={() => setShowEmotionPicker((v) => !v)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${selectedEmotion.bg} ${selectedEmotion.text}`}
         >
-          {selectedEmotion.emoji} {selectedEmotion.label}
+          {selectedEmotion.emoji} {t('emotions:' + selectedEmotion.key)}
         </button>
       </div>
 
@@ -165,7 +167,7 @@ export default function JournalEntryPage() {
                   : 'border-transparent text-stone-500 hover:bg-white/60'
               }`}
             >
-              {em.emoji} {em.label}
+              {em.emoji} {t('emotions:' + em.key)}
             </button>
           ))}
         </div>
@@ -189,7 +191,7 @@ export default function JournalEntryPage() {
               type="text"
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="A Message for your Future Self"
+              placeholder={t('editor.titlePlaceholder')}
               className="w-full bg-transparent text-stone-800 text-xl font-bold placeholder-stone-300 outline-none leading-tight"
             />
           </div>
@@ -207,7 +209,7 @@ export default function JournalEntryPage() {
               type="text"
               value={form.volume}
               onChange={(e) => setForm((p) => ({ ...p, volume: e.target.value }))}
-              placeholder="Volume / Chapter"
+              placeholder={t('editor.volumePlaceholder')}
               className="flex-1 bg-transparent text-stone-400 text-xs outline-none placeholder-stone-300"
             />
           </div>
@@ -274,7 +276,7 @@ export default function JournalEntryPage() {
             <div className="px-5 pt-2 space-y-1">
               {voiceMemos.map((memo, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-stone-100 rounded-xl px-3 py-1.5">
-                  <span className="text-xs text-stone-600">🎙 {memo.title || `Voice note ${idx + 1}`}</span>
+                  <span className="text-xs text-stone-600">🎙 {memo.title || t('editor.voiceNote', { index: idx + 1 })}</span>
                   <button
                     type="button"
                     onClick={() => setVoiceMemos((prev) => prev.filter((_, i) => i !== idx))}
@@ -305,7 +307,7 @@ export default function JournalEntryPage() {
           <textarea
             value={form.content}
             onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-            placeholder={`My dearest ${kid?.name || 'child'}, today…`}
+            placeholder={t('editor.contentPlaceholder', { name: kid?.name || t('editor.contentPlaceholderFallback') })}
             className="w-full min-h-16 px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300"
           />
         </div>
@@ -336,11 +338,11 @@ export default function JournalEntryPage() {
           <div className="ml-auto">
             {saving ? (
               <span className="text-xs tracking-[0.25em] uppercase font-medium text-stone-400">
-                Saving…
+                {t('editor.saving')}
               </span>
             ) : hasUploading ? (
               <span className="text-xs tracking-widest uppercase text-stone-400">
-                Uploading…
+                {t('editor.uploading')}
               </span>
             ) : (
               <button
@@ -348,7 +350,7 @@ export default function JournalEntryPage() {
                 disabled={!form.content.trim()}
                 className="text-xs tracking-[0.2em] uppercase font-semibold text-kaydo disabled:text-stone-300 transition-colors"
               >
-                {entry ? 'Update' : 'Save'}
+                {entry ? t('editor.update') : t('editor.save')}
               </button>
             )}
           </div>

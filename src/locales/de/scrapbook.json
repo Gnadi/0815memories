@@ -1,0 +1,131 @@
+{
+  "list": {
+    "title": "Sammelalben",
+    "subtitle": "Gestalte wunderschöne digitale Erinnerungsbücher",
+    "newScrapbook": "Neues Sammelalbum",
+    "createScrapbook": "Sammelalbum erstellen"
+  },
+  "empty": {
+    "heading": "Noch keine Sammelalben",
+    "body": "Erstelle dein erstes digitales Sammelalbum mit Fotos, Stickern, Text und schönen Layouts."
+  },
+  "errors": {
+    "notAuthenticated": "Nicht angemeldet. Bitte lade die Seite neu und versuche es erneut.",
+    "createFailed": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "notFound": "Sammelalbum nicht gefunden",
+    "pdfExportFailed": "PDF-Export fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "card": {
+    "page_one": "{{count}} Seite",
+    "page_other": "{{count}} Seiten",
+    "deleteConfirm": "„{{title}}“ löschen? Das kann nicht rückgängig gemacht werden."
+  },
+  "editor": {
+    "backToScrapbooks": "Zurück zu den Sammelalben",
+    "renameTooltip": "Zum Umbenennen klicken",
+    "addPage": "Seite hinzufügen",
+    "deletePage": "Seite löschen",
+    "deletePageConfirm": "Diese Seite löschen?",
+    "saving": "Speichert…",
+    "saved": "Gespeichert",
+    "undo": "Rückgängig",
+    "exportPdf": "Als PDF exportieren",
+    "pdf": "PDF",
+    "copyShareLink": "Link zum Teilen kopieren",
+    "linkCopied": "Link in die Zwischenablage kopiert!"
+  },
+  "pageNav": {
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "cover": "Titel",
+    "coverLabel": "Titel / {{total}}",
+    "pageLabel": "Seite {{number}} / {{total}}",
+    "pageThumb": "Seite {{number}}",
+    "pagesHeading": "Seiten",
+    "addPage": "Seite hinzufügen"
+  },
+  "photoBar": {
+    "heading": "Fotos",
+    "fillHint": "Tippe ein Foto an, um den ausgewählten Platz zu füllen",
+    "replaceHint": "Tippe ein Foto an, um es zu ersetzen",
+    "swapHint": "Tippe ein Foto an, um es zu tauschen",
+    "idleHint": "Lade neue hoch oder verwende deine Erinnerungen",
+    "addPhotos": "Fotos hinzufügen",
+    "uploading": "Lädt hoch…",
+    "emptyHint": "Noch keine Fotos – lade eines hoch, um loszulegen."
+  },
+  "photoActions": {
+    "done": "Fertig",
+    "change": "Ändern",
+    "swap": "Tauschen",
+    "scale": "Größe",
+    "rotate": "Drehen",
+    "flip": "Spiegeln",
+    "clear": "Leeren",
+    "remove": "Entfernen",
+    "zoom": "Zoom",
+    "reset": "Zurücksetzen"
+  },
+  "swap": {
+    "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",
+    "noOthers": "Keine anderen Fotos auf dieser Seite zum Tauschen",
+    "photoLabel": "Foto {{number}}"
+  },
+  "canvas": {
+    "tapToAddPhoto": "Zum Hinzufügen eines Fotos tippen",
+    "doubleClickToEdit": "Zum Bearbeiten doppelklicken",
+    "remove": "Entfernen",
+    "bringToFront": "In den Vordergrund holen"
+  },
+  "tools": {
+    "layouts": "Layouts",
+    "text": "Text",
+    "stickers": "Sticker",
+    "background": "Hintergrund",
+    "free": "Frei",
+    "locked": "Gesperrt",
+    "lockTooltip": "Layout sperren (Fotos rasten in Plätze ein)",
+    "unlockTooltip": "Layout entsperren (Fotos ziehen/skalieren)"
+  },
+  "layouts": {
+    "blank": "Leer",
+    "covers": "Titelseiten",
+    "spreads": "Doppelseiten",
+    "replaceConfirm": "Aktuelle Seite durch dieses Layout ersetzen? Vorhandene Elemente werden entfernt."
+  },
+  "background": {
+    "color": "Farbe",
+    "pattern": "Muster",
+    "patterns": {
+      "none": "Keins",
+      "dots": "Punkte",
+      "grid": "Raster",
+      "lines": "Linien"
+    }
+  },
+  "stickers": {
+    "groups": {
+      "hearts": "Herzen",
+      "nature": "Natur",
+      "events": "Anlässe",
+      "family": "Familie",
+      "fun": "Spaß"
+    },
+    "addSticker": "Sticker hinzufügen"
+  },
+  "text": {
+    "fontHint": "Titel & Überschrift nutzen die Display-Schrift {{font}}.",
+    "presets": {
+      "heading": "Überschrift",
+      "title": "Titel",
+      "quote": "Zitat",
+      "caption": "Bildunterschrift",
+      "date": "Datum",
+      "body": "Text"
+    },
+    "sample": {
+      "quote": "„Deine schöne Erinnerung kommt hierher“",
+      "title": "DEIN TITEL"
+    }
+  }
+}

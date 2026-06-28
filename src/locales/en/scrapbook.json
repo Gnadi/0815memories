@@ -1,0 +1,131 @@
+{
+  "list": {
+    "title": "Scrapbooks",
+    "subtitle": "Create beautiful digital memory books",
+    "newScrapbook": "New Scrapbook",
+    "createScrapbook": "Create Scrapbook"
+  },
+  "empty": {
+    "heading": "No scrapbooks yet",
+    "body": "Create your first digital scrapbook with photos, stickers, text, and beautiful layouts."
+  },
+  "errors": {
+    "notAuthenticated": "Not authenticated. Please reload and try again.",
+    "createFailed": "Could not create scrapbook. Please try again.",
+    "notFound": "Scrapbook not found",
+    "pdfExportFailed": "PDF export failed. Please try again."
+  },
+  "card": {
+    "page_one": "{{count}} page",
+    "page_other": "{{count}} pages",
+    "deleteConfirm": "Delete \"{{title}}\"? This cannot be undone."
+  },
+  "editor": {
+    "backToScrapbooks": "Back to Scrapbooks",
+    "renameTooltip": "Click to rename",
+    "addPage": "Add page",
+    "deletePage": "Delete page",
+    "deletePageConfirm": "Delete this page?",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "undo": "Undo",
+    "exportPdf": "Export as PDF",
+    "pdf": "PDF",
+    "copyShareLink": "Copy share link",
+    "linkCopied": "Link copied to clipboard!"
+  },
+  "pageNav": {
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "cover": "Cover",
+    "coverLabel": "Cover / {{total}}",
+    "pageLabel": "Page {{number}} / {{total}}",
+    "pageThumb": "Page {{number}}",
+    "pagesHeading": "Pages",
+    "addPage": "Add page"
+  },
+  "photoBar": {
+    "heading": "Photos",
+    "fillHint": "Tap a photo to fill the selected slot",
+    "replaceHint": "Tap a photo to replace",
+    "swapHint": "Tap a photo to swap with",
+    "idleHint": "Upload new or reuse from your memories",
+    "addPhotos": "Add photos",
+    "uploading": "Uploading…",
+    "emptyHint": "No photos yet — upload one to get started."
+  },
+  "photoActions": {
+    "done": "Done",
+    "change": "Change",
+    "swap": "Swap",
+    "scale": "Scale",
+    "rotate": "Rotate",
+    "flip": "Flip",
+    "clear": "Clear",
+    "remove": "Remove",
+    "zoom": "Zoom",
+    "reset": "Reset"
+  },
+  "swap": {
+    "tapToSwap": "Tap another photo on the page to swap",
+    "noOthers": "No other photos on this page to swap with",
+    "photoLabel": "Photo {{number}}"
+  },
+  "canvas": {
+    "tapToAddPhoto": "Tap to add photo",
+    "doubleClickToEdit": "Double-click to edit",
+    "remove": "Remove",
+    "bringToFront": "Bring to front"
+  },
+  "tools": {
+    "layouts": "Layouts",
+    "text": "Text",
+    "stickers": "Stickers",
+    "background": "Background",
+    "free": "Free",
+    "locked": "Locked",
+    "lockTooltip": "Lock layout (photos snap to slots)",
+    "unlockTooltip": "Unlock layout (drag/resize photos)"
+  },
+  "layouts": {
+    "blank": "Blank",
+    "covers": "Covers",
+    "spreads": "Spreads",
+    "replaceConfirm": "Replace current page with this layout? Existing elements will be removed."
+  },
+  "background": {
+    "color": "Color",
+    "pattern": "Pattern",
+    "patterns": {
+      "none": "None",
+      "dots": "Dots",
+      "grid": "Grid",
+      "lines": "Lines"
+    }
+  },
+  "stickers": {
+    "groups": {
+      "hearts": "Hearts",
+      "nature": "Nature",
+      "events": "Events",
+      "family": "Family",
+      "fun": "Fun"
+    },
+    "addSticker": "Add sticker"
+  },
+  "text": {
+    "fontHint": "Title & Heading use the {{font}} display font.",
+    "presets": {
+      "heading": "Heading",
+      "title": "Title",
+      "quote": "Quote",
+      "caption": "Caption",
+      "date": "Date",
+      "body": "Body"
+    },
+    "sample": {
+      "quote": "\"Your beautiful memory goes here\"",
+      "title": "YOUR TITLE"
+    }
+  }
+}

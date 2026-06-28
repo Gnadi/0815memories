@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
@@ -16,6 +17,7 @@ function useSwipe(onPrev, onNext) {
 }
 
 export default function MemoryHero({ images, imageUrl, category }) {
+  const { t } = useTranslation('memory')
   const allImages = images?.length ? images : (imageUrl ? [imageUrl] : [])
   const [index, setIndex] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
@@ -62,7 +64,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
             <button
               onClick={() => setFullscreen(true)}
               className="absolute top-3 left-3 w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white transition-colors"
-              title="View fullscreen"
+              title={t('hero.viewFullscreen')}
             >
               <Maximize2 className="w-4 h-4" />
             </button>

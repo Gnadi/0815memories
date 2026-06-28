@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { PenLine, Plus, Baby } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
@@ -10,6 +11,7 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function KidsJournalPage() {
+  const { t } = useTranslation('journal')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids, loading, addKid, updateKid, deleteKid } = useKids(familyId, encryptionKey)
@@ -36,10 +38,9 @@ export default function KidsJournalPage() {
         <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-bark mb-2">A Gift for Their Future</h1>
+        <h1 className="text-3xl font-bold text-bark mb-2">{t('list.title')}</h1>
         <p className="text-bark-muted max-w-lg">
-          Write letters to your children that they'll only open years from now. Record the small joys,
-          the big milestones, and the wisdom you want to share with them when they are grown.
+          {t('list.subtitle')}
         </p>
         <button
           onClick={() => {
@@ -49,7 +50,7 @@ export default function KidsJournalPage() {
           className="btn-kaydo mt-5 flex items-center gap-2"
         >
           <PenLine className="w-4 h-4" />
-          Add New Child
+          {t('list.addChild')}
         </button>
       </div>
 
@@ -64,15 +65,15 @@ export default function KidsJournalPage() {
             <Baby className="w-8 h-8 text-bark-muted" />
           </div>
           <div>
-            <p className="font-semibold text-bark">No children added yet</p>
-            <p className="text-sm text-bark-muted mt-1">Add a child to start writing their journal.</p>
+            <p className="font-semibold text-bark">{t('list.empty.heading')}</p>
+            <p className="text-sm text-bark-muted mt-1">{t('list.empty.body')}</p>
           </div>
           <button
             onClick={() => setShowAddKid(true)}
             className="btn-kaydo flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Your First Child
+            {t('list.empty.addFirstChild')}
           </button>
         </div>
       ) : (
@@ -88,7 +89,7 @@ export default function KidsJournalPage() {
                 setShowAddKid(true)
               }}
               onDelete={() => {
-                if (confirm(`Delete ${kid.name}? This will permanently remove the child and cannot be undone.`)) {
+                if (confirm(t('list.deleteChildConfirm', { name: kid.name }))) {
                   deleteKid(kid.id)
                 }
               }}
@@ -104,7 +105,7 @@ export default function KidsJournalPage() {
             className="bg-warm-white border-2 border-dashed border-cream-darker rounded-2xl p-5 flex flex-col items-center justify-center gap-3 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors min-h-[180px]"
           >
             <Plus className="w-8 h-8" />
-            <span className="text-sm font-medium">Add Another Child</span>
+            <span className="text-sm font-medium">{t('list.addAnotherChild')}</span>
           </button>
         </div>
       )}

@@ -1,0 +1,154 @@
+{
+  "list": {
+    "title": "The Recipe Vault",
+    "subtitle": "Family recipes passed down through generations — each fork preserved with the story of why it changed. Your culinary legacy, version-controlled.",
+    "addRecipe": "Add a Recipe",
+    "empty": {
+      "heading": "No recipes yet",
+      "body": "Add Grandma's first recipe and start building your family's culinary tree.",
+      "cta": "Add Your First Recipe"
+    },
+    "deleteConfirm": "Delete this recipe and all its forks permanently? This cannot be undone."
+  },
+  "card": {
+    "by": "by {{author}}",
+    "forks_one": "{{count}} fork",
+    "forks_other": "{{count}} forks",
+    "viewJourney": "View Journey →"
+  },
+  "journey": {
+    "notFound": "Recipe not found.",
+    "backToRecipes": "← Back to Recipes",
+    "origin": "The Origin",
+    "byline": "{{year}} · by {{author}}",
+    "compareVersions": "Compare Versions",
+    "evolutionTree": "The Evolution Tree",
+    "changeLog": "Change Log",
+    "forkReasonLabel": "Reason for the Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "legacy_one": "A Living Family Legacy · {{count}} Generation of Shared History",
+    "legacy_other": "A Living Family Legacy · {{count}} Generations of Shared History",
+    "forkRecipe": "Fork This Recipe"
+  },
+  "version": {
+    "notFound": "Recipe version not found.",
+    "loadError": "Failed to load this version. Please try again.",
+    "backToJourney": "← Back to Journey",
+    "original": "Original",
+    "fork": "Fork",
+    "by": "by {{author}}",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions",
+    "chefTip": "Chef's Secret Tip",
+    "forkReasonLabel": "Reason for the Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "forkVersion": "Fork This Version",
+    "status": {
+      "removed": "Removed",
+      "modified": "Modified"
+    }
+  },
+  "tree": {
+    "archive": "Archive",
+    "current": "CURRENT",
+    "modified": "MODIFIED",
+    "original": "Original",
+    "authorFork": "{{author}}'s Fork",
+    "fork": "Fork",
+    "rowTitle": "{{year}}: {{label}}",
+    "viewDetails": "View details →"
+  },
+  "compare": {
+    "eyebrow": "Recipe Fork",
+    "title": "Comparison View",
+    "subtitle": "Tracing the culinary journey across {{count}} years of taste and tradition.",
+    "originalBranch": "Original Branch",
+    "coreIngredients": "Core Ingredients",
+    "noIngredients": "No ingredients listed.",
+    "evolutionaryShift": "Evolutionary Shift",
+    "added": "+{{count}} Added",
+    "removed": "−{{count}} Removed",
+    "modified": "~{{count}} Modified",
+    "noChanges": "No ingredient changes",
+    "forkReasonLabel": "Reason for the Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "chefTip": "Chef's Secret Tip",
+    "mergeNotes": "Merge Notes to History",
+    "copied": "Copied!",
+    "shareFork": "Share Fork",
+    "yearFork": "{{year}} Fork",
+    "newSubstitutions": "New Substitutions",
+    "diff": {
+      "unchanged": "UNCHANGED",
+      "removed": "REMOVED",
+      "modified": "MODIFIED",
+      "added": "ADDED"
+    },
+    "generations_one": "{{count}} generation of shared history",
+    "generations_other": "{{count}} generations of shared history",
+    "share": {
+      "forkedFrom": "{{title}} ({{year}}) — forked from {{fromTitle}} ({{fromYear}})",
+      "reasonLine": "Reason: {{reason}}",
+      "noReason": "No reason given"
+    },
+    "notes": {
+      "fork": "Fork: {{title}} ({{year}})",
+      "author": "Author: {{author}}",
+      "reason": "Reason: {{reason}}"
+    }
+  },
+  "form": {
+    "newRecipe": "New Recipe",
+    "forkOf": "Fork of \"{{title}}\"",
+    "forkTitle": "Fork: \"{{title}}\"",
+    "forkLoadError": "Recipe not found.",
+    "forkOriginalNotFound": "Original recipe not found.",
+    "forkLoadFailed": "Failed to load recipe. Please go back and try again.",
+    "forkingFrom": "Forking from:",
+    "forkingFromValue": "{{title}} ({{year}}) by {{author}}",
+    "detailsHeading": "Recipe Details",
+    "titleLabel": "Recipe Title *",
+    "titlePlaceholderNew": "e.g. Grandma's Meatloaf",
+    "titlePlaceholderFork": "e.g. The Lentil & Walnut Loaf",
+    "authorLabel": "Author / Who Made It *",
+    "authorPlaceholder": "e.g. Grandma Rose",
+    "yearLabel": "Year",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "A brief description of the dish and its story...",
+    "instructionsLabel": "Instructions",
+    "instructionsPlaceholder": "Step-by-step instructions...",
+    "chefTipLabel": "Chef's Secret Tip",
+    "optional": "(optional)",
+    "chefTipPlaceholder": "e.g. The trick is to mash only half the lentils...",
+    "photoLabel": "Recipe Photo",
+    "photoPreviewAlt": "preview",
+    "uploadPhoto": "Upload a photo",
+    "ingredientsHeading": "Ingredients",
+    "toggleStatusHint": "Toggle status for each ingredient",
+    "ingredientsEmpty": "No ingredients yet — add your first one below.",
+    "ingredientPlaceholder": "e.g. 2 cups ground lentils",
+    "addIngredient": "Add Ingredient",
+    "status": {
+      "active": "Active",
+      "removed": "Removed",
+      "modified": "Modified"
+    },
+    "forkStoryHeading": "The Fork Story",
+    "forkReasonLabel": "Why did you change this recipe?",
+    "forkReasonPlaceholder": "e.g. Transitioning to a plant-based lifestyle was important for my health, but I couldn't let go of the Sunday dinners we shared at Grandma's...",
+    "keyChangesLabel": "Key Changes",
+    "addChange": "Add Change",
+    "changesEmpty": "Document the key changes to tell the story of this fork.",
+    "changeIngredientPlaceholder": "Ingredient name",
+    "changeDescriptionPlaceholder": "Why this change?",
+    "errors": {
+      "titleRequired": "Recipe title is required.",
+      "authorRequired": "Author name is required.",
+      "imageUploading": "Please wait for the image to finish uploading.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "saving": "Saving…",
+    "saveFork": "Save Fork",
+    "addToVault": "Add to Vault"
+  }
+}

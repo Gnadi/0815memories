@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ChefHat, Plus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useRecipes } from '../hooks/useRecipes'
@@ -8,6 +9,7 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function RecipesPage() {
+  const { t } = useTranslation('recipes')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { recipes, loading, deleteRecipe } = useRecipes(familyId, encryptionKey)
@@ -31,18 +33,17 @@ export default function RecipesPage() {
               <div className="w-10 h-10 rounded-2xl bg-bark flex items-center justify-center">
                 <ChefHat className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-bark">The Recipe Vault</h1>
+              <h1 className="text-3xl font-bold text-bark">{t('list.title')}</h1>
             </div>
             <p className="text-bark-muted max-w-lg">
-              Family recipes passed down through generations — each fork preserved with the story of
-              why it changed. Your culinary legacy, version-controlled.
+              {t('list.subtitle')}
             </p>
             <button
               onClick={() => navigate('/recipes/new')}
               className="mt-5 flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add a Recipe
+              {t('list.addRecipe')}
             </button>
           </div>
 
@@ -57,9 +58,9 @@ export default function RecipesPage() {
                 <ChefHat className="w-8 h-8 text-bark-muted" />
               </div>
               <div>
-                <p className="font-semibold text-bark">No recipes yet</p>
+                <p className="font-semibold text-bark">{t('list.empty.heading')}</p>
                 <p className="text-sm text-bark-muted mt-1">
-                  Add Grandma's first recipe and start building your family's culinary tree.
+                  {t('list.empty.body')}
                 </p>
               </div>
               <button
@@ -67,7 +68,7 @@ export default function RecipesPage() {
                 className="flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Add Your First Recipe
+                {t('list.empty.cta')}
               </button>
             </div>
           ) : (
@@ -78,7 +79,7 @@ export default function RecipesPage() {
                   recipe={recipe}
                   onClick={() => navigate(`/recipes/${recipe.id}`)}
                   onDelete={() => {
-                    if (confirm('Delete this recipe and all its forks permanently? This cannot be undone.')) {
+                    if (confirm(t('list.deleteConfirm'))) {
                       deleteRecipe(recipe.id)
                     }
                   }}

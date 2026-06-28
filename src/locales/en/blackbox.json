@@ -1,0 +1,84 @@
+{
+  "datePlaceholder": {
+    "month": "MM",
+    "day": "DD",
+    "year": "YYYY"
+  },
+  "page": {
+    "title": "The Black Box",
+    "description": "A scheduled emotional delivery system. Seal a message today — it will only unlock on the exact day you choose: a birthday, a wedding, a graduation, or whenever the time is right.",
+    "preserveMoment": "Preserve a Moment"
+  },
+  "empty": {
+    "heading": "No sealed messages yet",
+    "body": "Create your first time-release message — a gift for the future.",
+    "cta": "Seal Your First Message"
+  },
+  "confirmDelete": "Delete this sealed message permanently? This cannot be undone.",
+  "create": {
+    "headerTitle": "Preserving a Moment",
+    "subtitle": "Create a digital heirloom that remains sealed until the perfect moment in the future.",
+    "step1Label": "Step 1: The Message",
+    "step2Label": "Step 2: The Time Trigger",
+    "noChildren": "No children added yet.",
+    "addChild": "Add a child",
+    "addChildSuffix": "to start preserving moments for them.",
+    "forLabel": "For",
+    "noSpecificChild": "No specific child",
+    "titleLabel": "Title",
+    "titlePlaceholderChild": "For {{name}}…",
+    "titlePlaceholderGeneric": "A message from the heart…",
+    "voiceNoteRecorded": "🎙 Voice note recorded",
+    "recordVoiceNote": "Record a Voice Note",
+    "speakFromHeart": "Speak from the heart",
+    "messagePlaceholder": "Or type your message here…",
+    "photos": "Photos",
+    "camera": "Camera",
+    "video": "Video",
+    "record": "Record",
+    "milestone": "A Life Milestone",
+    "specificDate": "Specific Date",
+    "month": "Month",
+    "day": "Day",
+    "year": "Year",
+    "legacyTrigger": "Legacy Trigger",
+    "legacyTriggerDesc": "Release after my passing",
+    "noticeLegacy": "Once sealed, this box will only be released upon a legacy trigger. Your legacy is safe with us.",
+    "noticeDatePrefix": "Once sealed, this box cannot be opened until",
+    "noticeDateSuffix": ". Your legacy is safe with us.",
+    "heroTitle": "A gift for the future.",
+    "heroSubtitle": "Your words will become the memories that sustain them tomorrow.",
+    "seal": "Seal into The Black Box",
+    "sealing": "Sealing…"
+  },
+  "milestones": {
+    "18thBirthday": "18th Birthday",
+    "21stBirthday": "21st Birthday",
+    "graduation": "Graduation",
+    "wedding": "Wedding Day",
+    "firstJob": "First Job"
+  },
+  "errors": {
+    "noContent": "Please add a message, photo, video, or voice note.",
+    "milestoneNeedsBirthday": "Please select a child with a birthday to use a milestone trigger.",
+    "incompleteDate": "Please fill in the complete unlock date (month, day, and year).",
+    "noUnlockDate": "Please set an unlock date.",
+    "sealFailed": "Failed to seal. Please try again."
+  },
+  "defaultTitle": "For {{name}}",
+  "defaultTitleFallback": "the future",
+  "card": {
+    "untitled": "Untitled",
+    "for": "For {{name}}",
+    "uponLegacyTrigger": "Upon legacy trigger",
+    "unknownDate": "Unknown date",
+    "legacyDescription": "Legacy Trigger — Release after my passing",
+    "milestoneDescription": "Life Milestone — {{milestone}}",
+    "specificDateDescription": "Specific Date — {{date}}",
+    "sealedUntilPrefix": "Sealed until",
+    "sealedUntilSuffix": ". Your legacy is safe with us.",
+    "unlocked": "Unlocked",
+    "viewContents": "View Contents ↓",
+    "hideContents": "Hide Contents ↑"
+  }
+}

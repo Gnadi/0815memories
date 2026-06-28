@@ -1,0 +1,170 @@
+{
+  "seo": {
+    "title": "Kaydo — Private, Encrypted Family Memory App",
+    "description": "Kaydo is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling — just your stories, preserved forever.",
+    "ogTitle": "Kaydo — Your Private Digital Home",
+    "ogDescription": "A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever.",
+    "ogImageAlt": "Kaydo — Your Private Digital Home",
+    "twitterTitle": "Kaydo — Your Private Digital Home",
+    "twitterDescription": "A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories.",
+    "twitterImageAlt": "Kaydo — Your Private Digital Home",
+    "ogLocale": "en_US",
+    "ldDescription": "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
+    "ldFeatures": [
+      "End-to-end encrypted memory storage",
+      "Private family photo and video sharing",
+      "Family recipe tree with version history",
+      "Digital scrapbook with PDF export",
+      "Scheduled future letters to family members",
+      "Zero-knowledge encrypted vault"
+    ]
+  },
+  "nav": {
+    "features": "Features",
+    "privacy": "Privacy",
+    "security": "Security",
+    "login": "Login"
+  },
+  "hero": {
+    "badge": "Your Private Digital Home",
+    "titlePrefix": "Claim your family's",
+    "titleEmphasis": "corner",
+    "titleSuffix": "of the web.",
+    "subtitlePrefix": "Every family gets its own private address. Check if",
+    "subtitleExample": "yourname.kaydo.app",
+    "subtitleSuffix": "is still available and make it yours in seconds.",
+    "journalCard": {
+      "title": "Family Journal",
+      "lines": ["Summer vacation...", "Grandma's recipe", "First day of..."]
+    }
+  },
+  "pillars": {
+    "sectionTitle": "Seven Pillars of Home",
+    "sectionSubtitle": "Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.",
+    "share": {
+      "title": "Share: Moments & Memories",
+      "desc": "Every candid snapshot, milestone video, and voice memo — gathered in one warm, private feed. Your inner circle gets instant access with just a shared family password. No accounts, no friction, no strangers.",
+      "bullets": [
+        "Inner circle access — one shared password, zero sign-ups",
+        "Family admin controls who sees what and when",
+        "Post, pin, and curate from a simple dashboard"
+      ],
+      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" },
+      "innerCircle": "Inner Circle",
+      "sharedPassword": "One shared family password"
+    },
+    "vault": {
+      "title": "Preserve: The Vault",
+      "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos, our Black Box encryption ensures they remain yours alone.",
+      "bullets": ["Military-grade encryption", "Zero-knowledge storage"]
+    },
+    "letters": {
+      "title": "Write: The Letters",
+      "desc": "Schedule messages for the future. Congratulate a grandchild on a wedding you might not attend, or share wisdom across decades.",
+      "button": "Compose a Legacy"
+    },
+    "recipe": {
+      "title": "Evolve: Recipe Tree",
+      "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal.",
+      "members": "+12 family members"
+    },
+    "scrapbook": {
+      "title": "Create: Digital Scrapbook",
+      "desc": "Turn your family memories into handcrafted digital pages. Drag and drop polaroid photos, playful stickers, and personal notes onto a freeform canvas — then export your finished book as a PDF to print or share.",
+      "bullets": [
+        "Drag-and-drop canvas with photos, stickers & text",
+        "Polaroid-style photo frames with rotation & resize",
+        "Export finished scrapbooks to PDF"
+      ],
+      "button": "Open Scrapbooks",
+      "previewSummer": "Summer 2024",
+      "previewTrip": "Family Trip",
+      "previewLabel": "Our Family Story"
+    },
+    "export": {
+      "title": "Own: Your Data, Your Way",
+      "desc": "Your memories belong to you — forever. Download a full archive of every photo, video, and journal entry at any time. No lock-in, no bureaucracy, no questions asked.",
+      "bullets": [
+        "Full ZIP export of all photos & videos",
+        "Memories and journal entries as structured data",
+        "One-click download — no questions asked"
+      ]
+    },
+    "openSource": {
+      "title": "Open Source",
+      "desc": "Kaydo is built in the open. Audit the code, contribute features, or self-host for your family. No black boxes — except the ones you create.",
+      "star": "Star us",
+      "fork": "Fork & self-host",
+      "viewOnGithub": "View on GitHub"
+    }
+  },
+  "privacy": {
+    "badge": "Our Privacy Manifesto",
+    "titlePrefix": "Your data is a",
+    "titleEmphasis": "sacred legacy",
+    "titleSuffix": ", not a training set.",
+    "items": [
+      {
+        "title": "No AI Training",
+        "desc": "We strictly prohibit the use of your private photos or text for LLM or AI generative model training. Ever."
+      },
+      {
+        "title": "Zero-Knowledge Architecture",
+        "desc": "Your 'Black Box' content is encrypted locally. Even our engineers can't see your family photos."
+      },
+      {
+        "title": "Ad-Free Forever",
+        "desc": "We are funded by families, for families. We will never sell your attention to advertisers."
+      }
+    ],
+    "stats": {
+      "ownership": "Private Ownership",
+      "encryption": "E2E Encryption",
+      "verified": "Verified Members Only",
+      "breaches": "Data Breaches"
+    }
+  },
+  "cta": {
+    "title": "Ready to bring your family home?",
+    "subtitle": "Join the exclusive circle of families preserving their stories with dignity and style. Invite-only access ensures the highest standards of safety.",
+    "getStarted": "Get Started",
+    "openSource": "Open Source",
+    "noCreditCard": "No credit card required, it's free."
+  },
+  "footer": {
+    "links": ["Terms of Service", "Privacy Policy", "Help Center", "Contact Us"],
+    "safety": "Safety Guidelines",
+    "copyright": "© {{year}} Kaydo. All rights reserved.",
+    "crafted": "Crafted for memories."
+  },
+  "claim": {
+    "namePlaceholder": "The Millers",
+    "nameAriaLabel": "Your family name",
+    "check": "Check",
+    "previewLabel": "Your family address:",
+    "invalid": "Please use letters or numbers for your family name.",
+    "takenSuffix": "is already taken — try another name.",
+    "availableSuffix": "is available!",
+    "setupRequiredTitle": "Setup required:",
+    "setupRequiredBody": "Firebase environment variables are not configured, so accounts can't be created yet.",
+    "displayNamePlaceholder": "Your name (e.g., Sarah Miller)",
+    "displayNameAriaLabel": "Your name",
+    "emailPlaceholder": "Email",
+    "emailAriaLabel": "Email",
+    "passwordPlaceholder": "Password (at least 6 characters)",
+    "passwordAriaLabel": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "submit": "Claim {{domain}}",
+    "alreadyHaveAccount": "Already have an account?",
+    "login": "Login",
+    "errors": {
+      "couldNotCheck": "Could not check availability — please try again.",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "emailInUse": "An account with this email already exists",
+      "invalidEmail": "Please enter a valid email address",
+      "weakPassword": "Password must be at least 6 characters",
+      "generic": "Could not create account"
+    }
+  }
+}
