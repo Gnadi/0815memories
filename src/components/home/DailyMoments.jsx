@@ -1,17 +1,19 @@
 import { Plus, Video } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
+  const { t } = useTranslation('home')
   const { isAdmin } = useAuth()
 
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-bark">Daily Moments</h2>
+        <h2 className="text-xl font-bold text-bark">{t('dailyMoments.title')}</h2>
         <button onClick={onViewAll} className="text-sm font-semibold text-kaydo hover:text-kaydo-dark">
-          VIEW ALL
+          {t('dailyMoments.viewAll')}
         </button>
       </div>
 
@@ -25,7 +27,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
             <div className="w-16 h-16 rounded-full border-2 border-dashed border-bark-muted flex items-center justify-center">
               <Plus className="w-6 h-6 text-bark-muted" />
             </div>
-            <span className="text-xs text-bark-muted">Add</span>
+            <span className="text-xs text-bark-muted">{t('dailyMoments.add')}</span>
           </button>
         )}
 

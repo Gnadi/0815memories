@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function AlbumGlimpse({ memories }) {
+  const { t } = useTranslation('home')
   const photos = memories
     .filter((m) => m.images?.length || m.imageUrl)
     .slice(0, 6)
@@ -9,7 +11,7 @@ export default function AlbumGlimpse({ memories }) {
 
   return (
     <section className="mb-8">
-      <h2 className="text-xl font-bold text-bark mb-4">Family Album Glimpse</h2>
+      <h2 className="text-xl font-bold text-bark mb-4">{t('albumGlimpse.title')}</h2>
       <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden">
         {photos.map((photo, i) => (
           <div
@@ -20,7 +22,7 @@ export default function AlbumGlimpse({ memories }) {
           >
             <EncryptedImage
               src={photo.images?.[0] || photo.imageUrl}
-              alt={photo.title || 'Family photo'}
+              alt={photo.title || t('albumGlimpse.photoAlt')}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               style={{ minHeight: i === 0 ? '240px' : '116px' }}
             />

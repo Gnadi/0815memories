@@ -1,1 +1,154 @@
-{}
+{
+  "list": {
+    "title": "Die Rezept-Schatzkammer",
+    "subtitle": "Familienrezepte, über Generationen weitergegeben — jeder Fork bewahrt mit der Geschichte, warum er sich verändert hat. Dein kulinarisches Erbe, mit Versionsverlauf.",
+    "addRecipe": "Rezept hinzufügen",
+    "empty": {
+      "heading": "Noch keine Rezepte",
+      "body": "Füge Omas erstes Rezept hinzu und beginne, den kulinarischen Stammbaum deiner Familie aufzubauen.",
+      "cta": "Füge dein erstes Rezept hinzu"
+    },
+    "deleteConfirm": "Dieses Rezept und alle seine Forks dauerhaft löschen? Das kann nicht rückgängig gemacht werden."
+  },
+  "card": {
+    "by": "von {{author}}",
+    "forks_one": "{{count}} Fork",
+    "forks_other": "{{count}} Forks",
+    "viewJourney": "Reise ansehen →"
+  },
+  "journey": {
+    "notFound": "Rezept nicht gefunden.",
+    "backToRecipes": "← Zurück zu den Rezepten",
+    "origin": "Der Ursprung",
+    "byline": "{{year}} · von {{author}}",
+    "compareVersions": "Versionen vergleichen",
+    "evolutionTree": "Der Stammbaum",
+    "changeLog": "Änderungsverlauf",
+    "forkReasonLabel": "Grund für den Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "legacy_one": "Ein lebendiges Familienerbe · {{count}} Generation gemeinsamer Geschichte",
+    "legacy_other": "Ein lebendiges Familienerbe · {{count}} Generationen gemeinsamer Geschichte",
+    "forkRecipe": "Dieses Rezept forken"
+  },
+  "version": {
+    "notFound": "Rezeptversion nicht gefunden.",
+    "loadError": "Diese Version konnte nicht geladen werden. Bitte versuche es erneut.",
+    "backToJourney": "← Zurück zur Reise",
+    "original": "Original",
+    "fork": "Fork",
+    "by": "von {{author}}",
+    "ingredients": "Zutaten",
+    "instructions": "Zubereitung",
+    "chefTip": "Geheimtipp des Küchenchefs",
+    "forkReasonLabel": "Grund für den Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "forkVersion": "Diese Version forken",
+    "status": {
+      "removed": "Entfernt",
+      "modified": "Geändert"
+    }
+  },
+  "tree": {
+    "archive": "Archiv",
+    "current": "AKTUELL",
+    "modified": "GEÄNDERT",
+    "original": "Original",
+    "authorFork": "{{author}}s Fork",
+    "fork": "Fork",
+    "rowTitle": "{{year}}: {{label}}",
+    "viewDetails": "Details ansehen →"
+  },
+  "compare": {
+    "eyebrow": "Rezept-Fork",
+    "title": "Vergleichsansicht",
+    "subtitle": "Die kulinarische Reise über {{count}} Jahre Geschmack und Tradition nachverfolgt.",
+    "originalBranch": "Ursprünglicher Zweig",
+    "coreIngredients": "Kernzutaten",
+    "noIngredients": "Keine Zutaten aufgelistet.",
+    "evolutionaryShift": "Evolutionärer Wandel",
+    "added": "+{{count}} hinzugefügt",
+    "removed": "−{{count}} entfernt",
+    "modified": "~{{count}} geändert",
+    "noChanges": "Keine Änderungen an den Zutaten",
+    "forkReasonLabel": "Grund für den Fork",
+    "forkAttribution": "— {{author}}, {{year}}",
+    "chefTip": "Geheimtipp des Küchenchefs",
+    "mergeNotes": "Notizen in den Verlauf übernehmen",
+    "copied": "Kopiert!",
+    "shareFork": "Fork teilen",
+    "yearFork": "Fork von {{year}}",
+    "newSubstitutions": "Neue Ersetzungen",
+    "diff": {
+      "unchanged": "UNVERÄNDERT",
+      "removed": "ENTFERNT",
+      "modified": "GEÄNDERT",
+      "added": "HINZUGEFÜGT"
+    },
+    "generations_one": "{{count}} Generation gemeinsamer Geschichte",
+    "generations_other": "{{count}} Generationen gemeinsamer Geschichte",
+    "share": {
+      "forkedFrom": "{{title}} ({{year}}) — geforkt von {{fromTitle}} ({{fromYear}})",
+      "reasonLine": "Grund: {{reason}}",
+      "noReason": "Kein Grund angegeben"
+    },
+    "notes": {
+      "fork": "Fork: {{title}} ({{year}})",
+      "author": "Autor: {{author}}",
+      "reason": "Grund: {{reason}}"
+    }
+  },
+  "form": {
+    "newRecipe": "Neues Rezept",
+    "forkOf": "Fork von \"{{title}}\"",
+    "forkTitle": "Fork: \"{{title}}\"",
+    "forkLoadError": "Rezept nicht gefunden.",
+    "forkOriginalNotFound": "Originalrezept nicht gefunden.",
+    "forkLoadFailed": "Rezept konnte nicht geladen werden. Bitte geh zurück und versuche es erneut.",
+    "forkingFrom": "Fork von:",
+    "forkingFromValue": "{{title}} ({{year}}) von {{author}}",
+    "detailsHeading": "Rezeptdetails",
+    "titleLabel": "Rezepttitel *",
+    "titlePlaceholderNew": "z. B. Omas Hackbraten",
+    "titlePlaceholderFork": "z. B. Der Linsen-Walnuss-Braten",
+    "authorLabel": "Autor / Wer hat es gemacht *",
+    "authorPlaceholder": "z. B. Oma Rose",
+    "yearLabel": "Jahr",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Eine kurze Beschreibung des Gerichts und seiner Geschichte ...",
+    "instructionsLabel": "Zubereitung",
+    "instructionsPlaceholder": "Schritt-für-Schritt-Anleitung ...",
+    "chefTipLabel": "Geheimtipp des Küchenchefs",
+    "optional": "(optional)",
+    "chefTipPlaceholder": "z. B. Der Trick ist, nur die Hälfte der Linsen zu zerdrücken ...",
+    "photoLabel": "Rezeptfoto",
+    "photoPreviewAlt": "Vorschau",
+    "uploadPhoto": "Foto hochladen",
+    "ingredientsHeading": "Zutaten",
+    "toggleStatusHint": "Status für jede Zutat umschalten",
+    "ingredientsEmpty": "Noch keine Zutaten — füge unten deine erste hinzu.",
+    "ingredientPlaceholder": "z. B. 2 Tassen gemahlene Linsen",
+    "addIngredient": "Zutat hinzufügen",
+    "status": {
+      "active": "Aktiv",
+      "removed": "Entfernt",
+      "modified": "Geändert"
+    },
+    "forkStoryHeading": "Die Fork-Geschichte",
+    "forkReasonLabel": "Warum hast du dieses Rezept geändert?",
+    "forkReasonPlaceholder": "z. B. Die Umstellung auf eine pflanzenbasierte Ernährung war mir für meine Gesundheit wichtig, aber ich konnte die Sonntagsessen bei Oma nicht loslassen ...",
+    "keyChangesLabel": "Wichtigste Änderungen",
+    "addChange": "Änderung hinzufügen",
+    "changesEmpty": "Halte die wichtigsten Änderungen fest, um die Geschichte dieses Forks zu erzählen.",
+    "changeIngredientPlaceholder": "Name der Zutat",
+    "changeDescriptionPlaceholder": "Warum diese Änderung?",
+    "errors": {
+      "titleRequired": "Ein Rezepttitel ist erforderlich.",
+      "authorRequired": "Ein Autorenname ist erforderlich.",
+      "imageUploading": "Bitte warte, bis das Bild fertig hochgeladen ist.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+    },
+    "saving": "Speichert …",
+    "saveFork": "Fork speichern",
+    "addToVault": "Zur Schatzkammer hinzufügen"
+  }
+}

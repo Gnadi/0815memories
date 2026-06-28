@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LayoutGrid, Type, Smile, Palette, Unlock, Lock, X } from 'lucide-react'
 import LayoutsPanel from './panels/LayoutsPanel'
 import TextPanel from './panels/TextPanel'
@@ -6,10 +7,10 @@ import StickersPanel from './panels/StickersPanel'
 import BackgroundPanel from './panels/BackgroundPanel'
 
 const TOOLS = [
-  { id: 'layouts', icon: LayoutGrid, label: 'Layouts' },
-  { id: 'text', icon: Type, label: 'Text' },
-  { id: 'stickers', icon: Smile, label: 'Stickers' },
-  { id: 'background', icon: Palette, label: 'Background' },
+  { id: 'layouts', icon: LayoutGrid, labelKey: 'tools.layouts' },
+  { id: 'text', icon: Type, labelKey: 'tools.text' },
+  { id: 'stickers', icon: Smile, labelKey: 'tools.stickers' },
+  { id: 'background', icon: Palette, labelKey: 'tools.background' },
 ]
 
 /**
@@ -24,6 +25,7 @@ export default function BottomToolRow({
   onApplyLayout,
   onChangeBackground,
 }) {
+  const { t } = useTranslation('scrapbook')
   const [openPanel, setOpenPanel] = useState(null)
 
   // Close panel on Esc
@@ -65,12 +67,13 @@ export default function BottomToolRow({
     }
   }
 
-  const panelTitle = openPanel ? TOOLS.find((t) => t.id === openPanel)?.label || '' : ''
+  const openTool = openPanel ? TOOLS.find((tool) => tool.id === openPanel) : null
+  const panelTitle = openTool ? t(openTool.labelKey) : ''
 
   return (
     <>
       <div className="bg-warm-white border-t border-cream-dark flex items-stretch">
-        {TOOLS.map(({ id, icon: Icon, label }) => (
+        {TOOLS.map(({ id, icon: Icon, labelKey }) => (
           <button
             key={id}
             type="button"
@@ -82,13 +85,13 @@ export default function BottomToolRow({
             }`}
           >
             <Icon className="w-5 h-5" />
-            <span>{label}</span>
+            <span>{t(labelKey)}</span>
           </button>
         ))}
         <button
           type="button"
           onClick={onToggleCustomize}
-          title={customizable ? 'Lock layout (photos snap to slots)' : 'Unlock layout (drag/resize photos)'}
+          title={customizable ? t('tools.lockTooltip') : t('tools.unlockTooltip')}
           className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
             customizable
               ? 'text-kaydo bg-kaydo/10'
@@ -96,7 +99,7 @@ export default function BottomToolRow({
           }`}
         >
           {customizable ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
-          <span>{customizable ? 'Free' : 'Locked'}</span>
+          <span>{customizable ? t('tools.free') : t('tools.locked')}</span>
         </button>
       </div>
 

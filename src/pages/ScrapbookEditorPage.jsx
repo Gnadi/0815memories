@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { flushSync } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
@@ -140,6 +141,7 @@ const initialState = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ScrapbookEditorPage() {
+  const { t } = useTranslation('scrapbook')
   const { id } = useParams()
   const navigate = useNavigate()
   const { familyId, encryptionKey } = useAuth()
@@ -166,9 +168,9 @@ export default function ScrapbookEditorPage() {
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
     getDoc(doc(db, 'scrapbooks', id)).then(async (snap) => {
-      if (!snap.exists()) { setLoadError('Scrapbook not found'); setLoading(false); return }
+      if (!snap.exists()) { setLoadError(t('errors.notFound')); setLoading(false); return }
       const raw = snap.data()
-      if (raw.familyId !== familyId) { setLoadError('Scrapbook not found'); setLoading(false); return }
+      if (raw.familyId !== familyId) { setLoadError(t('errors.notFound')); setLoading(false); return }
       let nextTitle = raw.title || 'My Scrapbook'
       let nextPages = raw.pages || [makeBlankPage()]
       if (encryptionKey) {
@@ -278,7 +280,7 @@ export default function ScrapbookEditorPage() {
       pdf.save(`${title}.pdf`)
     } catch (err) {
       devError('PDF export failed', err)
-      alert('PDF export failed. Please try again.')
+      alert(t('errors.pdfExportFailed'))
     } finally {
       setExporting(false)
     }
@@ -407,7 +409,7 @@ export default function ScrapbookEditorPage() {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4">
         <p className="text-bark font-semibold">{loadError}</p>
-        <button onClick={() => navigate('/scrapbook')} className="btn-kaydo">Back to Scrapbooks</button>
+        <button onClick={() => navigate('/scrapbook')} className="btn-kaydo">{t('editor.backToScrapbooks')}</button>
       </div>
     )
   }
@@ -415,8 +417,8 @@ export default function ScrapbookEditorPage() {
   // When in swap mode, the action bar asks "pick another photo on the page to swap".
   const swapHint = photoMode === 'swap'
     ? (swapCandidates.length > 0
-        ? 'Tap another photo on the page to swap'
-        : 'No other photos on this page to swap with')
+        ? t('swap.tapToSwap')
+        : t('swap.noOthers'))
     : undefined
 
   return (
@@ -505,7 +507,7 @@ export default function ScrapbookEditorPage() {
                 onClick={() => handlePickSwapTarget(el.id)}
                 className="flex-shrink-0 px-2 py-1 rounded-lg border border-cream-dark bg-cream hover:border-kaydo hover:bg-kaydo/5 text-[11px] text-bark"
               >
-                Photo {(currentPage.elements.indexOf(el) + 1)}
+                {t('swap.photoLabel', { number: currentPage.elements.indexOf(el) + 1 })}
               </button>
             ))}
           </div>

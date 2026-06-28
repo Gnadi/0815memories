@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
@@ -14,6 +15,7 @@ const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName',
 export default function MemoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation('memory')
   const { familyId, isAdmin, encryptionKey } = useAuth()
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,7 +56,7 @@ export default function MemoryDetailPage() {
 
   const handleDelete = async () => {
     setShowMenu(false)
-    if (!window.confirm('Are you sure you want to delete this memory?')) return
+    if (!window.confirm(t('detail.deleteConfirm'))) return
     await deleteDoc(doc(db, 'memories', id))
     navigate('/home')
   }
@@ -77,12 +79,12 @@ export default function MemoryDetailPage() {
   if (!memory) {
     return (
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4">
-        <p className="text-bark-light text-lg">Memory not found</p>
+        <p className="text-bark-light text-lg">{t('detail.notFound')}</p>
         <button
           onClick={() => navigate('/home')}
           className="btn-kaydo"
         >
-          Back to Home
+          {t('detail.backToHome')}
         </button>
       </div>
     )
@@ -127,13 +129,13 @@ export default function MemoryDetailPage() {
                     onClick={handleEdit}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
                   >
-                    <Pencil className="w-4 h-4" /> Edit
+                    <Pencil className="w-4 h-4" /> {t('detail.edit')}
                   </button>
                   <button
                     onClick={handleDelete}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete
+                    <Trash2 className="w-4 h-4" /> {t('detail.delete')}
                   </button>
                 </div>
               )}

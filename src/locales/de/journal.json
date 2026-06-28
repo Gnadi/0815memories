@@ -1,1 +1,76 @@
-{}
+{
+  "list": {
+    "title": "Ein Geschenk für ihre Zukunft",
+    "subtitle": "Schreibe deinen Kindern Briefe, die sie erst in vielen Jahren öffnen werden. Halte die kleinen Freuden, die großen Meilensteine und die Weisheiten fest, die du ihnen mitgeben möchtest, wenn sie erwachsen sind.",
+    "addChild": "Neues Kind hinzufügen",
+    "addAnotherChild": "Weiteres Kind hinzufügen",
+    "empty": {
+      "heading": "Noch keine Kinder hinzugefügt",
+      "body": "Füge ein Kind hinzu, um mit seinem Tagebuch zu beginnen.",
+      "addFirstChild": "Dein erstes Kind hinzufügen"
+    },
+    "deleteChildConfirm": "{{name}} löschen? Damit wird das Kind dauerhaft entfernt und kann nicht wiederhergestellt werden."
+  },
+  "card": {
+    "born": "Geboren am {{date}}",
+    "ageSuffixOne": " · {{age}} Jahr alt",
+    "ageSuffixOther": " · {{age}} Jahre alt",
+    "lettersWritten": "{{count}} {{label}} geschrieben",
+    "letter": "Brief",
+    "letters": "Briefe",
+    "noLettersYet": "Noch keine Briefe geschrieben — fang heute an.",
+    "viewArchive": "Archiv ansehen",
+    "startJournal": "Tagebuch beginnen"
+  },
+  "archive": {
+    "fallbackTitle": "Tagebuch",
+    "yearsOld": "{{age}} Jahre alt",
+    "write": "Schreiben",
+    "letterCount": "{{count}} {{label}}",
+    "letter": "Brief",
+    "letters": "Briefe",
+    "empty": {
+      "heading": "Noch keine Briefe geschrieben",
+      "bodyNamed": "Schreibe deinen ersten Brief an {{name}}.",
+      "bodyFallback": "dein Kind",
+      "writeFirst": "Ersten Brief schreiben"
+    },
+    "deleteLetterConfirm": "Diesen Brief endgültig löschen?"
+  },
+  "entryCard": {
+    "voiceMemoCount": "{{count}} Sprach{{label}}",
+    "voiceMemoSingular": "memo",
+    "voiceMemoPlural": "memos",
+    "videoCount": "{{count}} {{label}}",
+    "videoSingular": "Video",
+    "videoPlural": "Videos"
+  },
+  "editor": {
+    "titlePlaceholder": "Eine Botschaft an dein zukünftiges Ich",
+    "volumePlaceholder": "Band / Kapitel",
+    "contentPlaceholder": "Mein liebstes {{name}}, heute…",
+    "contentPlaceholderFallback": "Kind",
+    "voiceNote": "Sprachnotiz {{index}}",
+    "saving": "Speichert…",
+    "uploading": "Lädt hoch…",
+    "update": "Aktualisieren",
+    "save": "Speichern",
+    "saveError": "Speichern fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "detail": {
+    "voiceNote": "Sprachnotiz {{index}}",
+    "deleteLetterConfirm": "Diesen Brief endgültig löschen?"
+  },
+  "kidModal": {
+    "editTitle": "Kind bearbeiten",
+    "addTitle": "Kind hinzufügen",
+    "tapToAddPhoto": "Tippen, um ein Foto hinzuzufügen",
+    "nameLabel": "Name",
+    "namePlaceholder": "z. B. Leo",
+    "birthdayLabel": "Geburtstag",
+    "saving": "Speichert...",
+    "saveChanges": "Änderungen speichern",
+    "addChild": "Kind hinzufügen",
+    "saveError": "Speichern fehlgeschlagen. Bitte versuche es erneut."
+  }
+}

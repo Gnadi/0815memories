@@ -1,1 +1,170 @@
-{}
+{
+  "seo": {
+    "title": "Kaydo — Private, verschlüsselte App für Familienerinnerungen",
+    "description": "Kaydo ist ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training, kein Datenverkauf — nur eure Geschichten, für immer bewahrt.",
+    "ogTitle": "Kaydo — Euer privates digitales Zuhause",
+    "ogDescription": "Ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training — nur eure Geschichten, für immer bewahrt.",
+    "ogImageAlt": "Kaydo — Euer privates digitales Zuhause",
+    "twitterTitle": "Kaydo — Euer privates digitales Zuhause",
+    "twitterDescription": "Ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training — nur eure Geschichten.",
+    "twitterImageAlt": "Kaydo — Euer privates digitales Zuhause",
+    "ogLocale": "de_DE",
+    "ldDescription": "Ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training, kein Datenverkauf.",
+    "ldFeatures": [
+      "Ende-zu-Ende-verschlüsselter Erinnerungsspeicher",
+      "Privates Teilen von Familienfotos und -videos",
+      "Familien-Rezeptbaum mit Versionsverlauf",
+      "Digitales Sammelalbum mit PDF-Export",
+      "Geplante Briefe an Familienmitglieder für die Zukunft",
+      "Zero-Knowledge-verschlüsselter Tresor"
+    ]
+  },
+  "nav": {
+    "features": "Funktionen",
+    "privacy": "Datenschutz",
+    "security": "Sicherheit",
+    "login": "Anmelden"
+  },
+  "hero": {
+    "badge": "Euer privates digitales Zuhause",
+    "titlePrefix": "Sichere deiner Familie ihre eigene",
+    "titleEmphasis": "Ecke",
+    "titleSuffix": "im Netz.",
+    "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
+    "subtitleExample": "deinname.kaydo.app",
+    "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
+    "journalCard": {
+      "title": "Familien-Tagebuch",
+      "lines": ["Sommerurlaub...", "Omas Rezept", "Erster Tag im..."]
+    }
+  },
+  "pillars": {
+    "sectionTitle": "Sieben Säulen des Zuhauses",
+    "sectionSubtitle": "Mit Bedacht gestaltete Räume, die euer Vermächtnis pflegen und tiefe Verbindungen über Generationen hinweg fördern.",
+    "share": {
+      "title": "Teilen: Momente & Erinnerungen",
+      "desc": "Jeder spontane Schnappschuss, jedes Meilenstein-Video und jede Sprachnachricht — gesammelt in einem warmen, privaten Feed. Dein engster Kreis erhält sofort Zugang mit nur einem gemeinsamen Familienpasswort. Keine Konten, keine Hürden, keine Fremden.",
+      "bullets": [
+        "Zugang für den engsten Kreis — ein gemeinsames Passwort, keine Anmeldungen",
+        "Die Familien-Admins bestimmen, wer was und wann sieht",
+        "Posten, anpinnen und kuratieren über ein einfaches Dashboard"
+      ],
+      "pills": { "photos": "Fotos", "videos": "Videos", "voiceMemos": "Sprachnachrichten" },
+      "innerCircle": "Engster Kreis",
+      "sharedPassword": "Ein gemeinsames Familienpasswort"
+    },
+    "vault": {
+      "title": "Bewahren: Der Tresor",
+      "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — unsere Black-Box-Verschlüsselung sorgt dafür, dass sie allein dir gehören.",
+      "bullets": ["Verschlüsselung auf höchstem Niveau", "Zero-Knowledge-Speicher"]
+    },
+    "letters": {
+      "title": "Schreiben: Die Briefe",
+      "desc": "Plane Nachrichten für die Zukunft. Gratuliere einem Enkelkind zu einer Hochzeit, bei der du vielleicht nicht dabei sein kannst, oder gib Weisheit über Jahrzehnte weiter.",
+      "button": "Ein Vermächtnis verfassen"
+    },
+    "recipe": {
+      "title": "Weiterentwickeln: Rezeptbaum",
+      "desc": "Rezepte sind nicht statisch. Verfolge, wie sich Omas Pasta über drei Generationen entwickelt hat — mit Notizen, Variationen und Fotos von jedem Festessen.",
+      "members": "+12 Familienmitglieder"
+    },
+    "scrapbook": {
+      "title": "Gestalten: Digitales Sammelalbum",
+      "desc": "Verwandle eure Familienerinnerungen in handgemachte digitale Seiten. Ziehe Polaroid-Fotos, verspielte Sticker und persönliche Notizen auf eine freie Leinwand — und exportiere dein fertiges Buch als PDF zum Drucken oder Teilen.",
+      "bullets": [
+        "Drag-and-drop-Leinwand mit Fotos, Stickern & Text",
+        "Polaroid-Fotorahmen mit Drehen & Skalieren",
+        "Fertige Sammelalben als PDF exportieren"
+      ],
+      "button": "Sammelalben öffnen",
+      "previewSummer": "Sommer 2024",
+      "previewTrip": "Familienausflug",
+      "previewLabel": "Unsere Familiengeschichte"
+    },
+    "export": {
+      "title": "Besitzen: Deine Daten, dein Weg",
+      "desc": "Deine Erinnerungen gehören dir — für immer. Lade jederzeit ein vollständiges Archiv jedes Fotos, Videos und Tagebucheintrags herunter. Keine Abhängigkeit, keine Bürokratie, keine Fragen.",
+      "bullets": [
+        "Vollständiger ZIP-Export aller Fotos & Videos",
+        "Erinnerungen und Tagebucheinträge als strukturierte Daten",
+        "Download mit einem Klick — ohne Wenn und Aber"
+      ]
+    },
+    "openSource": {
+      "title": "Open Source",
+      "desc": "Kaydo wird offen entwickelt. Prüfe den Code, steuere Funktionen bei oder hoste ihn selbst für deine Familie. Keine Blackboxes — außer denen, die du selbst erstellst.",
+      "star": "Gib uns einen Stern",
+      "fork": "Forken & selbst hosten",
+      "viewOnGithub": "Auf GitHub ansehen"
+    }
+  },
+  "privacy": {
+    "badge": "Unser Datenschutz-Manifest",
+    "titlePrefix": "Deine Daten sind ein",
+    "titleEmphasis": "heiliges Vermächtnis",
+    "titleSuffix": ", kein Trainingsdatensatz.",
+    "items": [
+      {
+        "title": "Kein KI-Training",
+        "desc": "Wir verbieten strikt die Nutzung deiner privaten Fotos oder Texte für das Training von LLMs oder generativen KI-Modellen. Niemals."
+      },
+      {
+        "title": "Zero-Knowledge-Architektur",
+        "desc": "Deine 'Black Box'-Inhalte werden lokal verschlüsselt. Nicht einmal unsere Entwickler können deine Familienfotos sehen."
+      },
+      {
+        "title": "Für immer werbefrei",
+        "desc": "Wir werden von Familien für Familien finanziert. Wir werden deine Aufmerksamkeit niemals an Werbetreibende verkaufen."
+      }
+    ],
+    "stats": {
+      "ownership": "Privater Besitz",
+      "encryption": "E2E-Verschlüsselung",
+      "verified": "Nur verifizierte Mitglieder",
+      "breaches": "Datenlecks"
+    }
+  },
+  "cta": {
+    "title": "Bereit, deine Familie nach Hause zu holen?",
+    "subtitle": "Werde Teil des exklusiven Kreises von Familien, die ihre Geschichten mit Würde und Stil bewahren. Der Zugang nur auf Einladung sichert höchste Sicherheitsstandards.",
+    "getStarted": "Loslegen",
+    "openSource": "Open Source",
+    "noCreditCard": "Keine Kreditkarte nötig, es ist kostenlos."
+  },
+  "footer": {
+    "links": ["Nutzungsbedingungen", "Datenschutzerklärung", "Hilfecenter", "Kontakt"],
+    "safety": "Sicherheitsrichtlinien",
+    "copyright": "© {{year}} Kaydo. Alle Rechte vorbehalten.",
+    "crafted": "Mit Liebe für Erinnerungen gemacht."
+  },
+  "claim": {
+    "namePlaceholder": "Die Müllers",
+    "nameAriaLabel": "Euer Familienname",
+    "check": "Prüfen",
+    "previewLabel": "Eure Familienadresse:",
+    "invalid": "Bitte verwende für deinen Familiennamen Buchstaben oder Zahlen.",
+    "takenSuffix": "ist bereits vergeben — versuche einen anderen Namen.",
+    "availableSuffix": "ist verfügbar!",
+    "setupRequiredTitle": "Einrichtung erforderlich:",
+    "setupRequiredBody": "Die Firebase-Umgebungsvariablen sind nicht konfiguriert, daher können noch keine Konten erstellt werden.",
+    "displayNamePlaceholder": "Dein Name (z. B. Sarah Müller)",
+    "displayNameAriaLabel": "Dein Name",
+    "emailPlaceholder": "E-Mail",
+    "emailAriaLabel": "E-Mail",
+    "passwordPlaceholder": "Passwort (mindestens 6 Zeichen)",
+    "passwordAriaLabel": "Passwort",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort verbergen",
+    "submit": "{{domain}} sichern",
+    "alreadyHaveAccount": "Du hast schon ein Konto?",
+    "login": "Anmelden",
+    "errors": {
+      "couldNotCheck": "Verfügbarkeit konnte nicht geprüft werden — bitte versuche es erneut.",
+      "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "emailInUse": "Mit dieser E-Mail-Adresse existiert bereits ein Konto",
+      "invalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein",
+      "weakPassword": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "generic": "Konto konnte nicht erstellt werden"
+    }
+  }
+}

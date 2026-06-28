@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Upload, Loader2 } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
@@ -28,6 +29,7 @@ export default function PhotoBar({
   mode = 'idle',
   hint,
 }) {
+  const { t } = useTranslation('scrapbook')
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -37,10 +39,10 @@ export default function PhotoBar({
   }
 
   const label = hint || (
-    mode === 'fill' ? 'Tap a photo to fill the selected slot'
-    : mode === 'replace' ? 'Tap a photo to replace'
-    : mode === 'swap' ? 'Tap a photo to swap with'
-    : 'Upload new or reuse from your memories'
+    mode === 'fill' ? t('photoBar.fillHint')
+    : mode === 'replace' ? t('photoBar.replaceHint')
+    : mode === 'swap' ? t('photoBar.swapHint')
+    : t('photoBar.idleHint')
   )
 
   return (
@@ -48,7 +50,7 @@ export default function PhotoBar({
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
       <div className="px-4 pt-3 pb-1 flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-bark">Photos</h3>
+        <h3 className="text-sm font-semibold text-bark">{t('photoBar.heading')}</h3>
         <span className={`text-[11px] truncate ${mode === 'idle' ? 'text-bark-muted' : 'text-kaydo font-medium'}`}>
           {label}
         </span>
@@ -68,7 +70,7 @@ export default function PhotoBar({
             <Upload className="w-5 h-5" />
           )}
           <span className="text-[11px] font-semibold">
-            {uploading ? 'Uploading…' : 'Add photos'}
+            {uploading ? t('photoBar.uploading') : t('photoBar.addPhotos')}
           </span>
         </button>
 
@@ -84,7 +86,7 @@ export default function PhotoBar({
 
         {memoryPhotos.length === 0 && sessionPhotos.length === 0 && !uploading && (
           <div className="flex items-center px-2 text-xs text-bark-muted italic">
-            No photos yet — upload one to get started.
+            {t('photoBar.emptyHint')}
           </div>
         )}
       </div>

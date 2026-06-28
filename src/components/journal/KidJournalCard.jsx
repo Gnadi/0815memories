@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { User, BookOpen, Star, ChevronRight, Plus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdit, onDelete }) {
+  const { t } = useTranslation('journal')
   const birthdate = kid.birthdate?.toDate ? kid.birthdate.toDate() : new Date(kid.birthdate)
   const age = Math.floor((new Date() - birthdate) / (365.25 * 24 * 60 * 60 * 1000))
   const formattedBirth = birthdate.toLocaleDateString('en-US', {
@@ -24,8 +26,8 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-bold text-bark truncate">{kid.name}</h3>
           <p className="text-sm text-bark-muted">
-            Born {formattedBirth}
-            {age >= 0 && ` · ${age} yr${age !== 1 ? 's' : ''} old`}
+            {t('card.born', { date: formattedBirth })}
+            {age >= 0 && (age === 1 ? t('card.ageSuffixOne', { age }) : t('card.ageSuffixOther', { age }))}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -49,11 +51,11 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 px-3 py-2 bg-cream rounded-xl text-sm text-bark">
             <BookOpen className="w-4 h-4 text-kaydo flex-shrink-0" />
-            <span>{journalCount} {journalCount === 1 ? 'Letter' : 'Letters'} written</span>
+            <span>{t('card.lettersWritten', { count: journalCount, label: journalCount === 1 ? t('card.letter') : t('card.letters') })}</span>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-bark-muted italic">No letters written yet — start today.</p>
+        <p className="text-sm text-bark-muted italic">{t('card.noLettersYet')}</p>
       )}
 
       {/* Action */}
@@ -62,9 +64,9 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
         className="flex items-center gap-1 text-sm font-semibold text-kaydo hover:text-kaydo/80 transition-colors mt-auto"
       >
         {journalCount > 0 ? (
-          <>View Archive <ChevronRight className="w-4 h-4" /></>
+          <>{t('card.viewArchive')} <ChevronRight className="w-4 h-4" /></>
         ) : (
-          <>Start Journal <Plus className="w-4 h-4" /></>
+          <>{t('card.startJournal')} <Plus className="w-4 h-4" /></>
         )}
       </button>
     </div>

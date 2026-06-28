@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
 import { Trash2, RotateCw, ImagePlus, ChevronsUp } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
@@ -55,6 +56,7 @@ export default function CanvasElement({
   editable = true,
   exporting = false,
 }) {
+  const { t } = useTranslation('scrapbook')
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
   const exportCanvasRef = useRef(null)
@@ -204,7 +206,7 @@ export default function CanvasElement({
             <div className="flex flex-col items-center gap-1 text-center px-2">
               <ImagePlus className="w-6 h-6 text-bark-muted" />
               <span className="text-[11px] font-medium text-bark-light leading-tight">
-                Tap to add photo
+                {t('canvas.tapToAddPhoto')}
               </span>
             </div>
           </div>
@@ -302,7 +304,7 @@ export default function CanvasElement({
           onDoubleClick={handleDoubleClick}
         >
           <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {element.text || 'Double-click to edit'}
+            {element.text || t('canvas.doubleClickToEdit')}
           </span>
         </div>
       )
@@ -387,7 +389,7 @@ export default function CanvasElement({
             onPointerDown={(e) => { e.stopPropagation(); onUpdate(id, { zIndex: Date.now() }) }}
             className="absolute -top-3 -right-3 w-6 h-6 bg-white border-2 border-kaydo text-kaydo rounded-full flex items-center justify-center shadow z-10 hover:bg-kaydo hover:text-white"
             style={{ touchAction: 'manipulation' }}
-            title="Bring to front"
+            title={t('canvas.bringToFront')}
           >
             <ChevronsUp className="w-3 h-3" />
           </button>
@@ -399,7 +401,7 @@ export default function CanvasElement({
               className="absolute -bottom-9 left-1/2 -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-sm font-medium rounded-md shadow z-10 hover:bg-red-600 whitespace-nowrap"
               style={{ touchAction: 'manipulation' }}
             >
-              Remove
+              {t('canvas.remove')}
             </button>
           )}
 

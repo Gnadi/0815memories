@@ -1,8 +1,10 @@
 import { GitFork, ChefHat, MoreVertical, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function RecipeCard({ recipe, onClick, onDelete }) {
+  const { t } = useTranslation('recipes')
   const [showMenu, setShowMenu] = useState(false)
 
   return (
@@ -52,7 +54,7 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
                   className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete
+                  {t('common:buttons.delete')}
                 </button>
               </div>
             )}
@@ -63,7 +65,7 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
         <h3 className="text-lg font-bold text-bark leading-tight">{recipe.title}</h3>
 
         {/* Author */}
-        <p className="text-sm text-bark-muted mt-0.5">by {recipe.author}</p>
+        <p className="text-sm text-bark-muted mt-0.5">{t('card.by', { author: recipe.author })}</p>
 
         {/* Description */}
         {recipe.description && (
@@ -74,9 +76,9 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-cream-dark">
           <div className="flex items-center gap-1.5 text-xs text-bark-muted">
             <GitFork className="w-3.5 h-3.5" />
-            <span>{recipe.forkCount ?? 0} fork{(recipe.forkCount ?? 0) !== 1 ? 's' : ''}</span>
+            <span>{t('card.forks', { count: recipe.forkCount ?? 0 })}</span>
           </div>
-          <span className="text-sm font-semibold text-kaydo">View Journey →</span>
+          <span className="text-sm font-semibold text-kaydo">{t('card.viewJourney')}</span>
         </div>
       </div>
     </div>

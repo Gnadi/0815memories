@@ -11,6 +11,7 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
@@ -26,6 +27,7 @@ function buildMediaItems(moment) {
 }
 
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
+  const { t } = useTranslation('home')
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
   const [progress, setProgress] = useState(0)   // 0–100, fill % for current media item
@@ -159,7 +161,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   const handleDelete = () => {
     setShowMenu(false)
-    if (window.confirm('Delete this moment?')) {
+    if (window.confirm(t('moment.deleteConfirm'))) {
       onDelete?.(moment.id)
       onClose()
     }
@@ -179,7 +181,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
   }
 
-  const authorName = moment?.authorName || 'Family'
+  const authorName = moment?.authorName || t('moment.author')
   const authorInitials = useMemo(
     () => authorName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
     [authorName]

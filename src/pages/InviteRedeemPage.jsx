@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
 import {
@@ -16,6 +17,7 @@ import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 
 export default function InviteRedeemPage() {
+  const { t } = useTranslation('auth')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user, firebaseReady } = useAuth()
@@ -44,7 +46,7 @@ export default function InviteRedeemPage() {
     }
     if (!familyId || !token) {
       setValidating(false)
-      setValidationError('This invite link is incomplete. Ask the person who shared it to send you a fresh link.')
+      setValidationError(t('invite.errors.incompleteLink'))
       return
     }
     let cancelled = false
@@ -53,52 +55,52 @@ export default function InviteRedeemPage() {
         const familySnap = await getDoc(doc(db, 'families', familyId))
         if (cancelled) return
         if (!familySnap.exists()) {
-          setValidationError('That family could not be found.')
+          setValidationError(t('invite.errors.familyNotFound'))
           return
         }
-        setFamilyName(familySnap.data().familyName || 'this family')
+        setFamilyName(familySnap.data().familyName || t('invite.fallbackFamilyName'))
 
         const inviteSnap = await getDoc(doc(db, 'families', familyId, 'invites', token))
         if (cancelled) return
         if (!inviteSnap.exists()) {
-          setValidationError('This invite link is invalid or has been revoked.')
+          setValidationError(t('invite.errors.invalidOrRevoked'))
           return
         }
         const data = inviteSnap.data()
         if (data.used) {
-          setValidationError('This invite link has already been used.')
+          setValidationError(t('invite.errors.alreadyUsed'))
           return
         }
         const expiresAt = data.expiresAt?.toMillis?.() ?? 0
         if (expiresAt && expiresAt < Date.now()) {
-          setValidationError('This invite link has expired. Ask for a new one.')
+          setValidationError(t('invite.errors.expired'))
           return
         }
         setInviteValid(true)
       } catch (err) {
         if (import.meta.env.DEV) console.error('Invite validation failed', err)
-        if (!cancelled) setValidationError('Could not validate this invite. Please try again later.')
+        if (!cancelled) setValidationError(t('invite.errors.validationFailed'))
       } finally {
         if (!cancelled) setValidating(false)
       }
     }
     validate()
     return () => { cancelled = true }
-  }, [familyId, token, firebaseReady])
+  }, [familyId, token, firebaseReady, t])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (user) {
-      setError('You are already signed in. Please sign out before redeeming an invite, so this account is created fresh and bound only to this family.')
+      setError(t('invite.errors.alreadySignedIn'))
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('invite.errors.passwordMismatch'))
       return
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('invite.errors.passwordTooShort'))
       return
     }
 
@@ -137,11 +139,11 @@ export default function InviteRedeemPage() {
     } catch (err) {
       if (import.meta.env.DEV) console.error('Invite redemption failed', err)
       const messages = {
-        'auth/email-already-in-use': 'An account with this email already exists. Each admin must use a unique email.',
-        'auth/invalid-email': 'Please enter a valid email address',
-        'auth/weak-password': 'Password must be at least 6 characters',
+        'auth/email-already-in-use': 'invite.errors.emailInUse',
+        'auth/invalid-email': 'invite.errors.invalidEmail',
+        'auth/weak-password': 'invite.errors.weakPassword',
       }
-      setError(messages[err.code] || err.message || 'Could not redeem the invite. Please try again.')
+      setError(t(messages[err.code] || 'invite.errors.generic'))
     } finally {
       setLoading(false)
     }
@@ -151,7 +153,7 @@ export default function InviteRedeemPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="flex items-center gap-2 text-bark-light">
-          <Loader2 className="w-5 h-5 animate-spin" /> Validating invite…
+          <Loader2 className="w-5 h-5 animate-spin" /> {t('invite.validating')}
         </div>
       </div>
     )
@@ -162,10 +164,10 @@ export default function InviteRedeemPage() {
       <div className="min-h-screen bg-cream flex items-center justify-center px-5">
         <div className="max-w-md w-full bg-warm-white rounded-2xl p-6 shadow-sm text-center">
           <KaydoLogo size={40} />
-          <h1 className="text-2xl font-bold text-bark mt-4 mb-2">Invite unavailable</h1>
-          <p className="text-bark-light mb-6">{validationError || 'This invite link is no longer valid.'}</p>
+          <h1 className="text-2xl font-bold text-bark mt-4 mb-2">{t('invite.unavailableTitle')}</h1>
+          <p className="text-bark-light mb-6">{validationError || t('invite.unavailableBody')}</p>
           <button onClick={() => navigate('/login')} className="btn-kaydo">
-            Go to sign in
+            {t('invite.goToSignIn')}
           </button>
         </div>
       </div>
@@ -191,10 +193,10 @@ export default function InviteRedeemPage() {
             <FamilyIllustration />
           </div>
           <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            Join {familyName}
+            {t('invite.joinFamily', { name: familyName })}
           </h1>
           <p className="text-bark-light text-center mb-6">
-            Create your account to become an admin of this family.
+            {t('invite.subtitle')}
           </p>
           {user && <AlreadySignedInBanner />}
           <RedeemForm
@@ -213,10 +215,10 @@ export default function InviteRedeemPage() {
           <FamilyIllustration />
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              You've been invited.
+              {t('invite.asideTitle')}
             </h2>
             <p className="text-base opacity-90 drop-shadow">
-              Create an account to manage memories with the rest of the family.
+              {t('invite.asideBody')}
             </p>
           </div>
         </div>

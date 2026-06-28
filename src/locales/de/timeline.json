@@ -1,1 +1,39 @@
-{}
+{
+  "header": {
+    "eyebrow": "Familien-Tresor",
+    "title": "Smarter Zeitstrahl",
+    "subtitle": "Wir folgen den Fäden unserer Geschichte."
+  },
+  "onThisDay": {
+    "banner": "Heute vor 3 Jahren",
+    "bannerSub": "{{date}} · Erinnerungen aus vergangenen Jahren"
+  },
+  "seasons": {
+    "all": "Alle",
+    "Winter": "Winter",
+    "Spring": "Frühling",
+    "Summer": "Sommer",
+    "Autumn": "Herbst"
+  },
+  "stats": {
+    "noMemories": "Keine Erinnerungen gefunden",
+    "memory": "{{count}} Erinnerung",
+    "memories": "{{count}} Erinnerungen",
+    "onThisDaySuffix": " · Heute vor Jahren · {{date}}",
+    "seasonSuffix": " im {{season}}",
+    "yearSuffix": " · {{year}}"
+  },
+  "filters": {
+    "allSeasons": "allen Jahreszeiten",
+    "allTime": "gesamter Zeitraum"
+  },
+  "empty": {
+    "heading": "Hier gibt es noch keine Erinnerungen",
+    "onThisDay": "Noch keine Erinnerungen vom {{date}} aus vergangenen Jahren.",
+    "seasonWithYear": "Keine Erinnerungen aus dem {{season}} für {{year}} gefunden.",
+    "season": "Keine Erinnerungen aus dem {{season}} gefunden.",
+    "year": "Keine Erinnerungen für {{year}} gefunden.",
+    "generic": "Keine Erinnerungen gefunden.",
+    "clearFilters": "Filter zurücksetzen"
+  }
+}

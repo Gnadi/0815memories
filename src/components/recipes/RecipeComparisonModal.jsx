@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, ChefHat, GitFork, Copy, Share2 } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
@@ -27,6 +28,7 @@ function computeDiffTags(versA, versB) {
 }
 
 function IngredientRow({ ing }) {
+  const { t } = useTranslation('recipes')
   const tagStyles = {
     UNCHANGED: { pill: 'bg-stone-100 text-stone-500', text: 'text-bark-muted' },
     REMOVED: { pill: 'bg-red-100 text-red-600', text: 'text-bark-muted line-through' },
@@ -41,17 +43,18 @@ function IngredientRow({ ing }) {
       <span className={`text-sm ${style.text}`}>{ing.name}</span>
       {showTag && (
         <span className={`text-[10px] font-bold uppercase rounded-md px-1.5 py-0.5 ml-2 shrink-0 ${style.pill}`}>
-          {ing.diffTag}
+          {t('compare.diff.' + ing.diffTag.toLowerCase(), ing.diffTag)}
         </span>
       )}
       {!showTag && (
-        <span className="text-[10px] text-stone-400 ml-2 shrink-0">UNCHANGED</span>
+        <span className="text-[10px] text-stone-400 ml-2 shrink-0">{t('compare.diff.unchanged')}</span>
       )}
     </div>
   )
 }
 
 export default function RecipeComparisonModal({ versionA, versionB, allVersions, onClose }) {
+  const { t } = useTranslation('recipes')
   const [localA, setLocalA] = useState(versionA)
   const [localB, setLocalB] = useState(versionB)
   const [copied, setCopied] = useState(false)
@@ -64,7 +67,7 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
   const actualRemovedCount = enrichedA.filter((i) => i.diffTag === 'REMOVED').length
 
   const handleShare = async () => {
-    const text = `${localB.title} (${localB.year}) — forked from ${localA.title} (${localA.year})\n\nReason: ${localB.forkReason || 'No reason given'}`
+    const text = `${t('compare.share.forkedFrom', { title: localB.title, year: localB.year, fromTitle: localA.title, fromYear: localA.year })}\n\n${t('compare.share.reasonLine', { reason: localB.forkReason || t('compare.share.noReason') })}`
     try {
       if (navigator.share) {
         await navigator.share({ title: localB.title, text, url: window.location.href })
@@ -80,10 +83,10 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
 
   const handleMergeNotes = async () => {
     const notes = [
-      `Fork: ${localB.title} (${localB.year})`,
-      `Author: ${localB.author}`,
-      localB.forkReason ? `Reason: ${localB.forkReason}` : '',
-      ...(localB.changes || []).map((c) => `${c.type}: ${c.ingredient} — ${c.description}`),
+      t('compare.notes.fork', { title: localB.title, year: localB.year }),
+      t('compare.notes.author', { author: localB.author }),
+      localB.forkReason ? t('compare.notes.reason', { reason: localB.forkReason }) : '',
+      ...(localB.changes || []).map((c) => `${t('compare.diff.' + c.type.toLowerCase(), c.type)}: ${c.ingredient} — ${c.description}`),
     ]
       .filter(Boolean)
       .join('\n')

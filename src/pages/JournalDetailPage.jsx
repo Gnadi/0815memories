@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../constants/emotions'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +11,7 @@ import EncryptedVideo from '../components/media/EncryptedVideo'
 import EncryptedAudio from '../components/media/EncryptedAudio'
 
 export default function JournalDetailPage() {
+  const { t } = useTranslation('journal')
   const { childId, entryId } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
@@ -32,7 +34,7 @@ export default function JournalDetailPage() {
   })
 
   const handleDelete = () => {
-    if (confirm('Delete this letter permanently?')) {
+    if (confirm(t('detail.deleteLetterConfirm'))) {
       deleteJournal(entryId)
       navigate(`/journal/${childId}`)
     }
@@ -92,7 +94,7 @@ export default function JournalDetailPage() {
             {/* Emotion + date */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${emotion.bg} ${emotion.text}`}>
-                {emotion.emoji} {emotion.label}
+                {emotion.emoji} {t('emotions:' + emotion.key)}
               </span>
               {formattedDate && (
                 <span className="text-xs text-stone-400">{formattedDate}</span>
@@ -144,7 +146,7 @@ export default function JournalDetailPage() {
                 {entry.voiceMemos.map((memo, i) => (
                   <div key={i} className="bg-stone-100 rounded-xl px-3 py-2">
                     <p className="text-xs text-stone-500 mb-1.5">
-                      🎙 {memo.title || `Voice note ${i + 1}`}
+                      🎙 {memo.title || t('detail.voiceNote', { index: i + 1 })}
                     </p>
                     <EncryptedAudio src={memo.url} controls className="w-full h-8" />
                   </div>

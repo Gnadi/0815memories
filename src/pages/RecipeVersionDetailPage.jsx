@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ChefHat, GitFork } from 'lucide-react'
 import { getDoc, doc } from 'firebase/firestore'
 import { db } from '../config/firebase'
@@ -19,6 +20,7 @@ const STATUS_TAG = {
 }
 
 export default function RecipeVersionDetailPage() {
+  const { t } = useTranslation('recipes')
   const { rootId, versionId } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
@@ -38,7 +40,7 @@ export default function RecipeVersionDetailPage() {
         const snap = await getDoc(doc(db, 'recipes', versionId))
         if (snap.exists()) {
           let data = { id: snap.id, ...snap.data() }
-          if (data.familyId !== familyId) { setLoadError('Recipe version not found.'); setLoading(false); return }
+          if (data.familyId !== familyId) { setLoadError(t('version.notFound')); setLoading(false); return }
           if (encryptionKey) {
             const { decryptFields, decryptJSON } = await import('../utils/encryption')
             data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
@@ -46,10 +48,10 @@ export default function RecipeVersionDetailPage() {
           }
           setRecipe(data)
         } else {
-          setLoadError('Recipe version not found.')
+          setLoadError(t('version.notFound'))
         }
       } catch {
-        setLoadError('Failed to load this version. Please try again.')
+        setLoadError(t('version.loadError'))
       } finally {
         setLoading(false)
       }
@@ -78,7 +80,7 @@ export default function RecipeVersionDetailPage() {
               onClick={() => navigate(`/recipes/${rootId}`)}
               className="text-sm text-kaydo font-semibold"
             >
-              ← Back to Journey
+              {t('version.backToJourney')}
             </button>
           </div>
         ) : (
@@ -114,11 +116,11 @@ export default function RecipeVersionDetailPage() {
                     {recipe.year}
                   </span>
                   <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${isOriginal ? 'bg-stone-200/80 text-stone-700' : 'bg-amber-400/80 text-amber-900'}`}>
-                    {isOriginal ? 'Original' : 'Fork'}
+                    {isOriginal ? t('version.original') : t('version.fork')}
                   </span>
                 </div>
                 <h1 className="text-xl md:text-2xl font-bold text-white leading-tight">{recipe.title}</h1>
-                <p className="text-white/70 text-sm mt-0.5">by {recipe.author}</p>
+                <p className="text-white/70 text-sm mt-0.5">{t('version.by', { author: recipe.author })}</p>
               </div>
             </div>
 
@@ -134,7 +136,7 @@ export default function RecipeVersionDetailPage() {
               {recipe.ingredients && recipe.ingredients.length > 0 && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
                   <h2 className="text-sm font-bold text-bark mb-3 flex items-center gap-1.5">
-                    <span>🍴</span> Ingredients
+                    <span>🍴</span> {t('version.ingredients')}
                   </h2>
                   <div className="space-y-2">
                     {recipe.ingredients.map((ing, i) => (
@@ -144,7 +146,7 @@ export default function RecipeVersionDetailPage() {
                         </span>
                         {STATUS_TAG[ing.status] && (
                           <span className={`text-[10px] font-bold uppercase rounded-md px-1.5 py-0.5 ml-2 shrink-0 ${STATUS_TAG[ing.status]}`}>
-                            {ing.status}
+                            {t('version.status.' + ing.status, ing.status)}
                           </span>
                         )}
                       </div>
@@ -156,7 +158,7 @@ export default function RecipeVersionDetailPage() {
               {/* Instructions */}
               {recipe.instructions && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
-                  <h2 className="text-sm font-bold text-bark mb-3">Instructions</h2>
+                  <h2 className="text-sm font-bold text-bark mb-3">{t('version.instructions')}</h2>
                   <p className="text-sm text-bark leading-relaxed whitespace-pre-wrap">{recipe.instructions}</p>
                 </div>
               )}
@@ -164,7 +166,7 @@ export default function RecipeVersionDetailPage() {
               {/* Chef's Secret Tip */}
               {recipe.chefNote && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">Chef's Secret Tip</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">{t('version.chefTip')}</p>
                   <p className="text-sm text-bark italic leading-relaxed">"{recipe.chefNote}"</p>
                 </div>
               )}
@@ -172,9 +174,9 @@ export default function RecipeVersionDetailPage() {
               {/* Fork Reason */}
               {recipe.forkReason && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">Reason for the Fork</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-kaydo mb-2">{t('version.forkReasonLabel')}</p>
                   <blockquote className="text-sm text-bark italic leading-relaxed">"{recipe.forkReason}"</blockquote>
-                  <p className="text-xs text-bark-muted mt-2">— {recipe.author}, {recipe.year}</p>
+                  <p className="text-xs text-bark-muted mt-2">{t('version.forkAttribution', { author: recipe.author, year: recipe.year })}</p>
                 </div>
               )}
 
@@ -185,13 +187,13 @@ export default function RecipeVersionDetailPage() {
                   className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
                 >
                   <GitFork className="w-4 h-4" />
-                  Fork This Version
+                  {t('version.forkVersion')}
                 </button>
                 <button
                   onClick={() => navigate(`/recipes/${rootId}`)}
                   className="text-sm text-bark-muted hover:text-bark transition-colors"
                 >
-                  ← Back to Journey
+                  {t('version.backToJourney')}
                 </button>
               </div>
 

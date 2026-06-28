@@ -1,1 +1,39 @@
-{}
+{
+  "header": {
+    "eyebrow": "Family Vault",
+    "title": "Smart Timeline",
+    "subtitle": "Tracing the threads of our story."
+  },
+  "onThisDay": {
+    "banner": "Heute vor 3 Jahren",
+    "bannerSub": "{{date}} · Erinnerungen aus vergangenen Jahren"
+  },
+  "seasons": {
+    "all": "All",
+    "Winter": "Winter",
+    "Spring": "Spring",
+    "Summer": "Summer",
+    "Autumn": "Autumn"
+  },
+  "stats": {
+    "noMemories": "No memories found",
+    "memory": "{{count}} memory",
+    "memories": "{{count}} memories",
+    "onThisDaySuffix": " · On this day · {{date}}",
+    "seasonSuffix": " in {{season}}",
+    "yearSuffix": " · {{year}}"
+  },
+  "filters": {
+    "allSeasons": "all seasons",
+    "allTime": "all time"
+  },
+  "empty": {
+    "heading": "No memories here yet",
+    "onThisDay": "Noch keine Erinnerungen vom {{date}} aus vergangenen Jahren.",
+    "seasonWithYear": "No {{season}} memories found for {{year}}.",
+    "season": "No {{season}} memories found.",
+    "year": "No memories found for {{year}}.",
+    "generic": "No memories found.",
+    "clearFilters": "Clear filters"
+  }
+}

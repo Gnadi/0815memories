@@ -1,1 +1,125 @@
-{}
+{
+  "detail": {
+    "notFound": "Erinnerung nicht gefunden",
+    "backToHome": "Zurück zur Startseite",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+  },
+  "hero": {
+    "viewFullscreen": "Vollbild ansehen"
+  },
+  "body": {
+    "sharedBy": "Geteilt von <1>{{name}}</1>"
+  },
+  "videos": {
+    "heading": "Videos"
+  },
+  "voiceMemos": {
+    "heading": "Sprachnotizen"
+  },
+  "postMemory": {
+    "titleEdit": "Erinnerung bearbeiten",
+    "titleNew": "Erinnerung teilen",
+    "photos": "Fotos",
+    "addPhoto": "Foto hinzufügen",
+    "camera": "Kamera",
+    "videos": "Videos",
+    "videosHint": "(max. 60 Sek. je Video)",
+    "videoTitlePlaceholder": "Titel hinzufügen (optional)",
+    "addVideo": "Video hinzufügen",
+    "recordVideo": "Video aufnehmen",
+    "voiceMemosLabel": "Sprachnotizen",
+    "voiceMemoFallback": "Sprachnotiz {{index}}",
+    "addVoiceMemo": "Sprachnotiz hinzufügen",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Gib dieser Erinnerung einen Titel...",
+    "storyLabel": "Geschichte",
+    "storyPlaceholder": "Erzähl die Geschichte hinter dieser Erinnerung...",
+    "quoteLabel": "Zitat",
+    "quoteHint": "(optional)",
+    "quotePlaceholder": "Ein einprägsames Zitat von diesem Tag...",
+    "categoryLabel": "Kategorie",
+    "categoryPlaceholder": "z. B. Sommerreise",
+    "locationLabel": "Ort",
+    "locationPlaceholder": "z. B. Opas Obstgarten",
+    "dateLabel": "Datum",
+    "sharedByLabel": "Geteilt von",
+    "sharedByPlaceholder": "Dein Name",
+    "featured": "Diese Erinnerung auf der Startseite hervorheben",
+    "uploading": "Lädt hoch...",
+    "saveChanges": "Änderungen speichern",
+    "shareMemory": "Erinnerung teilen"
+  },
+  "postMoment": {
+    "titleEdit": "Moment bearbeiten",
+    "titleNew": "Einen Moment teilen",
+    "photos": "Fotos",
+    "addPhoto": "Foto hinzufügen",
+    "camera": "Kamera",
+    "shortVideos": "Kurze Videos",
+    "shortVideosHint": "(max. 60 Sek.)",
+    "addVideo": "Video hinzufügen",
+    "record": "Aufnehmen",
+    "mediaRequired": "Mindestens ein Foto oder Video ist erforderlich.",
+    "captionLabel": "Bildunterschrift",
+    "captionPlaceholder": "Was passiert gerade...",
+    "categoryLabel": "Kategorie",
+    "categoryPlaceholder": "z. B. Familie",
+    "locationLabel": "Ort",
+    "locationPlaceholder": "z. B. Hinterhof",
+    "labelLabel": "Kreis-Beschriftung",
+    "labelHint": "(optional)",
+    "labelPlaceholder": "z. B. Morgenspaziergang",
+    "labelHelp": "Wird unter dem Story-Kreis angezeigt. Standardmäßig das Datum, wenn leer.",
+    "uploading": "Lädt hoch...",
+    "saveChanges": "Änderungen speichern",
+    "shareMoment": "Moment teilen"
+  },
+  "recorder": {
+    "record": "Aufnehmen",
+    "uploadAudio": "Audio hochladen",
+    "recording": "Aufnahme {{time}}",
+    "stop": "Stopp",
+    "titlePlaceholder": "Diese Sprachnotiz beschriften (optional)",
+    "addToMemory": "Zur Erinnerung hinzufügen",
+    "uploading": "Sprachnotiz wird hochgeladen...",
+    "micDenied": "Mikrofonzugriff verweigert. Bitte erlaube den Mikrofonzugriff und versuche es erneut.",
+    "uploadFailed": "Hochladen fehlgeschlagen"
+  },
+  "polaroid": {
+    "heading": "Polaroid-Rahmen",
+    "intro": "Passe an, wie diese Erinnerung im Polaroid-Feed aussieht. Jede Erinnerung kann ihren eigenen Rahmen haben.",
+    "theme": "Thema",
+    "customHint": "Lade ein kleines Bild hoch, das als Rahmentextur dieser Karte dient. Es füllt die gesamte Rahmenfläche.",
+    "color": "Farbe",
+    "borderColorAria": "Rahmenfarbe {{color}}",
+    "width": "Breite",
+    "style": "Stil",
+    "decoration": "Verzierung",
+    "previewCaption": "Erinnerung",
+    "themes": {
+      "solid": "Einfarbig",
+      "dots": "Punkte",
+      "stripes": "Streifen",
+      "confetti": "Konfetti",
+      "vintage": "Vintage",
+      "custom": "Eigenes"
+    },
+    "widths": {
+      "thin": "Dünn",
+      "medium": "Mittel",
+      "thick": "Dick"
+    },
+    "styles": {
+      "solid": "Durchgezogen",
+      "dashed": "Gestrichelt",
+      "double": "Doppelt"
+    },
+    "decorations": {
+      "none": "Keine",
+      "tape": "Klebeband",
+      "corners": "Ecken"
+    }
+  }
+}

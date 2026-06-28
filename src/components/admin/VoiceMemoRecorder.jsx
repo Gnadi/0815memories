@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Mic, Square, Play, Pause, Trash2, Upload, Check, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 
 export default function VoiceMemoRecorder({ onMemoAdded }) {
+  const { t } = useTranslation('memory')
   const { encryptionKey } = useAuth()
   const [mode, setMode] = useState('idle') // idle | recording | recorded | uploading
   const [isPlaying, setIsPlaying] = useState(false)
@@ -55,7 +57,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       setElapsed(0)
       timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000)
     } catch {
-      setError('Microphone access denied. Please allow microphone access and try again.')
+      setError(t('recorder.micDenied'))
     }
   }
 
@@ -96,8 +98,8 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       const { url, publicId } = await encryptAndUpload(blobRef.current, encryptionKey)
       onMemoAdded({ url, publicId, title, duration })
       discard()
-    } catch (err) {
-      setError(err.message || 'Upload failed')
+    } catch {
+      setError(t('recorder.uploadFailed'))
       setMode('recorded')
     }
   }
@@ -117,8 +119,8 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
         duration: 0,
       })
       setMode('idle')
-    } catch (err) {
-      setError(err.message || 'Upload failed')
+    } catch {
+      setError(t('recorder.uploadFailed'))
       setMode('idle')
     }
   }
@@ -135,14 +137,14 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
             onClick={startRecording}
             className="flex items-center gap-2 px-4 py-2 bg-kaydo text-white rounded-xl text-sm font-medium hover:bg-kaydo-dark transition-colors"
           >
-            <Mic className="w-4 h-4" /> Record
+            <Mic className="w-4 h-4" /> {t('recorder.record')}
           </button>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-2 px-4 py-2 bg-bark/10 text-bark rounded-xl text-sm font-medium hover:bg-bark/20 transition-colors"
           >
-            <Upload className="w-4 h-4" /> Upload audio
+            <Upload className="w-4 h-4" /> {t('recorder.uploadAudio')}
           </button>
         </div>
       )}
@@ -151,14 +153,14 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-kaydo font-medium">
             <span className="w-2 h-2 rounded-full bg-kaydo animate-pulse" />
-            Recording {formatTime(elapsed)}
+            {t('recorder.recording', { time: formatTime(elapsed) })}
           </span>
           <button
             type="button"
             onClick={stopRecording}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-bark text-white rounded-xl text-sm hover:bg-bark-light transition-colors"
           >
-            <Square className="w-3.5 h-3.5 fill-white" /> Stop
+            <Square className="w-3.5 h-3.5 fill-white" /> {t('recorder.stop')}
           </button>
         </div>
       )}
@@ -186,7 +188,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Label this voice memo (optional)"
+            placeholder={t('recorder.titlePlaceholder')}
             className="w-full px-3 py-2 bg-warm-white rounded-xl text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
           />
           <button
@@ -194,7 +196,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
             onClick={uploadAndSave}
             className="flex items-center gap-2 px-4 py-2 bg-kaydo text-white rounded-xl text-sm font-medium hover:bg-kaydo-dark transition-colors"
           >
-            <Check className="w-4 h-4" /> Add to memory
+            <Check className="w-4 h-4" /> {t('recorder.addToMemory')}
           </button>
         </div>
       )}
@@ -202,7 +204,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       {mode === 'uploading' && (
         <div className="flex items-center gap-2 text-sm text-bark-muted">
           <div className="w-4 h-4 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
-          Uploading voice memo...
+          {t('recorder.uploading')}
         </div>
       )}
 

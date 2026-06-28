@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Lock, Plus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useBlackBox } from '../hooks/useBlackBox'
@@ -9,6 +10,7 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 
 export default function BlackBoxPage() {
+  const { t } = useTranslation('blackbox')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { boxes, loading, deleteBox } = useBlackBox(familyId, encryptionKey)
@@ -34,18 +36,17 @@ export default function BlackBoxPage() {
           <div className="w-10 h-10 rounded-2xl bg-bark flex items-center justify-center">
             <Lock className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-bark">The Black Box</h1>
+          <h1 className="text-3xl font-bold text-bark">{t('page.title')}</h1>
         </div>
         <p className="text-bark-muted max-w-lg">
-          A scheduled emotional delivery system. Seal a message today — it will only unlock on the
-          exact day you choose: a birthday, a wedding, a graduation, or whenever the time is right.
+          {t('page.description')}
         </p>
         <button
           onClick={() => navigate('/blackbox/new')}
           className="mt-5 flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Preserve a Moment
+          {t('page.preserveMoment')}
         </button>
       </div>
 
@@ -60,9 +61,9 @@ export default function BlackBoxPage() {
             <Lock className="w-8 h-8 text-bark-muted" />
           </div>
           <div>
-            <p className="font-semibold text-bark">No sealed messages yet</p>
+            <p className="font-semibold text-bark">{t('empty.heading')}</p>
             <p className="text-sm text-bark-muted mt-1">
-              Create your first time-release message — a gift for the future.
+              {t('empty.body')}
             </p>
           </div>
           <button
@@ -70,7 +71,7 @@ export default function BlackBoxPage() {
             className="flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Seal Your First Message
+            {t('empty.cta')}
           </button>
         </div>
       ) : (
@@ -81,7 +82,7 @@ export default function BlackBoxPage() {
               box={box}
               kidName={box.childId ? kidMap[box.childId]?.name : null}
               onDelete={() => {
-                if (confirm('Delete this sealed message permanently? This cannot be undone.')) {
+                if (confirm(t('confirmDelete'))) {
                   deleteBox(box.id)
                 }
               }}

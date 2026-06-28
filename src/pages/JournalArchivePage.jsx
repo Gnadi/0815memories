@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, PenLine, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
@@ -8,6 +9,7 @@ import JournalEntryCard from '../components/journal/JournalEntryCard'
 import Sidebar from '../components/layout/Sidebar'
 
 export default function JournalArchivePage() {
+  const { t } = useTranslation('journal')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { childId } = useParams()
@@ -50,9 +52,9 @@ export default function JournalArchivePage() {
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="font-bold text-bark truncate">{kid?.name || 'Journal'}</h1>
+              <h1 className="font-bold text-bark truncate">{kid?.name || t('archive.fallbackTitle')}</h1>
               {age !== null && (
-                <p className="text-xs text-bark-muted">{age} years old</p>
+                <p className="text-xs text-bark-muted">{t('archive.yearsOld', { age })}</p>
               )}
             </div>
           </div>
@@ -61,14 +63,14 @@ export default function JournalArchivePage() {
             className="btn-kaydo flex items-center gap-1.5 text-sm py-2 px-3"
           >
             <PenLine className="w-4 h-4" />
-            Write
+            {t('archive.write')}
           </button>
         </div>
 
         <div className="p-4 md:p-8 max-w-2xl mx-auto w-full">
           {/* Stats */}
           <div className="flex items-center gap-4 mb-6 text-sm text-bark-muted">
-            <span>{journals.length} {journals.length === 1 ? 'letter' : 'letters'}</span>
+            <span>{t('archive.letterCount', { count: journals.length, label: journals.length === 1 ? t('archive.letter') : t('archive.letters') })}</span>
           </div>
 
           {loading ? (
@@ -77,16 +79,16 @@ export default function JournalArchivePage() {
             </div>
           ) : journals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-              <p className="font-semibold text-bark">No letters written yet</p>
+              <p className="font-semibold text-bark">{t('archive.empty.heading')}</p>
               <p className="text-sm text-bark-muted">
-                Write your first letter to {kid?.name || 'your child'}.
+                {t('archive.empty.bodyNamed', { name: kid?.name || t('archive.empty.bodyFallback') })}
               </p>
               <button
                 onClick={() => navigate(`/journal/${childId}/new`)}
                 className="btn-kaydo flex items-center gap-2"
               >
                 <PenLine className="w-4 h-4" />
-                Write First Letter
+                {t('archive.empty.writeFirst')}
               </button>
             </div>
           ) : (
@@ -98,7 +100,7 @@ export default function JournalArchivePage() {
                   onView={() => navigate(`/journal/${childId}/view/${entry.id}`)}
                   onEdit={() => navigate(`/journal/${childId}/edit/${entry.id}`)}
                   onDelete={() => {
-                    if (confirm('Delete this letter permanently?')) {
+                    if (confirm(t('archive.deleteLetterConfirm'))) {
                       deleteJournal(entry.id)
                     }
                   }}

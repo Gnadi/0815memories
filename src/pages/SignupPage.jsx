@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
@@ -7,6 +8,7 @@ import FamilyIllustration from '../components/FamilyIllustration'
 import { generateSlug } from '../utils/familySlug'
 
 export default function SignupPage() {
+  const { t } = useTranslation('auth')
   const [displayName, setDisplayName] = useState('')
   const [familyName, setFamilyName] = useState('')
   const [email, setEmail] = useState('')
@@ -32,12 +34,12 @@ export default function SignupPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('signup.errors.passwordMismatch'))
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('signup.errors.passwordTooShort'))
       return
     }
 
@@ -47,11 +49,11 @@ export default function SignupPage() {
       navigate('/home')
     } catch (err) {
       const messages = {
-        'auth/email-already-in-use': 'An account with this email already exists',
-        'auth/invalid-email': 'Please enter a valid email address',
-        'auth/weak-password': 'Password must be at least 6 characters',
+        'auth/email-already-in-use': 'signup.errors.emailInUse',
+        'auth/invalid-email': 'signup.errors.invalidEmail',
+        'auth/weak-password': 'signup.errors.weakPassword',
       }
-      setError(messages[err.code] || err.message || 'Could not create account')
+      setError(t(messages[err.code] || 'signup.errors.generic'))
     } finally {
       setLoading(false)
     }
@@ -83,10 +85,10 @@ export default function SignupPage() {
 
           {/* Welcome heading */}
           <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            Join the Family
+            {t('signup.title')}
           </h1>
           <p className="text-bark-light text-center mb-6">
-            Create your Kaydo account.
+            {t('signup.subtitle')}
           </p>
 
           {!firebaseReady && <SetupBanner />}
@@ -105,12 +107,12 @@ export default function SignupPage() {
           {/* Sign in link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-bark-light">
-              Already have an account?{' '}
+              {t('signup.alreadyHaveAccount')}{' '}
               <button
                 onClick={() => navigate('/')}
                 className="text-kaydo font-semibold hover:text-kaydo-dark"
               >
-                Sign in
+                {t('signup.signIn')}
               </button>
             </p>
           </div>
@@ -122,10 +124,10 @@ export default function SignupPage() {
           <FamilyIllustration />
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              Your digital living room awaits.
+              {t('signup.asideTitle')}
             </h2>
             <p className="text-base opacity-90 drop-shadow">
-              Safe, private, and filled with the ones who matter most.
+              {t('signup.asideBody')}
             </p>
           </div>
         </div>
@@ -139,10 +141,10 @@ export default function SignupPage() {
             </div>
 
             <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              Join the Family
+              {t('signup.title')}
             </h1>
             <p className="text-bark-light text-center mb-8">
-              Create your Kaydo account.
+              {t('signup.subtitle')}
             </p>
 
             {!firebaseReady && <SetupBanner />}
@@ -161,12 +163,12 @@ export default function SignupPage() {
             {/* Sign in link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-bark-light">
-                Already have an account?{' '}
+                {t('signup.alreadyHaveAccount')}{' '}
                 <button
                   onClick={() => navigate('/')}
                   className="text-kaydo font-semibold hover:text-kaydo-dark"
                 >
-                  Sign in
+                  {t('signup.signIn')}
                 </button>
               </p>
             </div>
@@ -174,7 +176,7 @@ export default function SignupPage() {
             {/* Secure badge */}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
               <Shield className="w-4 h-4" />
-              Encrypted & Private Family Network
+              {t('secureBadge')}
             </div>
           </div>
         </div>
@@ -182,11 +184,11 @@ export default function SignupPage() {
 
       {/* Footer — desktop only */}
       <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>&copy; {new Date().getFullYear()} Kaydo. Designed for memories.</p>
+        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
         <div className="flex gap-4">
-          <span className="hover:text-bark cursor-pointer">Privacy Policy</span>
-          <span className="hover:text-bark cursor-pointer">Terms of Service</span>
-          <span className="hover:text-bark cursor-pointer">Help Center</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.terms')}</span>
+          <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
         </div>
       </footer>
     </div>
@@ -194,11 +196,18 @@ export default function SignupPage() {
 }
 
 function SetupBanner() {
+  const { t } = useTranslation('auth')
   return (
     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-      <strong>Setup required:</strong> Firebase environment variables are not configured.
-      Copy <code className="bg-amber-100 px-1 rounded">.env.example</code> to{' '}
-      <code className="bg-amber-100 px-1 rounded">.env.local</code> and add your Firebase credentials.
+      <strong>{t('setupBanner.title')}</strong>{' '}
+      <Trans
+        t={t}
+        i18nKey="setupBanner.body"
+        components={[
+          <code className="bg-amber-100 px-1 rounded" />,
+          <code className="bg-amber-100 px-1 rounded" />,
+        ]}
+      />
     </div>
   )
 }
@@ -210,12 +219,13 @@ function SignupForm({
   showPassword, setShowPassword, showConfirm, setShowConfirm,
   error, loading, handleSubmit, slugPreview,
 }) {
+  const { t } = useTranslation('auth')
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Display Name */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Your Name
+          {t('signup.form.nameLabel')}
         </label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -223,7 +233,7 @@ function SignupForm({
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g., Sarah Miller"
+            placeholder={t('signup.form.namePlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
@@ -233,7 +243,7 @@ function SignupForm({
       {/* Family Name */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Family Name
+          {t('signup.form.familyNameLabel')}
         </label>
         <div className="relative">
           <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -241,14 +251,14 @@ function SignupForm({
             type="text"
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
-            placeholder="e.g., The Millers"
+            placeholder={t('signup.form.familyNamePlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
         </div>
         {slugPreview && (
           <p className="text-xs text-bark-muted mt-1.5">
-            Your family URL: <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
+            {t('signup.form.familyUrl')} <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
           </p>
         )}
       </div>
@@ -256,7 +266,7 @@ function SignupForm({
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Email
+          {t('signup.form.emailLabel')}
         </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -264,7 +274,7 @@ function SignupForm({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="the.millers@kaydo.com"
+            placeholder={t('signup.form.emailPlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
           />
@@ -274,7 +284,7 @@ function SignupForm({
       {/* Password */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Password
+          {t('signup.form.passwordLabel')}
         </label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -282,7 +292,7 @@ function SignupForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
+            placeholder={t('signup.form.passwordPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             minLength={6}
@@ -290,6 +300,7 @@ function SignupForm({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -300,7 +311,7 @@ function SignupForm({
       {/* Confirm Password */}
       <div>
         <label className="block text-sm font-medium text-bark mb-1.5">
-          Confirm Password
+          {t('signup.form.confirmPasswordLabel')}
         </label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
@@ -308,7 +319,7 @@ function SignupForm({
             type={showConfirm ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Repeat your password"
+            placeholder={t('signup.form.confirmPasswordPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             minLength={6}
@@ -316,6 +327,7 @@ function SignupForm({
           <button
             type="button"
             onClick={() => setShowConfirm(!showConfirm)}
+            aria-label={showConfirm ? t('hidePassword') : t('showPassword')}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
           >
             {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -340,7 +352,7 @@ function SignupForm({
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            Create Account
+            {t('signup.form.submit')}
             <span className="text-xl">&rarr;</span>
           </>
         )}

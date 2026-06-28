@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import DailyMoments from '../components/home/DailyMoments'
@@ -14,6 +15,7 @@ import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { t } = useTranslation('home')
   const [showPostModal, setShowPostModal] = useState(false)
   const [editingMemory, setEditingMemory] = useState(null)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
@@ -31,7 +33,7 @@ export default function HomePage() {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this memory?')) {
+    if (window.confirm(t('deleteMemoryConfirm'))) {
       await deleteMemory(id)
     }
   }
@@ -93,12 +95,12 @@ export default function HomePage() {
           >
             <div className="px-6 py-7 flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">Explore</p>
+                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">{t('timelineCta.eyebrow')}</p>
                 <h3 className="font-serif text-xl font-bold text-white leading-snug">
-                  Travel back in time
+                  {t('timelineCta.title')}
                 </h3>
                 <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
-                  Browse every memory by year and season.
+                  {t('timelineCta.body')}
                 </p>
               </div>
               <div className="flex-shrink-0 ml-4">

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { LAYOUT_PRESETS } from '../layoutPresets'
 
 /**
@@ -5,8 +6,9 @@ import { LAYOUT_PRESETS } from '../layoutPresets'
  * `onApplyLayout(elements)` is called with freshly-UUID'd element copies.
  */
 export default function LayoutsPanel({ onApplyLayout, hasExistingElements = false }) {
+  const { t } = useTranslation('scrapbook')
   const applyLayout = (layout) => {
-    if (layout.elements.length === 0 || !hasExistingElements || confirm('Replace current page with this layout? Existing elements will be removed.')) {
+    if (layout.elements.length === 0 || !hasExistingElements || confirm(t('layouts.replaceConfirm'))) {
       onApplyLayout(layout.elements.map((el) => ({ ...el, id: crypto.randomUUID() })))
     }
   }
@@ -17,13 +19,13 @@ export default function LayoutsPanel({ onApplyLayout, hasExistingElements = fals
 
   return (
     <div className="p-3 space-y-4">
-      <Section title="Blank">
+      <Section title={t('layouts.blank')}>
         <LayoutGrid items={blank ? [blank] : []} onApply={applyLayout} />
       </Section>
-      <Section title="Covers">
+      <Section title={t('layouts.covers')}>
         <LayoutGrid items={covers} onApply={applyLayout} />
       </Section>
-      <Section title="Spreads">
+      <Section title={t('layouts.spreads')}>
         <LayoutGrid items={spreads} onApply={applyLayout} />
       </Section>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, User } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
@@ -7,6 +8,7 @@ import EncryptedImage from '../media/EncryptedImage'
 import { devError } from '../../utils/devLog'
 
 export default function AddKidModal({ kid, onClose, onSave }) {
+  const { t } = useTranslation('journal')
   const { encryptionKey } = useAuth()
   const [form, setForm] = useState({
     name: kid?.name || '',
@@ -59,7 +61,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
       onClose()
     } catch (err) {
       devError('Failed to save kid:', err)
-      setError(err.message || 'Failed to save. Please try again.')
+      setError(t('kidModal.saveError'))
     } finally {
       setSaving(false)
     }
@@ -70,7 +72,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-warm-white rounded-2xl w-full max-w-sm shadow-xl">
         <div className="flex items-center justify-between p-5 border-b border-cream-dark">
-          <h2 className="text-lg font-bold text-bark">{kid ? 'Edit Child' : 'Add a Child'}</h2>
+          <h2 className="text-lg font-bold text-bark">{kid ? t('kidModal.editTitle') : t('kidModal.addTitle')}</h2>
           <button onClick={onClose} className="text-bark-muted hover:text-bark">
             <X className="w-5 h-5" />
           </button>
@@ -101,7 +103,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
                 <User className="w-10 h-10 text-bark-muted" />
               )}
             </button>
-            <span className="text-xs text-bark-muted">Tap to add photo</span>
+            <span className="text-xs text-bark-muted">{t('kidModal.tapToAddPhoto')}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -113,12 +115,12 @@ export default function AddKidModal({ kid, onClose, onSave }) {
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-1">Name</label>
+            <label className="block text-sm font-medium text-bark mb-1">{t('kidModal.nameLabel')}</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Leo"
+              placeholder={t('kidModal.namePlaceholder')}
               className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
               required
             />
@@ -126,7 +128,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
 
           {/* Birthdate */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-1">Birthday</label>
+            <label className="block text-sm font-medium text-bark mb-1">{t('kidModal.birthdayLabel')}</label>
             <input
               type="date"
               value={form.birthdate}
@@ -142,7 +144,7 @@ export default function AddKidModal({ kid, onClose, onSave }) {
             disabled={saving || photo?.uploading}
             className="btn-kaydo w-full text-sm disabled:opacity-50"
           >
-            {saving ? 'Saving...' : kid ? 'Save Changes' : 'Add Child'}
+            {saving ? t('kidModal.saving') : kid ? t('kidModal.saveChanges') : t('kidModal.addChild')}
           </button>
         </form>
       </div>

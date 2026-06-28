@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { X, Lock, Mic, Image as ImageIcon, Calendar, Star, BookOpen, Video, Camera, ArrowLeft, Baby } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
@@ -10,13 +11,7 @@ import { useKids } from '../hooks/useKids'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { devError } from '../utils/devLog'
 
-const MILESTONES = [
-  { key: '18thBirthday', label: '18th Birthday' },
-  { key: '21stBirthday', label: '21st Birthday' },
-  { key: 'graduation',   label: 'Graduation' },
-  { key: 'wedding',      label: 'Wedding Day' },
-  { key: 'firstJob',     label: 'First Job' },
-]
+const MILESTONES = ['18thBirthday', '21stBirthday', 'graduation', 'wedding', 'firstJob']
 
 function computeMilestoneDate(birthdate, milestone) {
   if (!birthdate) return null
@@ -31,6 +26,7 @@ function computeMilestoneDate(birthdate, milestone) {
 }
 
 export default function CreateBlackBoxPage() {
+  const { t } = useTranslation('blackbox')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids, loading: kidsLoading } = useKids(familyId, encryptionKey)
@@ -120,23 +116,23 @@ export default function CreateBlackBoxPage() {
     setSubmitError('')
 
     if (!hasContent) {
-      setSubmitError('Please add a message, photo, video, or voice note.')
+      setSubmitError(t('errors.noContent'))
       return
     }
     if (form.triggerType !== 'legacy' && !unlockDate) {
       if (form.triggerType === 'milestone' && !selectedKid?.birthdate) {
-        setSubmitError('Please select a child with a birthday to use a milestone trigger.')
+        setSubmitError(t('errors.milestoneNeedsBirthday'))
       } else if (form.triggerType === 'specificDate') {
-        setSubmitError('Please fill in the complete unlock date (month, day, and year).')
+        setSubmitError(t('errors.incompleteDate'))
       } else {
-        setSubmitError('Please set an unlock date.')
+        setSubmitError(t('errors.noUnlockDate'))
       }
       return
     }
     setSaving(true)
     try {
       const data = {
-        title: form.title.trim() || `For ${selectedKid?.name || 'the future'}`,
+        title: form.title.trim() || t('defaultTitle', { name: selectedKid?.name || t('defaultTitleFallback') }),
         message: form.message,
         childId: form.childId || null,
         triggerType: form.triggerType,
@@ -150,7 +146,7 @@ export default function CreateBlackBoxPage() {
       navigate('/blackbox')
     } catch (err) {
       devError('Failed to seal black box:', err)
-      setSubmitError(err.message || 'Failed to seal. Please try again.')
+      setSubmitError(err.message || t('errors.sealFailed'))
     } finally {
       setSaving(false)
     }
@@ -172,7 +168,7 @@ export default function CreateBlackBoxPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-sm font-bold text-bark">Preserving a Moment</h1>
+          <h1 className="text-sm font-bold text-bark">{t('create.headerTitle')}</h1>
           <button
             type="button"
             onClick={() => navigate('/blackbox')}
@@ -192,9 +188,9 @@ export default function CreateBlackBoxPage() {
             {/* Desktop header */}
             <div className="hidden lg:flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-bark">Preserving a Moment</h1>
+                <h1 className="text-2xl font-bold text-bark">{t('create.headerTitle')}</h1>
                 <p className="text-sm text-bark-muted mt-1">
-                  Create a digital heirloom that remains sealed until the perfect moment in the future.
+                  {t('create.subtitle')}
                 </p>
               </div>
               <button
@@ -211,30 +207,30 @@ export default function CreateBlackBoxPage() {
 
               {/* ── STEP 1: THE MESSAGE ── */}
               <div className="bg-warm-white rounded-2xl p-4 space-y-4 shadow-sm">
-                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">Step 1: The Message</p>
+                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">{t('create.step1Label')}</p>
 
                 {/* For which child */}
                 {!kidsLoading && kids.length === 0 && (
                   <div className="flex items-start gap-3 bg-cream-dark rounded-xl p-3">
                     <Baby className="w-5 h-5 text-bark-muted mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-bark-muted">
-                      No children added yet.{' '}
+                      {t('create.noChildren')}{' '}
                       <Link to="/journal" className="text-kaydo underline underline-offset-2 hover:opacity-80">
-                        Add a child
+                        {t('create.addChild')}
                       </Link>{' '}
-                      to start preserving moments for them.
+                      {t('create.addChildSuffix')}
                     </p>
                   </div>
                 )}
                 {kids.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-bark mb-1">For</label>
+                    <label className="block text-sm font-medium text-bark mb-1">{t('create.forLabel')}</label>
                     <select
                       value={form.childId}
                       onChange={(e) => setForm((p) => ({ ...p, childId: e.target.value }))}
                       className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                     >
-                      <option value="">No specific child</option>
+                      <option value="">{t('create.noSpecificChild')}</option>
                       {kids.map((k) => (
                         <option key={k.id} value={k.id}>{k.name}</option>
                       ))}
@@ -244,12 +240,12 @@ export default function CreateBlackBoxPage() {
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-bark mb-1">Title</label>
+                  <label className="block text-sm font-medium text-bark mb-1">{t('create.titleLabel')}</label>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                    placeholder={selectedKid ? `For ${selectedKid.name}…` : 'A message from the heart…'}
+                    placeholder={selectedKid ? t('create.titlePlaceholderChild', { name: selectedKid.name }) : t('create.titlePlaceholderGeneric')}
                     className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                   />
                 </div>
@@ -258,7 +254,7 @@ export default function CreateBlackBoxPage() {
                 <div>
                   {voiceNote ? (
                     <div className="flex items-center justify-between bg-cream rounded-xl px-3 py-2 border border-cream-dark">
-                      <span className="text-sm text-bark">🎙 Voice note recorded</span>
+                      <span className="text-sm text-bark">{t('create.voiceNoteRecorded')}</span>
                       <button
                         type="button"
                         onClick={() => setVoiceNote(null)}
@@ -280,8 +276,8 @@ export default function CreateBlackBoxPage() {
                       <div className="w-10 h-10 rounded-full bg-kaydo flex items-center justify-center">
                         <Mic className="w-5 h-5 text-white" />
                       </div>
-                      <span className="text-sm font-medium">Record a Voice Note</span>
-                      <span className="text-xs">Speak from the heart</span>
+                      <span className="text-sm font-medium">{t('create.recordVoiceNote')}</span>
+                      <span className="text-xs">{t('create.speakFromHeart')}</span>
                     </button>
                   )}
                 </div>
@@ -290,7 +286,7 @@ export default function CreateBlackBoxPage() {
                 <textarea
                   value={form.message}
                   onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
-                  placeholder="Or type your message here…"
+                  placeholder={t('create.messagePlaceholder')}
                   rows={5}
                   className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
                 />
@@ -322,7 +318,7 @@ export default function CreateBlackBoxPage() {
                       className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs"
                     >
                       <ImageIcon className="w-5 h-5" />
-                      Photos
+                      {t('create.photos')}
                     </button>
                     {/* Take photo - mobile only */}
                     <button
@@ -331,7 +327,7 @@ export default function CreateBlackBoxPage() {
                       className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs lg:hidden"
                     >
                       <Camera className="w-5 h-5" />
-                      Camera
+                      {t('create.camera')}
                     </button>
                   </div>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImagePick(e, fileInputRef)} />
@@ -373,7 +369,7 @@ export default function CreateBlackBoxPage() {
                       className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs"
                     >
                       <Video className="w-5 h-5" />
-                      Video
+                      {t('create.video')}
                     </button>
                     {/* Record video - mobile only */}
                     <button
@@ -382,7 +378,7 @@ export default function CreateBlackBoxPage() {
                       className="w-16 h-16 border-2 border-dashed border-cream-darker rounded-xl flex flex-col items-center justify-center gap-1 text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors text-xs lg:hidden"
                     >
                       <Camera className="w-5 h-5" />
-                      Record
+                      {t('create.record')}
                     </button>
                   </div>
                   {videoError && <p className="text-xs text-kaydo">{videoError}</p>}
@@ -393,7 +389,7 @@ export default function CreateBlackBoxPage() {
 
               {/* ── STEP 2: THE TIME TRIGGER ── */}
               <div className="bg-warm-white rounded-2xl p-4 space-y-3 shadow-sm">
-                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">Step 2: The Time Trigger</p>
+                <p className="text-xs font-bold text-kaydo uppercase tracking-wide">{t('create.step2Label')}</p>
 
                 {/* Milestone */}
                 <button
@@ -407,7 +403,7 @@ export default function CreateBlackBoxPage() {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-semibold text-bark">A Life Milestone</span>
+                    <span className="text-sm font-semibold text-bark">{t('create.milestone')}</span>
                   </div>
                   {form.triggerType === 'milestone' && (
                     <select
@@ -417,7 +413,7 @@ export default function CreateBlackBoxPage() {
                       className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                     >
                       {MILESTONES.map((m) => (
-                        <option key={m.key} value={m.key}>{m.label}</option>
+                        <option key={m} value={m}>{t(`milestones.${m}`)}</option>
                       ))}
                     </select>
                   )}
@@ -435,32 +431,32 @@ export default function CreateBlackBoxPage() {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Calendar className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-semibold text-bark">Specific Date</span>
+                    <span className="text-sm font-semibold text-bark">{t('create.specificDate')}</span>
                   </div>
                   {form.triggerType === 'specificDate' && (
                     <div className="grid grid-cols-3 gap-2" onClick={(e) => e.stopPropagation()}>
                       <div>
-                        <label className="text-xs text-bark-muted">Month</label>
+                        <label className="text-xs text-bark-muted">{t('create.month')}</label>
                         <input
-                          type="number" min="1" max="12" placeholder="MM"
+                          type="number" min="1" max="12" placeholder={t('datePlaceholder.month')}
                           value={form.specificMonth}
                           onChange={(e) => setForm((p) => ({ ...p, specificMonth: e.target.value }))}
                           className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-bark-muted">Day</label>
+                        <label className="text-xs text-bark-muted">{t('create.day')}</label>
                         <input
-                          type="number" min="1" max="31" placeholder="DD"
+                          type="number" min="1" max="31" placeholder={t('datePlaceholder.day')}
                           value={form.specificDay}
                           onChange={(e) => setForm((p) => ({ ...p, specificDay: e.target.value }))}
                           className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-bark-muted">Year</label>
+                        <label className="text-xs text-bark-muted">{t('create.year')}</label>
                         <input
-                          type="number" min={new Date().getFullYear()} placeholder="YYYY"
+                          type="number" min={new Date().getFullYear()} placeholder={t('datePlaceholder.year')}
                           value={form.specificYear}
                           onChange={(e) => setForm((p) => ({ ...p, specificYear: e.target.value }))}
                           className="w-full px-2 py-1.5 border border-cream-dark rounded-lg text-sm bg-warm-white focus:outline-none focus:ring-2 focus:ring-kaydo/30"
@@ -483,8 +479,8 @@ export default function CreateBlackBoxPage() {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-amber-600" />
                     <div>
-                      <span className="text-sm font-semibold text-bark">Legacy Trigger</span>
-                      <p className="text-xs text-bark-muted">Release after my passing</p>
+                      <span className="text-sm font-semibold text-bark">{t('create.legacyTrigger')}</span>
+                      <p className="text-xs text-bark-muted">{t('create.legacyTriggerDesc')}</p>
                     </div>
                   </div>
                 </button>
@@ -495,11 +491,10 @@ export default function CreateBlackBoxPage() {
                     <div className="w-3 h-3 rounded-full bg-kaydo mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-bark-muted leading-relaxed">
                       {form.triggerType === 'legacy'
-                        ? 'Once sealed, this box will only be released upon a legacy trigger. Your legacy is safe with us.'
+                        ? t('create.noticeLegacy')
                         : <>
-                            Once sealed, this box cannot be opened until{' '}
-                            <span className="text-kaydo font-semibold">{unlockDateStr}</span>.{' '}
-                            Your legacy is safe with us.
+                            {t('create.noticeDatePrefix')}{' '}
+                            <span className="text-kaydo font-semibold">{unlockDateStr}</span>{t('create.noticeDateSuffix')}
                           </>
                       }
                     </p>

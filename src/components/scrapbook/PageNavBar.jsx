@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react'
 
 /**
@@ -12,10 +13,11 @@ export default function PageNavBar({
   onAddPage,
   onDeletePage,
 }) {
+  const { t } = useTranslation('scrapbook')
   const [open, setOpen] = useState(false)
   const pageLabel = currentPageIndex === 0
-    ? `Cover / ${pages.length}`
-    : `Page ${currentPageIndex + 1} / ${pages.length}`
+    ? t('pageNav.coverLabel', { total: pages.length })
+    : t('pageNav.pageLabel', { number: currentPageIndex + 1, total: pages.length })
 
   return (
     <>
@@ -27,7 +29,7 @@ export default function PageNavBar({
           className="flex items-center justify-center gap-1 flex-1 py-3 text-sm font-medium text-bark-light hover:text-kaydo disabled:opacity-30 disabled:pointer-events-none"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Previous page</span>
+          <span>{t('pageNav.previousPage')}</span>
         </button>
         <button
           type="button"
@@ -43,7 +45,7 @@ export default function PageNavBar({
           onClick={() => onSwitchPage(Math.min(pages.length - 1, currentPageIndex + 1))}
           className="flex items-center justify-center gap-1 flex-1 py-3 text-sm font-medium text-bark-light hover:text-kaydo disabled:opacity-30 disabled:pointer-events-none"
         >
-          <span>Next page</span>
+          <span>{t('pageNav.nextPage')}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -55,7 +57,7 @@ export default function PageNavBar({
             left-0 right-0 bottom-0 rounded-t-2xl max-h-[55vh]
             lg:left-1/2 lg:-translate-x-1/2 lg:right-auto lg:bottom-28 lg:w-[420px] lg:rounded-2xl">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-cream-dark">
-              <h3 className="text-sm font-semibold text-bark">Pages</h3>
+              <h3 className="text-sm font-semibold text-bark">{t('pageNav.pagesHeading')}</h3>
               <button
                 type="button"
                 onClick={() => { onAddPage(); }}

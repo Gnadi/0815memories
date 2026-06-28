@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Plus, Image as ImageIcon, Video, Camera } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
@@ -27,6 +28,7 @@ function buildInitialVideos(moment) {
 }
 
 export default function PostMomentModal({ moment, onClose, onSave }) {
+  const { t } = useTranslation('memory')
   const { encryptionKey } = useAuth()
   const {
     images,
@@ -116,7 +118,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-cream-dark sticky top-0 bg-warm-white rounded-t-2xl z-10">
           <h2 className="text-lg font-bold text-bark">
-            {isEditing ? 'Edit Moment' : 'Share a Moment'}
+            {isEditing ? t('postMoment.titleEdit') : t('postMoment.titleNew')}
           </h2>
           <button onClick={onClose} className="text-bark-muted hover:text-bark">
             <X className="w-5 h-5" />
@@ -127,7 +129,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
-              Photos
+              {t('postMoment.photos')}
             </label>
             <div className={`flex gap-3 flex-wrap ${mediaError ? 'p-2 ring-2 ring-kaydo rounded-xl' : ''}`}>
               {images.map((img) => (
@@ -170,7 +172,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 {images.length === 0 && videos.length === 0 ? (
                   <>
                     <ImageIcon className="w-6 h-6 text-bark-muted" />
-                    <span className="text-xs text-bark-muted text-center leading-tight">Add photo</span>
+                    <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.addPhoto')}</span>
                   </>
                 ) : (
                   <Plus className="w-5 h-5 text-bark-muted" />
@@ -184,7 +186,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
               >
                 <Camera className="w-6 h-6 text-bark-muted" />
-                <span className="text-xs text-bark-muted text-center leading-tight">Camera</span>
+                <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.camera')}</span>
               </button>
             </div>
           </div>
@@ -192,7 +194,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           {/* Video upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
-              Short Videos <span className="text-bark-muted font-normal">(max 60s)</span>
+              {t('postMoment.shortVideos')} <span className="text-bark-muted font-normal">{t('postMoment.shortVideosHint')}</span>
             </label>
             <div className="flex gap-3 flex-wrap">
               {videos.map((v) => (
@@ -245,7 +247,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0"
               >
                 <Video className="w-6 h-6 text-bark-muted" />
-                <span className="text-xs text-bark-muted text-center leading-tight">Add video</span>
+                <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.addVideo')}</span>
               </button>
 
               {/* Record video button - mobile only */}
@@ -255,7 +257,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
               >
                 <Camera className="w-6 h-6 text-bark-muted" />
-                <span className="text-xs text-bark-muted text-center leading-tight">Record</span>
+                <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.record')}</span>
               </button>
             </div>
             {videoError && (
@@ -264,19 +266,19 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           </div>
 
           {mediaError && (
-            <p className="text-xs text-kaydo -mt-2">At least one photo or video is required.</p>
+            <p className="text-xs text-kaydo -mt-2">{t('postMoment.mediaRequired')}</p>
           )}
 
           {/* Caption */}
           <div>
             <label className="block text-sm font-medium text-bark mb-1">
-              Caption <span className="text-kaydo">*</span>
+              {t('postMoment.captionLabel')} <span className="text-kaydo">*</span>
             </label>
             <textarea
               name="caption"
               value={form.caption}
               onChange={handleChange}
-              placeholder="What's happening right now..."
+              placeholder={t('postMoment.captionPlaceholder')}
               rows={3}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
               required
@@ -286,22 +288,22 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           {/* Category & Location */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Category</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMoment.categoryLabel')}</label>
               <input
                 name="category"
                 value={form.category}
                 onChange={handleChange}
-                placeholder="e.g., Family"
+                placeholder={t('postMoment.categoryPlaceholder')}
                 className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Location</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMoment.locationLabel')}</label>
               <input
                 name="location"
                 value={form.location}
                 onChange={handleChange}
-                placeholder="e.g., Back yard"
+                placeholder={t('postMoment.locationPlaceholder')}
                 className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
@@ -310,17 +312,17 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
           {/* Circle label */}
           <div>
             <label className="block text-sm font-medium text-bark mb-1">
-              Circle label <span className="text-bark-muted font-normal">(optional)</span>
+              {t('postMoment.labelLabel')} <span className="text-bark-muted font-normal">{t('postMoment.labelHint')}</span>
             </label>
             <input
               name="label"
               value={form.label}
               onChange={handleChange}
-              placeholder="e.g., Morning walk"
+              placeholder={t('postMoment.labelPlaceholder')}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
             />
             <p className="text-xs text-bark-muted mt-1">
-              Shows under the story circle. Defaults to date if blank.
+              {t('postMoment.labelHelp')}
             </p>
           </div>
 
@@ -335,12 +337,12 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
             ) : hasUploading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Uploading...
+                {t('postMoment.uploading')}
               </>
             ) : isEditing ? (
-              'Save Changes'
+              t('postMoment.saveChanges')
             ) : (
-              'Share Moment'
+              t('postMoment.shareMoment')
             )}
           </button>
         </form>

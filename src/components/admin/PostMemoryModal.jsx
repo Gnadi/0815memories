@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
@@ -38,6 +39,7 @@ function buildInitialVideos(memory) {
 }
 
 export default function PostMemoryModal({ memory, onClose, onSave }) {
+  const { t } = useTranslation('memory')
   const { encryptionKey, memoryCardStyle } = useAuth()
   const {
     images,
@@ -166,7 +168,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-cream-dark sticky top-0 bg-warm-white rounded-t-2xl z-10">
           <h2 className="text-lg font-bold text-bark">
-            {memory ? 'Edit Memory' : 'Post a Memory'}
+            {memory ? t('postMemory.titleEdit') : t('postMemory.titleNew')}
           </h2>
           <button
             onClick={onClose}
@@ -179,7 +181,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Multi-image upload */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-2">Photos</label>
+            <label className="block text-sm font-medium text-bark mb-2">{t('postMemory.photos')}</label>
             <div className="flex gap-3 flex-wrap">
               {images.map((img) => (
                 <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
@@ -221,7 +223,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 {images.length === 0 ? (
                   <>
                     <ImageIcon className="w-6 h-6 text-bark-muted" />
-                    <span className="text-xs text-bark-muted text-center leading-tight">Add photo</span>
+                    <span className="text-xs text-bark-muted text-center leading-tight">{t('postMemory.addPhoto')}</span>
                   </>
                 ) : (
                   <Plus className="w-6 h-6 text-bark-muted" />
@@ -235,7 +237,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 className="w-20 h-20 rounded-xl border-2 border-dashed border-bark-muted flex flex-col items-center justify-center gap-1 hover:border-kaydo hover:bg-cream-dark/50 transition-colors flex-shrink-0 lg:hidden"
               >
                 <Camera className="w-6 h-6 text-bark-muted" />
-                <span className="text-xs text-bark-muted text-center leading-tight">Camera</span>
+                <span className="text-xs text-bark-muted text-center leading-tight">{t('postMemory.camera')}</span>
               </button>
             </div>
           </div>
@@ -243,7 +245,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           {/* Video upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
-              Videos <span className="text-bark-muted font-normal">(max 60s each)</span>
+              {t('postMemory.videos')} <span className="text-bark-muted font-normal">{t('postMemory.videosHint')}</span>
             </label>
 
             {/* Uploaded videos list */}
@@ -286,7 +288,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                         type="text"
                         value={v.title}
                         onChange={(e) => handleVideoTitleChange(v.id, e.target.value)}
-                        placeholder="Add a title (optional)"
+                        placeholder={t('postMemory.videoTitlePlaceholder')}
                         className="w-full px-3 py-1.5 bg-white rounded-lg text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
                         disabled={v.uploading}
                       />
@@ -311,7 +313,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
               >
                 <Video className="w-4 h-4" />
-                Add video
+                {t('postMemory.addVideo')}
               </button>
 
               {/* Record video button - mobile only */}
@@ -321,7 +323,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors lg:hidden"
               >
                 <Camera className="w-4 h-4" />
-                Record video
+                {t('postMemory.recordVideo')}
               </button>
             </div>
             {videoError && (
@@ -331,7 +333,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
 
           {/* Voice Memos */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-2">Voice Memos</label>
+            <label className="block text-sm font-medium text-bark mb-2">{t('postMemory.voiceMemosLabel')}</label>
 
             {/* Existing memos list */}
             {voiceMemos.length > 0 && (
@@ -340,7 +342,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                   <div key={memo.publicId || i} className="flex items-center gap-2 bg-cream-dark rounded-xl px-3 py-2">
                     <Mic className="w-4 h-4 text-kaydo flex-shrink-0" />
                     <span className="text-sm text-bark flex-1 truncate">
-                      {memo.title || `Voice memo ${i + 1}`}
+                      {memo.title || t('postMemory.voiceMemoFallback', { index: i + 1 })}
                     </span>
                     <button
                       type="button"
@@ -369,19 +371,19 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 border-dashed border-bark-muted text-sm text-bark-muted hover:border-kaydo hover:text-kaydo transition-colors"
               >
                 <Mic className="w-4 h-4" />
-                Add voice memo
+                {t('postMemory.addVoiceMemo')}
               </button>
             )}
           </div>
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-1">Title</label>
+            <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.titleLabel')}</label>
             <input
               name="title"
               value={form.title}
               onChange={handleChange}
-              placeholder="Give this memory a title..."
+              placeholder={t('postMemory.titlePlaceholder')}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               required
             />
@@ -389,12 +391,12 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
 
           {/* Story content */}
           <div>
-            <label className="block text-sm font-medium text-bark mb-1">Story</label>
+            <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.storyLabel')}</label>
             <textarea
               name="content"
               value={form.content}
               onChange={handleChange}
-              placeholder="Tell the story behind this memory..."
+              placeholder={t('postMemory.storyPlaceholder')}
               rows={4}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
             />
@@ -403,13 +405,13 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           {/* Quote */}
           <div>
             <label className="block text-sm font-medium text-bark mb-1">
-              Quote <span className="text-bark-muted font-normal">(optional)</span>
+              {t('postMemory.quoteLabel')} <span className="text-bark-muted font-normal">{t('postMemory.quoteHint')}</span>
             </label>
             <input
               name="quote"
               value={form.quote}
               onChange={handleChange}
-              placeholder="A memorable quote from that day..."
+              placeholder={t('postMemory.quotePlaceholder')}
               className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
             />
           </div>
@@ -417,22 +419,22 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           {/* Two columns: Category & Location */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Category</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.categoryLabel')}</label>
               <input
                 name="category"
                 value={form.category}
                 onChange={handleChange}
-                placeholder="e.g., Summer Trip"
+                placeholder={t('postMemory.categoryPlaceholder')}
                 className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Location</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.locationLabel')}</label>
               <input
                 name="location"
                 value={form.location}
                 onChange={handleChange}
-                placeholder="e.g., Grandpa's Orchard"
+                placeholder={t('postMemory.locationPlaceholder')}
                 className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
@@ -441,7 +443,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
           {/* Two columns: Date & Author */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Date</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.dateLabel')}</label>
               <input
                 type="date"
                 name="date"
@@ -451,12 +453,12 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-bark mb-1">Shared by</label>
+              <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.sharedByLabel')}</label>
               <input
                 name="authorName"
                 value={form.authorName}
                 onChange={handleChange}
-                placeholder="Your name"
+                placeholder={t('postMemory.sharedByPlaceholder')}
                 className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30"
               />
             </div>
@@ -471,7 +473,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
               onChange={handleChange}
               className="w-4 h-4 rounded accent-kaydo"
             />
-            <span className="text-sm text-bark">Feature this memory on the homepage</span>
+            <span className="text-sm text-bark">{t('postMemory.featured')}</span>
           </label>
 
           {/* Per-card polaroid border — only visible when polaroid style is active */}
@@ -493,10 +495,10 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             ) : hasUploading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Uploading...
+                {t('postMemory.uploading')}
               </>
             ) : (
-              memory ? 'Save Changes' : 'Share Memory'
+              memory ? t('postMemory.saveChanges') : t('postMemory.shareMemory')
             )}
           </button>
         </form>

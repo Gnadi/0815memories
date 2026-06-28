@@ -34,7 +34,8 @@
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "familyIllustrationAlt": "Family gathering illustration"
   },
   "mobileNav": {
     "home": "Home",

@@ -1,15 +1,17 @@
 import { BookOpen, Trash2, Edit2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function ScrapbookCard({ scrapbook, onDelete }) {
+  const { t } = useTranslation('scrapbook')
   const navigate = useNavigate()
   const pageCount = scrapbook.pages?.length || 0
   const coverUrl = scrapbook.coverImageUrl || null
 
   const handleDelete = (e) => {
     e.stopPropagation()
-    if (confirm(`Delete "${scrapbook.title}"? This cannot be undone.`)) {
+    if (confirm(t('card.deleteConfirm', { title: scrapbook.title }))) {
       onDelete(scrapbook.id)
     }
   }
@@ -47,7 +49,7 @@ export default function ScrapbookCard({ scrapbook, onDelete }) {
         <div className="min-w-0">
           <h3 className="font-semibold text-bark text-sm truncate">{scrapbook.title}</h3>
           <p className="text-xs text-bark-muted mt-0.5">
-            {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+            {t('card.page', { count: pageCount })}
           </p>
         </div>
         <button

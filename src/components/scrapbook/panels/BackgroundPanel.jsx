@@ -1,16 +1,18 @@
+import { useTranslation } from 'react-i18next'
 import { BG_COLORS } from '../layoutPresets'
 
 const PATTERNS = [
-  { id: 'none', label: 'None' },
-  { id: 'dots', label: 'Dots' },
-  { id: 'grid', label: 'Grid' },
-  { id: 'lines', label: 'Lines' },
+  { id: 'none' },
+  { id: 'dots' },
+  { id: 'grid' },
+  { id: 'lines' },
 ]
 
 export default function BackgroundPanel({ onChangeBackground, currentBackgroundColor, currentPattern }) {
+  const { t } = useTranslation('scrapbook')
   return (
     <div className="p-3">
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Color</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('background.color')}</p>
       <div className="grid grid-cols-7 gap-2 mb-4">
         {BG_COLORS.map((color) => (
           <button
@@ -27,9 +29,9 @@ export default function BackgroundPanel({ onChangeBackground, currentBackgroundC
           />
         ))}
       </div>
-      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">Pattern</p>
+      <p className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-2">{t('background.pattern')}</p>
       <div className="grid grid-cols-2 gap-2">
-        {PATTERNS.map(({ id, label }) => (
+        {PATTERNS.map(({ id }) => (
           <button
             key={id}
             type="button"
@@ -40,7 +42,7 @@ export default function BackgroundPanel({ onChangeBackground, currentBackgroundC
                 : 'border-cream-dark bg-cream hover:border-kaydo hover:bg-kaydo/5 text-bark-light hover:text-kaydo'
             }`}
           >
-            {label}
+            {t(`background.patterns.${id}`)}
           </button>
         ))}
       </div>

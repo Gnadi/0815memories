@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Plus, BookOpen, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -52,6 +53,7 @@ function makeCoverPage() {
 }
 
 export default function ScrapbooksPage() {
+  const { t } = useTranslation('scrapbook')
   const navigate = useNavigate()
   const { familyId, encryptionKey } = useAuth()
   const { scrapbooks, loading, addScrapbook, deleteScrapbook } = useScrapbooks(familyId, encryptionKey)
@@ -59,19 +61,19 @@ export default function ScrapbooksPage() {
   const [error, setError] = useState(null)
 
   const handleCreate = async () => {
-    if (!familyId) { setError('Not authenticated. Please reload and try again.'); return }
+    if (!familyId) { setError(t('errors.notAuthenticated')); return }
     setCreating(true)
     setError(null)
     try {
       const id = await addScrapbook({
-        title: 'My Scrapbook',
+        title: t('common:createSheet.defaultScrapbookTitle'),
         coverImageUrl: null,
         pages: [makeCoverPage()],
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
       devError('Failed to create scrapbook:', err)
-      setError('Could not create scrapbook. Please try again.')
+      setError(t('errors.createFailed'))
     } finally {
       setCreating(false)
     }
@@ -93,8 +95,8 @@ export default function ScrapbooksPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-bark">Scrapbooks</h1>
-              <p className="text-sm text-bark-muted mt-0.5">Create beautiful digital memory books</p>
+              <h1 className="text-2xl font-bold text-bark">{t('list.title')}</h1>
+              <p className="text-sm text-bark-muted mt-0.5">{t('list.subtitle')}</p>
             </div>
             <button
               onClick={handleCreate}
@@ -106,7 +108,7 @@ export default function ScrapbooksPage() {
               ) : (
                 <Plus className="w-4 h-4" />
               )}
-              New Scrapbook
+              {t('list.newScrapbook')}
             </button>
           </div>
 
@@ -120,13 +122,13 @@ export default function ScrapbooksPage() {
               <div className="w-20 h-20 bg-cream-dark rounded-full flex items-center justify-center mb-4">
                 <BookOpen className="w-10 h-10 text-bark-muted" />
               </div>
-              <h2 className="text-lg font-semibold text-bark mb-2">No scrapbooks yet</h2>
+              <h2 className="text-lg font-semibold text-bark mb-2">{t('empty.heading')}</h2>
               <p className="text-sm text-bark-muted mb-6 max-w-xs">
-                Create your first digital scrapbook with photos, stickers, text, and beautiful layouts.
+                {t('empty.body')}
               </p>
               <button onClick={handleCreate} disabled={creating} className="btn-kaydo flex items-center gap-2">
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                Create Scrapbook
+                {t('list.createScrapbook')}
               </button>
             </div>
           ) : (
@@ -145,7 +147,7 @@ export default function ScrapbooksPage() {
                 ) : (
                   <Plus className="w-8 h-8" />
                 )}
-                <span className="text-xs font-medium">New Scrapbook</span>
+                <span className="text-xs font-medium">{t('list.newScrapbook')}</span>
               </button>
             </div>
           )}

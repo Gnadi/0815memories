@@ -1,1 +1,125 @@
-{}
+{
+  "detail": {
+    "notFound": "Memory not found",
+    "backToHome": "Back to Home",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this memory?"
+  },
+  "hero": {
+    "viewFullscreen": "View fullscreen"
+  },
+  "body": {
+    "sharedBy": "Shared by <1>{{name}}</1>"
+  },
+  "videos": {
+    "heading": "Videos"
+  },
+  "voiceMemos": {
+    "heading": "Voice Memos"
+  },
+  "postMemory": {
+    "titleEdit": "Edit Memory",
+    "titleNew": "Post a Memory",
+    "photos": "Photos",
+    "addPhoto": "Add photo",
+    "camera": "Camera",
+    "videos": "Videos",
+    "videosHint": "(max 60s each)",
+    "videoTitlePlaceholder": "Add a title (optional)",
+    "addVideo": "Add video",
+    "recordVideo": "Record video",
+    "voiceMemosLabel": "Voice Memos",
+    "voiceMemoFallback": "Voice memo {{index}}",
+    "addVoiceMemo": "Add voice memo",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Give this memory a title...",
+    "storyLabel": "Story",
+    "storyPlaceholder": "Tell the story behind this memory...",
+    "quoteLabel": "Quote",
+    "quoteHint": "(optional)",
+    "quotePlaceholder": "A memorable quote from that day...",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "e.g., Summer Trip",
+    "locationLabel": "Location",
+    "locationPlaceholder": "e.g., Grandpa's Orchard",
+    "dateLabel": "Date",
+    "sharedByLabel": "Shared by",
+    "sharedByPlaceholder": "Your name",
+    "featured": "Feature this memory on the homepage",
+    "uploading": "Uploading...",
+    "saveChanges": "Save Changes",
+    "shareMemory": "Share Memory"
+  },
+  "postMoment": {
+    "titleEdit": "Edit Moment",
+    "titleNew": "Share a Moment",
+    "photos": "Photos",
+    "addPhoto": "Add photo",
+    "camera": "Camera",
+    "shortVideos": "Short Videos",
+    "shortVideosHint": "(max 60s)",
+    "addVideo": "Add video",
+    "record": "Record",
+    "mediaRequired": "At least one photo or video is required.",
+    "captionLabel": "Caption",
+    "captionPlaceholder": "What's happening right now...",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "e.g., Family",
+    "locationLabel": "Location",
+    "locationPlaceholder": "e.g., Back yard",
+    "labelLabel": "Circle label",
+    "labelHint": "(optional)",
+    "labelPlaceholder": "e.g., Morning walk",
+    "labelHelp": "Shows under the story circle. Defaults to date if blank.",
+    "uploading": "Uploading...",
+    "saveChanges": "Save Changes",
+    "shareMoment": "Share Moment"
+  },
+  "recorder": {
+    "record": "Record",
+    "uploadAudio": "Upload audio",
+    "recording": "Recording {{time}}",
+    "stop": "Stop",
+    "titlePlaceholder": "Label this voice memo (optional)",
+    "addToMemory": "Add to memory",
+    "uploading": "Uploading voice memo...",
+    "micDenied": "Microphone access denied. Please allow microphone access and try again.",
+    "uploadFailed": "Upload failed"
+  },
+  "polaroid": {
+    "heading": "Polaroid border",
+    "intro": "Customize how this memory looks in the polaroid feed. Each memory can have its own frame.",
+    "theme": "Theme",
+    "customHint": "Upload a small image to use as this card's polaroid frame texture. It fills the entire frame area.",
+    "color": "Color",
+    "borderColorAria": "Border color {{color}}",
+    "width": "Width",
+    "style": "Style",
+    "decoration": "Decoration",
+    "previewCaption": "Memory",
+    "themes": {
+      "solid": "Solid",
+      "dots": "Dots",
+      "stripes": "Stripes",
+      "confetti": "Confetti",
+      "vintage": "Vintage",
+      "custom": "Custom"
+    },
+    "widths": {
+      "thin": "Thin",
+      "medium": "Medium",
+      "thick": "Thick"
+    },
+    "styles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "double": "Double"
+    },
+    "decorations": {
+      "none": "None",
+      "tape": "Tape",
+      "corners": "Corners"
+    }
+  }
+}
