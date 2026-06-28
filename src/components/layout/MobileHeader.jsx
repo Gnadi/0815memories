@@ -1,10 +1,12 @@
 import { LogOut, Settings, BookMarked } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
   const { logout, isAdmin } = useAuth()
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -23,6 +25,7 @@ export default function MobileHeader() {
           <button
             onClick={() => navigate('/scrapbook')}
             className="p-2 text-bark-light hover:text-kaydo transition-colors"
+            aria-label={t('nav.scrapbooks')}
           >
             <BookMarked className="w-5 h-5" />
           </button>
@@ -30,10 +33,11 @@ export default function MobileHeader() {
         <button
           onClick={() => navigate('/settings')}
           className="p-2 text-bark-light hover:text-kaydo transition-colors"
+          aria-label={t('nav.settings')}
         >
           <Settings className="w-5 h-5" />
         </button>
-        <button onClick={handleLogout} className="p-2 text-bark-light hover:text-kaydo transition-colors">
+        <button onClick={handleLogout} className="p-2 text-bark-light hover:text-kaydo transition-colors" aria-label={t('buttons.leaveRoom')}>
           <LogOut className="w-5 h-5" />
         </button>
       </div>

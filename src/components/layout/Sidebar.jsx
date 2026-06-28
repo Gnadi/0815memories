@@ -1,20 +1,23 @@
 import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
+import LanguageSwitcher from '../LanguageSwitcher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const navItems = [
-  { icon: Home, label: 'Home', route: '/home' },
-  { icon: Clock, label: 'Timeline', route: '/timeline' },
-  { icon: BookMarked, label: 'Scrapbooks', route: '/scrapbook' },
-  { icon: ChefHat, label: 'Recipes', route: '/recipes' },
-  { icon: BookHeart, label: 'Kid Journals', route: '/journal' },
-  { icon: Lock, label: 'Black Box', route: '/blackbox' },
-  { icon: Settings, label: 'Settings', route: '/settings' },
+  { icon: Home, labelKey: 'nav.home', route: '/home' },
+  { icon: Clock, labelKey: 'nav.timeline', route: '/timeline' },
+  { icon: BookMarked, labelKey: 'nav.scrapbooks', route: '/scrapbook' },
+  { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes' },
+  { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal' },
+  { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox' },
+  { icon: Settings, labelKey: 'nav.settings', route: '/settings' },
 ]
 
 export default function Sidebar({ onPostMemory }) {
   const { isAdmin, logout } = useAuth()
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -32,8 +35,8 @@ export default function Sidebar({ onPostMemory }) {
       <div className="flex items-center gap-2 mb-10">
         <KaydoLogo size={32} />
         <div>
-          <h1 className="text-base font-bold text-bark leading-tight">The Living Room</h1>
-          <p className="text-xs text-bark-muted">Our Private Space</p>
+          <h1 className="text-base font-bold text-bark leading-tight">{t('brand.livingRoom')}</h1>
+          <p className="text-xs text-bark-muted">{t('brand.privateSpace')}</p>
         </div>
       </div>
 
@@ -43,13 +46,13 @@ export default function Sidebar({ onPostMemory }) {
           onClick={onPostMemory}
           className="btn-kaydo w-full text-sm mb-6"
         >
-          Post a Memory
+          {t('buttons.postMemory')}
         </button>
       )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map(({ icon: Icon, label, route }) => (
+        {navItems.map(({ icon: Icon, labelKey, route }) => (
           <button
             key={route}
             onClick={() => navigate(route)}
@@ -60,10 +63,15 @@ export default function Sidebar({ onPostMemory }) {
             }`}
           >
             <Icon className="w-5 h-5" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </nav>
+
+      {/* Language */}
+      <div className="mb-3">
+        <LanguageSwitcher variant="sidebar" />
+      </div>
 
       {/* Logout */}
       <button
@@ -71,7 +79,7 @@ export default function Sidebar({ onPostMemory }) {
         className="flex items-center gap-3 px-4 py-2.5 text-sm text-bark-muted hover:text-kaydo transition-colors"
       >
         <LogOut className="w-5 h-5" />
-        Leave the Room
+        {t('buttons.leaveRoom')}
       </button>
     </aside>
   )

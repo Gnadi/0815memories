@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 
 const DISMISSED_KEY = 'pwa_install_dismissed_until'
 const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 export default function PWAInstallPrompt() {
+  const { t } = useTranslation('common')
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [visible, setVisible] = useState(false)
 
@@ -54,7 +56,7 @@ export default function PWAInstallPrompt() {
         visible ? 'translate-y-0' : 'translate-y-full'
       }`}
       role="dialog"
-      aria-label="Install Kaydo"
+      aria-label={t('pwa.dialogLabel')}
     >
       <div className="max-w-lg mx-auto bg-warm-white border-t border-cream-dark shadow-2xl rounded-t-2xl p-5">
         {/* Header row */}
@@ -80,7 +82,7 @@ export default function PWAInstallPrompt() {
             <div>
               <p className="font-bold text-bark text-base leading-tight">Kaydo</p>
               <p className="text-bark-light text-sm mt-0.5">
-                Add to your home screen for the best experience — works offline too.
+                {t('pwa.tagline')}
               </p>
             </div>
           </div>
@@ -88,7 +90,7 @@ export default function PWAInstallPrompt() {
           <button
             onClick={handleDismiss}
             className="text-bark-muted hover:text-bark transition-colors shrink-0 mt-0.5"
-            aria-label="Dismiss install prompt"
+            aria-label={t('pwa.dismiss')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -100,13 +102,13 @@ export default function PWAInstallPrompt() {
             onClick={handleInstall}
             className="btn-kaydo text-sm px-5 py-2.5 shrink-0"
           >
-            Add to Home Screen
+            {t('pwa.install')}
           </button>
           <button
             onClick={handleDismiss}
             className="text-sm text-bark-muted hover:text-bark transition-colors font-medium"
           >
-            Not now
+            {t('pwa.notNow')}
           </button>
         </div>
       </div>

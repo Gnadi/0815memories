@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemories } from '../../hooks/useMemories'
@@ -29,6 +30,7 @@ const TAP = { touchAction: 'manipulation' }
 
 export default function AdminMobileBottomNav() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const location = useLocation()
   const [showChoiceSheet, setShowChoiceSheet] = useState(false)
@@ -48,29 +50,29 @@ export default function AdminMobileBottomNav() {
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
   const navItems = [
-    { label: 'Home', icon: Home, path: '/home' },
-    { label: 'Journal', icon: BookHeart, path: '/journal' },
+    { label: t('mobileNav.home'), icon: Home, path: '/home' },
+    { label: t('mobileNav.journal'), icon: BookHeart, path: '/journal' },
   ]
 
   const rightItems = [
-    { label: 'BlackBox', icon: Lock, path: '/blackbox' },
-    { label: 'Recipes', icon: ChefHat, path: '/recipes' },
+    { label: t('mobileNav.blackBox'), icon: Lock, path: '/blackbox' },
+    { label: t('mobileNav.recipes'), icon: ChefHat, path: '/recipes' },
   ]
 
   const handleCreateScrapbook = async () => {
     setShowChoiceSheet(false)
-    if (!familyId) { alert('Not authenticated — please reload the app.'); return }
+    if (!familyId) { alert(t('createSheet.notAuthenticated')); return }
     setCreating(true)
     try {
       const id = await addScrapbook({
-        title: 'My Scrapbook',
+        title: t('createSheet.defaultScrapbookTitle'),
         coverImageUrl: null,
         pages: [makeCoverPage()],
       })
       navigate(`/scrapbook/${id}`)
     } catch (err) {
       devError('Failed to create scrapbook:', err)
-      alert('Could not create scrapbook. Please try again.')
+      alert(t('createSheet.createError'))
     } finally {
       setCreating(false)
     }
@@ -118,7 +120,7 @@ export default function AdminMobileBottomNav() {
             >
               <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
             </button>
-            <span className="text-[10px] font-medium text-bark-muted mt-1">Create</span>
+            <span className="text-[10px] font-medium text-bark-muted mt-1">{t('mobileNav.create')}</span>
             <span className="w-1 h-1 rounded-full opacity-0" />
           </div>
 
@@ -157,7 +159,7 @@ export default function AdminMobileBottomNav() {
             <div className="flex justify-center pt-3 pb-4">
               <div className="w-10 h-1 rounded-full bg-cream-dark" />
             </div>
-            <p className="text-center text-sm font-semibold text-bark mb-4 px-4">What would you like to create?</p>
+            <p className="text-center text-sm font-semibold text-bark mb-4 px-4">{t('createSheet.title')}</p>
             <div className="flex flex-col gap-2 px-4">
               <button
                 onClick={() => { setShowChoiceSheet(false); setShowCreateModal(true) }}
@@ -169,8 +171,8 @@ export default function AdminMobileBottomNav() {
                   <Camera className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-bark text-sm">Post a Memory</p>
-                  <p className="text-xs text-bark-muted mt-0.5">Share photos, stories, videos & voice memos</p>
+                  <p className="font-semibold text-bark text-sm">{t('createSheet.postMemory')}</p>
+                  <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.postMemoryDesc')}</p>
                 </div>
               </button>
 
@@ -184,8 +186,8 @@ export default function AdminMobileBottomNav() {
                   <BookMarked className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-bark text-sm">Create Scrapbook</p>
-                  <p className="text-xs text-bark-muted mt-0.5">Design beautiful memory pages with photos & stickers</p>
+                  <p className="font-semibold text-bark text-sm">{t('createSheet.createScrapbook')}</p>
+                  <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.createScrapbookDesc')}</p>
                 </div>
               </button>
             </div>
@@ -195,7 +197,7 @@ export default function AdminMobileBottomNav() {
               style={TAP}
             >
               <X className="w-4 h-4" />
-              Cancel
+              {t('buttons.cancel')}
             </button>
           </div>
         </>

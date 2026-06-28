@@ -35,5 +35,36 @@
     "dismiss": "Schließen",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen"
+  },
+  "mobileNav": {
+    "home": "Start",
+    "journal": "Tagebuch",
+    "blackBox": "BlackBox",
+    "recipes": "Rezepte",
+    "create": "Erstellen"
+  },
+  "createSheet": {
+    "title": "Was möchtest du erstellen?",
+    "postMemory": "Erinnerung teilen",
+    "postMemoryDesc": "Fotos, Geschichten, Videos & Sprachnachrichten teilen",
+    "createScrapbook": "Sammelalbum erstellen",
+    "createScrapbookDesc": "Gestalte schöne Erinnerungsseiten mit Fotos & Stickern",
+    "defaultScrapbookTitle": "Mein Sammelalbum",
+    "notAuthenticated": "Nicht angemeldet – bitte lade die App neu.",
+    "createError": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
+  "pwa": {
+    "dialogLabel": "Kaydo installieren",
+    "tagline": "Füge die App zum Startbildschirm hinzu für das beste Erlebnis – funktioniert auch offline.",
+    "dismiss": "Installationshinweis schließen",
+    "install": "Zum Startbildschirm hinzufügen",
+    "notNow": "Nicht jetzt"
+  },
+  "notifications": {
+    "title": "Bleib auf dem Laufenden",
+    "body": "Werde benachrichtigt, wenn eine neue Erinnerung oder ein Moment geteilt wird.",
+    "enable": "Aktivieren",
+    "enabling": "Wird aktiviert…",
+    "notNow": "Nicht jetzt"
   }
 }
