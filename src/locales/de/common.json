@@ -1,0 +1,39 @@
+{
+  "brand": {
+    "livingRoom": "Das Wohnzimmer",
+    "privateSpace": "Unser privater Raum"
+  },
+  "nav": {
+    "home": "Start",
+    "timeline": "Zeitstrahl",
+    "scrapbooks": "Sammelalben",
+    "recipes": "Rezepte",
+    "kidJournals": "Kinder-Tagebücher",
+    "blackBox": "Black Box",
+    "settings": "Einstellungen"
+  },
+  "buttons": {
+    "postMemory": "Erinnerung teilen",
+    "leaveRoom": "Raum verlassen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "confirm": "Bestätigen",
+    "loading": "Lädt…"
+  },
+  "language": {
+    "label": "Sprache",
+    "description": "Wähle die Sprache für die App-Oberfläche.",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "actions": {
+    "dismiss": "Schließen",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
+  }
+}

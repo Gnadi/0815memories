@@ -1,0 +1,39 @@
+{
+  "brand": {
+    "livingRoom": "The Living Room",
+    "privateSpace": "Our Private Space"
+  },
+  "nav": {
+    "home": "Home",
+    "timeline": "Timeline",
+    "scrapbooks": "Scrapbooks",
+    "recipes": "Recipes",
+    "kidJournals": "Kid Journals",
+    "blackBox": "Black Box",
+    "settings": "Settings"
+  },
+  "buttons": {
+    "postMemory": "Post a Memory",
+    "leaveRoom": "Leave the Room",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "confirm": "Confirm",
+    "loading": "Loading…"
+  },
+  "language": {
+    "label": "Language",
+    "description": "Choose the language for the app interface.",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "actions": {
+    "dismiss": "Dismiss",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  }
+}
