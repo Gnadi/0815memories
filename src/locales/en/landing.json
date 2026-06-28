@@ -28,7 +28,7 @@
   "hero": {
     "badge": "Your Private Digital Home",
     "titlePrefix": "Claim your family's",
-    "titleEmphasis": "corner",
+    "titleEmphasis": "home",
     "titleSuffix": "of the web.",
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
@@ -132,8 +132,13 @@
     "noCreditCard": "No credit card required, it's free."
   },
   "footer": {
-    "links": ["Terms of Service", "Privacy Policy", "Help Center", "Contact Us"],
+    "links": [
+      { "label": "Terms of Service", "to": "/terms" },
+      { "label": "Privacy Policy", "to": "/privacy-policy" },
+      { "label": "Contact", "to": "/contact" }
+    ],
     "safety": "Safety Guidelines",
+    "safetyTo": "/safety",
     "copyright": "© {{year}} Kaydo. All rights reserved.",
     "crafted": "Crafted for memories."
   },

@@ -23,6 +23,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import InviteRedeemPage from './pages/InviteRedeemPage'
+import LegalPage from './pages/LegalPage'
 
 // Lazy loaded — protected pages, only needed after authentication
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -167,6 +168,12 @@ export const routes = [
       { path: 'family/:slug', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
       { path: 'invite', element: <InviteRedeemPage /> },
+
+      // Public legal / informational pages (linked from the footer).
+      { path: 'terms', element: <LegalPage docKey="terms" /> },
+      { path: 'privacy-policy', element: <LegalPage docKey="privacy-policy" /> },
+      { path: 'contact', element: <LegalPage docKey="contact" /> },
+      { path: 'safety', element: <LegalPage docKey="safety" /> },
       { path: 'home', element: protect(<HomePage />) },
       { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
       { path: 'moments', element: protect(<MomentsAllPage />) },
