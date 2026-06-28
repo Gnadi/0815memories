@@ -172,7 +172,6 @@ export const routes = [
       // Public legal / informational pages (linked from the footer).
       { path: 'terms', element: <LegalPage docKey="terms" /> },
       { path: 'privacy-policy', element: <LegalPage docKey="privacy-policy" /> },
-      { path: 'imprint', element: <LegalPage docKey="imprint" /> },
       { path: 'contact', element: <LegalPage docKey="contact" /> },
       { path: 'safety', element: <LegalPage docKey="safety" /> },
       { path: 'home', element: protect(<HomePage />) },

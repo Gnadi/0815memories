@@ -135,7 +135,6 @@
     "links": [
       { "label": "Terms of Service", "to": "/terms" },
       { "label": "Privacy Policy", "to": "/privacy-policy" },
-      { "label": "Imprint", "to": "/imprint" },
       { "label": "Contact", "to": "/contact" }
     ],
     "safety": "Safety Guidelines",

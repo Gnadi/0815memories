@@ -135,7 +135,6 @@
     "links": [
       { "label": "Nutzungsbedingungen", "to": "/terms" },
       { "label": "Datenschutzerklärung", "to": "/privacy-policy" },
-      { "label": "Impressum", "to": "/imprint" },
       { "label": "Kontakt", "to": "/contact" }
     ],
     "safety": "Sicherheitsrichtlinien",

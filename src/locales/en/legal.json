@@ -11,13 +11,13 @@
     "seoTitle": "Terms of Service — Kaydo",
     "seoDescription": "The terms and conditions that govern your use of Kaydo, the private home for your family's memories.",
     "title": "Terms of Service",
-    "effective": "Effective date: {{date}}",
+    "effective": "Effective date: June 28, 2026",
     "intro": "Welcome to Kaydo. These Terms of Service (the \"Terms\") govern your access to and use of the Kaydo website, applications, and related services (together, the \"Service\"). By creating an account or using the Service, you agree to these Terms. If you do not agree, please do not use the Service.",
     "sections": [
       {
         "heading": "1. Who we are",
         "paragraphs": [
-          "Kaydo is a private space for families to store, organize, and share their memories. References to \"Kaydo\", \"we\", \"us\", or \"our\" mean the operator of the Service identified in our Imprint.",
+          "Kaydo is a private space for families to store, organize, and share their memories. References to \"Kaydo\", \"we\", \"us\", or \"our\" mean the operator of the Service.",
           "References to \"you\" or \"your\" mean the person who uses the Service, or the family account holder who invites others to a shared family space."
         ]
       },
@@ -86,13 +86,13 @@
     "seoTitle": "Privacy Policy — Kaydo",
     "seoDescription": "How Kaydo collects, uses, and protects your family's personal data.",
     "title": "Privacy Policy",
-    "effective": "Effective date: {{date}}",
+    "effective": "Effective date: June 28, 2026",
     "intro": "Your family's memories are deeply personal, and protecting them is at the heart of what we do. This Privacy Policy explains what data we collect, why we collect it, and the rights you have over it.",
     "sections": [
       {
         "heading": "1. Who is responsible",
         "paragraphs": [
-          "The controller responsible for processing your personal data is the operator of Kaydo identified in our Imprint. You can reach us using the contact details listed there and on our Contact page."
+          "The controller responsible for processing your personal data is the operator of Kaydo. You can reach us using the contact details listed on our Contact page."
         ]
       },
       {
@@ -163,71 +163,6 @@
         "heading": "11. Changes to this policy",
         "paragraphs": [
           "We may update this Privacy Policy as the Service evolves. We will post the updated version here and, where changes are significant, notify you directly."
-        ]
-      }
-    ]
-  },
-  "imprint": {
-    "seoTitle": "Imprint — Kaydo",
-    "seoDescription": "Legal disclosure and provider identification for Kaydo.",
-    "title": "Imprint",
-    "intro": "Information pursuant to applicable provider-identification requirements (in Germany: § 5 DDG / § 18 MStV).",
-    "noteTitle": "Please complete before publishing",
-    "note": "The fields below marked with brackets must be filled in with the operator's real details before this page goes live. Provider-identification law requires accurate, complete information.",
-    "sections": [
-      {
-        "heading": "Service provider",
-        "paragraphs": [
-          "[Legal name of operator / company]",
-          "[Street and number]",
-          "[Postal code and city]",
-          "[Country]"
-        ]
-      },
-      {
-        "heading": "Represented by",
-        "paragraphs": [
-          "[Name of authorized representative / managing director]"
-        ]
-      },
-      {
-        "heading": "Contact",
-        "paragraphs": [
-          "Email: [contact email]",
-          "Phone: [phone number, optional]"
-        ]
-      },
-      {
-        "heading": "Register entry",
-        "paragraphs": [
-          "Register court: [if applicable]",
-          "Registration number: [if applicable]"
-        ]
-      },
-      {
-        "heading": "VAT identification number",
-        "paragraphs": [
-          "VAT ID pursuant to § 27a German VAT Act: [if applicable]"
-        ]
-      },
-      {
-        "heading": "Responsible for content",
-        "paragraphs": [
-          "[Name and address of the person responsible for content, where required]"
-        ]
-      },
-      {
-        "heading": "Online dispute resolution",
-        "paragraphs": [
-          "The European Commission provides a platform for online dispute resolution (ODR): https://ec.europa.eu/consumers/odr",
-          "We are neither obliged nor willing to participate in dispute-resolution proceedings before a consumer arbitration board, unless required by law."
-        ]
-      },
-      {
-        "heading": "Liability for content and links",
-        "paragraphs": [
-          "As a service provider, we are responsible for our own content on these pages in accordance with general law. We are not obliged to monitor transmitted or stored third-party information.",
-          "Our offer may contain links to external websites whose content we do not control. We accept no liability for such third-party content; the respective provider is always responsible for it."
         ]
       }
     ]

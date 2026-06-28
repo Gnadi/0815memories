@@ -11,13 +11,13 @@
     "seoTitle": "Nutzungsbedingungen — Kaydo",
     "seoDescription": "Die Bedingungen, die deine Nutzung von Kaydo regeln – dem privaten Zuhause für die Erinnerungen deiner Familie.",
     "title": "Nutzungsbedingungen",
-    "effective": "Gültig ab: {{date}}",
+    "effective": "Gültig ab: 28. Juni 2026",
     "intro": "Willkommen bei Kaydo. Diese Nutzungsbedingungen (die „Bedingungen“) regeln deinen Zugang zur und deine Nutzung der Kaydo-Website, der Anwendungen und der damit verbundenen Dienste (zusammen der „Dienst“). Mit der Erstellung eines Kontos oder der Nutzung des Dienstes stimmst du diesen Bedingungen zu. Wenn du nicht einverstanden bist, nutze den Dienst bitte nicht.",
     "sections": [
       {
         "heading": "1. Wer wir sind",
         "paragraphs": [
-          "Kaydo ist ein privater Raum für Familien, um ihre Erinnerungen zu speichern, zu ordnen und zu teilen. „Kaydo“, „wir“, „uns“ oder „unser“ bezeichnet den im Impressum genannten Betreiber des Dienstes.",
+          "Kaydo ist ein privater Raum für Familien, um ihre Erinnerungen zu speichern, zu ordnen und zu teilen. „Kaydo“, „wir“, „uns“ oder „unser“ bezeichnet den Betreiber des Dienstes.",
           "„Du“ oder „dein“ bezeichnet die Person, die den Dienst nutzt, oder die Inhaberin bzw. den Inhaber des Familienkontos, die bzw. der weitere Personen in einen gemeinsamen Familienbereich einlädt."
         ]
       },
@@ -86,13 +86,13 @@
     "seoTitle": "Datenschutzerklärung — Kaydo",
     "seoDescription": "Wie Kaydo die personenbezogenen Daten deiner Familie erhebt, verwendet und schützt.",
     "title": "Datenschutzerklärung",
-    "effective": "Gültig ab: {{date}}",
+    "effective": "Gültig ab: 28. Juni 2026",
     "intro": "Die Erinnerungen deiner Familie sind zutiefst persönlich, und ihr Schutz steht im Mittelpunkt unseres Handelns. Diese Datenschutzerklärung erläutert, welche Daten wir erheben, warum wir sie erheben und welche Rechte du daran hast.",
     "sections": [
       {
         "heading": "1. Verantwortlicher",
         "paragraphs": [
-          "Verantwortlich für die Verarbeitung deiner personenbezogenen Daten ist der im Impressum genannte Betreiber von Kaydo. Du erreichst uns über die dort sowie auf unserer Kontaktseite genannten Kontaktdaten."
+          "Verantwortlich für die Verarbeitung deiner personenbezogenen Daten ist der Betreiber von Kaydo. Du erreichst uns über die auf unserer Kontaktseite genannten Kontaktdaten."
         ]
       },
       {
@@ -163,71 +163,6 @@
         "heading": "11. Änderungen dieser Erklärung",
         "paragraphs": [
           "Wir können diese Datenschutzerklärung im Zuge der Weiterentwicklung des Dienstes aktualisieren. Wir veröffentlichen die aktualisierte Fassung hier und informieren dich bei wesentlichen Änderungen direkt."
-        ]
-      }
-    ]
-  },
-  "imprint": {
-    "seoTitle": "Impressum — Kaydo",
-    "seoDescription": "Anbieterkennzeichnung und gesetzliche Angaben zu Kaydo.",
-    "title": "Impressum",
-    "intro": "Angaben gemäß den geltenden Vorschriften zur Anbieterkennzeichnung (in Deutschland: § 5 DDG / § 18 MStV).",
-    "noteTitle": "Bitte vor Veröffentlichung ausfüllen",
-    "note": "Die unten in eckigen Klammern markierten Felder müssen vor der Veröffentlichung mit den echten Angaben des Betreibers ausgefüllt werden. Das Recht zur Anbieterkennzeichnung verlangt zutreffende und vollständige Angaben.",
-    "sections": [
-      {
-        "heading": "Diensteanbieter",
-        "paragraphs": [
-          "[Name des Betreibers / Firma]",
-          "[Straße und Hausnummer]",
-          "[Postleitzahl und Ort]",
-          "[Land]"
-        ]
-      },
-      {
-        "heading": "Vertreten durch",
-        "paragraphs": [
-          "[Name der/des Vertretungsberechtigten / Geschäftsführung]"
-        ]
-      },
-      {
-        "heading": "Kontakt",
-        "paragraphs": [
-          "E-Mail: [Kontakt-E-Mail]",
-          "Telefon: [Telefonnummer, optional]"
-        ]
-      },
-      {
-        "heading": "Registereintrag",
-        "paragraphs": [
-          "Registergericht: [falls zutreffend]",
-          "Registernummer: [falls zutreffend]"
-        ]
-      },
-      {
-        "heading": "Umsatzsteuer-Identifikationsnummer",
-        "paragraphs": [
-          "USt-IdNr. gemäß § 27a Umsatzsteuergesetz: [falls zutreffend]"
-        ]
-      },
-      {
-        "heading": "Verantwortlich für den Inhalt",
-        "paragraphs": [
-          "[Name und Anschrift der für den Inhalt verantwortlichen Person, soweit erforderlich]"
-        ]
-      },
-      {
-        "heading": "Online-Streitbeilegung",
-        "paragraphs": [
-          "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr",
-          "Wir sind nicht verpflichtet und grundsätzlich nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen, soweit nicht gesetzlich vorgeschrieben."
-        ]
-      },
-      {
-        "heading": "Haftung für Inhalte und Links",
-        "paragraphs": [
-          "Als Diensteanbieter sind wir für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen.",
-          "Unser Angebot kann Links zu externen Websites enthalten, auf deren Inhalte wir keinen Einfluss haben. Für diese fremden Inhalte übernehmen wir keine Haftung; hierfür ist stets der jeweilige Anbieter verantwortlich."
         ]
       }
     ]
