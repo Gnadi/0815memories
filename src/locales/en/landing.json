@@ -132,8 +132,14 @@
     "noCreditCard": "No credit card required, it's free."
   },
   "footer": {
-    "links": ["Terms of Service", "Privacy Policy", "Help Center", "Contact Us"],
+    "links": [
+      { "label": "Terms of Service", "to": "/terms" },
+      { "label": "Privacy Policy", "to": "/privacy-policy" },
+      { "label": "Imprint", "to": "/imprint" },
+      { "label": "Contact", "to": "/contact" }
+    ],
     "safety": "Safety Guidelines",
+    "safetyTo": "/safety",
     "copyright": "© {{year}} Kaydo. All rights reserved.",
     "crafted": "Crafted for memories."
   },

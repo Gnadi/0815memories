@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -637,16 +637,16 @@ export default function LandingPage() {
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-xs font-semibold text-bark-muted tracking-wider uppercase">
             {t('footer.links', { returnObjects: true }).map((link) => (
-              <a key={link} href="#" className="hover:text-bark transition-colors">
-                {link}
-              </a>
+              <Link key={link.to} to={link.to} className="hover:text-bark transition-colors">
+                {link.label}
+              </Link>
             ))}
           </nav>
 
           {/* Safety guidelines */}
-          <a href="#" className="text-xs text-bark-muted hover:text-bark transition-colors tracking-wider uppercase">
+          <Link to={t('footer.safetyTo')} className="text-xs text-bark-muted hover:text-bark transition-colors tracking-wider uppercase">
             {t('footer.safety')}
-          </a>
+          </Link>
 
           {/* Copyright */}
           <p className="text-xs text-bark-muted text-center">

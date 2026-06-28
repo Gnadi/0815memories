@@ -132,8 +132,14 @@
     "noCreditCard": "Keine Kreditkarte nötig, es ist kostenlos."
   },
   "footer": {
-    "links": ["Nutzungsbedingungen", "Datenschutzerklärung", "Hilfecenter", "Kontakt"],
+    "links": [
+      { "label": "Nutzungsbedingungen", "to": "/terms" },
+      { "label": "Datenschutzerklärung", "to": "/privacy-policy" },
+      { "label": "Impressum", "to": "/imprint" },
+      { "label": "Kontakt", "to": "/contact" }
+    ],
     "safety": "Sicherheitsrichtlinien",
+    "safetyTo": "/safety",
     "copyright": "© {{year}} Kaydo. Alle Rechte vorbehalten.",
     "crafted": "Mit Liebe für Erinnerungen gemacht."
   },

@@ -1,0 +1,299 @@
+{
+  "nav": {
+    "backHome": "Back to home",
+    "home": "Home"
+  },
+  "meta": {
+    "lastUpdated": "Last updated: {{date}}",
+    "disclaimer": "This page is provided for general information about Kaydo. It does not constitute legal advice. For binding questions, please consult a qualified professional."
+  },
+  "terms": {
+    "seoTitle": "Terms of Service — Kaydo",
+    "seoDescription": "The terms and conditions that govern your use of Kaydo, the private home for your family's memories.",
+    "title": "Terms of Service",
+    "effective": "Effective date: {{date}}",
+    "intro": "Welcome to Kaydo. These Terms of Service (the \"Terms\") govern your access to and use of the Kaydo website, applications, and related services (together, the \"Service\"). By creating an account or using the Service, you agree to these Terms. If you do not agree, please do not use the Service.",
+    "sections": [
+      {
+        "heading": "1. Who we are",
+        "paragraphs": [
+          "Kaydo is a private space for families to store, organize, and share their memories. References to \"Kaydo\", \"we\", \"us\", or \"our\" mean the operator of the Service identified in our Imprint.",
+          "References to \"you\" or \"your\" mean the person who uses the Service, or the family account holder who invites others to a shared family space."
+        ]
+      },
+      {
+        "heading": "2. Eligibility and accounts",
+        "paragraphs": [
+          "You must be at least 16 years old, or the age of digital consent in your country, to create an account. Accounts for children may only be created and managed by a parent or legal guardian.",
+          "You are responsible for keeping your login credentials confidential and for all activity that takes place under your account. Please notify us promptly if you believe your account has been accessed without your authorization.",
+          "You agree to provide accurate information when registering and to keep it up to date."
+        ]
+      },
+      {
+        "heading": "3. Your content",
+        "paragraphs": [
+          "You retain all ownership rights to the photos, videos, audio, recipes, journals, and other content you upload (\"Your Content\"). We do not claim ownership of Your Content.",
+          "You grant us a limited, non-exclusive license to host, store, back up, and display Your Content solely for the purpose of operating and providing the Service to you and the family members you choose to share it with.",
+          "You are responsible for ensuring that you have the right to upload Your Content and that it does not infringe the rights of others or violate any law."
+        ]
+      },
+      {
+        "heading": "4. Acceptable use",
+        "paragraphs": [
+          "You agree not to use the Service to upload or share content that is unlawful, harmful, threatening, abusive, harassing, defamatory, or that infringes the privacy or intellectual property rights of others.",
+          "You agree not to attempt to gain unauthorized access to the Service, interfere with its normal operation, introduce malicious code, or use the Service to send unsolicited communications.",
+          "We may suspend or terminate accounts that violate these Terms or that put the safety of other users at risk."
+        ]
+      },
+      {
+        "heading": "5. Privacy and security",
+        "paragraphs": [
+          "We take the privacy of your family seriously. Our handling of personal data is described in our Privacy Policy, which forms part of these Terms.",
+          "We apply technical and organizational measures designed to protect Your Content, but no online service can guarantee absolute security. You are responsible for keeping your own copies of irreplaceable content where appropriate."
+        ]
+      },
+      {
+        "heading": "6. Availability and changes",
+        "paragraphs": [
+          "We work hard to keep the Service available and reliable, but we provide it on an \"as is\" and \"as available\" basis. We may add, change, or remove features over time.",
+          "We may update these Terms from time to time. If we make material changes, we will notify you through the Service or by email. Continued use after changes take effect means you accept the updated Terms."
+        ]
+      },
+      {
+        "heading": "7. Termination",
+        "paragraphs": [
+          "You may stop using the Service and delete your account at any time. When you delete your account, we remove or anonymize Your Content in line with our Privacy Policy, except where we are legally required to retain certain information.",
+          "We may suspend or terminate your access if you materially breach these Terms."
+        ]
+      },
+      {
+        "heading": "8. Liability",
+        "paragraphs": [
+          "To the extent permitted by applicable law, our liability for loss or damage arising from your use of the Service is limited to cases of intent and gross negligence. Statutory liability for injury to life, body, or health and under mandatory consumer-protection law remains unaffected.",
+          "Nothing in these Terms limits any rights you may have that cannot be lawfully limited."
+        ]
+      },
+      {
+        "heading": "9. Governing law and contact",
+        "paragraphs": [
+          "These Terms are governed by the laws of the operator's country of establishment, without prejudice to any mandatory consumer-protection rules that apply where you live.",
+          "If you have questions about these Terms, please contact us using the details on our Contact page."
+        ]
+      }
+    ]
+  },
+  "privacy-policy": {
+    "seoTitle": "Privacy Policy — Kaydo",
+    "seoDescription": "How Kaydo collects, uses, and protects your family's personal data.",
+    "title": "Privacy Policy",
+    "effective": "Effective date: {{date}}",
+    "intro": "Your family's memories are deeply personal, and protecting them is at the heart of what we do. This Privacy Policy explains what data we collect, why we collect it, and the rights you have over it.",
+    "sections": [
+      {
+        "heading": "1. Who is responsible",
+        "paragraphs": [
+          "The controller responsible for processing your personal data is the operator of Kaydo identified in our Imprint. You can reach us using the contact details listed there and on our Contact page."
+        ]
+      },
+      {
+        "heading": "2. What data we collect",
+        "paragraphs": [
+          "Account data: your name, email address, and the credentials you use to sign in.",
+          "Content you create: photos, videos, audio recordings, journals, recipes, and other memories you choose to upload, along with information you add such as captions, dates, and the family members you share with.",
+          "Technical data: information your device sends automatically, such as device type, browser, and basic log data needed to operate and secure the Service.",
+          "We collect only what we need to provide the Service and do not sell your personal data."
+        ]
+      },
+      {
+        "heading": "3. How we use your data",
+        "paragraphs": [
+          "To create and manage your account and your family space.",
+          "To store, display, and back up the content you upload so you and your invited family members can access it.",
+          "To keep the Service secure, prevent abuse, and comply with our legal obligations.",
+          "To communicate with you about important changes, security notices, or support requests."
+        ]
+      },
+      {
+        "heading": "4. Legal bases for processing",
+        "paragraphs": [
+          "Where data protection law such as the EU GDPR applies, we rely on the following legal bases: performance of our contract with you to provide the Service; your consent where we ask for it; our legitimate interests in keeping the Service safe and reliable; and compliance with legal obligations."
+        ]
+      },
+      {
+        "heading": "5. Sharing and processors",
+        "paragraphs": [
+          "Your content is private to your family space by default. It is only visible to the people you invite.",
+          "We use carefully selected service providers to host and operate the Service (for example, cloud hosting and media storage). These providers act as our processors, handle data only on our instructions, and are bound by appropriate data-protection agreements.",
+          "We do not share your personal data with advertisers, and we do not use your content to train advertising profiles."
+        ]
+      },
+      {
+        "heading": "6. International transfers",
+        "paragraphs": [
+          "Where data is processed outside your country or the European Economic Area, we ensure appropriate safeguards are in place, such as Standard Contractual Clauses or an equivalent legal mechanism."
+        ]
+      },
+      {
+        "heading": "7. How long we keep data",
+        "paragraphs": [
+          "We keep your account and content for as long as your account is active. When you delete content or your account, we remove or anonymize it within a reasonable period, except where we must retain certain records to meet legal obligations."
+        ]
+      },
+      {
+        "heading": "8. Your rights",
+        "paragraphs": [
+          "Subject to applicable law, you have the right to access the personal data we hold about you, to correct inaccurate data, to request deletion, to restrict or object to processing, and to receive your data in a portable format.",
+          "Where we rely on consent, you may withdraw it at any time. You also have the right to lodge a complaint with your local data-protection authority.",
+          "To exercise any of these rights, please contact us using the details on our Contact page."
+        ]
+      },
+      {
+        "heading": "9. Security",
+        "paragraphs": [
+          "We use technical and organizational measures designed to protect your data, including encryption in transit and access controls. While no system can be perfectly secure, we continuously work to safeguard your information."
+        ]
+      },
+      {
+        "heading": "10. Children",
+        "paragraphs": [
+          "Kaydo is designed for families and may include content about children, but accounts must be created and managed by an adult. We do not knowingly allow children to create their own accounts without a parent or guardian."
+        ]
+      },
+      {
+        "heading": "11. Changes to this policy",
+        "paragraphs": [
+          "We may update this Privacy Policy as the Service evolves. We will post the updated version here and, where changes are significant, notify you directly."
+        ]
+      }
+    ]
+  },
+  "imprint": {
+    "seoTitle": "Imprint — Kaydo",
+    "seoDescription": "Legal disclosure and provider identification for Kaydo.",
+    "title": "Imprint",
+    "intro": "Information pursuant to applicable provider-identification requirements (in Germany: § 5 DDG / § 18 MStV).",
+    "noteTitle": "Please complete before publishing",
+    "note": "The fields below marked with brackets must be filled in with the operator's real details before this page goes live. Provider-identification law requires accurate, complete information.",
+    "sections": [
+      {
+        "heading": "Service provider",
+        "paragraphs": [
+          "[Legal name of operator / company]",
+          "[Street and number]",
+          "[Postal code and city]",
+          "[Country]"
+        ]
+      },
+      {
+        "heading": "Represented by",
+        "paragraphs": [
+          "[Name of authorized representative / managing director]"
+        ]
+      },
+      {
+        "heading": "Contact",
+        "paragraphs": [
+          "Email: [contact email]",
+          "Phone: [phone number, optional]"
+        ]
+      },
+      {
+        "heading": "Register entry",
+        "paragraphs": [
+          "Register court: [if applicable]",
+          "Registration number: [if applicable]"
+        ]
+      },
+      {
+        "heading": "VAT identification number",
+        "paragraphs": [
+          "VAT ID pursuant to § 27a German VAT Act: [if applicable]"
+        ]
+      },
+      {
+        "heading": "Responsible for content",
+        "paragraphs": [
+          "[Name and address of the person responsible for content, where required]"
+        ]
+      },
+      {
+        "heading": "Online dispute resolution",
+        "paragraphs": [
+          "The European Commission provides a platform for online dispute resolution (ODR): https://ec.europa.eu/consumers/odr",
+          "We are neither obliged nor willing to participate in dispute-resolution proceedings before a consumer arbitration board, unless required by law."
+        ]
+      },
+      {
+        "heading": "Liability for content and links",
+        "paragraphs": [
+          "As a service provider, we are responsible for our own content on these pages in accordance with general law. We are not obliged to monitor transmitted or stored third-party information.",
+          "Our offer may contain links to external websites whose content we do not control. We accept no liability for such third-party content; the respective provider is always responsible for it."
+        ]
+      }
+    ]
+  },
+  "contact": {
+    "seoTitle": "Contact — Kaydo",
+    "seoDescription": "Get in touch with the Kaydo team for support, privacy requests, or general questions.",
+    "title": "Contact",
+    "intro": "We'd love to hear from you. Whether you have a question about your account, need help, or want to exercise your privacy rights, here's how to reach us.",
+    "sections": [
+      {
+        "heading": "General and support",
+        "paragraphs": [
+          "For help with your account or general questions, email us at:",
+          "support@kaydo.app"
+        ]
+      },
+      {
+        "heading": "Privacy requests",
+        "paragraphs": [
+          "For questions about your data or to exercise your privacy rights, contact:",
+          "privacy@kaydo.app"
+        ]
+      },
+      {
+        "heading": "Response times",
+        "paragraphs": [
+          "We aim to respond to every message within a few business days. For privacy-related requests, we respond within the timeframes required by applicable law."
+        ]
+      }
+    ]
+  },
+  "safety": {
+    "seoTitle": "Safety Guidelines — Kaydo",
+    "seoDescription": "How to keep your family space safe and the standards we ask everyone on Kaydo to follow.",
+    "title": "Safety Guidelines",
+    "intro": "Kaydo is built to be a calm, private, invite-only space for the people who matter most. These guidelines help keep it that way.",
+    "sections": [
+      {
+        "heading": "Keep your space private",
+        "paragraphs": [
+          "Only invite people you know and trust into your family space. Anyone you invite can see the memories shared there.",
+          "Review your family members regularly and remove anyone who should no longer have access."
+        ]
+      },
+      {
+        "heading": "Protect your account",
+        "paragraphs": [
+          "Use a strong, unique password and never share your login details.",
+          "Sign out on devices you no longer use, and contact us immediately if you suspect unauthorized access."
+        ]
+      },
+      {
+        "heading": "Respect everyone in your circle",
+        "paragraphs": [
+          "Share content thoughtfully, especially photos and stories involving children or other family members.",
+          "Make sure you have permission before uploading content that features other people."
+        ]
+      },
+      {
+        "heading": "Reporting concerns",
+        "paragraphs": [
+          "If you encounter content or behavior that violates our Terms of Service or puts someone at risk, please contact us right away using our Contact page.",
+          "We review reports promptly and take appropriate action to keep the community safe."
+        ]
+      }
+    ]
+  }
+}

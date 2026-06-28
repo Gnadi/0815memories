@@ -1,0 +1,299 @@
+{
+  "nav": {
+    "backHome": "Zurück zur Startseite",
+    "home": "Start"
+  },
+  "meta": {
+    "lastUpdated": "Zuletzt aktualisiert: {{date}}",
+    "disclaimer": "Diese Seite dient der allgemeinen Information über Kaydo und stellt keine Rechtsberatung dar. Für verbindliche Fragen wende dich bitte an eine qualifizierte Fachperson."
+  },
+  "terms": {
+    "seoTitle": "Nutzungsbedingungen — Kaydo",
+    "seoDescription": "Die Bedingungen, die deine Nutzung von Kaydo regeln – dem privaten Zuhause für die Erinnerungen deiner Familie.",
+    "title": "Nutzungsbedingungen",
+    "effective": "Gültig ab: {{date}}",
+    "intro": "Willkommen bei Kaydo. Diese Nutzungsbedingungen (die „Bedingungen“) regeln deinen Zugang zur und deine Nutzung der Kaydo-Website, der Anwendungen und der damit verbundenen Dienste (zusammen der „Dienst“). Mit der Erstellung eines Kontos oder der Nutzung des Dienstes stimmst du diesen Bedingungen zu. Wenn du nicht einverstanden bist, nutze den Dienst bitte nicht.",
+    "sections": [
+      {
+        "heading": "1. Wer wir sind",
+        "paragraphs": [
+          "Kaydo ist ein privater Raum für Familien, um ihre Erinnerungen zu speichern, zu ordnen und zu teilen. „Kaydo“, „wir“, „uns“ oder „unser“ bezeichnet den im Impressum genannten Betreiber des Dienstes.",
+          "„Du“ oder „dein“ bezeichnet die Person, die den Dienst nutzt, oder die Inhaberin bzw. den Inhaber des Familienkontos, die bzw. der weitere Personen in einen gemeinsamen Familienbereich einlädt."
+        ]
+      },
+      {
+        "heading": "2. Voraussetzungen und Konten",
+        "paragraphs": [
+          "Du musst mindestens 16 Jahre alt sein oder das in deinem Land geltende Alter der digitalen Einwilligung erreicht haben, um ein Konto zu erstellen. Konten für Kinder dürfen nur von einem Elternteil oder einer bzw. einem Erziehungsberechtigten erstellt und verwaltet werden.",
+          "Du bist dafür verantwortlich, deine Zugangsdaten vertraulich zu behandeln, und für alle Aktivitäten, die über dein Konto erfolgen. Bitte informiere uns umgehend, wenn du den Verdacht hast, dass auf dein Konto unbefugt zugegriffen wurde.",
+          "Du verpflichtest dich, bei der Registrierung zutreffende Angaben zu machen und diese aktuell zu halten."
+        ]
+      },
+      {
+        "heading": "3. Deine Inhalte",
+        "paragraphs": [
+          "Du behältst sämtliche Rechte an den Fotos, Videos, Audioaufnahmen, Rezepten, Tagebüchern und sonstigen Inhalten, die du hochlädst („Deine Inhalte“). Wir erheben keinen Eigentumsanspruch an Deinen Inhalten.",
+          "Du räumst uns ein beschränktes, nicht ausschließliches Recht ein, Deine Inhalte zu hosten, zu speichern, zu sichern und anzuzeigen – ausschließlich zum Zweck des Betriebs und der Bereitstellung des Dienstes für dich und die von dir ausgewählten Familienmitglieder.",
+          "Du bist dafür verantwortlich, dass du zum Hochladen Deiner Inhalte berechtigt bist und dass diese keine Rechte Dritter verletzen oder gegen Gesetze verstoßen."
+        ]
+      },
+      {
+        "heading": "4. Zulässige Nutzung",
+        "paragraphs": [
+          "Du verpflichtest dich, den Dienst nicht zu nutzen, um Inhalte hochzuladen oder zu teilen, die rechtswidrig, schädlich, bedrohlich, beleidigend, belästigend oder verleumderisch sind oder die Privatsphäre bzw. die Schutzrechte Dritter verletzen.",
+          "Du verpflichtest dich, nicht zu versuchen, unbefugt auf den Dienst zuzugreifen, seinen ordnungsgemäßen Betrieb zu stören, Schadsoftware einzuschleusen oder den Dienst zum Versand unerwünschter Nachrichten zu nutzen.",
+          "Wir können Konten sperren oder kündigen, die gegen diese Bedingungen verstoßen oder die Sicherheit anderer Nutzerinnen und Nutzer gefährden."
+        ]
+      },
+      {
+        "heading": "5. Datenschutz und Sicherheit",
+        "paragraphs": [
+          "Wir nehmen den Schutz der Privatsphäre deiner Familie ernst. Wie wir mit personenbezogenen Daten umgehen, ist in unserer Datenschutzerklärung beschrieben, die Bestandteil dieser Bedingungen ist.",
+          "Wir setzen technische und organisatorische Maßnahmen zum Schutz Deiner Inhalte ein, jedoch kann kein Onlinedienst absolute Sicherheit gewährleisten. Du bist dafür verantwortlich, von unersetzlichen Inhalten gegebenenfalls eigene Kopien aufzubewahren."
+        ]
+      },
+      {
+        "heading": "6. Verfügbarkeit und Änderungen",
+        "paragraphs": [
+          "Wir bemühen uns, den Dienst verfügbar und zuverlässig zu halten, stellen ihn jedoch „wie besehen“ und „nach Verfügbarkeit“ bereit. Wir können Funktionen im Laufe der Zeit ergänzen, ändern oder entfernen.",
+          "Wir können diese Bedingungen von Zeit zu Zeit aktualisieren. Bei wesentlichen Änderungen informieren wir dich über den Dienst oder per E-Mail. Die fortgesetzte Nutzung nach Inkrafttreten der Änderungen gilt als Zustimmung zu den aktualisierten Bedingungen."
+        ]
+      },
+      {
+        "heading": "7. Beendigung",
+        "paragraphs": [
+          "Du kannst die Nutzung des Dienstes jederzeit beenden und dein Konto löschen. Wenn du dein Konto löschst, entfernen oder anonymisieren wir Deine Inhalte gemäß unserer Datenschutzerklärung, soweit wir nicht gesetzlich zur Aufbewahrung bestimmter Informationen verpflichtet sind.",
+          "Wir können deinen Zugang sperren oder beenden, wenn du wesentlich gegen diese Bedingungen verstößt."
+        ]
+      },
+      {
+        "heading": "8. Haftung",
+        "paragraphs": [
+          "Soweit gesetzlich zulässig, ist unsere Haftung für Schäden aus der Nutzung des Dienstes auf Fälle von Vorsatz und grober Fahrlässigkeit beschränkt. Die gesetzliche Haftung für die Verletzung von Leben, Körper oder Gesundheit sowie nach zwingendem Verbraucherschutzrecht bleibt unberührt.",
+          "Keine Bestimmung dieser Bedingungen schränkt Rechte ein, die nicht rechtswirksam beschränkt werden können."
+        ]
+      },
+      {
+        "heading": "9. Anwendbares Recht und Kontakt",
+        "paragraphs": [
+          "Diese Bedingungen unterliegen dem Recht des Sitzlandes des Betreibers, unbeschadet zwingender Verbraucherschutzvorschriften, die an deinem Wohnort gelten.",
+          "Bei Fragen zu diesen Bedingungen kontaktiere uns bitte über die Angaben auf unserer Kontaktseite."
+        ]
+      }
+    ]
+  },
+  "privacy-policy": {
+    "seoTitle": "Datenschutzerklärung — Kaydo",
+    "seoDescription": "Wie Kaydo die personenbezogenen Daten deiner Familie erhebt, verwendet und schützt.",
+    "title": "Datenschutzerklärung",
+    "effective": "Gültig ab: {{date}}",
+    "intro": "Die Erinnerungen deiner Familie sind zutiefst persönlich, und ihr Schutz steht im Mittelpunkt unseres Handelns. Diese Datenschutzerklärung erläutert, welche Daten wir erheben, warum wir sie erheben und welche Rechte du daran hast.",
+    "sections": [
+      {
+        "heading": "1. Verantwortlicher",
+        "paragraphs": [
+          "Verantwortlich für die Verarbeitung deiner personenbezogenen Daten ist der im Impressum genannte Betreiber von Kaydo. Du erreichst uns über die dort sowie auf unserer Kontaktseite genannten Kontaktdaten."
+        ]
+      },
+      {
+        "heading": "2. Welche Daten wir erheben",
+        "paragraphs": [
+          "Kontodaten: dein Name, deine E-Mail-Adresse und die Zugangsdaten, mit denen du dich anmeldest.",
+          "Von dir erstellte Inhalte: Fotos, Videos, Audioaufnahmen, Tagebücher, Rezepte und andere Erinnerungen, die du hochlädst, samt Angaben wie Bildunterschriften, Daten und den Familienmitgliedern, mit denen du teilst.",
+          "Technische Daten: Informationen, die dein Gerät automatisch übermittelt, etwa Gerätetyp, Browser und grundlegende Protokolldaten, die für Betrieb und Sicherheit des Dienstes erforderlich sind.",
+          "Wir erheben nur, was wir zur Bereitstellung des Dienstes benötigen, und verkaufen deine personenbezogenen Daten nicht."
+        ]
+      },
+      {
+        "heading": "3. Wie wir deine Daten verwenden",
+        "paragraphs": [
+          "Um dein Konto und deinen Familienbereich zu erstellen und zu verwalten.",
+          "Um die von dir hochgeladenen Inhalte zu speichern, anzuzeigen und zu sichern, damit du und die von dir eingeladenen Familienmitglieder darauf zugreifen können.",
+          "Um den Dienst sicher zu halten, Missbrauch zu verhindern und unsere gesetzlichen Pflichten zu erfüllen.",
+          "Um mit dir über wichtige Änderungen, Sicherheitshinweise oder Supportanfragen zu kommunizieren."
+        ]
+      },
+      {
+        "heading": "4. Rechtsgrundlagen der Verarbeitung",
+        "paragraphs": [
+          "Soweit das Datenschutzrecht wie die EU-DSGVO Anwendung findet, stützen wir uns auf folgende Rechtsgrundlagen: die Erfüllung unseres Vertrags mit dir zur Bereitstellung des Dienstes; deine Einwilligung, soweit wir sie einholen; unsere berechtigten Interessen an einem sicheren und zuverlässigen Dienst; sowie die Erfüllung gesetzlicher Pflichten."
+        ]
+      },
+      {
+        "heading": "5. Weitergabe und Auftragsverarbeiter",
+        "paragraphs": [
+          "Deine Inhalte sind standardmäßig auf deinen Familienbereich beschränkt. Sie sind nur für die von dir eingeladenen Personen sichtbar.",
+          "Wir setzen sorgfältig ausgewählte Dienstleister für Hosting und Betrieb des Dienstes ein (zum Beispiel Cloud-Hosting und Medienspeicherung). Diese handeln als unsere Auftragsverarbeiter, verarbeiten Daten nur auf unsere Weisung und sind durch entsprechende Datenschutzvereinbarungen gebunden.",
+          "Wir geben deine personenbezogenen Daten nicht an Werbetreibende weiter und nutzen deine Inhalte nicht zum Aufbau von Werbeprofilen."
+        ]
+      },
+      {
+        "heading": "6. Internationale Übermittlungen",
+        "paragraphs": [
+          "Soweit Daten außerhalb deines Landes oder des Europäischen Wirtschaftsraums verarbeitet werden, stellen wir geeignete Garantien sicher, etwa Standardvertragsklauseln oder einen gleichwertigen rechtlichen Mechanismus."
+        ]
+      },
+      {
+        "heading": "7. Speicherdauer",
+        "paragraphs": [
+          "Wir bewahren dein Konto und deine Inhalte so lange auf, wie dein Konto aktiv ist. Wenn du Inhalte oder dein Konto löschst, entfernen oder anonymisieren wir diese innerhalb eines angemessenen Zeitraums, soweit wir nicht zur Aufbewahrung bestimmter Aufzeichnungen gesetzlich verpflichtet sind."
+        ]
+      },
+      {
+        "heading": "8. Deine Rechte",
+        "paragraphs": [
+          "Nach Maßgabe des geltenden Rechts hast du das Recht auf Auskunft über die zu deiner Person gespeicherten Daten, auf Berichtigung unrichtiger Daten, auf Löschung, auf Einschränkung oder Widerspruch gegen die Verarbeitung sowie auf Erhalt deiner Daten in einem übertragbaren Format.",
+          "Soweit wir uns auf eine Einwilligung stützen, kannst du diese jederzeit widerrufen. Du hast außerdem das Recht, eine Beschwerde bei deiner zuständigen Datenschutzaufsichtsbehörde einzureichen.",
+          "Um diese Rechte auszuüben, kontaktiere uns bitte über die Angaben auf unserer Kontaktseite."
+        ]
+      },
+      {
+        "heading": "9. Sicherheit",
+        "paragraphs": [
+          "Wir setzen technische und organisatorische Maßnahmen zum Schutz deiner Daten ein, darunter Verschlüsselung bei der Übertragung und Zugriffskontrollen. Auch wenn kein System vollkommen sicher sein kann, arbeiten wir kontinuierlich am Schutz deiner Informationen."
+        ]
+      },
+      {
+        "heading": "10. Kinder",
+        "paragraphs": [
+          "Kaydo ist für Familien konzipiert und kann Inhalte über Kinder enthalten, Konten müssen jedoch von einer erwachsenen Person erstellt und verwaltet werden. Wir lassen es nicht wissentlich zu, dass Kinder ohne Elternteil oder Erziehungsberechtigte ein eigenes Konto erstellen."
+        ]
+      },
+      {
+        "heading": "11. Änderungen dieser Erklärung",
+        "paragraphs": [
+          "Wir können diese Datenschutzerklärung im Zuge der Weiterentwicklung des Dienstes aktualisieren. Wir veröffentlichen die aktualisierte Fassung hier und informieren dich bei wesentlichen Änderungen direkt."
+        ]
+      }
+    ]
+  },
+  "imprint": {
+    "seoTitle": "Impressum — Kaydo",
+    "seoDescription": "Anbieterkennzeichnung und gesetzliche Angaben zu Kaydo.",
+    "title": "Impressum",
+    "intro": "Angaben gemäß den geltenden Vorschriften zur Anbieterkennzeichnung (in Deutschland: § 5 DDG / § 18 MStV).",
+    "noteTitle": "Bitte vor Veröffentlichung ausfüllen",
+    "note": "Die unten in eckigen Klammern markierten Felder müssen vor der Veröffentlichung mit den echten Angaben des Betreibers ausgefüllt werden. Das Recht zur Anbieterkennzeichnung verlangt zutreffende und vollständige Angaben.",
+    "sections": [
+      {
+        "heading": "Diensteanbieter",
+        "paragraphs": [
+          "[Name des Betreibers / Firma]",
+          "[Straße und Hausnummer]",
+          "[Postleitzahl und Ort]",
+          "[Land]"
+        ]
+      },
+      {
+        "heading": "Vertreten durch",
+        "paragraphs": [
+          "[Name der/des Vertretungsberechtigten / Geschäftsführung]"
+        ]
+      },
+      {
+        "heading": "Kontakt",
+        "paragraphs": [
+          "E-Mail: [Kontakt-E-Mail]",
+          "Telefon: [Telefonnummer, optional]"
+        ]
+      },
+      {
+        "heading": "Registereintrag",
+        "paragraphs": [
+          "Registergericht: [falls zutreffend]",
+          "Registernummer: [falls zutreffend]"
+        ]
+      },
+      {
+        "heading": "Umsatzsteuer-Identifikationsnummer",
+        "paragraphs": [
+          "USt-IdNr. gemäß § 27a Umsatzsteuergesetz: [falls zutreffend]"
+        ]
+      },
+      {
+        "heading": "Verantwortlich für den Inhalt",
+        "paragraphs": [
+          "[Name und Anschrift der für den Inhalt verantwortlichen Person, soweit erforderlich]"
+        ]
+      },
+      {
+        "heading": "Online-Streitbeilegung",
+        "paragraphs": [
+          "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr",
+          "Wir sind nicht verpflichtet und grundsätzlich nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen, soweit nicht gesetzlich vorgeschrieben."
+        ]
+      },
+      {
+        "heading": "Haftung für Inhalte und Links",
+        "paragraphs": [
+          "Als Diensteanbieter sind wir für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen.",
+          "Unser Angebot kann Links zu externen Websites enthalten, auf deren Inhalte wir keinen Einfluss haben. Für diese fremden Inhalte übernehmen wir keine Haftung; hierfür ist stets der jeweilige Anbieter verantwortlich."
+        ]
+      }
+    ]
+  },
+  "contact": {
+    "seoTitle": "Kontakt — Kaydo",
+    "seoDescription": "Nimm Kontakt mit dem Kaydo-Team auf – für Support, Datenschutzanfragen oder allgemeine Fragen.",
+    "title": "Kontakt",
+    "intro": "Wir freuen uns, von dir zu hören. Ob du eine Frage zu deinem Konto hast, Hilfe brauchst oder deine Datenschutzrechte ausüben möchtest – so erreichst du uns.",
+    "sections": [
+      {
+        "heading": "Allgemein und Support",
+        "paragraphs": [
+          "Bei Fragen zu deinem Konto oder allgemeinen Anliegen schreib uns an:",
+          "support@kaydo.app"
+        ]
+      },
+      {
+        "heading": "Datenschutzanfragen",
+        "paragraphs": [
+          "Für Fragen zu deinen Daten oder zur Ausübung deiner Datenschutzrechte wende dich an:",
+          "privacy@kaydo.app"
+        ]
+      },
+      {
+        "heading": "Antwortzeiten",
+        "paragraphs": [
+          "Wir bemühen uns, jede Nachricht innerhalb weniger Werktage zu beantworten. Datenschutzbezogene Anfragen beantworten wir innerhalb der gesetzlich vorgeschriebenen Fristen."
+        ]
+      }
+    ]
+  },
+  "safety": {
+    "seoTitle": "Sicherheitsrichtlinien — Kaydo",
+    "seoDescription": "So hältst du deinen Familienbereich sicher und welche Standards wir bei Kaydo von allen erwarten.",
+    "title": "Sicherheitsrichtlinien",
+    "intro": "Kaydo ist als ruhiger, privater Raum nur auf Einladung für die Menschen gedacht, die am wichtigsten sind. Diese Richtlinien helfen, das zu bewahren.",
+    "sections": [
+      {
+        "heading": "Halte deinen Bereich privat",
+        "paragraphs": [
+          "Lade nur Menschen in deinen Familienbereich ein, die du kennst und denen du vertraust. Jede eingeladene Person kann die dort geteilten Erinnerungen sehen.",
+          "Überprüfe deine Familienmitglieder regelmäßig und entferne alle, die keinen Zugriff mehr haben sollten."
+        ]
+      },
+      {
+        "heading": "Schütze dein Konto",
+        "paragraphs": [
+          "Verwende ein starkes, einzigartiges Passwort und gib deine Zugangsdaten niemals weiter.",
+          "Melde dich auf Geräten ab, die du nicht mehr nutzt, und kontaktiere uns sofort, wenn du unbefugten Zugriff vermutest."
+        ]
+      },
+      {
+        "heading": "Respektiere alle in deinem Kreis",
+        "paragraphs": [
+          "Teile Inhalte mit Bedacht, besonders Fotos und Geschichten, die Kinder oder andere Familienmitglieder betreffen.",
+          "Stelle sicher, dass du die Erlaubnis hast, bevor du Inhalte hochlädst, auf denen andere Personen zu sehen sind."
+        ]
+      },
+      {
+        "heading": "Anliegen melden",
+        "paragraphs": [
+          "Wenn dir Inhalte oder Verhaltensweisen begegnen, die gegen unsere Nutzungsbedingungen verstoßen oder jemanden gefährden, kontaktiere uns bitte umgehend über unsere Kontaktseite.",
+          "Wir prüfen Meldungen zeitnah und ergreifen geeignete Maßnahmen, um die Gemeinschaft sicher zu halten."
+        ]
+      }
+    ]
+  }
+}

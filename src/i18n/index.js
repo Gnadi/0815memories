@@ -23,6 +23,7 @@ import enScrapbook from '../locales/en/scrapbook.json'
 import enTimeline from '../locales/en/timeline.json'
 import enSettings from '../locales/en/settings.json'
 import enEmotions from '../locales/en/emotions.json'
+import enLegal from '../locales/en/legal.json'
 
 import deCommon from '../locales/de/common.json'
 import deLanding from '../locales/de/landing.json'
@@ -36,6 +37,7 @@ import deScrapbook from '../locales/de/scrapbook.json'
 import deTimeline from '../locales/de/timeline.json'
 import deSettings from '../locales/de/settings.json'
 import deEmotions from '../locales/de/emotions.json'
+import deLegal from '../locales/de/legal.json'
 
 export const resources = {
   en: {
@@ -51,6 +53,7 @@ export const resources = {
     timeline: enTimeline,
     settings: enSettings,
     emotions: enEmotions,
+    legal: enLegal,
   },
   de: {
     common: deCommon,
@@ -65,6 +68,7 @@ export const resources = {
     timeline: deTimeline,
     settings: deSettings,
     emotions: deEmotions,
+    legal: deLegal,
   },
 }
 
