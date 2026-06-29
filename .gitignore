@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Locally generated placeholder media for emulator seeding (regenerated on demand)
+public/seed-media/
+
+# Firebase emulator runtime artifacts
+.firebase/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

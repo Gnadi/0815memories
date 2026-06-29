@@ -1,7 +1,12 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getMessaging } from 'firebase/messaging'
+
+// Dev-only: route Auth + Firestore to the local Firebase Emulator Suite.
+// Strictly gated so production never connects to an emulator.
+const USE_EMULATOR =
+  import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true'
 
 let app = null
 let auth = null
@@ -22,8 +27,17 @@ try {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
     db = getFirestore(app)
-    // Messaging is only available in browser windows, not service workers
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+
+    if (USE_EMULATOR) {
+      // Point the SDK at the local emulators (started via `firebase emulators:start`).
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+      connectFirestoreEmulator(db, '127.0.0.1', 8080)
+      console.info('🔧 Firebase running against local emulators (Auth:9099, Firestore:8080)')
+    }
+
+    // Messaging is only available in browser windows, not service workers.
+    // It also has no emulator, so skip it entirely in emulator mode.
+    if (!USE_EMULATOR && typeof window !== 'undefined' && 'Notification' in window) {
       try {
         messaging = getMessaging(app)
       } catch (e) {

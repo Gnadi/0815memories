@@ -69,7 +69,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-cream flex">
       <Sidebar onPostMemory={() => setShowPostModal(true)} />
 
-      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
 
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
