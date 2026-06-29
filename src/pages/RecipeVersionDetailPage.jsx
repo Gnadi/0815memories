@@ -66,7 +66,7 @@ export default function RecipeVersionDetailPage() {
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen pb-20 lg:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
 
         {loading ? (
