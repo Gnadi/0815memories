@@ -5,7 +5,6 @@ import {
   Shield,
   Mail,
   Utensils,
-  BookOpen,
   Lock,
   Check,
   Ban,
@@ -16,7 +15,6 @@ import {
   Camera,
   Video,
   Mic,
-  Users,
   KeyRound,
   Scissors,
   Layers,
@@ -30,6 +28,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 
 function OctocatIcon({ className }) {
@@ -176,45 +175,15 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* Right — decorative journal card */}
+        {/* Right — real app screenshot */}
         <div className="relative flex items-center justify-center">
-          {/* Main photo placeholder */}
-          <div className="w-full max-w-sm lg:max-w-none h-72 lg:h-96 rounded-3xl bg-gradient-to-br from-amber-900 via-amber-700 to-amber-500 overflow-hidden relative shadow-2xl">
-            {/* Warm light overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            {/* Simulated family silhouette */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              <div className="flex gap-3 items-end">
-                {[64, 80, 72, 56, 48].map((h, i) => (
-                  <div
-                    key={i}
-                    style={{ height: `${h}px`, width: '18px' }}
-                    className="bg-white rounded-full"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Overlay journal card */}
-          <div className="absolute -bottom-4 -left-4 lg:-left-8 bg-white rounded-2xl shadow-xl p-4 w-48">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 bg-kaydo rounded-lg flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xs font-semibold text-bark">{t('hero.journalCard.title')}</span>
-            </div>
-            <div className="space-y-1.5">
-              {t('hero.journalCard.lines', { returnObjects: true }).map((line, i) => (
-                <div key={i} className="h-2 rounded-full bg-cream-dark" style={{ width: `${[90, 70, 80][i]}%` }} />
-              ))}
-            </div>
-            <div className="mt-3 flex gap-1">
-              {['bg-kaydo', 'bg-amber-400', 'bg-green-400'].map((c, i) => (
-                <div key={i} className={`w-5 h-5 rounded-full ${c} border-2 border-white -ml-1 first:ml-0`} />
-              ))}
-            </div>
-          </div>
+          <BrowserFrame
+            src="/screenshots/home-desktop.webp"
+            alt={t('screens.homeAlt')}
+            width={1200}
+            height={750}
+            className="w-full max-w-xl lg:rotate-1"
+          />
         </div>
       </section>
 
@@ -250,8 +219,8 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              {/* Right — media type badges + access illustration */}
-              <div className="flex flex-col gap-4 lg:w-64 w-full">
+              {/* Right — media type badges + real mobile screenshot */}
+              <div className="flex flex-col gap-5 lg:w-64 w-full">
                 {/* Media type pills */}
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -266,27 +235,13 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                {/* Access card */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-cream-dark">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-kaydo/10 rounded-xl flex items-center justify-center">
-                      <Users className="w-4 h-4 text-kaydo" />
-                    </div>
-                    <span className="text-sm font-semibold text-bark">{t('pillars.share.innerCircle')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-bark-light mb-3">
-                    <KeyRound className="w-3.5 h-3.5 text-bark-muted" />
-                    <span>{t('pillars.share.sharedPassword')}</span>
-                  </div>
-                  <div className="flex gap-1">
-                    {['bg-kaydo', 'bg-amber-400', 'bg-green-500', 'bg-blue-400', 'bg-purple-400'].map((c, i) => (
-                      <div key={i} className={`w-7 h-7 rounded-full ${c} border-2 border-white -ml-1.5 first:ml-0`} />
-                    ))}
-                    <div className="w-7 h-7 rounded-full bg-cream-dark border-2 border-white -ml-1.5 flex items-center justify-center text-xs font-bold text-bark-light">
-                      +
-                    </div>
-                  </div>
-                </div>
+                {/* Real mobile app screenshot */}
+                <PhoneFrame
+                  src="/screenshots/home-mobile.webp"
+                  alt={t('screens.homeMobileAlt')}
+                  width={440}
+                  height={952}
+                />
               </div>
             </div>
 
@@ -309,16 +264,14 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              {/* Decorative keyhole */}
-              <div className="mt-2 rounded-2xl bg-bark overflow-hidden h-32 flex items-center justify-center relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-900/60 to-transparent" />
-                <div className="relative z-10 flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-full border-4 border-amber-400/60 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-amber-400/80" />
-                  </div>
-                  <div className="w-3 h-6 bg-amber-400/40 rounded-b-full mt-1" />
-                </div>
-              </div>
+              {/* Real Black Box vault screenshot */}
+              <BrowserFrame
+                src="/screenshots/blackbox-desktop.webp"
+                alt={t('screens.blackboxAlt')}
+                width={1200}
+                height={750}
+                className="mt-2"
+              />
             </div>
 
             {/* Card 2 — Write: The Letters */}
@@ -340,12 +293,14 @@ export default function LandingPage() {
                   {t('pillars.letters.button')}
                 </button>
               </div>
-              {/* Decorative envelope lines */}
-              <div className="mt-2 space-y-2 opacity-30">
-                {[80, 60, 70, 50].map((w, i) => (
-                  <div key={i} className="h-1.5 bg-white rounded-full" style={{ width: `${w}%` }} />
-                ))}
-              </div>
+              {/* Real journal / letters screenshot */}
+              <BrowserFrame
+                src="/screenshots/journal-desktop.webp"
+                alt={t('screens.journalAlt')}
+                width={1200}
+                height={750}
+                className="mt-2"
+              />
             </div>
 
             {/* Card 3 — Evolve: Recipe Tree */}
@@ -359,20 +314,14 @@ export default function LandingPage() {
                   {t('pillars.recipe.desc')}
                 </p>
               </div>
-              {/* Avatar stack */}
-              <div className="flex items-center gap-2 mt-auto">
-                <div className="flex">
-                  {['bg-kaydo', 'bg-amber-400', 'bg-green-500', 'bg-blue-400'].map((c, i) => (
-                    <div
-                      key={i}
-                      className={`w-8 h-8 rounded-full ${c} border-2 border-[#E8F5E0] -ml-2 first:ml-0 flex items-center justify-center text-white text-xs font-bold`}
-                    >
-                      {['G', 'M', 'D', '+'][i]}
-                    </div>
-                  ))}
-                </div>
-                <span className="text-xs text-bark-light font-medium">+12 family members</span>
-              </div>
+              {/* Real recipe evolution tree screenshot */}
+              <BrowserFrame
+                src="/screenshots/recipe-tree-desktop.webp"
+                alt={t('screens.recipeAlt')}
+                width={1200}
+                height={750}
+                className="mt-auto"
+              />
             </div>
 
             {/* Card 5 — Create: Digital Scrapbook (full-width) */}
@@ -406,53 +355,14 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              {/* Right — decorative canvas preview */}
-              <div className="lg:w-72 w-full flex-shrink-0">
-                <div
-                  className="relative rounded-2xl overflow-hidden h-52 lg:h-64"
-                  style={{
-                    backgroundColor: '#FDF6EC',
-                    backgroundImage: 'radial-gradient(circle, #C8B4A020 1.5px, transparent 1.5px)',
-                    backgroundSize: '20px 20px',
-                  }}
-                >
-                  {/* Polaroid — rotated left */}
-                  <div
-                    className="absolute bg-white shadow-lg rounded-sm p-2 pb-7 w-32"
-                    style={{ top: '20px', left: '24px', transform: 'rotate(-6deg)' }}
-                  >
-                    <div className="w-full h-20 bg-gradient-to-br from-amber-200 to-amber-400 rounded-sm" />
-                    <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
-                      {t('pillars.scrapbook.previewSummer')}
-                    </div>
-                  </div>
-
-                  {/* Polaroid — rotated right */}
-                  <div
-                    className="absolute bg-white shadow-md rounded-sm p-2 pb-7 w-28"
-                    style={{ top: '30px', left: '120px', transform: 'rotate(5deg)' }}
-                  >
-                    <div className="w-full h-16 bg-gradient-to-br from-violet-200 to-violet-400 rounded-sm" />
-                    <div className="absolute bottom-1.5 left-0 right-0 text-center text-[9px] font-medium text-bark-light tracking-wide">
-                      {t('pillars.scrapbook.previewTrip')}
-                    </div>
-                  </div>
-
-                  {/* Emoji stickers */}
-                  <div className="absolute text-2xl" style={{ top: '12px', right: '24px', transform: 'rotate(12deg)' }}>⭐</div>
-                  <div className="absolute text-xl" style={{ bottom: '40px', left: '30px', transform: 'rotate(-8deg)' }}>🌸</div>
-                  <div className="absolute text-xl" style={{ bottom: '36px', right: '32px' }}>🎀</div>
-
-                  {/* Text label element */}
-                  <div
-                    className="absolute bg-amber-100 border border-amber-300 rounded-lg px-3 py-1.5 shadow-sm"
-                    style={{ bottom: '16px', left: '50%', transform: 'translateX(-50%) rotate(2deg)' }}
-                  >
-                    <span className="text-xs font-semibold text-amber-800 whitespace-nowrap font-serif italic">
-                      {t('pillars.scrapbook.previewLabel')}
-                    </span>
-                  </div>
-                </div>
+              {/* Right — real scrapbook editor screenshot */}
+              <div className="lg:w-96 w-full flex-shrink-0">
+                <BrowserFrame
+                  src="/screenshots/scrapbook-desktop.webp"
+                  alt={t('screens.scrapbookAlt')}
+                  width={1200}
+                  height={750}
+                />
               </div>
             </div>
 

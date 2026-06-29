@@ -38,6 +38,14 @@
       "lines": ["Summer vacation...", "Grandma's recipe", "First day of..."]
     }
   },
+  "screens": {
+    "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",
+    "homeMobileAlt": "The Kaydo mobile app showing the family memory feed",
+    "scrapbookAlt": "The Kaydo scrapbook editor with drag-and-drop photos, text and stickers",
+    "recipeAlt": "A Kaydo recipe evolution tree tracing a family recipe across generations",
+    "journalAlt": "A child's private journal in Kaydo with dated letters",
+    "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages"
+  },
   "pillars": {
     "sectionTitle": "Seven Pillars of Home",
     "sectionSubtitle": "Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.",

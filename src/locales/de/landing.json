@@ -38,6 +38,14 @@
       "lines": ["Sommerurlaub...", "Omas Rezept", "Erster Tag im..."]
     }
   },
+  "screens": {
+    "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",
+    "homeMobileAlt": "Die Kaydo-App auf dem Smartphone mit dem Familien-Feed",
+    "scrapbookAlt": "Der Kaydo-Scrapbook-Editor mit Fotos, Text und Stickern per Drag & Drop",
+    "recipeAlt": "Ein Kaydo-Rezept-Stammbaum, der ein Familienrezept über Generationen zeigt",
+    "journalAlt": "Das private Tagebuch eines Kindes in Kaydo mit datierten Briefen",
+    "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten"
+  },
   "pillars": {
     "sectionTitle": "Sieben Säulen des Zuhauses",
     "sectionSubtitle": "Mit Bedacht gestaltete Räume, die euer Vermächtnis pflegen und tiefe Verbindungen über Generationen hinweg fördern.",
