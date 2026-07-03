@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+/* Anton (scrapbook display type) — self-hosted so it never render-blocks on an
+   external stylesheet and never logs a console error when Google Fonts is
+   unreachable. Only used for decorative display text, so `swap` is safe. */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
 @theme {
   --color-cream: #FDF6EC;
   --color-cream-dark: #F5E6D0;
@@ -7,8 +35,10 @@
   --color-kaydo-light: #D4784A;
   --color-kaydo-dark: #A04420;
   --color-bark: #2D1B0E;
-  --color-bark-light: #7A6A5E;
-  --color-bark-muted: #B8A99C;
+  /* bark-light / bark-muted darkened to meet WCAG AA (4.5:1) as body and
+     secondary text on the cream / tinted-card backgrounds used across the app. */
+  --color-bark-light: #6A5B4D;
+  --color-bark-muted: #736150;
   --color-warm-white: #FFFDF9;
   --font-family-serif: 'Georgia', 'Times New Roman', serif;
   --font-family-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;

@@ -63,6 +63,22 @@ function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
 }
 
+// Vercel's analytics script is only served on Vercel deployments; on localhost,
+// the preview server, or any other host it 404s and logs a console error. Gate
+// it to real hosts so it stays silent locally (and in Lighthouse runs) while
+// still reporting from production.
+function SiteAnalytics() {
+  // Decided once at first render. On the server (pre-render) there is no window,
+  // so it stays off; <Analytics /> emits no DOM either way, so there is no
+  // hydration mismatch. Reads the host lazily to keep it out of an effect.
+  const [enabled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const host = window.location.hostname
+    return !(host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local'))
+  })
+  return enabled ? <Analytics /> : null
+}
+
 // Handles push notification prompt + in-app foreground toast.
 // Must be inside AuthProvider to access familyId.
 function AppNotifications() {
@@ -146,7 +162,7 @@ function Layout() {
         <AdminMobileBottomNav />
         <PWAInstallPrompt />
         <AppNotifications />
-        <Analytics />
+        <SiteAnalytics />
       </AuthProvider>
     </I18nextProvider>
   )

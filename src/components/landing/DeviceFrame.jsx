@@ -4,8 +4,12 @@
  * Purely decorative — no state, no app dependencies.
  */
 
-/** A minimal browser-window chrome around a desktop screenshot. */
-export function BrowserFrame({ src, alt, width, height, className = '' }) {
+/**
+ * A minimal browser-window chrome around a desktop screenshot.
+ * Pass `priority` for an above-the-fold image (the hero) so it loads eagerly
+ * with high fetch priority — it is usually the Largest Contentful Paint element.
+ */
+export function BrowserFrame({ src, alt, width, height, className = '', priority = false }) {
   return (
     <figure className={`rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white ${className}`}>
       {/* Title bar */}
@@ -22,7 +26,9 @@ export function BrowserFrame({ src, alt, width, height, className = '' }) {
         alt={alt}
         width={width}
         height={height}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : 'auto'}
+        decoding="async"
         className="block w-full h-auto"
       />
     </figure>

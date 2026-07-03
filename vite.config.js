@@ -9,6 +9,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/__tests__/setup.js'],
   },
+  build: {
+    // The pre-rendered landing page ("/") paints from HTML + CSS alone. Vite's
+    // automatic <link rel="modulepreload"> hints would otherwise fetch the whole
+    // app JS graph (~300 KB) at high priority, starving the render-blocking CSS
+    // on a throttled connection and pushing out First Contentful Paint. The app
+    // JS still loads to hydrate — just after the first paint, not before it.
+    modulePreload: false,
+  },
   plugins: [
     react(),
     tailwindcss(),
