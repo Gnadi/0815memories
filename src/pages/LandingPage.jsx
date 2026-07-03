@@ -58,6 +58,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
       <Head>
+        {/* Emitted first in <head> so the charset declaration lands within the
+            first 1024 bytes of the pre-rendered HTML (Lighthouse best-practice). */}
+        <meta charSet="utf-8" />
         <html lang={t('seo.ogLocale').slice(0, 2)} />
         <title>{t('seo.title')}</title>
         <meta name="description" content={t('seo.description')} />
@@ -151,6 +154,7 @@ export default function LandingPage() {
         )}
       </nav>
 
+      <main>
       {/* ── Hero ── */}
       <section className="max-w-6xl mx-auto px-5 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left — claim your family name */}
@@ -184,6 +188,7 @@ export default function LandingPage() {
             alt={t('screens.homeAlt')}
             width={1200}
             height={750}
+            priority
             className="w-full max-w-xl lg:rotate-1"
           />
         </div>
@@ -277,13 +282,13 @@ export default function LandingPage() {
             </div>
 
             {/* Card 2 — Write: The Letters */}
-            <div className="bg-kaydo rounded-3xl p-8 flex flex-col gap-5">
+            <div className="bg-kaydo-dark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white mb-2">{t('pillars.letters.title')}</h3>
-                <p className="text-white/80 text-sm leading-relaxed">
+                <p className="text-white/90 text-sm leading-relaxed">
                   {t('pillars.letters.desc')}
                 </p>
               </div>
@@ -536,6 +541,7 @@ export default function LandingPage() {
           <p className="text-xs text-bark-muted">{t('cta.noCreditCard')}</p>
         </div>
       </section>
+      </main>
 
       {/* ── Footer ── */}
       <footer className="bg-cream border-t border-cream-dark py-8">
@@ -667,6 +673,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
           <button
             type="submit"
             disabled={status === 'checking'}
+            aria-label={t('claim.check')}
             className="btn-kaydo rounded-none px-5 flex items-center gap-2 text-sm disabled:opacity-60"
           >
             {status === 'checking' ? (
@@ -806,7 +813,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
         {t('claim.alreadyHaveAccount')}{' '}
         <button
           onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
-          className="text-kaydo font-semibold hover:text-kaydo-dark"
+          className="text-kaydo-dark font-semibold hover:text-kaydo"
         >
           {t('claim.login')}
         </button>

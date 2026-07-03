@@ -1,0 +1,40 @@
+# Kaydo
+
+> Kaydo is a private, end-to-end-encrypted sanctuary for your family's memories.
+> No ads, no AI training, no data selling — just your stories, photos, letters,
+> recipes and scrapbooks, preserved for the people you love.
+
+Each family gets its own space at `your-name.kaydo.app`. Everything is encrypted,
+you own and can export all of your data at any time, and the app is open source.
+
+## Core pages
+
+- [Home / overview](https://kaydo.app/): What Kaydo is and how to claim your family name.
+- [Log in](https://kaydo.app/login): Sign in to an existing family space.
+- [Sign up](https://kaydo.app/signup): Create a new family space.
+
+## Features
+
+- [Moments & Memories](https://kaydo.app/#features): Privately share photos, videos and voice memos with your family.
+- [The Vault](https://kaydo.app/#features): Securely store high-fidelity originals of your most precious files.
+- [The Letters](https://kaydo.app/#features): Write messages to be delivered to loved ones in the future.
+- [Recipe Tree](https://kaydo.app/#features): Preserve and evolve family recipes across generations.
+- [Digital Scrapbook](https://kaydo.app/#features): Turn memories into handcrafted, drag-and-drop pages.
+- [Data Export](https://kaydo.app/#features): Own and export all of your data whenever you want.
+
+## Privacy & security
+
+- [Privacy commitments](https://kaydo.app/#privacy): No ads, no AI training, no data selling.
+- [Security](https://kaydo.app/#security): End-to-end encryption and verified-members-only access.
+
+## Legal
+
+- [Terms of Service](https://kaydo.app/terms)
+- [Privacy Policy](https://kaydo.app/privacy-policy)
+- [Safety Guidelines](https://kaydo.app/safety)
+- [Contact](https://kaydo.app/contact)
+
+## More
+
+- [Source code on GitHub](https://github.com/Gnadi/0815memories): Kaydo is open source.
+- [Sitemap](https://kaydo.app/sitemap.xml)
