@@ -1,46 +1,30 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
+import usePWAInstall from '../hooks/usePWAInstall'
 
 const DISMISSED_KEY = 'pwa_install_dismissed_until'
 const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
 export default function PWAInstallPrompt() {
   const { t } = useTranslation('common')
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const { canInstall, promptInstall } = usePWAInstall()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Don't attach listeners if dismissed recently
+    if (!canInstall) return
+
+    // Don't show if dismissed recently
     const dismissedUntil = localStorage.getItem(DISMISSED_KEY)
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return
 
-    let showTimer
-
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      showTimer = setTimeout(() => setVisible(true), 2000)
-    }
-
-    const handleAppInstalled = () => setVisible(false)
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
-
-    return () => {
-      clearTimeout(showTimer)
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
-  }, [])
+    const showTimer = setTimeout(() => setVisible(true), 2000)
+    return () => clearTimeout(showTimer)
+  }, [canInstall])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') setVisible(false)
-    setDeferredPrompt(null)
+    const accepted = await promptInstall()
+    if (accepted) setVisible(false)
   }
 
   const handleDismiss = () => {
@@ -48,7 +32,7 @@ export default function PWAInstallPrompt() {
     localStorage.setItem(DISMISSED_KEY, String(Date.now() + DISMISS_DURATION_MS))
   }
 
-  if (!visible) return null
+  if (!visible || !canInstall) return null
 
   return (
     <div

@@ -30,6 +30,7 @@ import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
+import usePWAInstall from '../hooks/usePWAInstall'
 
 function OctocatIcon({ className }) {
   return (
@@ -50,6 +51,7 @@ export default function LandingPage() {
   const { isAuthenticated, signup, firebaseReady } = useAuth()
   const { t } = useTranslation('landing')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { canInstall, promptInstall } = usePWAInstall()
 
 
   return (
@@ -551,6 +553,11 @@ export default function LandingPage() {
                 {link.label}
               </Link>
             ))}
+            {canInstall && (
+              <button type="button" onClick={promptInstall} className="hover:text-bark transition-colors">
+                {t('footer.install')}
+              </button>
+            )}
           </nav>
 
           {/* Safety guidelines */}

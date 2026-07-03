@@ -147,6 +147,7 @@
     ],
     "safety": "Sicherheitsrichtlinien",
     "safetyTo": "/safety",
+    "install": "App installieren",
     "copyright": "© {{year}} Kaydo. Alle Rechte vorbehalten.",
     "crafted": "Mit Liebe für Erinnerungen gemacht."
   },
