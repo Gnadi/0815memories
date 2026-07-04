@@ -1,7 +1,27 @@
+import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { NetworkFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
+
+// Take control immediately on update. This SW is built with the `injectManifest`
+// strategy, so — unlike `generateSW` — vite-plugin-pwa does NOT auto-inject the
+// skip-waiting / claim logic that `registerType: 'autoUpdate'` relies on. Without
+// it, a freshly deployed worker installs but stays *waiting* for as long as any
+// tab is open. Mobile Chrome keeps the tab's process alive for days, so the stale
+// worker keeps serving the old precached index.html, whose hashed <script> was
+// removed by the new deploy → the module 404s → React never hydrates → the
+// pre-rendered landing-page buttons (all onClick handlers) silently do nothing.
+// skipWaiting() + clientsClaim() make each new worker activate and take over
+// open clients right away, keeping the served HTML and its JS bundles in sync.
+self.skipWaiting()
+clientsClaim()
+
+// autoUpdate posts a SKIP_WAITING message when a new worker is found; honour it
+// so control transfers without waiting for every tab to close.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
 
 // Precache all assets injected by vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST)
