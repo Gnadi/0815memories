@@ -35,7 +35,11 @@
     "subtitleSuffix": "is still available and make it yours in seconds.",
     "journalCard": {
       "title": "Family Journal",
-      "lines": ["Summer vacation...", "Grandma's recipe", "First day of..."]
+      "lines": [
+        "Summer vacation...",
+        "Grandma's recipe",
+        "First day of..."
+      ]
     }
   },
   "screens": {
@@ -57,14 +61,21 @@
         "Family admin controls who sees what and when",
         "Post, pin, and curate from a simple dashboard"
       ],
-      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" },
+      "pills": {
+        "photos": "Photos",
+        "videos": "Videos",
+        "voiceMemos": "Voice Memos"
+      },
       "innerCircle": "Inner Circle",
       "sharedPassword": "One shared family password"
     },
     "vault": {
       "title": "Preserve: The Vault",
       "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos, our Black Box encryption ensures they remain yours alone.",
-      "bullets": ["Military-grade encryption", "Zero-knowledge storage"]
+      "bullets": [
+        "Military-grade encryption",
+        "Zero-knowledge storage"
+      ]
     },
     "letters": {
       "title": "Write: The Letters",
@@ -141,13 +152,28 @@
   },
   "footer": {
     "links": [
-      { "label": "Terms of Service", "to": "/terms" },
-      { "label": "Privacy Policy", "to": "/privacy-policy" },
-      { "label": "Contact", "to": "/contact" }
+      {
+        "label": "Terms of Service",
+        "to": "/terms"
+      },
+      {
+        "label": "Privacy Policy",
+        "to": "/privacy-policy"
+      },
+      {
+        "label": "Contact",
+        "to": "/contact"
+      }
     ],
     "safety": "Safety Guidelines",
     "safetyTo": "/safety",
     "install": "Install App",
+    "installHelp": {
+      "title": "Install Kaydo",
+      "ios": "Tap the Share button in your browser's toolbar, then choose “Add to Home Screen”.",
+      "generic": "Open your browser's menu and choose “Install app” or “Add to Home Screen”.",
+      "close": "Got it"
+    },
     "copyright": "© {{year}} Kaydo. All rights reserved.",
     "crafted": "Crafted for memories."
   },

@@ -35,7 +35,11 @@
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
     "journalCard": {
       "title": "Familien-Tagebuch",
-      "lines": ["Sommerurlaub...", "Omas Rezept", "Erster Tag im..."]
+      "lines": [
+        "Sommerurlaub...",
+        "Omas Rezept",
+        "Erster Tag im..."
+      ]
     }
   },
   "screens": {
@@ -57,14 +61,21 @@
         "Die Familien-Admins bestimmen, wer was und wann sieht",
         "Posten, anpinnen und kuratieren über ein einfaches Dashboard"
       ],
-      "pills": { "photos": "Fotos", "videos": "Videos", "voiceMemos": "Sprachnachrichten" },
+      "pills": {
+        "photos": "Fotos",
+        "videos": "Videos",
+        "voiceMemos": "Sprachnachrichten"
+      },
       "innerCircle": "Engster Kreis",
       "sharedPassword": "Ein gemeinsames Familienpasswort"
     },
     "vault": {
       "title": "Bewahren: Der Tresor",
       "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — unsere Black-Box-Verschlüsselung sorgt dafür, dass sie allein dir gehören.",
-      "bullets": ["Verschlüsselung auf höchstem Niveau", "Zero-Knowledge-Speicher"]
+      "bullets": [
+        "Verschlüsselung auf höchstem Niveau",
+        "Zero-Knowledge-Speicher"
+      ]
     },
     "letters": {
       "title": "Schreiben: Die Briefe",
@@ -141,13 +152,28 @@
   },
   "footer": {
     "links": [
-      { "label": "Nutzungsbedingungen", "to": "/terms" },
-      { "label": "Datenschutzerklärung", "to": "/privacy-policy" },
-      { "label": "Kontakt", "to": "/contact" }
+      {
+        "label": "Nutzungsbedingungen",
+        "to": "/terms"
+      },
+      {
+        "label": "Datenschutzerklärung",
+        "to": "/privacy-policy"
+      },
+      {
+        "label": "Kontakt",
+        "to": "/contact"
+      }
     ],
     "safety": "Sicherheitsrichtlinien",
     "safetyTo": "/safety",
     "install": "App installieren",
+    "installHelp": {
+      "title": "Kaydo installieren",
+      "ios": "Tippe auf das Teilen-Symbol in der Browserleiste und wähle “Zum Home-Bildschirm”.",
+      "generic": "Öffne das Menü deines Browsers und wähle “App installieren” oder “Zum Startbildschirm hinzufügen”.",
+      "close": "Verstanden"
+    },
     "copyright": "© {{year}} Kaydo. Alle Rechte vorbehalten.",
     "crafted": "Mit Liebe für Erinnerungen gemacht."
   },

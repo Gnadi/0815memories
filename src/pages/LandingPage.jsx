@@ -51,7 +51,18 @@ export default function LandingPage() {
   const { isAuthenticated, signup, firebaseReady } = useAuth()
   const { t } = useTranslation('landing')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { canInstall, promptInstall } = usePWAInstall()
+  const { canInstall, installed, isIOS, promptInstall } = usePWAInstall()
+  const [installHelpOpen, setInstallHelpOpen] = useState(false)
+
+  const handleInstallClick = () => {
+    // Chromium browsers that captured `beforeinstallprompt` can install natively.
+    // Everywhere else (iOS Safari, desktop menus) we show manual instructions.
+    if (canInstall) {
+      promptInstall()
+    } else {
+      setInstallHelpOpen(true)
+    }
+  }
 
 
   return (
@@ -559,8 +570,8 @@ export default function LandingPage() {
                 {link.label}
               </Link>
             ))}
-            {canInstall && (
-              <button type="button" onClick={promptInstall} className="hover:text-bark transition-colors">
+            {!installed && (
+              <button type="button" onClick={handleInstallClick} className="hover:text-bark transition-colors">
                 {t('footer.install')}
               </button>
             )}
@@ -578,6 +589,47 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+
+      {/* ── Install instructions (shown when the native prompt isn't available) ── */}
+      {installHelpOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-bark/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('footer.installHelp.title')}
+          onClick={() => setInstallHelpOpen(false)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl shadow-2xl border border-cream-dark w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 text-bark font-bold">
+                <KaydoLogo size={20} />
+                <span>{t('footer.installHelp.title')}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInstallHelpOpen(false)}
+                className="text-bark-muted hover:text-bark transition-colors shrink-0"
+                aria-label={t('footer.installHelp.close')}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-bark-light leading-relaxed">
+              {isIOS ? t('footer.installHelp.ios') : t('footer.installHelp.generic')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setInstallHelpOpen(false)}
+              className="btn-kaydo w-full mt-5 text-sm py-2.5"
+            >
+              {t('footer.installHelp.close')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
