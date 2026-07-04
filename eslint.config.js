@@ -26,4 +26,12 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // The service worker runs in the ServiceWorkerGlobalScope, not the window —
+    // so `self`, `clients`, `registration`, etc. are service-worker globals.
+    files: ['src/sw.js'],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
 ])
