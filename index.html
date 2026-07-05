@@ -6,11 +6,17 @@
 
     <!-- TEMPORARY on-device diagnostic. Dormant for normal visitors; only
          activates when the URL carries ?debug=1 (e.g. https://kaydo.app/?debug=1).
-         When active it wraps console.error/warn and listens for uncaught errors
-         and promise rejections, then renders them into a fixed banner so a startup
-         crash or React hydration mismatch can be read straight off a phone that has
-         no remote debugger attached. Runs before the app module so it captures the
-         earliest failures. Remove once the mobile-Chrome dead-button bug is found. -->
+         It renders a fixed banner readable straight off a phone with no remote
+         debugger, and captures the things that make "buttons do nothing" hard to
+         see from source alone:
+           - uncaught errors, promise rejections, console.error/warn;
+           - FAILED resource loads (a 404'd JS bundle — caught via the capture
+             phase, which a plain error listener misses);
+           - whether React actually hydrated (#root gains a __reactContainer key);
+           - every tap: the tapped element AND the element actually on top at that
+             point (reveals an invisible overlay eating the click).
+         Runs before the app module so it sees the earliest failures. Remove once
+         the mobile-Chrome dead-button bug is found. -->
     <script>
       (function () {
         try {
@@ -30,12 +36,14 @@
           }
           function render() {
             ensureBox().textContent = 'KAYDO DEBUG (?debug=1) — ' + logs.length +
-              ' event(s). Screenshot this.\nUA: ' + navigator.userAgent + '\n\n' + logs.join('\n\n')
+              ' event(s). Tap "Get Started", then screenshot.\nUA: ' + navigator.userAgent +
+              '\n\n' + logs.join('\n')
           }
           function flush() {
             if (document.body) render()
             else document.addEventListener('DOMContentLoaded', render, { once: true })
           }
+          function log(m) { logs.push(m); flush() }
           function fmt(args) {
             return Array.prototype.map.call(args, function (a) {
               if (a instanceof Error) return a.stack || a.message || String(a)
@@ -43,21 +51,57 @@
               return String(a)
             }).join(' ')
           }
+          function desc(el) {
+            if (!el) return 'null'
+            if (el === window || el === document) return 'window'
+            var s = (el.tagName || '?').toLowerCase()
+            if (el.id) s += '#' + el.id
+            if (el.className && typeof el.className === 'string') s += '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.')
+            var txt = (el.textContent || '').trim().slice(0, 24)
+            if (txt) s += ' "' + txt + '"'
+            return s
+          }
+          function hydrated() {
+            var r = document.getElementById('root')
+            if (!r) return 'no #root'
+            for (var k in r) { if (k.indexOf('__reactContainer') === 0 || k.indexOf('__reactFiber') === 0) return 'YES' }
+            return 'NO (children=' + r.childElementCount + ')'
+          }
+
+          // Errors — capture phase so failed <script>/<img> resource loads are seen.
           window.addEventListener('error', function (e) {
-            logs.push('[uncaught] ' + (e.message || 'error') +
-              (e.filename ? ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
-              (e.error && e.error.stack ? '\n' + e.error.stack : ''))
-            flush()
-          })
+            if (e.target && e.target !== window && e.target.tagName) {
+              log('[resource-fail] ' + e.target.tagName + ' ' + (e.target.src || e.target.href || ''))
+            } else {
+              log('[uncaught] ' + (e.message || 'error') +
+                (e.filename ? ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
+                (e.error && e.error.stack ? '\n' + e.error.stack : ''))
+            }
+          }, true)
           window.addEventListener('unhandledrejection', function (e) {
             var r = e.reason
-            logs.push('[promise] ' + ((r && r.stack) || (r && r.message) || String(r)))
-            flush()
+            log('[promise] ' + ((r && r.stack) || (r && r.message) || String(r)))
           })
           var oe = console.error
-          console.error = function () { try { logs.push('[console.error] ' + fmt(arguments)); flush() } catch (x) {} return oe.apply(console, arguments) }
+          console.error = function () { try { log('[console.error] ' + fmt(arguments)) } catch (x) {} return oe.apply(console, arguments) }
           var ow = console.warn
-          console.warn = function () { try { logs.push('[console.warn] ' + fmt(arguments)); flush() } catch (x) {} return ow.apply(console, arguments) }
+          console.warn = function () { try { log('[console.warn] ' + fmt(arguments)) } catch (x) {} return ow.apply(console, arguments) }
+
+          // Tap diagnostics — capture phase so they fire even if a handler stops
+          // propagation. elementFromPoint exposes an invisible click-blocking overlay.
+          document.addEventListener('pointerdown', function (e) {
+            log('[tap] hit=' + desc(document.elementFromPoint(e.clientX, e.clientY)) + ' target=' + desc(e.target))
+          }, true)
+          document.addEventListener('click', function (e) {
+            log('[click] hit=' + desc(document.elementFromPoint(e.clientX, e.clientY)) +
+              ' target=' + desc(e.target) + ' prevented=' + e.defaultPrevented + ' hydrated=' + hydrated())
+          }, true)
+
+          // Lifecycle + hydration checkpoints.
+          log('script:start')
+          document.addEventListener('DOMContentLoaded', function () { log('DOMContentLoaded hydrated=' + hydrated()) }, { once: true })
+          window.addEventListener('load', function () { log('window.load hydrated=' + hydrated()) })
+          setTimeout(function () { log('t+4s hydrated=' + hydrated()) }, 4000)
           flush()
         } catch (e) { /* diagnostics must never break the app */ }
       })()
