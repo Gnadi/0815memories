@@ -4,65 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- TEMPORARY on-device diagnostic. Dormant for normal visitors; only
-         activates when the URL carries ?debug=1 (e.g. https://kaydo.app/?debug=1).
-         When active it wraps console.error/warn and listens for uncaught errors
-         and promise rejections, then renders them into a fixed banner so a startup
-         crash or React hydration mismatch can be read straight off a phone that has
-         no remote debugger attached. Runs before the app module so it captures the
-         earliest failures. Remove once the mobile-Chrome dead-button bug is found. -->
-    <script>
-      (function () {
-        try {
-          if (new URLSearchParams(window.location.search).get('debug') !== '1') return
-          var logs = []
-          var box = null
-          function ensureBox() {
-            if (box) return box
-            box = document.createElement('div')
-            box.id = '__kaydo_debug__'
-            box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;' +
-              'max-height:70vh;overflow:auto;background:#161616;color:#7CFC7C;' +
-              'font:12px/1.45 ui-monospace,monospace;padding:10px 12px;white-space:pre-wrap;' +
-              'word-break:break-word;border-bottom:3px solid #C25A2E;-webkit-user-select:text;user-select:text'
-            ;(document.body || document.documentElement).appendChild(box)
-            return box
-          }
-          function render() {
-            ensureBox().textContent = 'KAYDO DEBUG (?debug=1) — ' + logs.length +
-              ' event(s). Screenshot this.\nUA: ' + navigator.userAgent + '\n\n' + logs.join('\n\n')
-          }
-          function flush() {
-            if (document.body) render()
-            else document.addEventListener('DOMContentLoaded', render, { once: true })
-          }
-          function fmt(args) {
-            return Array.prototype.map.call(args, function (a) {
-              if (a instanceof Error) return a.stack || a.message || String(a)
-              if (a && typeof a === 'object') { try { return JSON.stringify(a) } catch (e) { return String(a) } }
-              return String(a)
-            }).join(' ')
-          }
-          window.addEventListener('error', function (e) {
-            logs.push('[uncaught] ' + (e.message || 'error') +
-              (e.filename ? ' @ ' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
-              (e.error && e.error.stack ? '\n' + e.error.stack : ''))
-            flush()
-          })
-          window.addEventListener('unhandledrejection', function (e) {
-            var r = e.reason
-            logs.push('[promise] ' + ((r && r.stack) || (r && r.message) || String(r)))
-            flush()
-          })
-          var oe = console.error
-          console.error = function () { try { logs.push('[console.error] ' + fmt(arguments)); flush() } catch (x) {} return oe.apply(console, arguments) }
-          var ow = console.warn
-          console.warn = function () { try { logs.push('[console.warn] ' + fmt(arguments)); flush() } catch (x) {} return ow.apply(console, arguments) }
-          flush()
-        } catch (e) { /* diagnostics must never break the app */ }
-      })()
-    </script>
-
     <!-- Title, description, canonical, Open Graph, Twitter and JSON-LD are owned
          per-route by react-helmet-async (vite-react-ssg <Head>) — see
          src/pages/LandingPage.jsx — so they are NOT duplicated here. The
