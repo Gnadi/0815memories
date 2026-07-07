@@ -21,7 +21,7 @@ import {
   themeToStyles, themeDecorationEmojis, themeText,
 } from '../utils/loginTheme'
 import { normalizeLoginCard, CARD_STYLES, LOGIN_CARD_STYLES } from '../utils/loginCard'
-import { DEFAULT_LOGIN_HTML, DEFAULT_LOGIN_CSS } from '../utils/loginPageTemplates'
+import { LOGIN_STARTER_TEMPLATES } from '../utils/loginPageTemplates'
 import { MAX_LOGIN_HTML_LENGTH, MAX_LOGIN_CSS_LENGTH } from '../utils/loginPageSanitizer'
 
 const MODES = ['classic', 'theme', 'custom']
@@ -123,10 +123,10 @@ export default function LoginDesignerPage() {
     }
   }
 
-  const handleLoadTemplate = () => {
+  const handleLoadTemplate = (template) => {
     if ((html || css) && !window.confirm(t('loginDesigner.loadTemplateConfirm'))) return
-    setHtml(DEFAULT_LOGIN_HTML)
-    setCss(DEFAULT_LOGIN_CSS)
+    setHtml(template.html)
+    setCss(template.css)
   }
 
   // Any manual edit of a theme field marks the theme as customized.
@@ -555,13 +555,26 @@ function CodeEditor({ html, setHtml, htmlTooLong, css, setCss, cssTooLong, onLoa
         {t('loginDesigner.securityNote')}
       </div>
 
-      <button
-        type="button"
-        onClick={onLoadTemplate}
-        className="text-sm text-kaydo font-semibold hover:underline"
-      >
-        {t('loginDesigner.loadTemplate')}
-      </button>
+      <div>
+        <label className="block text-sm font-medium text-bark mb-2">
+          {t('loginDesigner.templatesLabel')}
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {LOGIN_STARTER_TEMPLATES.map((template) => (
+            <button
+              key={template.key}
+              type="button"
+              onClick={() => onLoadTemplate(template)}
+              className="rounded-xl border-2 border-cream-dark p-1.5 transition-all hover:border-kaydo/50"
+            >
+              <div className="h-10 rounded-lg" style={{ background: template.swatch }} />
+              <span className="block text-xs text-bark mt-1 truncate">
+                {t(`loginDesigner.templates.${template.key}`)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div>
         <div className="flex items-center justify-between mb-1.5">

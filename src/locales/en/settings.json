@@ -76,7 +76,15 @@
     "cssLabel": "CSS",
     "charCount": "{{used}} / {{max}} characters",
     "securityNote": "Scripts, forms, and embeds are automatically removed for safety. The login box always stays on top of your page.",
-    "loadTemplate": "Load starter template",
+    "templatesLabel": "Starter templates",
+    "templates": {
+      "retro": "Retro web",
+      "space": "Space",
+      "garden": "Garden",
+      "arcade": "Arcade",
+      "elegant": "Elegant",
+      "scrapbook": "Scrapbook"
+    },
     "loadTemplateConfirm": "Replace your current HTML & CSS with the starter template?",
     "imagesLabel": "Your images",
     "imagesHint": "Upload images here, then copy their URLs into your HTML.",

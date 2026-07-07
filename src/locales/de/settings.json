@@ -76,7 +76,15 @@
     "cssLabel": "CSS",
     "charCount": "{{used}} / {{max}} Zeichen",
     "securityNote": "Skripte, Formulare und Einbettungen werden aus Sicherheitsgründen automatisch entfernt. Das Login-Feld bleibt immer oben auf deiner Seite.",
-    "loadTemplate": "Startvorlage laden",
+    "templatesLabel": "Startvorlagen",
+    "templates": {
+      "retro": "Retro-Web",
+      "space": "Weltraum",
+      "garden": "Garten",
+      "arcade": "Arcade",
+      "elegant": "Elegant",
+      "scrapbook": "Sammelalbum"
+    },
     "loadTemplateConfirm": "Dein aktuelles HTML & CSS durch die Startvorlage ersetzen?",
     "imagesLabel": "Deine Bilder",
     "imagesHint": "Lade hier Bilder hoch und kopiere ihre URLs in dein HTML.",
