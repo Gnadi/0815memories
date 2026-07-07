@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import bcrypt from 'bcryptjs'
-import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera } from 'lucide-react'
+import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
@@ -14,12 +15,14 @@ import LanguageSwitcher from '../LanguageSwitcher'
 export default function SettingsPanel() {
   const { familyId } = useAuth()
   const { t } = useTranslation('settings')
+  const navigate = useNavigate()
   const [newPassword, setNewPassword] = useState('')
   const [familyName, setFamilyName] = useState('')
   const [familySlug, setFamilySlug] = useState('')
   const [loginHeaderImage, setLoginHeaderImage] = useState('')
   const [loginHeaderImagePublicId, setLoginHeaderImagePublicId] = useState('')
   const [memoryCardStyle, setMemoryCardStyle] = useState('modern')
+  const [loginPageMode, setLoginPageMode] = useState('classic')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -42,6 +45,8 @@ export default function SettingsPanel() {
         setLoginHeaderImagePublicId(data.loginHeaderImagePublicId || '')
         const style = data.memoryCardStyle
         setMemoryCardStyle(style === 'classic' || style === 'polaroid' ? style : 'modern')
+        const pageMode = data.loginPageMode
+        setLoginPageMode(pageMode === 'theme' || pageMode === 'custom' ? pageMode : 'classic')
       }
     }
     loadFamily()
@@ -202,6 +207,34 @@ export default function SettingsPanel() {
           {t('loginImage.description')}
         </p>
         <UploadWidget onUpload={handleLoginImageUpload} currentUrl={loginHeaderImage} unencrypted />
+      </div>
+
+      {/* Login page designer */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <Palette className="w-4 h-4" />
+            {t('loginDesigner.title')}
+            {loginPageMode !== 'classic' && (
+              <span className="ml-1 text-xs font-semibold text-kaydo bg-cream-dark px-2 py-0.5 rounded-full">
+                {loginPageMode === 'theme'
+                  ? t('loginDesigner.badgeTheme')
+                  : t('loginDesigner.badgeCustom')}
+              </span>
+            )}
+          </div>
+        </label>
+        <p className="text-xs text-bark-muted mb-3">
+          {t('loginDesigner.teaser')}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/settings/login-designer')}
+          className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
+        >
+          <Palette className="w-4 h-4" />
+          {t('loginDesigner.openDesigner')}
+        </button>
       </div>
 
       {/* Share link */}
