@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

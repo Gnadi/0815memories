@@ -12,6 +12,7 @@ import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import RouteErrorScreen from './components/RouteErrorScreen'
 import NotificationPrompt from './components/NotificationPrompt'
 import AnniversaryReminder from './components/AnniversaryReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
@@ -179,6 +180,9 @@ export const routes = [
   {
     path: '/',
     element: <Layout />,
+    // Recovers stale tabs after a deploy (auto-reload) and turns any other
+    // routing/render error into a branded screen instead of a raw stack trace.
+    errorElement: <RouteErrorScreen />,
     children: [
       { index: true, element: <SubdomainRedirect /> },
       { path: 'login', element: <LoginPage /> },
