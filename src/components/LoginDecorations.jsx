@@ -16,12 +16,17 @@ export default function LoginDecorations({ emojis }) {
   if (!emojis || emojis.length === 0) return null
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {/* The float is container-relative (animated `bottom` in %), so the
+          emojis traverse the whole layer no matter how tall it is — the same
+          on the real login page and inside the designer's preview box.
+          vh-based transforms would only cover the bottom viewport-height of
+          a taller page and never reach the visible screen. */}
       <style>{`
         @keyframes login-deco-float {
-          0% { transform: translateY(105vh) rotate(0deg); opacity: 0; }
+          0% { bottom: -8%; transform: rotate(0deg); opacity: 0; }
           10% { opacity: 0.8; }
           90% { opacity: 0.8; }
-          100% { transform: translateY(-10vh) rotate(25deg); opacity: 0; }
+          100% { bottom: 108%; transform: rotate(25deg); opacity: 0; }
         }
       `}</style>
       {SLOTS.map((slot, i) => (
@@ -30,7 +35,7 @@ export default function LoginDecorations({ emojis }) {
           className="absolute"
           style={{
             left: slot.left,
-            bottom: 0,
+            bottom: '-8%',
             fontSize: slot.size,
             animation: `login-deco-float ${slot.duration} linear infinite`,
             animationDelay: slot.delay,

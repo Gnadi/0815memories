@@ -155,7 +155,7 @@ export default function LoginPage() {
   // shell instead of flashing the default design before the custom one loads.
   if (resolving && !resolvedFamily) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center" aria-busy="true">
+      <div className="min-h-dvh bg-cream flex items-center justify-center" aria-busy="true">
         <div className="animate-pulse">
           <KaydoLogo size={48} />
         </div>
@@ -213,7 +213,7 @@ export default function LoginPage() {
       styleKey: style,
     }
     return (
-      <div className="relative min-h-screen bg-cream">
+      <div className="relative min-h-dvh bg-cream">
         {/* Login UI first in DOM (keyboard/screen-reader priority), painted
             above the canvas via z-10/z-20 */}
         {behavior === 'minimized' ? (
@@ -281,7 +281,7 @@ export default function LoginPage() {
   const welcomeSubtitle = welcomeMessageOverride || t('login.subtitle')
 
   return (
-    <div className="relative min-h-screen bg-cream flex flex-col" style={pageStyle}>
+    <div className="relative min-h-dvh bg-cream flex flex-col" style={pageStyle}>
       {isThemed && <LoginDecorations emojis={decorationEmojis} />}
 
       {/* Desktop header — hidden on mobile */}
@@ -295,25 +295,31 @@ export default function LoginPage() {
       {/* Main content */}
       <main className="relative flex-1 flex flex-col lg:flex-row items-stretch">
         {/* ====== MOBILE LAYOUT (< lg) ====== */}
-        <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
+        {/* Themed pages are compacted to fit a single phone screen: smaller
+            (or no default) illustration, tighter spacing, content centered.
+            `safe center` falls back to flex-start when it would overflow. */}
+        <div className={`lg:hidden flex-1 flex flex-col px-5 pt-4 ${isThemed ? 'pb-6 [justify-content:safe_center]' : 'pb-8'}`}>
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
             <KaydoLogo size={22} />
             <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
           </div>
 
-          {/* Illustration card */}
-          <div className="rounded-2xl overflow-hidden mb-6 h-48">
-            {resolvedFamilyHeaderImage
-              ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
-              : <FamilyIllustration />}
-          </div>
+          {/* Illustration card — themed pages only keep it when the family
+              uploaded a photo; the default illustration clashes with themes */}
+          {(!isThemed || resolvedFamilyHeaderImage) && (
+            <div className={`rounded-2xl overflow-hidden ${isThemed ? 'mb-4 h-32' : 'mb-6 h-48'}`}>
+              {resolvedFamilyHeaderImage
+                ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
+                : <FamilyIllustration />}
+            </div>
+          )}
 
           {/* Welcome heading */}
           <h1 className="text-3xl font-bold text-bark text-center mb-2" style={headingStyle}>
             {welcomeHeading}
           </h1>
-          <p className="text-bark-light text-center mb-6" style={textStyle}>
+          <p className={`text-bark-light text-center ${isThemed ? 'mb-4' : 'mb-6'}`} style={textStyle}>
             {welcomeSubtitle}
           </p>
 
