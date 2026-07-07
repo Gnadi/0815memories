@@ -25,6 +25,32 @@ function toResolvedFamily(data) {
   }
 }
 
+// Snapshot of the last successful family resolution, keyed by the slug or
+// family id used to look it up. Lets returning visitors get their custom
+// design on the first paint instead of a flash of the default page; the
+// fresh Firestore fetch still runs and updates the snapshot afterwards.
+// Only ever rendered through the same validated/sanitized paths as live data.
+const LOGIN_CACHE_PREFIX = 'kaydo_login_page:'
+
+function readCachedFamily(key) {
+  if (!key || typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(LOGIN_CACHE_PREFIX + key)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedFamily(key, family) {
+  if (!key || typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LOGIN_CACHE_PREFIX + key, JSON.stringify(family))
+  } catch {
+    // Storage full or unavailable — the page just keeps the one-time swap.
+  }
+}
+
 export default function LoginPage() {
   const { t } = useTranslation('auth')
   const [password, setPassword] = useState('')
@@ -35,17 +61,31 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Family resolution state
-  const [resolvedFamilyId, setResolvedFamilyId] = useState(null)
-  const [resolvedFamily, setResolvedFamily] = useState(null)
-  const [, setResolving] = useState(false)
-
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { slug: routeSlug } = useParams()
   const urlFamilyId = searchParams.get('family')
   const adminParam = searchParams.get('admin')
+
+  // Key the family is looked up by: slug (route param or subdomain) first,
+  // ?family= id as fallback. Empty on a plain /login visit.
+  const lookupKey = routeSlug || getSubdomainSlug() || urlFamilyId || ''
+
+  // Family resolution state, seeded from the localStorage snapshot so the
+  // custom design paints immediately on repeat visits. `resolving` is true
+  // only while we have a family to look up and nothing cached to show yet.
+  const [resolvedFamilyId, setResolvedFamilyId] = useState(null)
+  const [resolvedFamily, setResolvedFamily] = useState(() => readCachedFamily(lookupKey))
+  const [resolving, setResolving] = useState(() => !!lookupKey && !readCachedFamily(lookupKey))
+
+  // Safety valve: never hold the neutral loading shell for more than a few
+  // seconds (e.g. Firestore unreachable) — fall back to the default page.
+  useEffect(() => {
+    if (!resolving) return
+    const id = setTimeout(() => setResolving(false), 5000)
+    return () => clearTimeout(id)
+  }, [resolving])
 
   useEffect(() => {
     if (adminParam === '1') setShowAdminLogin(true)
@@ -56,12 +96,13 @@ export default function LoginPage() {
     const slug = routeSlug || getSubdomainSlug()
     if (!slug) return
 
-    setResolving(true)
     resolveFamilyBySlug(slug)
       .then((family) => {
         if (family) {
+          const resolved = toResolvedFamily(family)
           setResolvedFamilyId(family.id)
-          setResolvedFamily(toResolvedFamily(family))
+          setResolvedFamily(resolved)
+          writeCachedFamily(slug, resolved)
         } else {
           setError(t('login.errors.familyNotFound'))
         }
@@ -72,14 +113,21 @@ export default function LoginPage() {
 
   // Load customization for families accessed via ?family= query param (no slug)
   useEffect(() => {
-    if (!urlFamilyId || resolvedFamilyId || !db) return
+    if (!urlFamilyId || resolvedFamilyId) return
+    if (!db) {
+      setResolving(false)
+      return
+    }
     getDoc(doc(db, 'families', urlFamilyId))
       .then((snap) => {
         if (snap.exists()) {
-          setResolvedFamily(toResolvedFamily(snap.data()))
+          const resolved = toResolvedFamily(snap.data())
+          setResolvedFamily(resolved)
+          writeCachedFamily(urlFamilyId, resolved)
         }
       })
       .catch(() => {})
+      .finally(() => setResolving(false))
   }, [urlFamilyId, resolvedFamilyId])
 
   // The effective familyId: resolved slug takes priority, then query param fallback
@@ -88,6 +136,18 @@ export default function LoginPage() {
   if (isAuthenticated) {
     navigate('/home', { replace: true })
     return null
+  }
+
+  // While looking up a family with nothing cached to show, render a neutral
+  // shell instead of flashing the default design before the custom one loads.
+  if (resolving && !resolvedFamily) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center" aria-busy="true">
+        <div className="animate-pulse">
+          <KaydoLogo size={48} />
+        </div>
+      </div>
+    )
   }
 
   const handleSubmit = async (e) => {
