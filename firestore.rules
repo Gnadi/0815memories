@@ -26,7 +26,10 @@ service cloud.firestore {
         && (!('loginPageMode' in d) || d.loginPageMode in ['classic', 'theme', 'custom'])
         && (!('loginTheme' in d) || (d.loginTheme is map
             && (!('welcomeTitle' in d.loginTheme) || (d.loginTheme.welcomeTitle is string && d.loginTheme.welcomeTitle.size() <= 200))
-            && (!('welcomeMessage' in d.loginTheme) || (d.loginTheme.welcomeMessage is string && d.loginTheme.welcomeMessage.size() <= 200))));
+            && (!('welcomeMessage' in d.loginTheme) || (d.loginTheme.welcomeMessage is string && d.loginTheme.welcomeMessage.size() <= 200))))
+        && (!('loginCard' in d) || (d.loginCard is map
+            && (!('behavior' in d.loginCard) || d.loginCard.behavior in ['minimized', 'card'])
+            && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
     // Families — anyone can read (needed for viewer password check).

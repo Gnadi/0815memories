@@ -20,6 +20,7 @@ import {
   LOGIN_THEME_PRESETS, THEME_FONTS, THEME_DECORATIONS,
   themeToStyles, themeDecorationEmojis, themeText,
 } from '../utils/loginTheme'
+import { normalizeLoginCard, CARD_STYLES, LOGIN_CARD_STYLES } from '../utils/loginCard'
 import { DEFAULT_LOGIN_HTML, DEFAULT_LOGIN_CSS } from '../utils/loginPageTemplates'
 import { MAX_LOGIN_HTML_LENGTH, MAX_LOGIN_CSS_LENGTH } from '../utils/loginPageSanitizer'
 
@@ -34,6 +35,7 @@ export default function LoginDesignerPage() {
   const [theme, setTheme] = useState(LOGIN_THEME_PRESETS.sunset)
   const [html, setHtml] = useState('')
   const [css, setCss] = useState('')
+  const [loginCard, setLoginCard] = useState(normalizeLoginCard(null))
   const [familyName, setFamilyName] = useState('')
   const [headerImage, setHeaderImage] = useState('')
   const [saving, setSaving] = useState(false)
@@ -64,6 +66,7 @@ export default function LoginDesignerPage() {
         }
         setHtml(data.loginCustomHtml || '')
         setCss(data.loginCustomCss || '')
+        setLoginCard(normalizeLoginCard(data.loginCard))
         setFamilyName(data.familyName || '')
         setHeaderImage(data.loginHeaderImage || '')
       }
@@ -93,6 +96,7 @@ export default function LoginDesignerPage() {
           loginTheme: theme,
           loginCustomHtml: html,
           loginCustomCss: css,
+          loginCard,
         },
         { merge: true }
       )
@@ -187,11 +191,14 @@ export default function LoginDesignerPage() {
 
               {mode === 'theme' && <ThemeEditor theme={theme} setTheme={setTheme} updateTheme={updateTheme} t={t} />}
               {mode === 'custom' && (
-                <CodeEditor
-                  html={html} setHtml={setHtml} htmlTooLong={htmlTooLong}
-                  css={css} setCss={setCss} cssTooLong={cssTooLong}
-                  onLoadTemplate={handleLoadTemplate} t={t}
-                />
+                <>
+                  <LoginBoxControls card={loginCard} setCard={setLoginCard} t={t} />
+                  <CodeEditor
+                    html={html} setHtml={setHtml} htmlTooLong={htmlTooLong}
+                    css={css} setCss={setCss} cssTooLong={cssTooLong}
+                    onLoadTemplate={handleLoadTemplate} t={t}
+                  />
+                </>
               )}
               {mode === 'classic' && (
                 <p className="text-sm text-bark-muted mb-6">{t('loginDesigner.modeClassicDesc')}</p>
@@ -235,6 +242,7 @@ export default function LoginDesignerPage() {
                 css={previewCode.css}
                 familyName={familyName}
                 headerImage={headerImage}
+                card={loginCard}
                 t={t}
               />
             </div>
@@ -460,6 +468,71 @@ function ThemeEditor({ theme, setTheme, updateTheme, t }) {
   )
 }
 
+// Swatch backgrounds hinting at each login-card preset in the picker.
+const CARD_SWATCHES = {
+  light: 'bg-warm-white border border-cream-dark',
+  dark: 'bg-zinc-900',
+  glass: 'bg-gradient-to-br from-white/80 to-white/30 border border-white/60',
+}
+
+function LoginBoxControls({ card, setCard, t }) {
+  const set = (patch) => setCard((prev) => ({ ...normalizeLoginCard(prev), ...patch }))
+  return (
+    <div className="space-y-4 mb-6">
+      <div>
+        <label className="block text-sm font-medium text-bark mb-2">
+          {t('loginDesigner.loginBoxLabel')}
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {['minimized', 'card'].map((b) => (
+            <button
+              key={b}
+              type="button"
+              onClick={() => set({ behavior: b })}
+              className={`rounded-xl border-2 p-3 text-left transition-all ${
+                card.behavior === b
+                  ? 'border-kaydo bg-cream shadow-sm'
+                  : 'border-cream-dark bg-warm-white hover:border-kaydo/50'
+              }`}
+              aria-pressed={card.behavior === b}
+            >
+              <span className="text-sm font-semibold text-bark">
+                {t(b === 'minimized' ? 'loginDesigner.loginBoxMinimized' : 'loginDesigner.loginBoxCard')}
+              </span>
+              <p className="text-xs text-bark-muted mt-1">
+                {t(b === 'minimized' ? 'loginDesigner.loginBoxMinimizedDesc' : 'loginDesigner.loginBoxCardDesc')}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-bark mb-2">
+          {t('loginDesigner.cardStyleLabel')}
+        </label>
+        <div className="flex gap-2">
+          {LOGIN_CARD_STYLES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => set({ style: s })}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border-2 transition-colors ${
+                card.style === s
+                  ? 'border-kaydo bg-cream text-bark font-semibold'
+                  : 'border-cream-dark text-bark-muted hover:border-kaydo/50'
+              }`}
+              aria-pressed={card.style === s}
+            >
+              <span className={`inline-block w-4 h-4 rounded-full ${CARD_SWATCHES[s]}`} />
+              {t(`loginDesigner.card${s[0].toUpperCase()}${s.slice(1)}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CodeEditor({ html, setHtml, htmlTooLong, css, setCss, cssTooLong, onLoadTemplate, t }) {
   const [uploadedUrls, setUploadedUrls] = useState([])
   const [copiedUrl, setCopiedUrl] = useState('')
@@ -566,8 +639,12 @@ function CodeEditor({ html, setHtml, htmlTooLong, css, setCss, cssTooLong, onLoa
   )
 }
 
-function PreviewPane({ mode, theme, html, css, familyName, headerImage, t }) {
+function PreviewPane({ mode, theme, html, css, familyName, headerImage, card, t }) {
   const { t: tAuth } = useTranslation('auth')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const { behavior, style } = normalizeLoginCard(card)
+  const preset = CARD_STYLES[style] || CARD_STYLES.light
+  const darkCard = mode === 'custom' && preset.tone === 'dark'
   const welcomeHeading = (mode === 'theme' && themeText(theme, 'welcomeTitle'))
     || (familyName
       ? tAuth('login.welcomeFamily', { name: familyName })
@@ -590,21 +667,35 @@ function PreviewPane({ mode, theme, html, css, familyName, headerImage, t }) {
 
   const formCard = (
     <div
-      className="w-full max-w-sm bg-warm-white/95 backdrop-blur rounded-2xl shadow-2xl p-5"
+      className={`pointer-events-auto relative w-full max-w-sm rounded-2xl shadow-2xl p-5 ${
+        mode === 'custom' ? preset.cardClass : 'bg-warm-white/95 backdrop-blur'
+      }`}
       style={mode === 'theme' && accentColor ? { borderTop: `4px solid ${accentColor}` } : undefined}
     >
+      {mode === 'custom' && behavior === 'minimized' && (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(false)}
+          aria-label={tAuth('login.closeLogin')}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center ${
+            darkCard ? 'text-cream/70 hover:text-cream hover:bg-white/10' : 'text-bark-muted hover:text-bark hover:bg-cream-dark'
+          }`}
+        >
+          ✕
+        </button>
+      )}
       <div className="flex justify-center mb-3">
         <KaydoLogo size={32} />
       </div>
       {mode !== 'theme' && (
         <>
-          <h2 className="text-xl font-bold text-bark text-center mb-1">{welcomeHeading}</h2>
-          <p className="text-bark-light text-center text-xs mb-4">{welcomeSubtitle}</p>
+          <h2 className={`text-xl font-bold text-center mb-1 ${darkCard ? 'text-cream' : 'text-bark'}`}>{welcomeHeading}</h2>
+          <p className={`text-center text-xs mb-4 ${darkCard ? 'text-cream/80' : 'text-bark-light'}`}>{welcomeSubtitle}</p>
         </>
       )}
       {/* Preview only — the form is inert */}
       <fieldset disabled className="pointer-events-none">
-        <LoginForm {...previewFormProps} />
+        <LoginForm {...previewFormProps} tone={darkCard ? 'dark' : 'light'} />
       </fieldset>
     </div>
   )
@@ -613,9 +704,28 @@ function PreviewPane({ mode, theme, html, css, familyName, headerImage, t }) {
     <div className="relative rounded-2xl overflow-hidden border-2 border-cream-dark bg-cream h-[70vh] min-h-[24rem]">
       {mode === 'custom' ? (
         <>
-          <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
-            {formCard}
-          </div>
+          {behavior === 'card' || previewOpen ? (
+            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
+              {behavior === 'minimized' && (
+                <div
+                  className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+                  onClick={() => setPreviewOpen(false)}
+                />
+              )}
+              {formCard}
+            </div>
+          ) : (
+            <div className="absolute bottom-4 inset-x-0 z-10 flex justify-center pointer-events-none">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="pointer-events-auto flex items-center gap-2 bg-warm-white/95 backdrop-blur text-bark font-semibold rounded-full shadow-2xl px-5 py-2.5 text-sm"
+              >
+                <KaydoLogo size={18} />
+                {tAuth('login.openLogin')}
+              </button>
+            </div>
+          )}
           <CustomLoginCanvas html={html} css={css} />
         </>
       ) : (

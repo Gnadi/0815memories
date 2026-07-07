@@ -21,15 +21,19 @@ export function SetupBanner() {
 export default function LoginForm({
   showAdminLogin, email, setEmail, password, setPassword,
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
-  error, loading, handleSubmit,
+  error, loading, handleSubmit, tone = 'light', autoFocusPassword = false,
 }) {
   const { t } = useTranslation('auth')
+  // tone='dark' is used on dark login-card presets: labels flip to light
+  // colors while the inputs keep their cream background and dark text.
+  const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
+  const subtleClass = tone === 'dark' ? 'text-cream/80' : 'text-bark-light'
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Admin email field */}
       {showAdminLogin && (
         <div>
-          <label className="block text-sm font-medium text-bark mb-1.5">
+          <label className={`block text-sm font-medium ${labelClass} mb-1.5`}>
             {t('login.form.familyEmailLabel')}
           </label>
           <div className="relative">
@@ -47,7 +51,7 @@ export default function LoginForm({
 
       {/* Password field */}
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
+        <label className={`block text-sm font-medium ${labelClass} mb-1.5`}>
           {t('login.form.privateKeyLabel')}
         </label>
         <div className="relative">
@@ -56,6 +60,7 @@ export default function LoginForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoFocus={autoFocusPassword}
             placeholder={t('login.form.privateKeyPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
@@ -73,7 +78,7 @@ export default function LoginForm({
 
       {/* Stay logged in */}
       <div className="flex items-center">
-        <label className="flex items-center gap-2 text-sm text-bark-light cursor-pointer">
+        <label className={`flex items-center gap-2 text-sm ${subtleClass} cursor-pointer`}>
           <input
             type="checkbox"
             checked={stayLoggedIn}

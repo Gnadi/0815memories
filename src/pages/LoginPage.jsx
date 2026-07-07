@@ -4,13 +4,14 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { Shield } from 'lucide-react'
+import { Shield, X } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import LoginForm, { SetupBanner } from '../components/auth/LoginForm'
 import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
 import { themeToStyles, themeDecorationEmojis, themeText } from '../utils/loginTheme'
+import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
 import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
 
 function toResolvedFamily(data) {
@@ -22,6 +23,7 @@ function toResolvedFamily(data) {
     theme: data.loginTheme || null,
     customHtml: data.loginCustomHtml || '',
     customCss: data.loginCustomCss || '',
+    card: data.loginCard || null,
   }
 }
 
@@ -60,6 +62,17 @@ export default function LoginPage() {
   const [showAdminLogin, setShowAdminLogin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Custom pages with a minimized login box open the form as an overlay.
+  const [loginOpen, setLoginOpen] = useState(false)
+
+  useEffect(() => {
+    if (!loginOpen) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLoginOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [loginOpen])
 
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
@@ -192,49 +205,54 @@ export default function LoginPage() {
 
   // ====== CUSTOM MODE (admin-authored HTML/CSS, sanitized + shadow-DOM) ======
   if (resolvedFamily?.pageMode === 'custom' && resolvedFamily.customHtml) {
+    const { behavior, style } = normalizeLoginCard(resolvedFamily.card)
+    const cardProps = {
+      t, navigate, formProps, firebaseReady,
+      familyName: resolvedFamilyName,
+      showAdminLogin, setShowAdminLogin,
+      styleKey: style,
+    }
     return (
       <div className="relative min-h-screen bg-cream">
-        {/* Form overlay first in DOM (keyboard/screen-reader priority), painted on top via z-10 */}
-        <div className="fixed inset-0 z-10 overflow-y-auto pointer-events-none flex items-start sm:items-center justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-md my-8 bg-warm-white/95 backdrop-blur rounded-2xl shadow-2xl p-6">
-            <div className="flex justify-center mb-4">
-              <KaydoLogo size={40} />
-            </div>
-            <h1 className="text-2xl font-bold text-bark text-center mb-1">
-              {resolvedFamilyName
-                ? t('login.welcomeFamily', { name: resolvedFamilyName })
-                : t('login.welcomeHome')}
-            </h1>
-            <p className="text-bark-light text-center text-sm mb-5">
-              {t('login.subtitle')}
-            </p>
-
-            {!firebaseReady && <SetupBanner />}
-
-            <LoginForm {...formProps} />
-
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setShowAdminLogin(!showAdminLogin)}
-                className="text-sm text-bark-muted hover:text-kaydo transition-colors"
-              >
-                {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
-              </button>
-            </div>
-
-            {showAdminLogin && (
-              <div className="mt-4 text-center">
+        {/* Login UI first in DOM (keyboard/screen-reader priority), painted
+            above the canvas via z-10/z-20 */}
+        {behavior === 'minimized' ? (
+          <>
+            {!loginOpen && (
+              <div className="fixed bottom-5 inset-x-0 z-10 flex justify-center pointer-events-none px-4">
                 <button
-                  onClick={() => navigate('/signup')}
-                  className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
+                  type="button"
+                  onClick={() => setLoginOpen(true)}
+                  className="pointer-events-auto flex items-center gap-2 bg-warm-white/95 backdrop-blur text-bark font-semibold rounded-full shadow-2xl px-6 py-3 hover:scale-[1.03] transition-transform"
                 >
-                  {t('login.createAccount')}
+                  <KaydoLogo size={20} />
+                  {t('login.openLogin')}
                 </button>
               </div>
             )}
+            {loginOpen && (
+              <div
+                className="fixed inset-0 z-20 overflow-y-auto flex items-start sm:items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+              >
+                <div
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                  onClick={() => setLoginOpen(false)}
+                />
+                <CustomLoginCard
+                  {...cardProps}
+                  onClose={() => setLoginOpen(false)}
+                  autoFocusPassword
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="fixed inset-0 z-10 overflow-y-auto pointer-events-none flex items-start sm:items-center justify-center p-4">
+            <CustomLoginCard {...cardProps} />
           </div>
-        </div>
+        )}
 
         <div className="fixed inset-0">
           <CustomLoginCanvas
@@ -415,6 +433,71 @@ export default function LoginPage() {
           <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
         </div>
       </footer>
+    </div>
+  )
+}
+
+// The native login card shown on custom-designed pages, either always
+// visible or opened from the floating "Sign in" pill. Its look follows the
+// admin-picked preset (CARD_STYLES); the form itself is always native UI.
+function CustomLoginCard({
+  t, navigate, formProps, firebaseReady, familyName,
+  showAdminLogin, setShowAdminLogin, styleKey, onClose, autoFocusPassword = false,
+}) {
+  const preset = CARD_STYLES[styleKey] || CARD_STYLES.light
+  const dark = preset.tone === 'dark'
+  return (
+    <div className={`pointer-events-auto relative w-full max-w-md my-8 rounded-2xl shadow-2xl p-6 ${preset.cardClass}`}>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('login.closeLogin')}
+          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+            dark ? 'text-cream/70 hover:text-cream hover:bg-white/10' : 'text-bark-muted hover:text-bark hover:bg-cream-dark'
+          }`}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+      <div className="flex justify-center mb-4">
+        <KaydoLogo size={40} />
+      </div>
+      <h1 className={`text-2xl font-bold text-center mb-1 ${dark ? 'text-cream' : 'text-bark'}`}>
+        {familyName
+          ? t('login.welcomeFamily', { name: familyName })
+          : t('login.welcomeHome')}
+      </h1>
+      <p className={`text-center text-sm mb-5 ${dark ? 'text-cream/80' : 'text-bark-light'}`}>
+        {t('login.subtitle')}
+      </p>
+
+      {!firebaseReady && <SetupBanner />}
+
+      <LoginForm {...formProps} tone={preset.tone} autoFocusPassword={autoFocusPassword} />
+
+      <div className="mt-4 text-center">
+        <button
+          type="button"
+          onClick={() => setShowAdminLogin(!showAdminLogin)}
+          className={`text-sm transition-colors ${dark ? 'text-cream/70 hover:text-cream' : 'text-bark-muted hover:text-kaydo'}`}
+        >
+          {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
+        </button>
+      </div>
+
+      {showAdminLogin && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => navigate('/signup')}
+            className={`w-full py-3 border-2 rounded-full font-semibold transition-colors ${
+              dark ? 'border-white/20 text-cream hover:bg-white/10' : 'border-cream-dark text-kaydo hover:bg-cream-dark'
+            }`}
+          >
+            {t('login.createAccount')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

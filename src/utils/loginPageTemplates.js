@@ -3,6 +3,7 @@
 // CSS animations. Scripts, forms, and iframes are stripped by the sanitizer.
 
 export const DEFAULT_LOGIN_HTML = `<!-- Welcome to your custom login page! -->
+<!-- Visitors sign in via the floating button at the bottom of the page. -->
 <!-- Tip: upload images below and paste their URLs like this: -->
 <!-- <img src="https://res.cloudinary.com/..." width="200"> -->
 
@@ -48,7 +49,8 @@ export const DEFAULT_LOGIN_CSS = `.canvas {
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 24px 16px 220px;
+  /* bottom padding leaves room for the floating sign-in button */
+  padding: 24px 16px 90px;
 }
 
 .banner {
