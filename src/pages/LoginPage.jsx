@@ -1,13 +1,29 @@
 import { useState, useEffect } from 'react'
-import { useTranslation, Trans } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { Mail, KeyRound, Eye, EyeOff, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
+import LoginForm, { SetupBanner } from '../components/auth/LoginForm'
+import CustomLoginCanvas from '../components/CustomLoginCanvas'
+import LoginDecorations from '../components/LoginDecorations'
+import { themeToStyles, themeDecorationEmojis, themeText } from '../utils/loginTheme'
 import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
+
+function toResolvedFamily(data) {
+  if (!data) return null
+  return {
+    name: data.familyName || '',
+    headerImage: data.loginHeaderImage || '',
+    pageMode: data.loginPageMode || 'classic',
+    theme: data.loginTheme || null,
+    customHtml: data.loginCustomHtml || '',
+    customCss: data.loginCustomCss || '',
+  }
+}
 
 export default function LoginPage() {
   const { t } = useTranslation('auth')
@@ -21,9 +37,8 @@ export default function LoginPage() {
 
   // Family resolution state
   const [resolvedFamilyId, setResolvedFamilyId] = useState(null)
-  const [resolvedFamilyName, setResolvedFamilyName] = useState(null)
-  const [resolvedFamilyHeaderImage, setResolvedFamilyHeaderImage] = useState('')
-  const [resolving, setResolving] = useState(false)
+  const [resolvedFamily, setResolvedFamily] = useState(null)
+  const [, setResolving] = useState(false)
 
   const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
@@ -46,8 +61,7 @@ export default function LoginPage() {
       .then((family) => {
         if (family) {
           setResolvedFamilyId(family.id)
-          setResolvedFamilyName(family.familyName)
-          setResolvedFamilyHeaderImage(family.loginHeaderImage || '')
+          setResolvedFamily(toResolvedFamily(family))
         } else {
           setError(t('login.errors.familyNotFound'))
         }
@@ -56,13 +70,13 @@ export default function LoginPage() {
       .finally(() => setResolving(false))
   }, [routeSlug, t])
 
-  // Load header image for families accessed via ?family= query param (no slug)
+  // Load customization for families accessed via ?family= query param (no slug)
   useEffect(() => {
     if (!urlFamilyId || resolvedFamilyId || !db) return
     getDoc(doc(db, 'families', urlFamilyId))
       .then((snap) => {
         if (snap.exists()) {
-          setResolvedFamilyHeaderImage(snap.data().loginHeaderImage || '')
+          setResolvedFamily(toResolvedFamily(snap.data()))
         }
       })
       .catch(() => {})
@@ -107,24 +121,106 @@ export default function LoginPage() {
     }
   }
 
+  const formProps = {
+    showAdminLogin, email, setEmail, password, setPassword,
+    showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
+    error, loading, handleSubmit,
+  }
+
+  const resolvedFamilyName = resolvedFamily?.name || null
+  const resolvedFamilyHeaderImage = resolvedFamily?.headerImage || ''
+
+  // ====== CUSTOM MODE (admin-authored HTML/CSS, sanitized + shadow-DOM) ======
+  if (resolvedFamily?.pageMode === 'custom' && resolvedFamily.customHtml) {
+    return (
+      <div className="relative min-h-screen bg-cream">
+        {/* Form overlay first in DOM (keyboard/screen-reader priority), painted on top via z-10 */}
+        <div className="fixed inset-0 z-10 overflow-y-auto pointer-events-none flex items-start sm:items-center justify-center p-4">
+          <div className="pointer-events-auto w-full max-w-md my-8 bg-warm-white/95 backdrop-blur rounded-2xl shadow-2xl p-6">
+            <div className="flex justify-center mb-4">
+              <KaydoLogo size={40} />
+            </div>
+            <h1 className="text-2xl font-bold text-bark text-center mb-1">
+              {resolvedFamilyName
+                ? t('login.welcomeFamily', { name: resolvedFamilyName })
+                : t('login.welcomeHome')}
+            </h1>
+            <p className="text-bark-light text-center text-sm mb-5">
+              {t('login.subtitle')}
+            </p>
+
+            {!firebaseReady && <SetupBanner />}
+
+            <LoginForm {...formProps} />
+
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setShowAdminLogin(!showAdminLogin)}
+                className="text-sm text-bark-muted hover:text-kaydo transition-colors"
+              >
+                {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
+              </button>
+            </div>
+
+            {showAdminLogin && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
+                >
+                  {t('login.createAccount')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="fixed inset-0">
+          <CustomLoginCanvas
+            html={resolvedFamily.customHtml}
+            css={resolvedFamily.customCss}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // ====== THEME MODE (structured, validated styling of the standard layout) ======
+  const isThemed = resolvedFamily?.pageMode === 'theme'
+  const { pageStyle, headingStyle, textStyle } = isThemed
+    ? themeToStyles(resolvedFamily.theme)
+    : { pageStyle: {}, headingStyle: {}, textStyle: {} }
+  const decorationEmojis = isThemed ? themeDecorationEmojis(resolvedFamily.theme) : []
+  const welcomeTitleOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeTitle') : ''
+  const welcomeMessageOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeMessage') : ''
+
+  const welcomeHeading = welcomeTitleOverride
+    || (resolvedFamilyName
+      ? t('login.welcomeFamily', { name: resolvedFamilyName })
+      : t('login.welcomeHome'))
+  const welcomeSubtitle = welcomeMessageOverride || t('login.subtitle')
+
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
+    <div className="relative min-h-screen bg-cream flex flex-col" style={pageStyle}>
+      {isThemed && <LoginDecorations emojis={decorationEmojis} />}
+
       {/* Desktop header — hidden on mobile */}
-      <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-bark font-semibold text-lg">
+      <header className="relative hidden lg:flex px-6 py-4 items-center justify-between">
+        <div className="flex items-center gap-2 text-bark font-semibold text-lg" style={headingStyle}>
           <KaydoLogo size={22} />
           <span>Kaydo</span>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col lg:flex-row items-stretch">
+      <main className="relative flex-1 flex flex-col lg:flex-row items-stretch">
         {/* ====== MOBILE LAYOUT (< lg) ====== */}
         <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
             <KaydoLogo size={22} />
-            <span className="text-lg font-bold text-bark">Kaydo</span>
+            <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
           </div>
 
           {/* Illustration card */}
@@ -135,32 +231,23 @@ export default function LoginPage() {
           </div>
 
           {/* Welcome heading */}
-          <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            {resolvedFamilyName
-              ? t('login.welcomeFamily', { name: resolvedFamilyName })
-              : t('login.welcomeHome')}
+          <h1 className="text-3xl font-bold text-bark text-center mb-2" style={headingStyle}>
+            {welcomeHeading}
           </h1>
-          <p className="text-bark-light text-center mb-6">
-            {t('login.subtitle')}
+          <p className="text-bark-light text-center mb-6" style={textStyle}>
+            {welcomeSubtitle}
           </p>
 
           {!firebaseReady && <SetupBanner />}
 
           {/* Form */}
-          <LoginForm
-            showAdminLogin={showAdminLogin}
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            stayLoggedIn={stayLoggedIn}
-            setStayLoggedIn={setStayLoggedIn}
-            error={error}
-            loading={loading}
-            handleSubmit={handleSubmit}
-          />
+          {isThemed
+            ? (
+              <div className="bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-5">
+                <LoginForm {...formProps} />
+              </div>
+            )
+            : <LoginForm {...formProps} />}
 
           {/* Admin toggle */}
           <div className="mt-4 text-center">
@@ -168,6 +255,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setShowAdminLogin(!showAdminLogin)}
               className="text-sm text-bark-muted hover:text-kaydo transition-colors"
+              style={textStyle}
             >
               {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
             </button>
@@ -188,7 +276,7 @@ export default function LoginPage() {
 
         {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
         {/* Left — Illustration */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
+        <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center p-12 ${isThemed ? '' : 'bg-cream-dark'}`}>
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover" />
             : <FamilyIllustration />}
@@ -204,35 +292,22 @@ export default function LoginPage() {
 
         {/* Right — Login Form */}
         <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
-          <div className="w-full max-w-md">
+          <div className={`w-full max-w-md ${isThemed ? 'bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-8' : ''}`}>
             {/* Logo mark */}
             <div className="flex justify-center mb-6">
               <KaydoLogo size={52} />
             </div>
 
             <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              {t('login.welcomeHome')}
+              {welcomeHeading}
             </h1>
             <p className="text-bark-light text-center mb-8">
-              {t('login.subtitle')}
+              {welcomeSubtitle}
             </p>
 
             {!firebaseReady && <SetupBanner />}
 
-            <LoginForm
-              showAdminLogin={showAdminLogin}
-              email={email}
-              setEmail={setEmail}
-              password={password}
-              setPassword={setPassword}
-              showPassword={showPassword}
-              setShowPassword={setShowPassword}
-              stayLoggedIn={stayLoggedIn}
-              setStayLoggedIn={setStayLoggedIn}
-              error={error}
-              loading={loading}
-              handleSubmit={handleSubmit}
-            />
+            <LoginForm {...formProps} />
 
             {/* Admin toggle */}
             <div className="mt-4 text-center">
@@ -268,7 +343,7 @@ export default function LoginPage() {
       </main>
 
       {/* Footer — desktop only */}
-      <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
+      <footer className="relative hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
         <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
         <div className="flex gap-4">
           <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
@@ -279,113 +354,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
-function SetupBanner() {
-  const { t } = useTranslation('auth')
-  return (
-    <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-      <strong>{t('setupBanner.title')}</strong>{' '}
-      <Trans
-        t={t}
-        i18nKey="setupBanner.body"
-        components={[
-          <code className="bg-amber-100 px-1 rounded" />,
-          <code className="bg-amber-100 px-1 rounded" />,
-        ]}
-      />
-    </div>
-  )
-}
-
-function LoginForm({
-  showAdminLogin, email, setEmail, password, setPassword,
-  showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
-  error, loading, handleSubmit,
-}) {
-  const { t } = useTranslation('auth')
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Admin email field */}
-      {showAdminLogin && (
-        <div>
-          <label className="block text-sm font-medium text-bark mb-1.5">
-            {t('login.form.familyEmailLabel')}
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('login.form.familyEmailPlaceholder')}
-              className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Password field */}
-      <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
-          {t('login.form.privateKeyLabel')}
-        </label>
-        <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('login.form.privateKeyPlaceholder')}
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
-          >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Stay logged in */}
-      <div className="flex items-center">
-        <label className="flex items-center gap-2 text-sm text-bark-light cursor-pointer">
-          <input
-            type="checkbox"
-            checked={stayLoggedIn}
-            onChange={(e) => setStayLoggedIn(e.target.checked)}
-            className="w-4 h-4 rounded border-bark-muted accent-kaydo"
-          />
-          {t('login.form.stayLoggedIn')}
-        </label>
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
-          {error}
-        </p>
-      )}
-
-      {/* Submit button */}
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
-      >
-        {loading ? (
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <>
-            {t('login.form.submit')}
-            <span className="text-xl">&rarr;</span>
-          </>
-        )}
-      </button>
-    </form>
-  )
-}
-
