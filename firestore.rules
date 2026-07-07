@@ -14,6 +14,21 @@ service cloud.firestore {
             || request.auth.uid == fam.adminUid);
     }
 
+    // Shape limits for the login-page customization fields. The family doc is
+    // world-readable and served to every login-page visitor, so cap the sizes
+    // (limits mirror src/utils/loginPageSanitizer.js) and constrain the mode
+    // enum. `request.resource.data` is the post-merge document, so these hold
+    // for setDoc(..., { merge: true }) writes too.
+    function loginCustomOk() {
+      let d = request.resource.data;
+      return (!('loginCustomHtml' in d) || (d.loginCustomHtml is string && d.loginCustomHtml.size() <= 65536))
+        && (!('loginCustomCss' in d) || (d.loginCustomCss is string && d.loginCustomCss.size() <= 32768))
+        && (!('loginPageMode' in d) || d.loginPageMode in ['classic', 'theme', 'custom'])
+        && (!('loginTheme' in d) || (d.loginTheme is map
+            && (!('welcomeTitle' in d.loginTheme) || (d.loginTheme.welcomeTitle is string && d.loginTheme.welcomeTitle.size() <= 200))
+            && (!('welcomeMessage' in d.loginTheme) || (d.loginTheme.welcomeMessage is string && d.loginTheme.welcomeMessage.size() <= 200))));
+    }
+
     // Families — anyone can read (needed for viewer password check).
     // Updates fall into one of four explicit paths; everything else is denied.
     // Admin-list mutations only happen via these gated paths — there is no
@@ -23,9 +38,11 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.adminUid == request.auth.uid
                     && (!('adminUids' in request.resource.data)
-                        || request.resource.data.adminUids == [request.auth.uid]);
+                        || request.resource.data.adminUids == [request.auth.uid])
+                    && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
+                    && loginCustomOk()
                     && (
                       // Path A: existing admin edits regular fields; adminUids unchanged.
                       (

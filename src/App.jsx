@@ -30,6 +30,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const MemoryDetailPage = lazy(() => import('./pages/MemoryDetailPage'))
 const MomentsAllPage = lazy(() => import('./pages/MomentsAllPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const LoginDesignerPage = lazy(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazy(() => import('./pages/KidsJournalPage'))
 const JournalArchivePage = lazy(() => import('./pages/JournalArchivePage'))
 const JournalEntryPage = lazy(() => import('./pages/JournalEntryPage'))
@@ -195,6 +196,7 @@ export const routes = [
       { path: 'moments', element: protect(<MomentsAllPage />) },
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
       { path: 'settings', element: protect(<SettingsPage />) },
+      { path: 'settings/login-designer', element: protect(<LoginDesignerPage />) },
       { path: 'journal', element: protect(<KidsJournalPage />) },
       { path: 'journal/:childId', element: protect(<JournalArchivePage />) },
       { path: 'journal/:childId/new', element: protect(<JournalEntryPage />) },
