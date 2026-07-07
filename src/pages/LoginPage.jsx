@@ -188,9 +188,10 @@ export default function LoginPage() {
 
   // ====== THEME MODE (structured, validated styling of the standard layout) ======
   const isThemed = resolvedFamily?.pageMode === 'theme'
-  const { pageStyle, headingStyle, textStyle } = isThemed
+  const { pageStyle, headingStyle, textStyle, accentColor } = isThemed
     ? themeToStyles(resolvedFamily.theme)
-    : { pageStyle: {}, headingStyle: {}, textStyle: {} }
+    : { pageStyle: {}, headingStyle: {}, textStyle: {}, accentColor: '' }
+  const themedCardStyle = accentColor ? { borderTop: `4px solid ${accentColor}` } : {}
   const decorationEmojis = isThemed ? themeDecorationEmojis(resolvedFamily.theme) : []
   const welcomeTitleOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeTitle') : ''
   const welcomeMessageOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeMessage') : ''
@@ -243,7 +244,7 @@ export default function LoginPage() {
           {/* Form */}
           {isThemed
             ? (
-              <div className="bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-5">
+              <div className="bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-5" style={themedCardStyle}>
                 <LoginForm {...formProps} />
               </div>
             )
@@ -292,7 +293,10 @@ export default function LoginPage() {
 
         {/* Right — Login Form */}
         <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
-          <div className={`w-full max-w-md ${isThemed ? 'bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-8' : ''}`}>
+          <div
+            className={`w-full max-w-md ${isThemed ? 'bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-8' : ''}`}
+            style={isThemed ? themedCardStyle : undefined}
+          >
             {/* Logo mark */}
             <div className="flex justify-center mb-6">
               <KaydoLogo size={52} />
