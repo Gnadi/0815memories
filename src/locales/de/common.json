@@ -31,6 +31,12 @@
     "en": "English",
     "de": "Deutsch"
   },
+  "errorScreen": {
+    "updating": "Aktualisierung auf die neueste Version…",
+    "title": "Etwas ist schiefgelaufen",
+    "message": "Ein unerwarteter Fehler ist aufgetreten. Ein Neuladen der Seite behebt das meistens — deine Erinnerungen sind sicher.",
+    "reload": "Seite neu laden"
+  },
   "actions": {
     "dismiss": "Schließen",
     "openMenu": "Menü öffnen",

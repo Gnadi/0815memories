@@ -31,6 +31,12 @@
     "en": "English",
     "de": "Deutsch"
   },
+  "errorScreen": {
+    "updating": "Updating to the latest version…",
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Reloading the page usually fixes it — your memories are safe.",
+    "reload": "Reload page"
+  },
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",
