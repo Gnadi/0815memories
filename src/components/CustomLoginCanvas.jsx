@@ -29,5 +29,9 @@ export default function CustomLoginCanvas({ html, css, className = 'absolute ins
 
   // isolation:isolate creates a new stacking context: no z-index inside the
   // shadow tree can ever paint above the sibling login-form overlay.
-  return <div ref={hostRef} className={className} style={{ isolation: 'isolate' }} />
+  // contain:paint makes the host the containing block even for
+  // position:fixed descendants and clips them, so custom content can never
+  // escape the canvas (on the login page it fills the viewport anyway, but
+  // in the designer preview it must stay inside the preview box).
+  return <div ref={hostRef} className={className} style={{ isolation: 'isolate', contain: 'paint' }} />
 }
