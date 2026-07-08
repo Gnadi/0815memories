@@ -1,8 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
+    { "source": "/static-loader-data-manifest-(.*).json", "destination": "/static-loader-data-manifest.json" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
