@@ -308,7 +308,7 @@ export default function LoginPage() {
           {/* Illustration card — themed pages only keep it when the family
               uploaded a photo; the default illustration clashes with themes */}
           {(!isThemed || resolvedFamilyHeaderImage) && (
-            <div className={`rounded-2xl overflow-hidden ${isThemed ? 'mb-4 h-32' : 'mb-6 h-48'}`}>
+            <div className={`rounded-2xl overflow-hidden flex-1 ${isThemed ? 'mb-4 min-h-32' : 'mb-6 min-h-48'}`}>
               {resolvedFamilyHeaderImage
                 ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
                 : <FamilyIllustration />}
