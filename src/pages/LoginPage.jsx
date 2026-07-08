@@ -295,10 +295,10 @@ export default function LoginPage() {
       {/* Main content */}
       <main className="relative flex-1 flex flex-col lg:flex-row items-stretch">
         {/* ====== MOBILE LAYOUT (< lg) ====== */}
-        {/* Themed pages are compacted to fit a single phone screen: smaller
-            (or no default) illustration, tighter spacing, content centered.
-            `safe center` falls back to flex-start when it would overflow. */}
-        <div className={`lg:hidden flex-1 flex flex-col px-5 pt-4 ${isThemed ? 'pb-6 [justify-content:safe_center]' : 'pb-8'}`}>
+        {/* Fills exactly one phone screen (h-dvh, no scroll). The photo/illustration
+            is the flex-grow element, so it expands to absorb any leftover vertical
+            space — no empty gap — and shrinks (min-h-0) if content ever gets tall. */}
+        <div className={`lg:hidden h-dvh flex flex-col px-5 pt-4 ${isThemed ? 'pb-6' : 'pb-8'}`}>
           {/* Mobile brand */}
           <div className="flex items-center gap-2 mb-4">
             <KaydoLogo size={22} />
@@ -308,7 +308,7 @@ export default function LoginPage() {
           {/* Illustration card — themed pages only keep it when the family
               uploaded a photo; the default illustration clashes with themes */}
           {(!isThemed || resolvedFamilyHeaderImage) && (
-            <div className={`rounded-2xl overflow-hidden flex-1 ${isThemed ? 'mb-4 min-h-32' : 'mb-6 min-h-48'}`}>
+            <div className={`rounded-2xl overflow-hidden flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'}`}>
               {resolvedFamilyHeaderImage
                 ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
                 : <FamilyIllustration />}
