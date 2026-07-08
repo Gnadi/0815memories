@@ -5,7 +5,14 @@ import { sanitizeLoginHtml, sanitizeLoginCss } from '../utils/loginPageSanitizer
 // isolates both ways: custom CSS selectors cannot reach the login form (no
 // restyling or attribute-selector tricks against the password input), and
 // the app's styles don't bleed into the custom canvas.
-export default function CustomLoginCanvas({ html, css, className = 'absolute inset-0 z-0' }) {
+//
+// `scrollable` controls whether the canvas may scroll its own content. The
+// designer preview keeps it on so admins can inspect a tall design; the live
+// login page turns it off so the design fills the viewport as a fixed,
+// non-scrolling backdrop and the image gets the whole screen.
+export default function CustomLoginCanvas({
+  html, css, className = 'absolute inset-0 z-0', scrollable = true,
+}) {
   const hostRef = useRef(null)
 
   useEffect(() => {
@@ -18,14 +25,15 @@ export default function CustomLoginCanvas({ html, css, className = 'absolute ins
     // textContent assignment bypasses the HTML parser, so the CSS string can
     // never break out of the style element.
     style.textContent =
-      ':host{display:block;height:100%;overflow:auto}\n' + sanitizeLoginCss(css)
+      `:host{display:block;height:100%;overflow:${scrollable ? 'auto' : 'hidden'}}\n`
+      + sanitizeLoginCss(css)
     shadow.appendChild(style)
 
     const root = document.createElement('div')
     root.className = 'canvas' // documented styling hook for the admin's CSS
     root.innerHTML = sanitizeLoginHtml(html)
     shadow.appendChild(root)
-  }, [html, css])
+  }, [html, css, scrollable])
 
   // isolation:isolate creates a new stacking context: no z-index inside the
   // shadow tree can ever paint above the sibling login-form overlay.

@@ -213,7 +213,7 @@ export default function LoginPage() {
       styleKey: style,
     }
     return (
-      <div className="relative min-h-dvh bg-cream">
+      <div className="relative h-dvh overflow-hidden bg-cream">
         {/* Login UI first in DOM (keyboard/screen-reader priority), painted
             above the canvas via z-10/z-20 */}
         {behavior === 'minimized' ? (
@@ -258,6 +258,7 @@ export default function LoginPage() {
           <CustomLoginCanvas
             html={resolvedFamily.customHtml}
             css={resolvedFamily.customCss}
+            scrollable={false}
           />
         </div>
       </div>
