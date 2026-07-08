@@ -281,7 +281,10 @@ export default function LoginPage() {
   const welcomeSubtitle = welcomeMessageOverride || t('login.subtitle')
 
   return (
-    <div className="relative min-h-dvh bg-cream flex flex-col" style={pageStyle}>
+    <div
+      className={`relative min-h-dvh bg-cream flex flex-col ${isThemed ? '' : 'max-lg:h-dvh max-lg:overflow-hidden'}`}
+      style={pageStyle}
+    >
       {isThemed && <LoginDecorations emojis={decorationEmojis} />}
 
       {/* Desktop header — hidden on mobile */}
@@ -308,10 +311,10 @@ export default function LoginPage() {
           {/* Illustration card — themed pages only keep it when the family
               uploaded a photo; the default illustration clashes with themes */}
           {(!isThemed || resolvedFamilyHeaderImage) && (
-            <div className={`rounded-2xl overflow-hidden ${isThemed ? 'mb-4 h-32' : 'mb-6 h-48'}`}>
+            <div className={`rounded-2xl overflow-hidden ${isThemed ? 'mb-4 h-32' : 'mb-6 flex-1 min-h-0'}`}>
               {resolvedFamilyHeaderImage
                 ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
-                : <FamilyIllustration />}
+                : <FamilyIllustration className="w-full h-full object-cover" />}
             </div>
           )}
 

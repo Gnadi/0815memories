@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 
-export default function FamilyIllustration() {
+export default function FamilyIllustration({ className = 'w-full' }) {
   const { t } = useTranslation('common')
   return (
-    <svg viewBox="0 0 500 400" className="w-full" role="img" aria-label={t('actions.familyIllustrationAlt')}>
+    <svg viewBox="0 0 500 400" className={className} role="img" aria-label={t('actions.familyIllustrationAlt')} preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#F4A460" />
