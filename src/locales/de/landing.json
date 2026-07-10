@@ -11,12 +11,12 @@
     "ogLocale": "de_DE",
     "ldDescription": "Ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training, kein Datenverkauf.",
     "ldFeatures": [
-      "Ende-zu-Ende-verschlüsselter Erinnerungsspeicher",
+      "Erinnerungen werden mit AES-256 auf deinem Gerät verschlüsselt",
       "Privates Teilen von Familienfotos und -videos",
       "Familien-Rezeptbaum mit Versionsverlauf",
       "Digitales Sammelalbum mit PDF-Export",
       "Geplante Briefe an Familienmitglieder für die Zukunft",
-      "Zero-Knowledge-verschlüsselter Tresor"
+      "AES-256-verschlüsselter Tresor für wertvolle Originale"
     ]
   },
   "nav": {
@@ -33,6 +33,7 @@
     "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
     "subtitleExample": "deinname.kaydo.app",
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
+    "demoCta": "Demo-Familie ansehen",
     "journalCard": {
       "title": "Familien-Tagebuch",
       "lines": ["Sommerurlaub...", "Omas Rezept", "Erster Tag im..."]
@@ -63,8 +64,8 @@
     },
     "vault": {
       "title": "Bewahren: Der Tresor",
-      "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — unsere Black-Box-Verschlüsselung sorgt dafür, dass sie allein dir gehören.",
-      "bullets": ["Verschlüsselung auf höchstem Niveau", "Zero-Knowledge-Speicher"]
+      "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden.",
+      "bullets": ["AES-256-Verschlüsselung", "Auf deinem Gerät verschlüsselt — vor dem Upload"]
     },
     "letters": {
       "title": "Schreiben: Die Briefe",
@@ -106,6 +107,30 @@
       "viewOnGithub": "Auf GitHub ansehen"
     }
   },
+  "zones": {
+    "sectionTitle": "Zwei Zonen, ein Zuhause",
+    "sectionSubtitle": "Alltägliches Teilen soll mühelos sein. Eure wertvollsten Dinge verdienen mehr. Kaydo trennt beides — ganz bewusst.",
+    "everyday": {
+      "badge": "Bequem im Alltag",
+      "title": "Der Familien-Feed",
+      "desc": "Fotos, Videos und Sprachnachrichten für den engsten Kreis. Ein gemeinsames Familienpasswort bringt auch Oma und Opa hinein — ganz ohne eigenes Konto. Bequem, und zwar mit Absicht.",
+      "bullets": [
+        "Ein gemeinsames Passwort für den engsten Kreis",
+        "Keine Konten oder App-Installationen für Mitleser",
+        "Die Familien-Admins entscheiden, was geteilt wird"
+      ]
+    },
+    "vaultZone": {
+      "badge": "Tresor-Privatsphäre",
+      "title": "Tresor & Briefe",
+      "desc": "Deine Originale, Dokumente und Zukunftsbriefe werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden. Auf unseren Servern kommt nur Chiffretext an.",
+      "bullets": [
+        "AES-256-GCM — verschlüsselt auf deinem Gerät",
+        "Nur im privaten Bereich deiner Familie entschlüsselt",
+        "Jederzeit vollständiger Export — es bleibt deins"
+      ]
+    }
+  },
   "privacy": {
     "badge": "Unser Datenschutz-Manifest",
     "titlePrefix": "Deine Daten sind ein",
@@ -117,8 +142,8 @@
         "desc": "Wir verbieten strikt die Nutzung deiner privaten Fotos oder Texte für das Training von LLMs oder generativen KI-Modellen. Niemals."
       },
       {
-        "title": "Zero-Knowledge-Architektur",
-        "desc": "Deine 'Black Box'-Inhalte werden lokal verschlüsselt. Nicht einmal unsere Entwickler können deine Familienfotos sehen."
+        "title": "Auf deinem Gerät verschlüsselt",
+        "desc": "Dein Tresor und deine Briefe werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext, nicht deine Fotos."
       },
       {
         "title": "Für immer werbefrei",
@@ -127,14 +152,23 @@
     ],
     "stats": {
       "ownership": "Privater Besitz",
-      "encryption": "E2E-Verschlüsselung",
-      "verified": "Nur verifizierte Mitglieder",
-      "breaches": "Datenlecks"
+      "encryption": "Tresor-Verschlüsselung",
+      "openSource": "Open Source & nachprüfbar",
+      "adTrackers": "Werbe-Tracker"
+    }
+  },
+  "trust": {
+    "title": "Datenschutz zum Nachprüfen",
+    "badges": {
+      "gdpr": "DSGVO-konform",
+      "openSource": "100 % Open Source (MIT)",
+      "audit": "Auf GitHub nachprüfbar",
+      "noTracking": "Kein Ad-Tracking"
     }
   },
   "cta": {
     "title": "Bereit, deine Familie nach Hause zu holen?",
-    "subtitle": "Werde Teil des exklusiven Kreises von Familien, die ihre Geschichten mit Würde und Stil bewahren. Der Zugang nur auf Einladung sichert höchste Sicherheitsstandards.",
+    "subtitle": "Werde Teil der Familien, die ihre Geschichten mit Würde und Stil bewahren. Die private Ecke eurer Familie im Internet — keine öffentlichen Profile, keine Fremden.",
     "getStarted": "Loslegen",
     "openSource": "Open Source",
     "noCreditCard": "Keine Kreditkarte nötig, es ist kostenlos."
