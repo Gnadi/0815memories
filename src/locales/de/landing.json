@@ -117,7 +117,8 @@
       "bullets": [
         "Ein gemeinsames Passwort für den engsten Kreis",
         "Keine Konten oder App-Installationen für Mitleser",
-        "Die Familien-Admins entscheiden, was geteilt wird"
+        "Die Familien-Admins entscheiden, was geteilt wird",
+        "Auch hier auf deinem Gerät verschlüsselt — Bequemlichkeit ohne Kompromiss"
       ]
     },
     "vaultZone": {
@@ -143,7 +144,7 @@
       },
       {
         "title": "Auf deinem Gerät verschlüsselt",
-        "desc": "Dein Tresor und deine Briefe werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext, nicht deine Fotos."
+        "desc": "Deine Fotos, Videos, Briefe und Tresor-Originale werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext, nicht deine Bilder."
       },
       {
         "title": "Für immer werbefrei",

@@ -117,7 +117,8 @@
       "bullets": [
         "One shared password for the inner circle",
         "No accounts or app installs for viewers",
-        "Family admins decide what gets shared"
+        "Family admins decide what gets shared",
+        "Encrypted on your device too — convenience without the trade-off"
       ]
     },
     "vaultZone": {
@@ -143,7 +144,7 @@
       },
       {
         "title": "Encrypted on Your Device",
-        "desc": "Your Vault and Letters are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext, not your photos."
+        "desc": "Your photos, videos, letters and Vault originals are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext, not your pictures."
       },
       {
         "title": "Ad-Free Forever",
