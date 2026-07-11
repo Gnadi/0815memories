@@ -26,22 +26,29 @@ describe('LandingPage renders in both languages', () => {
     i18n.changeLanguage('en')
   })
 
-  it('renders English with demo CTA, two-zone section and trust badges', () => {
+  it('renders English with demo CTAs, two-zone, app, FAQ and trust sections', () => {
     renderLanding()
-    expect(screen.getByText('Explore the demo family')).toBeInTheDocument()
+    // Demo CTA appears in the hero and again in the closing CTA section.
+    expect(screen.getAllByText('Explore the demo family').length).toBe(2)
     expect(screen.getByText('Two zones, one home')).toBeInTheDocument()
     expect(screen.getByText('Everyday ease')).toBeInTheDocument()
     expect(screen.getByText('Vault-grade privacy')).toBeInTheDocument()
+    expect(screen.getByText('Works like an app')).toBeInTheDocument()
+    expect(screen.getByText('Frequently asked questions')).toBeInTheDocument()
+    expect(screen.getByText('Do grandparents need an account?')).toBeInTheDocument()
     expect(screen.getByText('GDPR-compliant')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/invite-only|military-grade|zero-knowledge|data breaches/i)
   })
 
-  it('renders German with demo CTA, two-zone section and DSGVO badge', async () => {
+  it('renders German with demo CTAs, two-zone, app, FAQ and DSGVO badge', async () => {
     await i18n.changeLanguage('de')
     renderLanding()
-    expect(screen.getByText('Demo-Familie ansehen')).toBeInTheDocument()
+    expect(screen.getAllByText('Demo-Familie ansehen').length).toBe(2)
     expect(screen.getByText('Zwei Zonen, ein Zuhause')).toBeInTheDocument()
+    expect(screen.getByText('Funktioniert wie eine App')).toBeInTheDocument()
+    expect(screen.getByText('Häufige Fragen')).toBeInTheDocument()
+    expect(screen.getByText('Brauchen Oma und Opa ein Konto?')).toBeInTheDocument()
     expect(screen.getByText('DSGVO-konform')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/nur auf Einladung|Zero-Knowledge|Datenlecks/i)

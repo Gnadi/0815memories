@@ -33,11 +33,7 @@
     "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
     "subtitleExample": "deinname.kaydo.app",
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
-    "demoCta": "Demo-Familie ansehen",
-    "journalCard": {
-      "title": "Familien-Tagebuch",
-      "lines": ["Sommerurlaub...", "Omas Rezept", "Erster Tag im..."]
-    }
+    "demoCta": "Demo-Familie ansehen"
   },
   "screens": {
     "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",
@@ -48,7 +44,7 @@
     "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten"
   },
   "pillars": {
-    "sectionTitle": "Sieben Säulen des Zuhauses",
+    "sectionTitle": "Die Säulen des Zuhauses",
     "sectionSubtitle": "Mit Bedacht gestaltete Räume, die euer Vermächtnis pflegen und tiefe Verbindungen über Generationen hinweg fördern.",
     "share": {
       "title": "Teilen: Momente & Erinnerungen",
@@ -56,16 +52,15 @@
       "bullets": [
         "Zugang für den engsten Kreis — ein gemeinsames Passwort, keine Anmeldungen",
         "Die Familien-Admins bestimmen, wer was und wann sieht",
-        "Posten, anpinnen und kuratieren über ein einfaches Dashboard"
+        "Tägliche Momente — Story-Kreise für schnelle Alltags-Schnappschüsse",
+        "Die smarte Timeline ordnet Erinnerungen nach Jahreszeit und \"Heute vor ...\""
       ],
-      "pills": { "photos": "Fotos", "videos": "Videos", "voiceMemos": "Sprachnachrichten" },
-      "innerCircle": "Engster Kreis",
-      "sharedPassword": "Ein gemeinsames Familienpasswort"
+      "pills": { "photos": "Fotos", "videos": "Videos", "voiceMemos": "Sprachnachrichten" }
     },
     "vault": {
       "title": "Bewahren: Der Tresor",
       "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden.",
-      "bullets": ["AES-256-Verschlüsselung", "Auf deinem Gerät verschlüsselt — vor dem Upload"]
+      "bullets": ["AES-256-Verschlüsselung", "Auf deinem Gerät verschlüsselt — vor dem Upload", "Zeitkapseln — versiegelt bis zu einem Datum deiner Wahl"]
     },
     "letters": {
       "title": "Schreiben: Die Briefe",
@@ -74,8 +69,7 @@
     },
     "recipe": {
       "title": "Weiterentwickeln: Rezeptbaum",
-      "desc": "Rezepte sind nicht statisch. Verfolge, wie sich Omas Pasta über drei Generationen entwickelt hat — mit Notizen, Variationen und Fotos von jedem Festessen.",
-      "members": "+12 Familienmitglieder"
+      "desc": "Rezepte sind nicht statisch. Verfolge, wie sich Omas Pasta über drei Generationen entwickelt hat — mit Notizen, Variationen und Fotos von jedem Festessen."
     },
     "scrapbook": {
       "title": "Gestalten: Digitales Sammelalbum",
@@ -85,10 +79,7 @@
         "Polaroid-Fotorahmen mit Drehen & Skalieren",
         "Fertige Sammelalben als PDF exportieren"
       ],
-      "button": "Sammelalben öffnen",
-      "previewSummer": "Sommer 2024",
-      "previewTrip": "Familienausflug",
-      "previewLabel": "Unsere Familiengeschichte"
+      "button": "Sammelalben öffnen"
     },
     "export": {
       "title": "Besitzen: Deine Daten, dein Weg",
@@ -105,6 +96,14 @@
       "star": "Gib uns einen Stern",
       "fork": "Forken & selbst hosten",
       "viewOnGithub": "Auf GitHub ansehen"
+    }
+  },
+  "app": {
+    "title": "Funktioniert wie eine App",
+    "items": {
+      "install": "Auf jedem Handy oder Desktop installierbar",
+      "offline": "Lädt sofort — auch bei wackeligem Empfang",
+      "notify": "Benachrichtigungen bei neuen Erinnerungen & Jahrestagen"
     }
   },
   "zones": {
@@ -157,6 +156,31 @@
       "openSource": "Open Source & nachprüfbar",
       "adTrackers": "Werbe-Tracker"
     }
+  },
+  "faq": {
+    "sectionTitle": "Häufige Fragen",
+    "items": [
+      {
+        "q": "Brauchen Oma und Opa ein Konto?",
+        "a": "Nein. Der engste Kreis kommt mit einem gemeinsamen Familienpasswort hinein und sieht alles direkt im Browser — kein Konto, keine App-Installation."
+      },
+      {
+        "q": "Was kostet Kaydo?",
+        "a": "Kaydo ist kostenlos. Keine Kreditkarte nötig."
+      },
+      {
+        "q": "Sind meine Fotos verschlüsselt?",
+        "a": "Ja. Fotos, Videos, Briefe und Tresor-Originale werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext."
+      },
+      {
+        "q": "Kann ich meine Daten mitnehmen?",
+        "a": "Jederzeit. Lade ein vollständiges Archiv jedes Fotos, Videos und Tagebucheintrags herunter — als ganz normale, lesbare Dateien, ohne Abhängigkeit."
+      },
+      {
+        "q": "Kann ich Kaydo selbst hosten?",
+        "a": "Ja. Kaydo ist zu 100 % Open Source unter MIT-Lizenz — forke es auf GitHub und betreibe es für deine eigene Familie."
+      }
+    ]
   },
   "trust": {
     "title": "Datenschutz zum Nachprüfen",

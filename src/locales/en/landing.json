@@ -33,11 +33,7 @@
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
     "subtitleSuffix": "is still available and make it yours in seconds.",
-    "demoCta": "Explore the demo family",
-    "journalCard": {
-      "title": "Family Journal",
-      "lines": ["Summer vacation...", "Grandma's recipe", "First day of..."]
-    }
+    "demoCta": "Explore the demo family"
   },
   "screens": {
     "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",
@@ -48,7 +44,7 @@
     "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages"
   },
   "pillars": {
-    "sectionTitle": "Seven Pillars of Home",
+    "sectionTitle": "The Pillars of Home",
     "sectionSubtitle": "Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.",
     "share": {
       "title": "Share: Moments & Memories",
@@ -56,16 +52,15 @@
       "bullets": [
         "Inner circle access — one shared password, zero sign-ups",
         "Family admin controls who sees what and when",
-        "Post, pin, and curate from a simple dashboard"
+        "Daily Moments — story circles for quick everyday snapshots",
+        "A smart timeline sorts memories by season and \"on this day\""
       ],
-      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" },
-      "innerCircle": "Inner Circle",
-      "sharedPassword": "One shared family password"
+      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" }
     },
     "vault": {
       "title": "Preserve: The Vault",
       "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos — encrypted with AES-256 in your browser before they're uploaded.",
-      "bullets": ["AES-256 encryption", "Encrypted on your device, before upload"]
+      "bullets": ["AES-256 encryption", "Encrypted on your device, before upload", "Time-locked capsules — sealed until a date you choose"]
     },
     "letters": {
       "title": "Write: The Letters",
@@ -74,8 +69,7 @@
     },
     "recipe": {
       "title": "Evolve: Recipe Tree",
-      "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal.",
-      "members": "+12 family members"
+      "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal."
     },
     "scrapbook": {
       "title": "Create: Digital Scrapbook",
@@ -85,10 +79,7 @@
         "Polaroid-style photo frames with rotation & resize",
         "Export finished scrapbooks to PDF"
       ],
-      "button": "Open Scrapbooks",
-      "previewSummer": "Summer 2024",
-      "previewTrip": "Family Trip",
-      "previewLabel": "Our Family Story"
+      "button": "Open Scrapbooks"
     },
     "export": {
       "title": "Own: Your Data, Your Way",
@@ -105,6 +96,14 @@
       "star": "Star us",
       "fork": "Fork & self-host",
       "viewOnGithub": "View on GitHub"
+    }
+  },
+  "app": {
+    "title": "Works like an app",
+    "items": {
+      "install": "Install on any phone or desktop",
+      "offline": "Loads instantly — even on shaky connections",
+      "notify": "Notifications for new memories & anniversaries"
     }
   },
   "zones": {
@@ -157,6 +156,31 @@
       "openSource": "Open Source & Auditable",
       "adTrackers": "Ad Trackers"
     }
+  },
+  "faq": {
+    "sectionTitle": "Frequently asked questions",
+    "items": [
+      {
+        "q": "Do grandparents need an account?",
+        "a": "No. Your inner circle enters with one shared family password and views everything right in the browser — no account, no app install."
+      },
+      {
+        "q": "What does Kaydo cost?",
+        "a": "Kaydo is free. No credit card required."
+      },
+      {
+        "q": "Are my photos encrypted?",
+        "a": "Yes. Photos, videos, letters and Vault originals are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext."
+      },
+      {
+        "q": "Can I take my data with me?",
+        "a": "Any time. Download a full archive of every photo, video and journal entry as plain, readable files — no lock-in."
+      },
+      {
+        "q": "Can I host Kaydo myself?",
+        "a": "Yes. Kaydo is 100% open source under the MIT license — fork it on GitHub and run it for your own family."
+      }
+    ]
   },
   "trust": {
     "title": "Privacy you can verify",

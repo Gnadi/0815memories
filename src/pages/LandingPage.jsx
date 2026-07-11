@@ -23,6 +23,10 @@ import {
   User,
   Eye,
   EyeOff,
+  Smartphone,
+  Zap,
+  Bell,
+  ChevronDown,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -59,6 +63,7 @@ export default function LandingPage() {
   // the English default. Canonical and hreflang must agree on that mapping.
   const lang = t('seo.ogLocale').slice(0, 2)
   const canonicalUrl = lang === 'de' ? 'https://kaydo.app/?lang=de' : 'https://kaydo.app/'
+  const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
 
   return (
     <div className="min-h-screen bg-cream font-sans">
@@ -84,7 +89,7 @@ export default function LandingPage() {
         <meta property="og:title" content={t('seo.ogTitle')} />
         <meta property="og:description" content={t('seo.ogDescription')} />
         <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:image" content="https://kaydo.app/og-image.png" />
+        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
@@ -95,7 +100,7 @@ export default function LandingPage() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={t('seo.twitterTitle')} />
         <meta name="twitter:description" content={t('seo.twitterDescription')} />
-        <meta name="twitter:image" content="https://kaydo.app/og-image.png" />
+        <meta name="twitter:image" content={ogImageUrl} />
         <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
         {/* Structured data */}
@@ -108,9 +113,29 @@ export default function LandingPage() {
             url: 'https://kaydo.app',
             applicationCategory: 'LifestyleApplication',
             operatingSystem: 'Web',
-            offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            inLanguage: ['en', 'de'],
+            offers: [
+              { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            ],
+            screenshot: [
+              'https://kaydo.app/screenshots/home-desktop.webp',
+              'https://kaydo.app/screenshots/scrapbook-desktop.webp',
+              'https://kaydo.app/screenshots/recipe-tree-desktop.webp',
+            ],
             featureList: t('seo.ldFeatures', { returnObjects: true }),
             publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
+          })}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: t('faq.items', { returnObjects: true }).map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
           })}
         </script>
       </Head>
@@ -477,6 +502,42 @@ export default function LandingPage() {
             </div>
 
           </div>
+
+          {/* ── Works like an app (PWA) ──
+              Backed by the real PWA setup: install prompt (usePWAInstall),
+              Workbox precache in src/sw.js, FCM push (functions/index.js)
+              and the anniversary reminder hook. Media is deliberately not
+              claimed to work offline — encrypted blobs are NetworkOnly. */}
+          <div className="mt-12 bg-cream rounded-3xl px-8 py-7">
+            <p className="text-center text-xs font-bold text-bark-muted tracking-widest uppercase mb-5">
+              {t('app.title')}
+            </p>
+            <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
+              {canInstall ? (
+                <button
+                  type="button"
+                  onClick={promptInstall}
+                  className="flex items-center gap-2.5 text-sm font-medium text-bark hover:text-kaydo transition-colors"
+                >
+                  <Smartphone className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                  {t('app.items.install')}
+                </button>
+              ) : (
+                <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
+                  <Smartphone className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                  {t('app.items.install')}
+                </span>
+              )}
+              <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Zap className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                {t('app.items.offline')}
+              </span>
+              <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Bell className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                {t('app.items.notify')}
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -606,6 +667,26 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
+      <section className="bg-warm-white py-20">
+        <div className="max-w-2xl mx-auto px-5">
+          <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
+            {t('faq.sectionTitle')}
+          </h2>
+          <div className="space-y-3">
+            {t('faq.items', { returnObjects: true }).map(({ q, a }) => (
+              <details key={q} className="group bg-cream rounded-2xl px-6 py-4">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none font-semibold text-bark [&::-webkit-details-marker]:hidden">
+                  {q}
+                  <ChevronDown className="w-5 h-5 text-bark-muted flex-shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                </summary>
+                <p className="text-bark-light text-sm leading-relaxed mt-3">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Trust badges ──
           TODO(verify): EU hosting is NOT confirmed (Vercel + Firebase +
           Cloudinary, no regions pinned in config) — add an "EU-hosted" badge
@@ -659,6 +740,14 @@ export default function LandingPage() {
             >
               {t('cta.getStarted')}
             </button>
+            <a
+              href="https://the-bennetts.kaydo.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
+            >
+              {t('hero.demoCta')}
+            </a>
             <a
               href="https://github.com/Gnadi/0815memories"
               target="_blank"
