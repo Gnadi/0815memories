@@ -88,7 +88,11 @@ i18n
     interpolation: { escapeValue: false }, // React already escapes
     react: { useSuspense: false }, // CRITICAL: keeps SSG pre-render synchronous
     detection: {
-      order: ['localStorage', 'navigator'],
+      // "?lang=de" first: the hreflang alternate URLs (LandingPage <Head> and
+      // public/sitemap.xml) point crawlers and shared links at explicit
+      // language variants, which must win over a previously cached choice.
+      order: ['querystring', 'localStorage', 'navigator'],
+      lookupQuerystring: 'lang',
       lookupLocalStorage: 'kaydo_lang',
       caches: ['localStorage'],
     },

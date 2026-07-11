@@ -17,9 +17,15 @@ export function BrowserFrame({ src, alt, width, height, className = '', priority
         <span className="w-3 h-3 rounded-full bg-red-400" />
         <span className="w-3 h-3 rounded-full bg-amber-400" />
         <span className="w-3 h-3 rounded-full bg-green-400" />
-        <div className="ml-3 flex-1 max-w-xs h-5 rounded-md bg-white/70 flex items-center px-2.5">
+        {/* The address bar doubles as a link to the live demo family. */}
+        <a
+          href="https://the-bennetts.kaydo.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-3 flex-1 max-w-xs h-5 rounded-md bg-white/70 flex items-center px-2.5 hover:bg-white transition-colors"
+        >
           <span className="text-[10px] text-bark-muted truncate">the-bennetts.kaydo.app</span>
-        </div>
+        </a>
       </div>
       <img
         src={src}

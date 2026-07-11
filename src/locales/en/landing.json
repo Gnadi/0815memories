@@ -11,12 +11,12 @@
     "ogLocale": "en_US",
     "ldDescription": "A private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling.",
     "ldFeatures": [
-      "End-to-end encrypted memory storage",
+      "Memories encrypted on your device with AES-256",
       "Private family photo and video sharing",
       "Family recipe tree with version history",
       "Digital scrapbook with PDF export",
       "Scheduled future letters to family members",
-      "Zero-knowledge encrypted vault"
+      "AES-256 encrypted vault for precious originals"
     ]
   },
   "nav": {
@@ -33,10 +33,7 @@
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
     "subtitleSuffix": "is still available and make it yours in seconds.",
-    "journalCard": {
-      "title": "Family Journal",
-      "lines": ["Summer vacation...", "Grandma's recipe", "First day of..."]
-    }
+    "demoCta": "Explore the demo family"
   },
   "screens": {
     "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",
@@ -47,7 +44,7 @@
     "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages"
   },
   "pillars": {
-    "sectionTitle": "Seven Pillars of Home",
+    "sectionTitle": "The Pillars of Home",
     "sectionSubtitle": "Thoughtfully engineered spaces designed to nurture legacy and foster deep connections across generations.",
     "share": {
       "title": "Share: Moments & Memories",
@@ -55,16 +52,15 @@
       "bullets": [
         "Inner circle access — one shared password, zero sign-ups",
         "Family admin controls who sees what and when",
-        "Post, pin, and curate from a simple dashboard"
+        "Daily Moments — story circles for quick everyday snapshots",
+        "A smart timeline sorts memories by season and \"on this day\""
       ],
-      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" },
-      "innerCircle": "Inner Circle",
-      "sharedPassword": "One shared family password"
+      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" }
     },
     "vault": {
       "title": "Preserve: The Vault",
-      "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos, our Black Box encryption ensures they remain yours alone.",
-      "bullets": ["Military-grade encryption", "Zero-knowledge storage"]
+      "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos — encrypted with AES-256 in your browser before they're uploaded.",
+      "bullets": ["AES-256 encryption", "Encrypted on your device, before upload", "Time-locked capsules — sealed until a date you choose"]
     },
     "letters": {
       "title": "Write: The Letters",
@@ -73,8 +69,7 @@
     },
     "recipe": {
       "title": "Evolve: Recipe Tree",
-      "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal.",
-      "members": "+12 family members"
+      "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal."
     },
     "scrapbook": {
       "title": "Create: Digital Scrapbook",
@@ -84,10 +79,7 @@
         "Polaroid-style photo frames with rotation & resize",
         "Export finished scrapbooks to PDF"
       ],
-      "button": "Open Scrapbooks",
-      "previewSummer": "Summer 2024",
-      "previewTrip": "Family Trip",
-      "previewLabel": "Our Family Story"
+      "button": "Open Scrapbooks"
     },
     "export": {
       "title": "Own: Your Data, Your Way",
@@ -106,6 +98,39 @@
       "viewOnGithub": "View on GitHub"
     }
   },
+  "app": {
+    "title": "Works like an app",
+    "items": {
+      "install": "Install on any phone or desktop",
+      "offline": "Loads instantly — even on shaky connections",
+      "notify": "Notifications for new memories & anniversaries"
+    }
+  },
+  "zones": {
+    "sectionTitle": "Two zones, one home",
+    "sectionSubtitle": "Everyday sharing should be effortless. Your most precious things deserve more. Kaydo separates the two — by design.",
+    "everyday": {
+      "badge": "Everyday ease",
+      "title": "The Family Feed",
+      "desc": "Photos, videos and voice memos for your inner circle. One shared family password gets grandparents in without creating an account — convenient on purpose.",
+      "bullets": [
+        "One shared password for the inner circle",
+        "No accounts or app installs for viewers",
+        "Family admins decide what gets shared",
+        "Encrypted on your device too — convenience without the trade-off"
+      ]
+    },
+    "vaultZone": {
+      "badge": "Vault-grade privacy",
+      "title": "Vault & Letters",
+      "desc": "Your originals, documents and future letters are encrypted with AES-256 in your browser before they're uploaded. What reaches our servers is ciphertext.",
+      "bullets": [
+        "AES-256-GCM, encrypted on your device",
+        "Unlocked only inside your family's private space",
+        "Full export any time — it stays yours"
+      ]
+    }
+  },
   "privacy": {
     "badge": "Our Privacy Manifesto",
     "titlePrefix": "Your data is a",
@@ -117,8 +142,8 @@
         "desc": "We strictly prohibit the use of your private photos or text for LLM or AI generative model training. Ever."
       },
       {
-        "title": "Zero-Knowledge Architecture",
-        "desc": "Your 'Black Box' content is encrypted locally. Even our engineers can't see your family photos."
+        "title": "Encrypted on Your Device",
+        "desc": "Your photos, videos, letters and Vault originals are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext, not your pictures."
       },
       {
         "title": "Ad-Free Forever",
@@ -127,14 +152,48 @@
     ],
     "stats": {
       "ownership": "Private Ownership",
-      "encryption": "E2E Encryption",
-      "verified": "Verified Members Only",
-      "breaches": "Data Breaches"
+      "encryption": "Vault Encryption",
+      "openSource": "Open Source & Auditable",
+      "adTrackers": "Ad Trackers"
+    }
+  },
+  "faq": {
+    "sectionTitle": "Frequently asked questions",
+    "items": [
+      {
+        "q": "Do grandparents need an account?",
+        "a": "No. Your inner circle enters with one shared family password and views everything right in the browser — no account, no app install."
+      },
+      {
+        "q": "What does Kaydo cost?",
+        "a": "Kaydo is free. No credit card required."
+      },
+      {
+        "q": "Are my photos encrypted?",
+        "a": "Yes. Photos, videos, letters and Vault originals are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext."
+      },
+      {
+        "q": "Can I take my data with me?",
+        "a": "Any time. Download a full archive of every photo, video and journal entry as plain, readable files — no lock-in."
+      },
+      {
+        "q": "Can I host Kaydo myself?",
+        "a": "Yes. Kaydo is 100% open source under the MIT license — fork it on GitHub and run it for your own family."
+      }
+    ]
+  },
+  "trust": {
+    "title": "Privacy you can verify",
+    "badges": {
+      "gdpr": "GDPR-compliant",
+      "openSource": "100% Open Source (MIT)",
+      "audit": "Auditable on GitHub",
+      "noTracking": "No ad tracking"
     }
   },
   "cta": {
     "title": "Ready to bring your family home?",
-    "subtitle": "Join the exclusive circle of families preserving their stories with dignity and style. Invite-only access ensures the highest standards of safety.",
+    "subtitle": "Join families preserving their stories with dignity and style. Your family's private corner of the internet — no public profiles, no strangers.",
     "getStarted": "Get Started",
     "openSource": "Open Source",
     "noCreditCard": "No credit card required, it's free."

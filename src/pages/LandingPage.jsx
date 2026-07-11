@@ -23,6 +23,10 @@ import {
   User,
   Eye,
   EyeOff,
+  Smartphone,
+  Zap,
+  Bell,
+  ChevronDown,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -54,6 +58,13 @@ export default function LandingPage() {
   const { canInstall, promptInstall } = usePWAInstall()
 
 
+  // Language-dependent URLs: the language is selected client-side (localStorage /
+  // navigator / ?lang=), so the German version lives at "/?lang=de" while "/" is
+  // the English default. Canonical and hreflang must agree on that mapping.
+  const lang = t('seo.ogLocale').slice(0, 2)
+  const canonicalUrl = lang === 'de' ? 'https://kaydo.app/?lang=de' : 'https://kaydo.app/'
+  const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
+
   return (
     <div className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
@@ -61,29 +72,35 @@ export default function LandingPage() {
         {/* Emitted first in <head> so the charset declaration lands within the
             first 1024 bytes of the pre-rendered HTML (Lighthouse best-practice). */}
         <meta charSet="utf-8" />
-        <html lang={t('seo.ogLocale').slice(0, 2)} />
+        <html lang={lang} />
         <title>{t('seo.title')}</title>
         <meta name="description" content={t('seo.description')} />
         <meta name="robots" content="index,follow" />
-        <link rel="canonical" href="https://kaydo.app/" />
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* hreflang alternates — mirror the entries in public/sitemap.xml */}
+        <link rel="alternate" hrefLang="en" href="https://kaydo.app/" />
+        <link rel="alternate" hrefLang="de" href="https://kaydo.app/?lang=de" />
+        <link rel="alternate" hrefLang="x-default" href="https://kaydo.app/" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Kaydo" />
         <meta property="og:title" content={t('seo.ogTitle')} />
         <meta property="og:description" content={t('seo.ogDescription')} />
-        <meta property="og:url" content="https://kaydo.app/" />
-        <meta property="og:image" content="https://kaydo.app/og-image.png" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
         <meta property="og:locale" content={t('seo.ogLocale')} />
+        <meta property="og:locale:alternate" content={lang === 'de' ? 'en_US' : 'de_DE'} />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={t('seo.twitterTitle')} />
         <meta name="twitter:description" content={t('seo.twitterDescription')} />
-        <meta name="twitter:image" content="https://kaydo.app/og-image.png" />
+        <meta name="twitter:image" content={ogImageUrl} />
         <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
         {/* Structured data */}
@@ -96,9 +113,29 @@ export default function LandingPage() {
             url: 'https://kaydo.app',
             applicationCategory: 'LifestyleApplication',
             operatingSystem: 'Web',
-            offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            inLanguage: ['en', 'de'],
+            offers: [
+              { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+              { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+            ],
+            screenshot: [
+              'https://kaydo.app/screenshots/home-desktop.webp',
+              'https://kaydo.app/screenshots/scrapbook-desktop.webp',
+              'https://kaydo.app/screenshots/recipe-tree-desktop.webp',
+            ],
             featureList: t('seo.ldFeatures', { returnObjects: true }),
             publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
+          })}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: t('faq.items', { returnObjects: true }).map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
           })}
         </script>
       </Head>
@@ -179,6 +216,17 @@ export default function LandingPage() {
             signup={signup}
             firebaseReady={firebaseReady}
           />
+
+          {/* Secondary CTA — see a real family space before claiming one */}
+          <a
+            href="https://the-bennetts.kaydo.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-bark-muted text-bark text-sm font-semibold hover:border-bark transition-colors"
+          >
+            {t('hero.demoCta')}
+            <span aria-hidden="true">&rarr;</span>
+          </a>
         </div>
 
         {/* Right — real app screenshot */}
@@ -454,6 +502,113 @@ export default function LandingPage() {
             </div>
 
           </div>
+
+          {/* ── Works like an app (PWA) ──
+              Backed by the real PWA setup: install prompt (usePWAInstall),
+              Workbox precache in src/sw.js, FCM push (functions/index.js)
+              and the anniversary reminder hook. Media is deliberately not
+              claimed to work offline — encrypted blobs are NetworkOnly. */}
+          <div className="mt-12 bg-cream rounded-3xl px-8 py-7">
+            <p className="text-center text-xs font-bold text-bark-muted tracking-widest uppercase mb-5">
+              {t('app.title')}
+            </p>
+            {/* Mobile: left-aligned column (centered as a block) so the icons
+                line up; sm+: centered wrapping row. */}
+            <div className="mx-auto w-fit flex flex-col items-start gap-4 sm:w-auto sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-10 sm:gap-y-4">
+              {canInstall ? (
+                <button
+                  type="button"
+                  onClick={promptInstall}
+                  className="inline-flex items-center gap-2.5 text-sm font-medium text-bark text-left hover:text-kaydo transition-colors"
+                >
+                  <Smartphone className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                  {t('app.items.install')}
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                  <Smartphone className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                  {t('app.items.install')}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Zap className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                {t('app.items.offline')}
+              </span>
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Bell className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                {t('app.items.notify')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Two zones: everyday ease vs. vault-grade privacy ──
+          The Family Feed is deliberately convenient (one shared password);
+          Vault & Letters content is AES-256-GCM encrypted in the browser
+          before upload (src/utils/encryption.js, encryptedUpload.js).
+          TODO(verify): the per-family AES key is currently stored server-side
+          (Firestore family doc, AuthContext signup) — do NOT add
+          "zero-knowledge" / "we can't read it" claims here until client-side
+          key derivation ships. */}
+      <section id="security" className="py-20">
+        <div className="max-w-6xl mx-auto px-5">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">{t('zones.sectionTitle')}</h2>
+            <p className="text-bark-light max-w-md mx-auto">
+              {t('zones.sectionSubtitle')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Everyday ease — the Family Feed */}
+            <div className="bg-gradient-to-br from-amber-50 to-cream-dark rounded-3xl p-8 flex flex-col gap-5">
+              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-xs font-semibold px-4 py-1.5 rounded-full tracking-wide uppercase w-fit">
+                {t('zones.everyday.badge')}
+              </div>
+              <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center">
+                <Camera className="w-5 h-5 text-kaydo" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('zones.everyday.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('zones.everyday.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2 mt-auto">
+                {t('zones.everyday.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark font-medium">
+                    <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Vault-grade privacy — Vault & Letters */}
+            <div className="bg-bark rounded-3xl p-8 flex flex-col gap-5">
+              <div className="inline-flex items-center gap-2 bg-white/10 text-cream text-xs font-semibold px-4 py-1.5 rounded-full tracking-wide uppercase w-fit">
+                {t('zones.vaultZone.badge')}
+              </div>
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                <Lock className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">{t('zones.vaultZone.title')}</h3>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  {t('zones.vaultZone.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2 mt-auto">
+                {t('zones.vaultZone.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-white/90 font-medium">
+                    <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -490,13 +645,15 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Right — stats grid */}
-            <div id="security" className="grid grid-cols-2 gap-4">
+            {/* Right — stats grid. Every tile is verifiable: AES-256 is the
+                cipher in src/utils/encryption.js, the repo is public under MIT,
+                and the app ships no ad trackers. */}
+            <div className="grid grid-cols-2 gap-4">
               {[
                 { value: '100%', label: t('privacy.stats.ownership'), color: 'text-kaydo' },
-                { icon: <Lock className="w-8 h-8 text-amber-600" />, label: t('privacy.stats.encryption'), color: '' },
-                { icon: <Check className="w-8 h-8 text-green-600" />, label: t('privacy.stats.verified'), color: '' },
-                { value: '0', label: t('privacy.stats.breaches'), color: 'text-bark' },
+                { value: 'AES-256', label: t('privacy.stats.encryption'), color: 'text-amber-600' },
+                { icon: <OctocatIcon className="w-8 h-8 text-bark" />, label: t('privacy.stats.openSource'), color: '' },
+                { value: '0', label: t('privacy.stats.adTrackers'), color: 'text-bark' },
               ].map(({ value, icon, label, color }, i) => (
                 <div key={i} className="bg-warm-white rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-center shadow-sm">
                   {value !== undefined ? (
@@ -508,6 +665,63 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
+      <section className="bg-warm-white py-20">
+        <div className="max-w-2xl mx-auto px-5">
+          <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
+            {t('faq.sectionTitle')}
+          </h2>
+          <div className="space-y-3">
+            {t('faq.items', { returnObjects: true }).map(({ q, a }) => (
+              <details key={q} className="group bg-cream rounded-2xl px-6 py-4">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none font-semibold text-bark [&::-webkit-details-marker]:hidden">
+                  {q}
+                  <ChevronDown className="w-5 h-5 text-bark-muted flex-shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                </summary>
+                <p className="text-bark-light text-sm leading-relaxed mt-3">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Trust badges ──
+          TODO(verify): EU hosting is NOT confirmed (Vercel + Firebase +
+          Cloudinary, no regions pinned in config) — add an "EU-hosted" badge
+          only once the regions are verifiably set. The GDPR badge wording
+          should be double-checked against the privacy policy. */}
+      <section className="border-y border-cream-dark bg-cream py-10">
+        <div className="max-w-6xl mx-auto px-5">
+          <p className="text-center text-xs font-bold text-bark-muted tracking-widest uppercase mb-6">
+            {t('trust.title')}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              { icon: <Shield className="w-4 h-4 text-kaydo" aria-hidden="true" />, label: t('trust.badges.gdpr') },
+              { icon: <OctocatIcon className="w-4 h-4 text-bark" />, label: t('trust.badges.openSource') },
+              { icon: <Ban className="w-4 h-4 text-red-500" aria-hidden="true" />, label: t('trust.badges.noTracking') },
+            ].map(({ icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-2 bg-warm-white border border-cream-dark rounded-full px-4 py-2 text-sm font-medium text-bark shadow-sm"
+              >
+                {icon}
+                {label}
+              </span>
+            ))}
+            <a
+              href="https://github.com/Gnadi/0815memories"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-warm-white border border-cream-dark rounded-full px-4 py-2 text-sm font-medium text-bark shadow-sm hover:border-bark transition-colors"
+            >
+              <GitFork className="w-4 h-4 text-bark" aria-hidden="true" />
+              {t('trust.badges.audit')}
+            </a>
           </div>
         </div>
       </section>
@@ -528,6 +742,14 @@ export default function LandingPage() {
             >
               {t('cta.getStarted')}
             </button>
+            <a
+              href="https://the-bennetts.kaydo.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
+            >
+              {t('hero.demoCta')}
+            </a>
             <a
               href="https://github.com/Gnadi/0815memories"
               target="_blank"
