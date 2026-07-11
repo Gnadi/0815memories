@@ -512,28 +512,30 @@ export default function LandingPage() {
             <p className="text-center text-xs font-bold text-bark-muted tracking-widest uppercase mb-5">
               {t('app.title')}
             </p>
-            <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
+            {/* Mobile: left-aligned column (centered as a block) so the icons
+                line up; sm+: centered wrapping row. */}
+            <div className="mx-auto w-fit flex flex-col items-start gap-4 sm:w-auto sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-10 sm:gap-y-4">
               {canInstall ? (
                 <button
                   type="button"
                   onClick={promptInstall}
-                  className="flex items-center gap-2.5 text-sm font-medium text-bark hover:text-kaydo transition-colors"
+                  className="inline-flex items-center gap-2.5 text-sm font-medium text-bark text-left hover:text-kaydo transition-colors"
                 >
-                  <Smartphone className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                  <Smartphone className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                   {t('app.items.install')}
                 </button>
               ) : (
-                <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
-                  <Smartphone className="w-5 h-5 text-kaydo" aria-hidden="true" />
+                <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                  <Smartphone className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                   {t('app.items.install')}
                 </span>
               )}
-              <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
-                <Zap className="w-5 h-5 text-kaydo" aria-hidden="true" />
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Zap className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                 {t('app.items.offline')}
               </span>
-              <span className="flex items-center gap-2.5 text-sm font-medium text-bark">
-                <Bell className="w-5 h-5 text-kaydo" aria-hidden="true" />
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Bell className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                 {t('app.items.notify')}
               </span>
             </div>
