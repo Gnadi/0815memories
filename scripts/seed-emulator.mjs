@@ -141,6 +141,7 @@ async function main() {
     familyName: FAMILY_NAME,
     familySlug: FAMILY_SLUG,
     memoryCardStyle: 'modern',
+    isDemo: true,
     createdAt: ts('2023-01-01'),
   })
   const familyId = familyRef.id
