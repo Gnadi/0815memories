@@ -33,7 +33,8 @@
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
     "subtitleSuffix": "is still available and make it yours in seconds.",
-    "demoCta": "Explore the demo family"
+    "demoCta": "Explore the demo family",
+    "demoUrl": "https://the-bennetts.kaydo.app"
   },
   "screens": {
     "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",

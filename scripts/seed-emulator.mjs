@@ -39,6 +39,14 @@ const ADMIN_NAME = 'Sarah Bennett'
 const FAMILY_NAME = 'The Bennett Family'
 const FAMILY_SLUG = 'the-bennetts'
 
+// German demo family — the landing page's German locale links here.
+// Name/slug pair must match what production signup derives via generateSlug().
+const DE_ADMIN_EMAIL = 'demo-de@kaydo.app'
+const DE_ADMIN_PASSWORD = 'demo123456'
+const DE_ADMIN_NAME = 'Max Mustermann'
+const DE_FAMILY_NAME = 'Familie Mustermann'
+const DE_FAMILY_SLUG = 'familie-mustermann'
+
 const ts = (isoDate) => Timestamp.fromDate(new Date(isoDate))
 
 // ── Placeholder media ────────────────────────────────────────────────────────
@@ -124,6 +132,7 @@ async function main() {
     await clearCollection(c)
   }
   try { await auth.deleteUser((await auth.getUserByEmail(ADMIN_EMAIL)).uid) } catch { /* none */ }
+  try { await auth.deleteUser((await auth.getUserByEmail(DE_ADMIN_EMAIL)).uid) } catch { /* none */ }
 
   console.log('③ Creating admin user …')
   const user = await auth.createUser({
@@ -321,9 +330,69 @@ async function main() {
     })
   }
 
+  console.log('⑫ Seeding German demo family (Familie Mustermann) …')
+  const deUser = await auth.createUser({
+    email: DE_ADMIN_EMAIL,
+    password: DE_ADMIN_PASSWORD,
+    displayName: DE_ADMIN_NAME,
+    emailVerified: true,
+  })
+  const deFamilyRef = await db.collection('families').add({
+    adminUid: deUser.uid,
+    adminUids: [deUser.uid],
+    familyName: DE_FAMILY_NAME,
+    familySlug: DE_FAMILY_SLUG,
+    memoryCardStyle: 'modern',
+    isDemo: true,
+    createdAt: ts('2023-03-01'),
+  })
+  const deFamilyId = deFamilyRef.id
+
+  // Viewer-visible content only (memories + moments) — recipes, children,
+  // journals, scrapbooks and blackbox are admin-only, so demo visitors
+  // never see them anyway.
+  const deMemories = [
+    {
+      title: 'Sommer an der Ostsee', featured: true,
+      content: 'Drei Tage Strandkorb, Sandburgen und Kinder, die einfach nicht aus dem Wasser wollten. Opa hat am Ende alle beim Federball geschlagen.',
+      quote: 'Die schönsten Erinnerungen entstehen barfuß.',
+      location: 'Rügen', authorName: 'Max', category: 'Travel',
+      images: [url('beach.jpg'), url('picnic.jpg')], date: ts('2023-08-10'),
+    },
+    {
+      title: 'Erste Schneewanderung', content: 'Dick eingepackt bis zum Gipfelkreuz — und genau dann riss die Wolkendecke auf. Der Kakao danach hat noch nie so gut geschmeckt.',
+      quote: 'Kalte Hände, warme Herzen.', location: 'Zugspitze', authorName: 'Erika', category: 'Adventure',
+      images: [url('mountains.jpg')], date: ts('2023-12-28'),
+    },
+    {
+      title: 'Lenas 7. Geburtstag', content: 'Regenbogentorte, ein Garten voller Cousins und Cousinen — und um acht Uhr abends ein sehr müdes Geburtstagskind.',
+      location: 'Zu Hause', authorName: 'Erika', category: 'Celebration',
+      images: [url('birthday.jpg')], date: ts('2024-05-04'),
+    },
+    {
+      title: 'Backen mit Oma', content: 'Das Apfelkuchen-Rezept wird weitergegeben: Mehl überall, Gelächter noch mehr.',
+      location: 'Omas Küche', authorName: 'Max', category: 'Family',
+      images: [url('kitchen.jpg'), url('pie.jpg')], date: ts('2024-10-20'),
+    },
+  ]
+  for (const m of deMemories) {
+    await db.collection('memories').add({ ...m, imageUrl: m.images[0], familyId: deFamilyId, createdAt: Timestamp.now() })
+  }
+  const deMoments = [
+    { caption: 'Sonntagspfannkuchen 🥞', category: 'Everyday', location: 'Zu Hause', images: [url('moment-1.jpg')], date: ts('2024-12-01') },
+    { caption: 'Nachmittag auf dem Spielplatz', category: 'Kids', location: 'Stadtpark', images: [url('moment-2.jpg')], date: ts('2024-12-06') },
+    { caption: 'Alle Cousins wieder vereint', category: 'Family', location: 'Bei Oma', images: [url('moment-3.jpg')], date: ts('2024-12-10') },
+    { caption: 'Ernte aus dem Garten', category: 'Everyday', location: 'Garten', images: [url('garden.jpg')], date: ts('2024-12-14') },
+  ]
+  for (const m of deMoments) {
+    await db.collection('moments').add({ ...m, familyId: deFamilyId, createdAt: Timestamp.now() })
+  }
+
   console.log('\n✅ Seed complete.')
   console.log(`   Family:   ${FAMILY_NAME}  (slug: ${FAMILY_SLUG}, id: ${familyId})`)
   console.log(`   Admin:    ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
+  console.log(`   Family:   ${DE_FAMILY_NAME}  (slug: ${DE_FAMILY_SLUG}, id: ${deFamilyId})`)
+  console.log(`   Admin:    ${DE_ADMIN_EMAIL} / ${DE_ADMIN_PASSWORD}`)
   process.exit(0)
 }
 

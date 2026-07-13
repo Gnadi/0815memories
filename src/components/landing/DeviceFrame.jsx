@@ -1,8 +1,9 @@
 /**
  * Presentational device frames for the landing page. They wrap real app
  * screenshots so visitors immediately read them as "this is the actual product".
- * Purely decorative — no state, no app dependencies.
+ * Purely decorative — no state beyond the active language.
  */
+import { useTranslation } from 'react-i18next'
 
 /**
  * A minimal browser-window chrome around a desktop screenshot.
@@ -10,6 +11,11 @@
  * with high fetch priority — it is usually the Largest Contentful Paint element.
  */
 export function BrowserFrame({ src, alt, width, height, className = '', priority = false }) {
+  // Locale-specific demo family (en: Bennetts, de: Mustermanns), same URL as
+  // the landing page's demo CTAs.
+  const { t } = useTranslation('landing')
+  const demoUrl = t('hero.demoUrl')
+  const demoLabel = demoUrl.replace(/^https?:\/\//, '')
   return (
     <figure className={`rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white ${className}`}>
       {/* Title bar */}
@@ -19,12 +25,12 @@ export function BrowserFrame({ src, alt, width, height, className = '', priority
         <span className="w-3 h-3 rounded-full bg-green-400" />
         {/* The address bar doubles as a link to the live demo family. */}
         <a
-          href="https://the-bennetts.kaydo.app"
+          href={demoUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="ml-3 flex-1 max-w-xs h-5 rounded-md bg-white/70 flex items-center px-2.5 hover:bg-white transition-colors"
         >
-          <span className="text-[10px] text-bark-muted truncate">the-bennetts.kaydo.app</span>
+          <span className="text-[10px] text-bark-muted truncate">{demoLabel}</span>
         </a>
       </div>
       <img
