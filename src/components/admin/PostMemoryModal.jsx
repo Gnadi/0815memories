@@ -110,10 +110,10 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
   }
 
   const handleImagePick = async (e, inputRef) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     if (inputRef?.current) inputRef.current.value = ''
-    await addImage(file)
+    await Promise.all(files.map((file) => addImage(file)))
   }
 
   const handleVideoPick = async (e, inputRef) => {
@@ -508,6 +508,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={(e) => handleImagePick(e, fileInputRef)}
         className="hidden"
       />
