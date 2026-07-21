@@ -29,7 +29,9 @@
   "card": {
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "filmCaptionFallback": "0815 MEMORIES 200 PX"
+    "filmCaptionFallback": "0815 MEMORIES 200 PX",
+    "showMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen"
   },
   "moment": {
     "edit": "Bearbeiten",
