@@ -8,6 +8,15 @@ const cache = new Map()
 // Dedupe concurrent fetches: encrypted URL -> Promise<object URL>
 const inflight = new Map()
 
+// Whether an encrypted URL is already decrypted and ready to display instantly.
+// Without an encryption key the URL is used as-is (no decrypt step), so treat
+// it as ready.
+export function isMediaCached(encryptedUrl, encryptionKey) {
+  if (!encryptedUrl) return false
+  if (!encryptionKey) return true
+  return cache.has(encryptedUrl)
+}
+
 // Fetch + decrypt an encrypted URL into the shared cache without React state.
 // Used to warm the cache for adjacent media so navigation feels instant.
 // Returns a Promise resolving to the object URL (or null when not applicable).

@@ -10,13 +10,14 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Loader2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
-import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
+import { prefetchDecryptedMedia, isMediaCached } from '../media/useDecryptedMedia'
 
 // Build a unified media list from a moment's images and videos
 function buildMediaItems(moment) {
@@ -37,6 +38,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
+  const [switching, setSwitching] = useState(false)  // waiting for target media to decrypt
 
   const videoRef = useRef(null)
 
@@ -59,14 +61,38 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const isAtEndRef = useRef(isAtEnd)
   const onCloseRef = useRef(onClose)
 
+  // Only switch once the target media is decrypted and ready, so the current
+  // photo stays on screen instead of flashing a loading placeholder. Prefetch
+  // usually makes the target already cached, so the wait is normally zero.
+  const switchTokenRef = useRef(0)
+
+  const navigateTo = async (targetMoment, targetMedia) => {
+    const item = buildMediaItems(moments[targetMoment])[targetMedia]
+    const token = ++switchTokenRef.current
+
+    if (item?.url && !isMediaCached(item.url, encryptionKey)) {
+      setSwitching(true)
+      await prefetchDecryptedMedia(
+        item.url,
+        encryptionKey,
+        item.type === 'video' ? 'video/*' : 'image/*'
+      )
+      // A newer navigation started while we waited — let it win.
+      if (token !== switchTokenRef.current) return
+    }
+
+    setSwitching(false)
+    // Update both indices in the same batch so the new moment never renders
+    // with a stale media index.
+    setCurrentMomentIndex(targetMoment)
+    setCurrentMediaIndex(targetMedia)
+  }
+
   const goNext = () => {
     if (!isLastMedia) {
-      setCurrentMediaIndex((i) => i + 1)
+      navigateTo(currentMomentIndex, currentMediaIndex + 1)
     } else if (!isLastMoment) {
-      // Update both indices in the same batch so the new moment never renders
-      // with a stale media index (which would flash the empty placeholder).
-      setCurrentMomentIndex((i) => i + 1)
-      setCurrentMediaIndex(0)
+      navigateTo(currentMomentIndex + 1, 0)
     } else {
       onClose()
     }
@@ -74,12 +100,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   const goPrev = () => {
     if (!isFirstMedia) {
-      setCurrentMediaIndex((i) => i - 1)
+      navigateTo(currentMomentIndex, currentMediaIndex - 1)
     } else if (!isFirstMoment) {
-      const prevMoment = moments[currentMomentIndex - 1]
-      const prevItems = buildMediaItems(prevMoment)
-      setCurrentMomentIndex((i) => i - 1)
-      setCurrentMediaIndex(Math.max(0, prevItems.length - 1))
+      const prevItems = buildMediaItems(moments[currentMomentIndex - 1])
+      navigateTo(currentMomentIndex - 1, Math.max(0, prevItems.length - 1))
     }
   }
 
@@ -371,6 +395,13 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           aria-label="Next"
         />
 
+        {/* Loading spinner while the next media decrypts */}
+        {switching && (
+          <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+            <Loader2 className="w-8 h-8 text-white/80 animate-spin" />
+          </div>
+        )}
+
         {/* Bottom info card — first media item only */}
         {currentMediaIndex === 0 && infoVisible && (
           <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-20">
@@ -511,6 +542,13 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             ) : (
               <div className="w-full aspect-[4/5] bg-cream-dark flex items-center justify-center">
                 <span className="text-bark-muted text-sm">No media</span>
+              </div>
+            )}
+
+            {/* Loading spinner while the next media decrypts */}
+            {switching && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none">
+                <Loader2 className="w-8 h-8 text-white animate-spin drop-shadow" />
               </div>
             )}
           </div>
