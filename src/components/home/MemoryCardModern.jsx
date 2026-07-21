@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
@@ -10,9 +10,21 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
   const { t } = useTranslation('home')
   const [showMenu, setShowMenu] = useState(false)
   const [imgIndex, setImgIndex] = useState(0)
+  const [expanded, setExpanded] = useState(false)
+  const [isClamped, setIsClamped] = useState(false)
   const { isAdmin } = useAuth()
   const navigate = useNavigate()
   const touchStartX = useRef(null)
+  const contentRef = useRef(null)
+
+  // Only offer a "show more" toggle when the description actually overflows the
+  // 3-line clamp — measured against the collapsed height so it stays accurate
+  // across screen sizes and content lengths.
+  useEffect(() => {
+    if (expanded) return
+    const el = contentRef.current
+    if (el) setIsClamped(el.scrollHeight > el.clientHeight + 1)
+  }, [memory.content, expanded])
 
   const allImages = memory.images?.length ? memory.images : (memory.imageUrl ? [memory.imageUrl] : [])
 
@@ -171,9 +183,26 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
 
       {/* Content */}
       {memory.content && (
-        <p className="px-4 pb-3 text-sm text-bark-light italic line-clamp-3">
-          &ldquo;{memory.content}&rdquo;
-        </p>
+        <div className="px-4 pb-3">
+          <p
+            ref={contentRef}
+            className={`text-sm text-bark-light italic ${expanded ? '' : 'line-clamp-3'}`}
+          >
+            &ldquo;{memory.content}&rdquo;
+          </p>
+          {(isClamped || expanded) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpanded((v) => !v)
+              }}
+              className="mt-1 text-xs font-medium text-kaydo hover:underline"
+            >
+              {expanded ? t('card.showLess') : t('card.showMore')}
+            </button>
+          )}
+        </div>
       )}
 
       {/* Caption */}
