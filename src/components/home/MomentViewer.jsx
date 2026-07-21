@@ -305,7 +305,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     <>
       {/* ─── MOBILE: full-screen story ─── */}
       <div
-        className="md:hidden fixed inset-0 z-50 bg-bark"
+        className="md:hidden fixed inset-0 z-50 bg-bark touch-none"
         onPointerDown={handlePointerDown}
         onPointerUp={(e) => handlePointerUp(e, null)}
         onPointerCancel={handlePointerCancel}
@@ -405,7 +405,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           onPointerUp={(e) => { e.stopPropagation(); handlePointerUp(e, goPrev) }}
           onPointerCancel={(e) => { e.stopPropagation(); handlePointerCancel() }}
           disabled={isAtStart}
-          className="absolute left-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
+          className="absolute left-0 top-0 bottom-48 w-1/3 z-10 touch-none disabled:cursor-default"
           aria-label="Previous"
         />
         <button
@@ -413,7 +413,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           onPointerUp={(e) => { e.stopPropagation(); handlePointerUp(e, goNext) }}
           onPointerCancel={(e) => { e.stopPropagation(); handlePointerCancel() }}
           disabled={false}
-          className="absolute right-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
+          className="absolute right-0 top-0 bottom-48 w-1/3 z-10 touch-none disabled:cursor-default"
           aria-label="Next"
         />
 
