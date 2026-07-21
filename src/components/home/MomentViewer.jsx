@@ -60,7 +60,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     if (!isLastMedia) {
       setCurrentMediaIndex((i) => i + 1)
     } else if (!isLastMoment) {
+      // Update both indices in the same batch so the new moment never renders
+      // with a stale media index (which would flash the empty placeholder).
       setCurrentMomentIndex((i) => i + 1)
+      setCurrentMediaIndex(0)
     } else {
       onClose()
     }
@@ -96,11 +99,6 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     setProgress(0)
     setPaused(false)
   }, [currentMediaIndex, currentMomentIndex])
-
-  // Reset media index when switching moments
-  useEffect(() => {
-    setCurrentMediaIndex(0)
-  }, [currentMomentIndex])
 
   // Restore info card visibility on new moment
   useEffect(() => {
