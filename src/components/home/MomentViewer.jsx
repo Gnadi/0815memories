@@ -39,6 +39,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const [showMenu, setShowMenu] = useState(false)
 
   const videoRef = useRef(null)
+  const pointerStart = useRef(null)
 
   const moment = moments[currentMomentIndex]
   const mediaItems = useMemo(() => buildMediaItems(moment), [moment])
@@ -81,6 +82,51 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       setCurrentMomentIndex((i) => i - 1)
       setCurrentMediaIndex(Math.max(0, prevItems.length - 1))
     }
+  }
+
+  // Jump straight to the next/previous moment, skipping any remaining media in
+  // the current one. Used for horizontal swipe gestures.
+  const goNextMoment = () => {
+    if (!isLastMoment) {
+      setCurrentMomentIndex((i) => i + 1)
+      setCurrentMediaIndex(0)
+    } else {
+      onClose()
+    }
+  }
+
+  const goPrevMoment = () => {
+    if (!isFirstMoment) {
+      setCurrentMomentIndex((i) => i - 1)
+      setCurrentMediaIndex(0)
+    }
+  }
+
+  // A horizontal swipe jumps between moments; a plain tap runs the per-zone
+  // tapAction (step through the current moment's media). We track the pointer
+  // start so pointerup can tell the two apart.
+  const SWIPE_THRESHOLD = 50
+  const handlePointerDown = (e) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY }
+    setPaused(true)
+  }
+  const handlePointerUp = (e, tapAction) => {
+    setPaused(false)
+    const start = pointerStart.current
+    pointerStart.current = null
+    if (!start) return
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goNextMoment()
+      else goPrevMoment()
+    } else {
+      tapAction?.()
+    }
+  }
+  const handlePointerCancel = () => {
+    setPaused(false)
+    pointerStart.current = null
   }
 
   useEffect(() => {
@@ -260,9 +306,9 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       {/* ─── MOBILE: full-screen story ─── */}
       <div
         className="md:hidden fixed inset-0 z-50 bg-bark"
-        onPointerDown={() => setPaused(true)}
-        onPointerUp={() => setPaused(false)}
-        onPointerCancel={() => setPaused(false)}
+        onPointerDown={handlePointerDown}
+        onPointerUp={(e) => handlePointerUp(e, null)}
+        onPointerCancel={handlePointerCancel}
       >
         {/* Background media */}
         {currentItem?.type === 'video' ? (
@@ -355,17 +401,17 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
         {/* Tap zones for navigation */}
         <button
-          onClick={goPrev}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
+          onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e) }}
+          onPointerUp={(e) => { e.stopPropagation(); handlePointerUp(e, goPrev) }}
+          onPointerCancel={(e) => { e.stopPropagation(); handlePointerCancel() }}
           disabled={isAtStart}
           className="absolute left-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
           aria-label="Previous"
         />
         <button
-          onClick={goNext}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
+          onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e) }}
+          onPointerUp={(e) => { e.stopPropagation(); handlePointerUp(e, goNext) }}
+          onPointerCancel={(e) => { e.stopPropagation(); handlePointerCancel() }}
           disabled={false}
           className="absolute right-0 top-0 bottom-48 w-1/3 z-10 disabled:cursor-default"
           aria-label="Next"
