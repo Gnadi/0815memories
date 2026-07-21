@@ -13,8 +13,10 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
+import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
+import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 
 // Build a unified media list from a moment's images and videos
 function buildMediaItems(moment) {
@@ -28,6 +30,7 @@ function buildMediaItems(moment) {
 
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const { t } = useTranslation('home')
+  const { encryptionKey } = useAuth()
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
   const [progress, setProgress] = useState(0)   // 0–100, fill % for current media item
@@ -93,6 +96,32 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
+
+  // Warm the decryption cache for media the user is about to reach, so
+  // navigation shows the next photo instantly instead of a loading placeholder.
+  useEffect(() => {
+    if (!encryptionKey) return
+    const targets = []
+    // Remaining media in the current moment
+    mediaItems.forEach((item, i) => { if (i > currentMediaIndex) targets.push(item) })
+    // First media of the next moment
+    const nextMoment = moments[currentMomentIndex + 1]
+    if (nextMoment) {
+      const first = buildMediaItems(nextMoment)[0]
+      if (first) targets.push(first)
+    }
+    // Last media of the previous moment (where goPrev lands)
+    const prevMoment = moments[currentMomentIndex - 1]
+    if (prevMoment) {
+      const prevItems = buildMediaItems(prevMoment)
+      if (prevItems.length) targets.push(prevItems[prevItems.length - 1])
+    }
+    targets.forEach((item) => {
+      if (item?.url) {
+        prefetchDecryptedMedia(item.url, encryptionKey, item.type === 'video' ? 'video/*' : 'image/*')
+      }
+    })
+  }, [currentMomentIndex, currentMediaIndex, encryptionKey, mediaItems, moments])
 
   // Reset progress + unpause on media/moment change
   useEffect(() => {
@@ -230,7 +259,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     <>
       {/* ─── MOBILE: full-screen story ─── */}
       <div
-        className="md:hidden fixed inset-0 z-50"
+        className="md:hidden fixed inset-0 z-50 bg-bark"
         onPointerDown={() => setPaused(true)}
         onPointerUp={() => setPaused(false)}
         onPointerCancel={() => setPaused(false)}
