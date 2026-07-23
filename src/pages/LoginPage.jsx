@@ -310,7 +310,7 @@ export default function LoginPage() {
           {(!isThemed || resolvedFamilyHeaderImage) && (
             <div className={`rounded-2xl overflow-hidden flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'}`}>
               {resolvedFamilyHeaderImage
-                ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover" />
+                ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover object-top" />
                 : <FamilyIllustration />}
             </div>
           )}
@@ -363,7 +363,7 @@ export default function LoginPage() {
         {/* Left — Illustration */}
         <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center p-12 ${isThemed ? '' : 'bg-cream-dark'}`}>
           {resolvedFamilyHeaderImage
-            ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover" />
+            ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
             : <FamilyIllustration />}
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
