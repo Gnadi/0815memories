@@ -20,7 +20,7 @@ export default function InviteRedeemPage() {
   const { t } = useTranslation('auth')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user, firebaseReady } = useAuth()
+  const { user, firebaseReady, setActiveFamilyId } = useAuth()
 
   const familyId = searchParams.get('family')
   const token = searchParams.get('token')
@@ -135,6 +135,12 @@ export default function InviteRedeemPage() {
         adminUids: arrayUnion(newUid),
       })
 
+      // Bind the session to this family explicitly. The onAuthStateChanged
+      // handler that fired on account creation ran before adminUids included us,
+      // so its resolveFamilyId() lookup found nothing and left familyId null —
+      // which would land us on an empty /home until a manual re-login.
+      setActiveFamilyId(familyId)
+
       navigate('/home', { replace: true })
     } catch (err) {
       if (import.meta.env.DEV) console.error('Invite redemption failed', err)
@@ -198,7 +204,7 @@ export default function InviteRedeemPage() {
           <p className="text-bark-light text-center mb-6">
             {t('invite.subtitle')}
           </p>
-          {user && <AlreadySignedInBanner />}
+          {user && !loading && <AlreadySignedInBanner />}
           <RedeemForm
             displayName={displayName} setDisplayName={setDisplayName}
             email={email} setEmail={setEmail}
@@ -234,7 +240,7 @@ export default function InviteRedeemPage() {
             <p className="text-bark-light text-center mb-8">
               Create your account to become an admin of this family.
             </p>
-            {user && <AlreadySignedInBanner />}
+            {user && !loading && <AlreadySignedInBanner />}
             <RedeemForm
               displayName={displayName} setDisplayName={setDisplayName}
               email={email} setEmail={setEmail}
