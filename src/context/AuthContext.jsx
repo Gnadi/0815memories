@@ -119,6 +119,16 @@ export function AuthProvider({ children }) {
     return id
   }
 
+  // Explicitly bind the session to a family without going through a lookup.
+  // Used right after invite redemption, where the new admin's UID has just been
+  // added to the family but a fresh resolveFamilyId() query may race the write
+  // (or the onAuthStateChanged-triggered lookup already ran before the write).
+  const setActiveFamilyId = (id) => {
+    if (!id) return
+    setFamilyId(id)
+    localStorage.setItem('fh_familyId', id)
+  }
+
   const loginAsViewer = async (password, viewerFamilyId) => {
     if (!db) throw new Error('Firebase not configured — add env vars and reload')
     if (!viewerFamilyId) throw new Error('No family link provided')
@@ -220,6 +230,7 @@ export function AuthProvider({ children }) {
       loginAsAdmin,
       signup,
       logout,
+      setActiveFamilyId,
     }}>
       {children}
     </AuthContext.Provider>
