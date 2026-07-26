@@ -33,7 +33,8 @@
     "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
     "subtitleExample": "deinname.kaydo.app",
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
-    "demoCta": "Demo-Familie ansehen"
+    "demoCta": "Demo-Familie ansehen",
+    "demoUrl": "https://familie-mustermann.kaydo.app"
   },
   "screens": {
     "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",

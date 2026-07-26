@@ -24,6 +24,7 @@ function toResolvedFamily(data) {
     customHtml: data.loginCustomHtml || '',
     customCss: data.loginCustomCss || '',
     card: data.loginCard || null,
+    isDemo: data.isDemo === true,
   }
 }
 
@@ -74,7 +75,7 @@ export default function LoginPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [loginOpen])
 
-  const { loginAsViewer, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
+  const { loginAsViewer, loginAsDemo, loginAsAdmin, isAuthenticated, firebaseReady } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { slug: routeSlug } = useParams()
@@ -194,10 +195,29 @@ export default function LoginPage() {
     }
   }
 
+  const handleDemoLogin = async () => {
+    setError('')
+    if (!effectiveFamilyId) {
+      setError(t('login.errors.needFamilyLink'))
+      return
+    }
+    setLoading(true)
+    try {
+      await loginAsDemo(effectiveFamilyId)
+      sessionStorage.setItem('fh_session', 'true')
+      navigate('/home')
+    } catch {
+      setError(t('login.errors.generic'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formProps = {
     showAdminLogin, email, setEmail, password, setPassword,
     showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
     error, loading, handleSubmit,
+    isDemo: !!resolvedFamily?.isDemo, handleDemoLogin,
   }
 
   const resolvedFamilyName = resolvedFamily?.name || null

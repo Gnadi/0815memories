@@ -217,9 +217,11 @@ export default function LandingPage() {
             firebaseReady={firebaseReady}
           />
 
-          {/* Secondary CTA — see a real family space before claiming one */}
+          {/* Secondary CTA — see a real family space before claiming one.
+              The URL lives in the locale files so each language links to
+              its own demo family (en: Bennetts, de: Mustermanns). */}
           <a
-            href="https://the-bennetts.kaydo.app"
+            href={t('hero.demoUrl')}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-bark-muted text-bark text-sm font-semibold hover:border-bark transition-colors"
@@ -743,7 +745,7 @@ export default function LandingPage() {
               {t('cta.getStarted')}
             </button>
             <a
-              href="https://the-bennetts.kaydo.app"
+              href={t('hero.demoUrl')}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"

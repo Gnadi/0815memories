@@ -22,12 +22,48 @@ export default function LoginForm({
   showAdminLogin, email, setEmail, password, setPassword,
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
   error, loading, handleSubmit, tone = 'light', autoFocusPassword = false,
+  isDemo = false, handleDemoLogin,
 }) {
   const { t } = useTranslation('auth')
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
   const subtleClass = tone === 'dark' ? 'text-cream/80' : 'text-bark-light'
+
+  // Demo families skip the password entirely — one click enters as a viewer.
+  // Admin mode still gets the regular email + password form below.
+  if (isDemo && !showAdminLogin) {
+    return (
+      <div className="space-y-5">
+        <p className={`text-sm text-center ${subtleClass}`}>
+          {t('login.demo.hint')}
+        </p>
+
+        {error && (
+          <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          disabled={loading}
+          className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
+        >
+          {loading ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              {t('login.demo.cta')}
+              <span className="text-xl">&rarr;</span>
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Admin email field */}

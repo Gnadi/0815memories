@@ -154,6 +154,24 @@ export function AuthProvider({ children }) {
     localStorage.setItem('fh_familyId', viewerFamilyId)
   }
 
+  // Passwordless viewer login for families flagged `isDemo` in Firestore.
+  // Safe to skip the password check: viewer auth is client-side anyway and
+  // everything viewers can read is world-readable by the security rules.
+  const loginAsDemo = async (demoFamilyId) => {
+    if (!db) throw new Error('Firebase not configured — add env vars and reload')
+    if (!demoFamilyId) throw new Error('No family link provided')
+
+    const familyDoc = await getDoc(doc(db, 'families', demoFamilyId))
+    if (!familyDoc.exists() || familyDoc.data().isDemo !== true) {
+      throw new Error('This family is not a demo family')
+    }
+
+    setIsViewer(true)
+    setFamilyId(demoFamilyId)
+    localStorage.setItem('fh_viewer', 'true')
+    localStorage.setItem('fh_familyId', demoFamilyId)
+  }
+
   const loginAsAdmin = async (email, password) => {
     if (!auth) throw new Error('Firebase not configured — add env vars and reload')
     const result = await signInWithEmailAndPassword(auth, email, password)
@@ -227,6 +245,7 @@ export function AuthProvider({ children }) {
       keyLoading,
       firebaseReady,
       loginAsViewer,
+      loginAsDemo,
       loginAsAdmin,
       signup,
       logout,
