@@ -43,7 +43,7 @@ export const dispatchPushNotifications = firestore
 
     if (!data) return cleanup()
 
-    const { familyId, title, body, url } = data
+    const { familyId, title, body, url, targetUids } = data
 
     if (!familyId || !title) return cleanup()
 
@@ -56,7 +56,13 @@ export const dispatchPushNotifications = firestore
       .where('familyId', '==', familyId)
       .get()
 
-    const tokenDocs = tokenSnapshot.docs
+    // `targetUids` narrows a notification to specific people in the family —
+    // used by the "Our Year" ritual, which only ever concerns the two partners.
+    // Without the field the message goes to the whole family, as before.
+    const restrictTo = Array.isArray(targetUids) && targetUids.length > 0 ? targetUids : null
+    const tokenDocs = restrictTo
+      ? tokenSnapshot.docs.filter((d) => restrictTo.includes(d.data().uid))
+      : tokenSnapshot.docs
     const tokens = tokenDocs.map((d) => d.data().token).filter(Boolean)
 
     if (tokens.length === 0) return cleanup()

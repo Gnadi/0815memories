@@ -21,6 +21,15 @@ A private, encrypted family memory platform — your family's own corner of the 
 - **Digital scrapbook** — freeform drag-and-drop canvas with polaroid frames, stickers and text; export finished books as PDF
 - **Login page designer** — give your family's address its own front door, from starter templates to a custom photo welcome page
 
+### Just the two of you
+- **Our Year** — a recurring review ritual for a couple, on whatever day they choose, or on no fixed day at all. It holds four things per chapter:
+  - a **shared look back**: both partners answer the same five questions independently, and the answers only become visible once both have handed in
+  - a **couple's quiz** whose questions are rewritten for every chapter — no points, no winner, different memories welcome
+  - a **letter to their future selves** that the server refuses to hand out until the date they picked, so it cannot be read early, not even straight from the console
+  - **four keepsakes**: one photo, one song, one sentence, one moment
+
+  Closed chapters become a shared timeline of the relationship. Nothing here assumes marriage, children, or twelve-month cycles, and it is visible to those two accounts only — not even other family admins can see it
+
 ### Everyday
 - **Two access levels** — viewers enter with one shared family password (no account needed); admins sign in via Firebase Auth. Invite co-admins with secure invite links
 - **PWA** — installable on any phone or desktop, instant loads via service-worker precache, push notifications for new memories, anniversary reminders
@@ -31,6 +40,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - Photos, videos, voice memos, journal entries, recipes, scrapbooks and Vault content are encrypted **client-side** with **AES-256-GCM** (Web Crypto API) before upload — see `src/utils/encryption.js` and `src/utils/encryptedUpload.js`
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated
+- **Our Year** goes further than the rest of the app: instead of trusting the UI, `firestore.rules` decides who may read what. A partner's answers are unreadable until both have handed in, a sealed letter is unreadable until its open date (`request.time`), and a closed chapter can no longer be edited. Those guarantees are covered by emulator tests — `npm run test:rules`
 - **Honest limitation:** the per-family encryption key is currently stored in the family's Firestore document, so Kaydo is *not* zero-knowledge yet. Moving to client-side key derivation is the intended path before any such claim is made
 
 ## Tech stack
@@ -82,6 +92,7 @@ VITE_USE_EMULATOR=true npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | Production build incl. static pre-render of `/` |
 | `npm test` | Run the Vitest suite |
+| `npm run test:rules` | Firestore security-rule tests for "Our Year" (needs the emulator + Java) |
 | `npm run lint` | ESLint |
 | `npm run emulators` | Firebase Auth + Firestore emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |

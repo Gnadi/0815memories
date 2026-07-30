@@ -236,6 +236,136 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // -----------------------------------------------------------------------
+    // "Our Year" — the couple's recurring review ritual.
+    //
+    // Stricter than every other collection in this file: family-admin status is
+    // not enough. Each document carries `participantUids` (exactly the two
+    // partners), and only those two can read it — other admins of the same
+    // family see nothing. Two further guarantees are enforced here rather than
+    // in the UI, because the whole point of the ritual is that they hold:
+    //   1. neither partner can read the other's answers before both are in
+    //      (ourYearEntries);
+    //   2. a sealed letter cannot be read or altered before its open date
+    //      (ourYearLetters) — request.time is the server's clock.
+    // -----------------------------------------------------------------------
+
+    // The ritual itself: who, which occasion, which rhythm.
+    match /ourYearRituals/{ritualId} {
+      allow read: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids;
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.resource.data.participantUids is list
+                    && request.resource.data.participantUids.size() == 2
+                    && request.auth.uid in request.resource.data.participantUids;
+      // Participants may edit the ritual, but never re-home it or hand it to
+      // someone else.
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids
+                    && request.resource.data.familyId == resource.data.familyId
+                    && request.resource.data.participantUids == resource.data.participantUids;
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids;
+    }
+
+    // One chapter = one review of a self-chosen period. Carries only metadata
+    // about the answers (who handed in, whether they are revealed) — never the
+    // answers themselves.
+    match /ourYearChapters/{chapterId} {
+      allow read: if request.auth != null
+                    && (resource == null
+                        || request.auth.uid in resource.data.participantUids);
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.resource.data.participantUids is list
+                    && request.auth.uid in request.resource.data.participantUids;
+      // A closed chapter is a time capsule: once it is closed, only the letter
+      // bookkeeping may still change (opening a letter that was written back
+      // then). Everything else is frozen for good.
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids
+                    && request.resource.data.familyId == resource.data.familyId
+                    && request.resource.data.participantUids == resource.data.participantUids
+                    && (
+                      resource.data.get('status', 'open') != 'closed'
+                      || request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['letterStatus', 'letterOpenedAt', 'updatedAt'])
+                    );
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids;
+    }
+
+    // One partner's answers to one part of one chapter. The read rule is what
+    // makes "write independently, then look together" real: until `revealed`
+    // is set, only the author can read their own document.
+    match /ourYearEntries/{entryId} {
+      // `resource == null` covers a document that does not exist yet: a client
+      // subscribes to its own entry before writing it, and denying that read
+      // would kill the listener instead of reporting an empty answer sheet.
+      // Nothing leaks — there is nothing there.
+      allow read: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.participantUids
+                            && (resource.data.authorUid == request.auth.uid
+                                || resource.data.get('revealed', false) == true)));
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.auth.uid in request.resource.data.participantUids
+                    && request.resource.data.authorUid == request.auth.uid;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids
+                    && (
+                      // Your own answers, yours to edit until you hand them in.
+                      resource.data.authorUid == request.auth.uid
+                      // The reveal: whoever finishes second flips this flag on
+                      // BOTH documents. `revealed` is the only key they may
+                      // touch on their partner's — so the write must not carry
+                      // an updatedAt alongside it.
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revealed'])
+                          && request.resource.data.revealed == true)
+                    );
+      // Either partner may delete, so discarding a chapter cleans up both
+      // sides. Destroying an answer is fine; reading it early is not, and that
+      // is what the read rule above guards.
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids;
+    }
+
+    // The letter to the couple's future self. While it is sealed and the open
+    // date has not arrived, Firestore hands the document to nobody — not the
+    // partners, not through the console. The chapter document carries the
+    // status and the open date so the UI can show the wait without reading it.
+    match /ourYearLetters/{chapterId} {
+      allow read: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.participantUids
+                            && (resource.data.sealedAt == null
+                                || request.time >= resource.data.openAt)));
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.auth.uid in request.resource.data.participantUids
+                    && request.resource.data.sealedAt == null;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids
+                    && request.resource.data.familyId == resource.data.familyId
+                    && request.resource.data.participantUids == resource.data.participantUids
+                    && (resource.data.sealedAt == null
+                        || request.time >= resource.data.openAt);
+      // Deleting is allowed (a chapter can be discarded while it is open);
+      // reading early is not, which is the property that matters.
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.participantUids;
+    }
+
     // FCM push tokens — any client (admin or viewer) can write their own token.
     // Viewers are not Firebase-authenticated, so we allow unauthenticated writes,
     // but we still require a well-formed shape so the collection can't be abused

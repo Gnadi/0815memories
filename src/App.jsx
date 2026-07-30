@@ -15,6 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 import NotificationPrompt from './components/NotificationPrompt'
 import AnniversaryReminder from './components/AnniversaryReminder'
+import OurYearReminder from './components/OurYearReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
@@ -45,6 +46,9 @@ const CreateRecipePage = lazy(() => import('./pages/CreateRecipePage'))
 const ScrapbooksPage = lazy(() => import('./pages/ScrapbooksPage'))
 const ScrapbookEditorPage = lazy(() => import('./pages/ScrapbookEditorPage'))
 const SmartTimelinePage = lazy(() => import('./pages/SmartTimelinePage'))
+const OurYearPage = lazy(() => import('./pages/OurYearPage'))
+const OurYearSetupPage = lazy(() => import('./pages/OurYearSetupPage'))
+const OurYearChapterPage = lazy(() => import('./pages/OurYearChapterPage'))
 
 // On a family subdomain (e.g. the-millers.kaydo.app) send visitors to /login;
 // on the apex domain show the marketing landing page. The redirect runs in an
@@ -112,6 +116,7 @@ function AppNotifications() {
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
       {isAuthenticated && <AnniversaryReminder />}
+      {isAuthenticated && <OurYearReminder />}
 
       {/* In-app toast for foreground push messages */}
       {toast && (
@@ -215,6 +220,11 @@ export const routes = [
       { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
       { path: 'scrapbook', element: protect(<ScrapbooksPage />) },
       { path: 'scrapbook/:id', element: protect(<ScrapbookEditorPage />) },
+      // "Our Year" — the couple's recurring review. Private to two people;
+      // the pages and the security rules both enforce that.
+      { path: 'our-year', element: protect(<OurYearPage />) },
+      { path: 'our-year/setup', element: protect(<OurYearSetupPage />) },
+      { path: 'our-year/:chapterId', element: protect(<OurYearChapterPage />) },
     ],
   },
 ]

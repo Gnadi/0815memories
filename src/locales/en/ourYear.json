@@ -1,0 +1,344 @@
+{
+  "page": {
+    "eyebrow": "Our ritual",
+    "title": "Our Year",
+    "subtitle": "A shared look back, as often as you like — and a timeline that grows with you.",
+    "newChapter": "Start a new chapter",
+    "timelineHeading": "Our chapters",
+    "chapterCount_one": "{{count}} chapter",
+    "chapterCount_other": "{{count}} chapters"
+  },
+  "empty": {
+    "heading": "No chapter yet",
+    "body": "Start your first look back together. You decide which stretch of time it covers.",
+    "cta": "Start the first chapter"
+  },
+  "gate": {
+    "heading": "There is nothing here for you yet",
+    "body": "\"Our Year\" is only ever visible to one couple. Set up your own ritual — nobody else in this family gets to see it.",
+    "cta": "Set up our ritual"
+  },
+  "privacy": {
+    "note": "Everything in here is visible to the two of you only. No other account in this family has access."
+  },
+  "partner": {
+    "you": "You",
+    "generic": "your partner",
+    "genericShort": "the other person",
+    "yourNameLabel": "Your name",
+    "yourNamePlaceholder": "What should we call you?",
+    "partnerNameLabel": "Your partner's name",
+    "partnerNamePlaceholder": "What should we call them?"
+  },
+  "setup": {
+    "headerTitle": "Set up Our Year",
+    "subtitle": "A few details, then this space belongs to the two of you.",
+    "intro": "\"Our Year\" is a ritual for you as a couple: you look back together on a stretch of time you choose, compare your memories and keep what matters as a chapter. You don't need to be married, and you don't have to enter any particular date.",
+    "step1Label": "Who are you?",
+    "step2Label": "Your occasion",
+    "step3Label": "Your rhythm",
+    "partnerSelectLabel": "Who is your partner?",
+    "partnerSelectPlaceholder": "Choose an account",
+    "partnerSelectHint": "Both of you need your own account — that is what keeps your answers apart until you look at them together.",
+    "noPartnerHeading": "There is only one account so far",
+    "noPartnerBody": "Invite your partner. Once the second account exists, you can continue here.",
+    "inviteCta": "Create an invite link",
+    "inviteCreating": "Creating…",
+    "inviteHint": "The link is valid for seven days and can be redeemed once.",
+    "inviteCopy": "Copy link",
+    "inviteCopied": "Copied",
+    "occasionLabel": "What do you call this occasion?",
+    "occasionHint": "Just a name for the two of you — it commits you to nothing.",
+    "customLabelLabel": "Your own wording",
+    "customLabelPlaceholder": "e.g. Our evening in December",
+    "rhythmRecurring": "A day that comes round every year",
+    "rhythmRecurringHint": "Only for orientation. You can always look back earlier or later.",
+    "rhythmManual": "No fixed date",
+    "rhythmManualHint": "You simply start a new chapter whenever it feels right for both of you.",
+    "dateLabel": "Day and month",
+    "dayLabel": "Day",
+    "monthLabel": "Month",
+    "save": "Set up the ritual",
+    "saving": "Setting up…",
+    "editTitle": "Change the ritual",
+    "editSave": "Save changes",
+    "cancel": "Cancel"
+  },
+  "occasions": {
+    "anniversary": "Our anniversary",
+    "wedding": "Our wedding anniversary",
+    "firstMet": "The day we met",
+    "newYear": "Our turn of the year",
+    "personal": "Our personal look back",
+    "custom": "Our own wording"
+  },
+  "ritual": {
+    "onDate": "on {{date}}",
+    "noFixedDate": "No fixed date",
+    "nextIn_one": "Next occasion in {{count}} day",
+    "nextIn_other": "Next occasion in {{count}} days",
+    "nextToday": "Today is your day",
+    "edit": "Change",
+    "flexNote": "This is only a reminder — you can start a chapter whenever you want."
+  },
+  "chapter": {
+    "autoTitleYear": "Our year {{year}}",
+    "autoTitleYearSpan": "Our year {{from}}/{{to}}",
+    "autoTitleFallback": "Our chapter {{count}}",
+    "newTitle": "New chapter",
+    "newSubtitle": "The title and the period are suggestions — change them to fit you.",
+    "titleLabel": "Title of this chapter",
+    "titlePlaceholder": "e.g. A year full of changes",
+    "titleHint": "Examples: Our year 2026 · Our fifth year together · A fresh start",
+    "periodLabel": "Period",
+    "periodHint": "A chapter doesn't have to cover twelve months.",
+    "from": "From",
+    "to": "To",
+    "create": "Start the chapter",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "openBadge": "In progress",
+    "closedBadge": "Complete",
+    "openCta": "Open chapter",
+    "backToTimeline": "Back to the timeline",
+    "delete": "Discard chapter",
+    "deleteConfirm": "Discard this chapter and everything in it? This cannot be undone.",
+    "notFound": "This chapter no longer exists.",
+    "closedNote": "Completed on {{date}}",
+    "readOnly": "This chapter is complete and stays exactly as you left it."
+  },
+  "steps": {
+    "reflection": "Look back",
+    "quiz": "Couple's quiz",
+    "letter": "Letter",
+    "keepsakes": "Four keepsakes",
+    "summary": "Closing",
+    "status": {
+      "todo": "Open",
+      "partial": "Started",
+      "waiting": "Waiting for {{name}}",
+      "done": "Done"
+    }
+  },
+  "periodPhrase": {
+    "year": "this year",
+    "span": "during this time together"
+  },
+  "reflection": {
+    "title": "Looking back on our time together",
+    "intro": "You both answer the same five questions independently. Only once both of you are done do the answers become visible together.",
+    "questions": {
+      "moment": "What was your loveliest moment with me?",
+      "laugh": "When did you make me laugh hardest {{period}}?",
+      "mastered": "What did we handle well as a couple?",
+      "more": "What would you like to do with me more often?",
+      "grateful": "What are you grateful to me for right now?"
+    },
+    "placeholder": "Write down whatever comes to mind first.",
+    "save": "Save draft",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "submit": "I'm done",
+    "submitting": "Submitting…",
+    "submitConfirm": "After this you can no longer change your answers. Ready?",
+    "submitHint": "Until you tap \"I'm done\", nobody can see your answers.",
+    "needAnswer": "Answer at least one question before you hand in.",
+    "waitingHeading": "Your answers are kept safe",
+    "waitingBody": "As soon as {{name}} is done, you'll see both perspectives side by side.",
+    "partnerDoneHeading": "{{name}} is already done",
+    "partnerDoneBody": "Your answers are still missing. Take your time — {{name}} sees nothing of yours until then.",
+    "revealedHeading": "Your two perspectives",
+    "revealedHint": "There is no right and no wrong. The differences are the interesting part.",
+    "noAnswer": "No answer"
+  },
+  "quiz": {
+    "title": "Our couple's quiz",
+    "intro": "Answer separately first, then compare. No points and no winners — different memories are entirely welcome.",
+    "questions": {
+      "trip": "What was our loveliest trip together?",
+      "phrase": "Which phrase did one of us keep saying?",
+      "purchase": "What did one of us absolutely want to buy?",
+      "pointlessDebate": "What did we argue about completely needlessly?",
+      "surprise": "What surprised us most {{period}}?",
+      "laughedHardest": "What did we laugh loudest about?",
+      "kids": "Who got up at night for the children more often {{period}}?",
+      "meal": "What was our best meal together?",
+      "hardestDay": "Which day was the hardest?",
+      "proudest": "What are we proudest of as a couple?"
+    },
+    "editQuestions": "Adjust the questions",
+    "doneEditing": "Done",
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions",
+    "ownQuestionLabel": "Your own question",
+    "ownQuestionPlaceholder": "What do you want to compare?",
+    "add": "Add",
+    "remove": "Remove",
+    "suggestionsHeading": "Suggestions",
+    "suggestionsHint": "Take what fits. Leave out everything else.",
+    "emptyQuestions": "No questions yet. Take a suggestion or write your own.",
+    "lockedHint": "The questions can be changed as long as nobody has answered yet.",
+    "placeholder": "Your memory.",
+    "save": "Save draft",
+    "saved": "Saved",
+    "submit": "I'm done",
+    "submitConfirm": "After this you can no longer change your answers. Ready?",
+    "needAnswer": "Answer at least one question before you hand in.",
+    "waitingHeading": "Your answers are kept safe",
+    "waitingBody": "As soon as {{name}} is done, you'll compare your memories.",
+    "partnerDoneHeading": "{{name}} is already done",
+    "partnerDoneBody": "Only your answers are missing now.",
+    "revealedHeading": "Your memories side by side",
+    "revealedHint": "No score, no winner. At most, note how it was for the two of you.",
+    "noAnswer": "No answer",
+    "reactionLabel": "How was it for you?",
+    "reactionHint": "Optional — just for the two of you.",
+    "reactions": {
+      "same": "Same memory",
+      "different": "Different memory",
+      "forgotten": "Completely forgotten",
+      "talk": "We need to talk about this"
+    }
+  },
+  "letter": {
+    "title": "A letter to our future selves",
+    "intro": "You write this letter together. Afterwards it is sealed — until the day you choose yourselves.",
+    "questions": {
+      "now": "Where are we right now?",
+      "wishes": "What do we wish for our next stretch of time together?",
+      "remember": "What do we not want to forget?"
+    },
+    "placeholder": "Write as much or as little as you like.",
+    "save": "Save draft",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "openAtLabel": "Open again on",
+    "openAtHint": "Your next occasion is suggested. You can pick any date.",
+    "seal": "Seal the letter together",
+    "sealing": "Sealing…",
+    "sealConfirm": "After this the letter can neither be read nor changed until {{date}} — not even by you. Seal it?",
+    "sealedHeading": "Sealed",
+    "sealedBody": "Your letter opens on {{date}}.",
+    "sealedNote": "Until then nobody can read it. Not even the two of you.",
+    "waitingHeading": "A letter from us is waiting for us.",
+    "waitingBody": "Written on {{date}}. Take a quiet moment for it.",
+    "openCta": "Open the letter",
+    "opening": "Opening…",
+    "openedHeading": "Our letter",
+    "writtenOn": "Written on {{date}}",
+    "openedOn": "Opened on {{date}}",
+    "emptySection": "We didn't write anything here.",
+    "needText": "Write at least one sentence before you seal the letter.",
+    "needFutureDate": "The opening date has to be in the future."
+  },
+  "keepsakes": {
+    "title": "One picture, one song, one sentence, one moment",
+    "intro": "Deliberately just four things. This isn't about collecting as much as possible, but about the essence of this time together.",
+    "progress": "{{count}} of 4 kept",
+    "photo": {
+      "label": "A photo of the two of you",
+      "hint": "One picture that stands for this time.",
+      "empty": "No photo yet"
+    },
+    "song": {
+      "label": "A song",
+      "hint": "A song that fits this time.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "What is the song called?",
+      "artistLabel": "Artist",
+      "artistPlaceholder": "Who is it by?",
+      "linkLabel": "Link (optional)",
+      "linkPlaceholder": "https://…",
+      "empty": "No song yet",
+      "listen": "Listen"
+    },
+    "quote": {
+      "label": "A sentence that stuck",
+      "hint": "Something emotional, funny or simply typical of this time.",
+      "placeholder": "\"…\"",
+      "empty": "No sentence yet"
+    },
+    "moment": {
+      "label": "One special moment",
+      "hint": "Described in a few sentences.",
+      "placeholder": "What happened?",
+      "empty": "No moment yet"
+    },
+    "save": "Save keepsakes",
+    "saving": "Saving…",
+    "saved": "Saved"
+  },
+  "summary": {
+    "title": "Before you close this",
+    "intro": "Take one more look at what remains from this time together.",
+    "readyHeading": "Everything is here",
+    "readyBody": "You can close this chapter together now. Afterwards it becomes part of your timeline and stays as it is.",
+    "missingHeading": "Something is still missing",
+    "missing": {
+      "reflection": "Your look back — one of you hasn't handed in yet.",
+      "quiz": "The couple's quiz — one of you hasn't handed in yet.",
+      "letter": "The letter to your future selves isn't sealed yet.",
+      "keepsakes": "Keepsakes are missing: picture, song, sentence and moment."
+    },
+    "close": "Close this chapter together",
+    "closing": "Closing…",
+    "closeConfirm": "Close this chapter? Afterwards it stays part of your timeline, unchanged.",
+    "closedHeading": "This chapter is complete",
+    "closedBody": "Completed on {{date}}. It stays exactly as you kept it.",
+    "letterPending": "Your letter is still waiting for {{date}}."
+  },
+  "card": {
+    "song": "Song",
+    "quote": "Sentence",
+    "moment": "Moment",
+    "photoMissing": "No photo",
+    "letterSealed": "Letter sealed until {{date}}",
+    "letterWaiting": "A letter is waiting",
+    "letterOpened": "Letter opened",
+    "letterNone": "No letter"
+  },
+  "nudge": {
+    "eyebrow": "Our Year",
+    "open": "Take a look",
+    "letterWaiting": {
+      "title": "A letter from us is waiting for us.",
+      "body": "From \"{{chapter}}\". Open it together."
+    },
+    "partnerWaiting": {
+      "title": "{{name}} is waiting for you",
+      "body": "Your answers are still missing in \"{{chapter}}\"."
+    },
+    "chapterOpen": {
+      "title": "Your chapter has begun",
+      "body": "\"{{chapter}}\" is waiting for you."
+    },
+    "ritualDue": {
+      "title": "Your look back is due",
+      "body": "{{occasion}} has passed. Start whenever it suits you both."
+    },
+    "setup": {
+      "title": "Our Year",
+      "body": "A shared look back as a recurring ritual — for the two of you only."
+    }
+  },
+  "push": {
+    "ritualDue": {
+      "title": "Our Year",
+      "body": "Your shared look back is due."
+    },
+    "letterWaiting": {
+      "title": "Our Year",
+      "body": "A letter from you is waiting for you."
+    }
+  },
+  "errors": {
+    "saveFailed": "Couldn't be saved. Please try again.",
+    "loadFailed": "Couldn't be loaded.",
+    "inviteFailed": "The invite link couldn't be created.",
+    "periodInvalid": "The end has to come after the start.",
+    "titleRequired": "Give your chapter a title.",
+    "partnerRequired": "Choose who your partner is.",
+    "namesRequired": "Enter both names.",
+    "customLabelRequired": "Give your wording a name."
+  }
+}

@@ -1,4 +1,4 @@
-import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock } from 'lucide-react'
+import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock, CalendarHeart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import LanguageSwitcher from '../LanguageSwitcher'
@@ -12,6 +12,9 @@ const navItems = [
   { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes' },
   { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal' },
   { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox' },
+  // "Our Year" belongs to two people, so — unlike the rest of this list — it is
+  // never shown to viewers.
+  { icon: CalendarHeart, labelKey: 'nav.ourYear', route: '/our-year', adminOnly: true },
   { icon: Settings, labelKey: 'nav.settings', route: '/settings' },
 ]
 
@@ -52,7 +55,7 @@ export default function Sidebar({ onPostMemory }) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map(({ icon: Icon, labelKey, route }) => (
+        {navItems.filter(({ adminOnly }) => !adminOnly || isAdmin).map(({ icon: Icon, labelKey, route }) => (
           <button
             key={route}
             onClick={() => navigate(route)}

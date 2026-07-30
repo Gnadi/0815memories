@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, X } from 'lucide-react'
+import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemories } from '../../hooks/useMemories'
 import { useScrapbooks } from '../../hooks/useScrapbooks'
@@ -188,6 +188,21 @@ export default function AdminMobileBottomNav() {
                 <div>
                   <p className="font-semibold text-bark text-sm">{t('createSheet.createScrapbook')}</p>
                   <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.createScrapbookDesc')}</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setShowChoiceSheet(false); navigate('/our-year') }}
+                className="flex items-center gap-4 p-4 rounded-2xl bg-cream hover:bg-cream-dark transition-colors text-left"
+                style={TAP}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #A04420, #C25A2E)' }}>
+                  <CalendarHeart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-bark text-sm">{t('createSheet.ourYearChapter')}</p>
+                  <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.ourYearChapterDesc')}</p>
                 </div>
               </button>
             </div>

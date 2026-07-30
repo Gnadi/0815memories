@@ -58,6 +58,14 @@
         { "fieldPath": "familyId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "ourYearChapters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ritualId", "order": "ASCENDING" },
+        { "fieldPath": "periodStart", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
