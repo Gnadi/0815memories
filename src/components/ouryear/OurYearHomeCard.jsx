@@ -17,7 +17,7 @@ export default function OurYearHomeCard() {
   const { t } = useTranslation('ourYear')
   const uid = user?.uid ?? null
   const { ritual, loading } = useOurYearRitual(familyId, uid, encryptionKey)
-  const { chapters } = useOurYearChapters(ritual?.id ?? null, encryptionKey)
+  const { chapters } = useOurYearChapters(ritual?.id ?? null, uid, encryptionKey)
 
   if (!isAdmin || loading || !ritual) return null
 

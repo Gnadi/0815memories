@@ -253,7 +253,7 @@ service cloud.firestore {
     // The ritual itself: who, which occasion, which rhythm.
     match /ourYearRituals/{ritualId} {
       allow read: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids;
+                    && request.auth.uid in resource.data.get('participantUids', []);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -264,11 +264,11 @@ service cloud.firestore {
       // Participants may edit the ritual, but never re-home it or hand it to
       // someone else.
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids
+                    && request.auth.uid in resource.data.get('participantUids', [])
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids;
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids;
+                    && request.auth.uid in resource.data.get('participantUids', []);
     }
 
     // One chapter = one review of a self-chosen period. Carries only metadata
@@ -277,7 +277,7 @@ service cloud.firestore {
     match /ourYearChapters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
-                        || request.auth.uid in resource.data.participantUids);
+                        || request.auth.uid in resource.data.get('participantUids', []));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -288,7 +288,7 @@ service cloud.firestore {
       // bookkeeping may still change (opening a letter that was written back
       // then). Everything else is frozen for good.
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids
+                    && request.auth.uid in resource.data.get('participantUids', [])
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (
@@ -297,7 +297,7 @@ service cloud.firestore {
                            .hasOnly(['letterStatus', 'letterOpenedAt', 'updatedAt'])
                     );
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids;
+                    && request.auth.uid in resource.data.get('participantUids', []);
     }
 
     // One partner's answers to one part of one chapter. The read rule is what
@@ -310,20 +310,20 @@ service cloud.firestore {
       // Nothing leaks — there is nothing there.
       allow read: if request.auth != null
                     && (resource == null
-                        || (request.auth.uid in resource.data.participantUids
-                            && (resource.data.authorUid == request.auth.uid
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
-                    && request.resource.data.authorUid == request.auth.uid;
+                    && request.resource.data.get('authorUid', '') == request.auth.uid;
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids
+                    && request.auth.uid in resource.data.get('participantUids', [])
                     && (
                       // Your own answers, yours to edit until you hand them in.
-                      resource.data.authorUid == request.auth.uid
+                      resource.data.get('authorUid', '') == request.auth.uid
                       // The reveal: whoever finishes second flips this flag on
                       // BOTH documents. `revealed` is the only key they may
                       // touch on their partner's — so the write must not carry
@@ -335,7 +335,7 @@ service cloud.firestore {
       // sides. Destroying an answer is fine; reading it early is not, and that
       // is what the read rule above guards.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids;
+                    && request.auth.uid in resource.data.get('participantUids', []);
     }
 
     // The letter to the couple's future self. While it is sealed and the open
@@ -345,25 +345,25 @@ service cloud.firestore {
     match /ourYearLetters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
-                        || (request.auth.uid in resource.data.participantUids
-                            && (resource.data.sealedAt == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && (resource.data.get('sealedAt', null) == null
                                 || request.time >= resource.data.openAt)));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
-                    && request.resource.data.sealedAt == null;
+                    && request.resource.data.get('sealedAt', null) == null;
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids
+                    && request.auth.uid in resource.data.get('participantUids', [])
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
-                    && (resource.data.sealedAt == null
+                    && (resource.data.get('sealedAt', null) == null
                         || request.time >= resource.data.openAt);
       // Deleting is allowed (a chapter can be discarded while it is open);
       // reading early is not, which is the property that matters.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.participantUids;
+                    && request.auth.uid in resource.data.get('participantUids', []);
     }
 
     // FCM push tokens — any client (admin or viewer) can write their own token.

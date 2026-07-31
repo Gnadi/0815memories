@@ -87,6 +87,7 @@
       "collectionGroup": "ourYearChapters",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "participantUids", "arrayConfig": "CONTAINS" },
         { "fieldPath": "ritualId", "order": "ASCENDING" },
         { "fieldPath": "periodStart", "order": "DESCENDING" }
       ]

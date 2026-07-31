@@ -36,6 +36,13 @@ const SEED_MEDIA_DIR = join(__dirname, '..', 'public', 'seed-media')
 const ADMIN_EMAIL = 'demo@kaydo.app'
 const ADMIN_PASSWORD = 'demo123456'
 const ADMIN_NAME = 'Sarah Bennett'
+
+// "Our Year" is a ritual for two people, and each of them needs their own
+// account — that separation is what keeps their answers apart. So the demo
+// family has a second admin.
+const PARTNER_EMAIL = 'partner@kaydo.app'
+const PARTNER_PASSWORD = 'demo123456'
+const PARTNER_NAME = 'David Bennett'
 const FAMILY_NAME = 'The Bennett Family'
 const FAMILY_SLUG = 'the-bennetts'
 
@@ -65,6 +72,8 @@ const MEDIA = [
   { file: 'scrap-2.jpg', a: '#F6A5C0', b: '#F7E7C8', glyph: '☀️', w: 800, h: 800 },
   { file: 'scrap-3.jpg', a: '#8FCB6B', b: '#E8F3C9', glyph: '🌊', w: 800, h: 800 },
   { file: 'scrap-4.jpg', a: '#A7CE6B', b: '#FBF0A8', glyph: '🌳', w: 800, h: 800 },
+  { file: 'ouryear-1.jpg', a: '#C9A98B', b: '#F6E6D2', glyph: '🌇', w: 1000, h: 700 },
+  { file: 'ouryear-2.jpg', a: '#8FA9C4', b: '#EFE4D6', glyph: '🚶', w: 1000, h: 700 },
 ]
 
 const url = (file) => `/seed-media/${file}`
@@ -120,10 +129,15 @@ async function main() {
   await generateMedia()
 
   console.log('② Resetting emulator data …')
-  for (const c of ['families', 'memories', 'moments', 'recipes', 'children', 'journals', 'scrapbooks', 'blackbox']) {
+  for (const c of [
+    'families', 'memories', 'moments', 'recipes', 'children', 'journals', 'scrapbooks', 'blackbox',
+    'ourYearRituals', 'ourYearChapters', 'ourYearEntries', 'ourYearLetters',
+  ]) {
     await clearCollection(c)
   }
-  try { await auth.deleteUser((await auth.getUserByEmail(ADMIN_EMAIL)).uid) } catch { /* none */ }
+  for (const email of [ADMIN_EMAIL, PARTNER_EMAIL]) {
+    try { await auth.deleteUser((await auth.getUserByEmail(email)).uid) } catch { /* none */ }
+  }
 
   console.log('③ Creating admin user …')
   const user = await auth.createUser({
@@ -134,10 +148,18 @@ async function main() {
   })
   const uid = user.uid
 
+  const partner = await auth.createUser({
+    email: PARTNER_EMAIL,
+    password: PARTNER_PASSWORD,
+    displayName: PARTNER_NAME,
+    emailVerified: true,
+  })
+  const partnerUid = partner.uid
+
   console.log('④ Creating family (plaintext — no encryptionKeyJwk) …')
   const familyRef = await db.collection('families').add({
     adminUid: uid,
-    adminUids: [uid],
+    adminUids: [uid, partnerUid],
     familyName: FAMILY_NAME,
     familySlug: FAMILY_SLUG,
     memoryCardStyle: 'modern',
@@ -320,9 +342,175 @@ async function main() {
     })
   }
 
+  console.log('⑫ Seeding "Our Year" …')
+  // Admin metadata, so the ritual setup can offer the partner by name.
+  await db.collection('families').doc(familyId).collection('admins').doc(uid)
+    .set({ email: ADMIN_EMAIL, addedAt: ts('2023-01-01') })
+  await db.collection('families').doc(familyId).collection('admins').doc(partnerUid)
+    .set({ email: PARTNER_EMAIL, addedAt: ts('2023-01-01') })
+
+  const participantUids = [uid, partnerUid]
+  const ritualRef = await db.collection('ourYearRituals').add({
+    familyId,
+    participantUids,
+    partners: [
+      { uid, name: 'Sarah' },
+      { uid: partnerUid, name: 'David' },
+    ],
+    occasionKey: 'firstMet',
+    occasionLabel: '',
+    rhythm: 'recurring',
+    anchorMonth: 5,
+    anchorDay: 12,
+    createdBy: uid,
+    createdAt: ts('2024-05-12'),
+    updatedAt: ts('2024-05-12'),
+  })
+
+  const chapters = [
+    {
+      id: 'ouryear-2025',
+      title: 'Our year 2025/2026',
+      periodStart: ts('2025-05-13'), periodEnd: ts('2026-05-12'),
+      closedAt: ts('2026-05-12'),
+      keepsakes: {
+        photoUrl: url('ouryear-1.jpg'), photoPublicId: '',
+        song: { title: 'Harvest Moon', artist: 'Neil Young', link: '' },
+        quote: 'We can figure that out tomorrow.',
+        moment: 'The evening the power went out and we ate cold pasta on the kitchen floor by candlelight, and neither of us wanted it to end.',
+      },
+      // Written at the close of the chapter, to be opened at the next occasion.
+      letterStatus: 'sealed', letterOpenAt: ts('2027-05-12'), letterOpenedAt: null,
+      letter: { sealedAt: ts('2026-05-12'), openAt: ts('2027-05-12'), openedAt: null },
+    },
+    {
+      id: 'ouryear-2024',
+      title: 'The year we became four',
+      periodStart: ts('2024-05-13'), periodEnd: ts('2025-05-12'),
+      closedAt: ts('2025-05-12'),
+      keepsakes: {
+        photoUrl: url('ouryear-2.jpg'), photoPublicId: '',
+        song: { title: 'This Must Be the Place', artist: 'Talking Heads', link: '' },
+        quote: 'Nobody warned us about the laundry.',
+        moment: 'Walking the long way home from the hospital, taking turns carrying her, saying almost nothing the whole way.',
+      },
+      letterStatus: 'opened', letterOpenAt: ts('2026-05-12'), letterOpenedAt: ts('2026-05-12'),
+      letter: { sealedAt: ts('2025-05-12'), openAt: ts('2026-05-12'), openedAt: ts('2026-05-12') },
+    },
+  ]
+
+  const reflectionAnswers = {
+    [chapters[0].id]: {
+      [uid]: {
+        moment: 'The morning we drove out to the coast on a whim and had the whole beach to ourselves.',
+        laugh: 'When you tried to assemble the shelf without the instructions and defended it for a full hour.',
+        mastered: 'The move. We were exhausted and still kind to each other.',
+        more: 'Cooking together on a weeknight, without a plan.',
+        grateful: 'That you take the early shift without ever making it a thing.',
+      },
+      [partnerUid]: {
+        moment: 'The night we stayed up talking on the balcony until it got cold.',
+        laugh: 'You, doing the voice you do for the cat. Every single time.',
+        mastered: 'Getting through February. That was a hard month and we held it together.',
+        more: 'Long walks with no destination.',
+        grateful: 'For the way you notice when I am off before I do.',
+      },
+    },
+  }
+
+  const quizAnswers = {
+    [chapters[0].id]: {
+      [uid]: {
+        trip: 'The coast, definitely.',
+        phrase: '"Let me just finish this one thing."',
+        purchase: 'That absurd pizza oven.',
+        pointlessDebate: 'Whether the bathroom light was left on. It was.',
+        surprise: 'How quickly the new place started to feel like ours.',
+      },
+      [partnerUid]: {
+        trip: 'The weekend at your sister\'s, hands down.',
+        phrase: '"Have you seen my keys?"',
+        purchase: 'The pizza oven. No regrets.',
+        pointlessDebate: 'The correct way to load a dishwasher.',
+        surprise: 'That we made it through the move without one real argument.',
+      },
+    },
+  }
+
+  for (const c of chapters) {
+    const { letter, ...chapter } = c
+    const revealedAt = c.closedAt
+    await db.collection('ourYearChapters').doc(c.id).set({
+      familyId,
+      ritualId: ritualRef.id,
+      participantUids,
+      title: chapter.title,
+      titleIsAuto: false,
+      periodStart: chapter.periodStart,
+      periodEnd: chapter.periodEnd,
+      status: 'closed',
+      closedAt: chapter.closedAt,
+      reflectionSubmittedBy: participantUids,
+      quizSubmittedBy: participantUids,
+      reflectionsRevealedAt: revealedAt,
+      quizRevealedAt: revealedAt,
+      quizQuestions: [
+        { id: 'trip', presetKey: 'trip' },
+        { id: 'phrase', presetKey: 'phrase' },
+        { id: 'purchase', presetKey: 'purchase' },
+        { id: 'pointlessDebate', presetKey: 'pointlessDebate' },
+        { id: 'surprise', presetKey: 'surprise' },
+      ],
+      quizReactions: { trip: 'different', phrase: 'same', purchase: 'same', pointlessDebate: 'talk' },
+      keepsakes: chapter.keepsakes,
+      letterStatus: chapter.letterStatus,
+      letterOpenAt: chapter.letterOpenAt,
+      letterOpenedAt: chapter.letterOpenedAt,
+      createdBy: uid,
+      createdAt: chapter.periodEnd,
+      updatedAt: chapter.closedAt,
+    })
+
+    await db.collection('ourYearLetters').doc(c.id).set({
+      familyId,
+      chapterId: c.id,
+      participantUids,
+      sections: {
+        now: 'Tired, in the good way. The flat is finally ours and the boxes are almost gone.',
+        wishes: 'One trip with nothing planned. And to keep asking each other the real question instead of the easy one.',
+        remember: 'That we got through this year by being on the same side, even on the days we disagreed.',
+      },
+      ...letter,
+      createdAt: c.closedAt,
+      updatedAt: c.closedAt,
+    })
+
+    // Answers only for the most recent chapter — enough to demo the reveal.
+    for (const [kind, source] of [['reflection', reflectionAnswers], ['quiz', quizAnswers]]) {
+      const perChapter = source[c.id]
+      if (!perChapter) continue
+      for (const author of participantUids) {
+        await db.collection('ourYearEntries').doc(`${c.id}_${kind}_${author}`).set({
+          familyId,
+          chapterId: c.id,
+          participantUids,
+          authorUid: author,
+          kind,
+          answers: perChapter[author],
+          submitted: true,
+          submittedAt: c.closedAt,
+          revealed: true,
+          createdAt: c.closedAt,
+          updatedAt: c.closedAt,
+        })
+      }
+    }
+  }
+
   console.log('\n✅ Seed complete.')
   console.log(`   Family:   ${FAMILY_NAME}  (slug: ${FAMILY_SLUG}, id: ${familyId})`)
   console.log(`   Admin:    ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
+  console.log(`   Partner:  ${PARTNER_EMAIL} / ${PARTNER_PASSWORD}`)
   process.exit(0)
 }
 
