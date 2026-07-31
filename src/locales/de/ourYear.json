@@ -321,16 +321,6 @@
       "body": "Ein gemeinsamer Rückblick als wiederkehrendes Ritual — nur für euch beide."
     }
   },
-  "push": {
-    "ritualDue": {
-      "title": "Unser Jahr",
-      "body": "Euer gemeinsamer Rückblick steht an."
-    },
-    "letterWaiting": {
-      "title": "Unser Jahr",
-      "body": "Ein Brief von euch wartet auf euch."
-    }
-  },
   "errors": {
     "saveFailed": "Konnte nicht gespeichert werden. Versuch es bitte noch einmal.",
     "loadFailed": "Konnte nicht geladen werden.",

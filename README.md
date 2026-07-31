@@ -47,7 +47,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 - **React + Vite** with **vite-react-ssg** (the landing page is pre-rendered to static HTML)
 - **Tailwind CSS** — warm, cozy design system
-- **Firebase** — Auth, Firestore, Cloud Functions (push notifications, free Spark plan compatible)
+- **Firebase** — Auth, Firestore, Cloud Functions (push notifications). Everything except the Cloud Function runs on the free Spark plan; deploying functions now requires Blaze, so push is optional
 - **Cloudinary** — media storage (signed uploads via the `api/cloudinary-sign` Vercel function)
 - **Workbox** — PWA service worker
 - **i18next** — EN/DE localization
@@ -66,7 +66,7 @@ A private, encrypted family memory platform — your family's own corner of the 
    - Create a project at console.firebase.google.com
    - Enable Email/Password authentication
    - Create a Firestore database and deploy `firestore.rules`
-   - Optional: deploy the push-notification Cloud Function with `firebase deploy --only functions`
+   - Optional: deploy the push-notification Cloud Function with `firebase deploy --only functions` (needs the Blaze plan — everything else works without it)
 
 4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`).
 

@@ -321,16 +321,6 @@
       "body": "A shared look back as a recurring ritual — for the two of you only."
     }
   },
-  "push": {
-    "ritualDue": {
-      "title": "Our Year",
-      "body": "Your shared look back is due."
-    },
-    "letterWaiting": {
-      "title": "Our Year",
-      "body": "A letter from you is waiting for you."
-    }
-  },
   "errors": {
     "saveFailed": "Couldn't be saved. Please try again.",
     "loadFailed": "Couldn't be loaded.",
