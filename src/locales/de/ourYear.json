@@ -1,0 +1,334 @@
+{
+  "page": {
+    "eyebrow": "Unser Ritual",
+    "title": "Unser Jahr",
+    "subtitle": "Ein gemeinsamer Rückblick, so oft ihr möchtet — und eine Timeline, die mit euch wächst.",
+    "newChapter": "Neues Kapitel beginnen",
+    "timelineHeading": "Unsere Kapitel",
+    "chapterCount_one": "{{count}} Kapitel",
+    "chapterCount_other": "{{count}} Kapitel"
+  },
+  "empty": {
+    "heading": "Noch kein Kapitel",
+    "body": "Beginnt euren ersten gemeinsamen Rückblick. Ihr entscheidet selbst, welchen Zeitraum er umfasst.",
+    "cta": "Erstes Kapitel beginnen"
+  },
+  "gate": {
+    "heading": "Hier ist noch nichts für dich",
+    "body": "„Unser Jahr\" ist immer nur für ein Paar sichtbar. Richtet euer eigenes Ritual ein — niemand sonst in dieser Familie bekommt es zu sehen.",
+    "cta": "Unser Ritual einrichten"
+  },
+  "privacy": {
+    "note": "Alles in diesem Bereich sehen nur ihr beide. Kein anderes Konto dieser Familie hat Zugriff."
+  },
+  "partner": {
+    "you": "Du",
+    "generic": "dein Partner oder deine Partnerin",
+    "genericShort": "die andere Person",
+    "yourNameLabel": "Dein Name",
+    "yourNamePlaceholder": "Wie sollen wir dich nennen?",
+    "partnerNameLabel": "Name deiner Partnerin oder deines Partners",
+    "partnerNamePlaceholder": "Wie sollen wir sie oder ihn nennen?"
+  },
+  "setup": {
+    "headerTitle": "Unser Jahr einrichten",
+    "subtitle": "Ein paar Angaben, dann gehört dieser Bereich euch beiden.",
+    "intro": "„Unser Jahr\" ist ein Ritual für euch als Paar: Ihr blickt gemeinsam auf einen selbst gewählten Zeitraum zurück, vergleicht eure Erinnerungen und bewahrt das Wichtigste als Kapitel auf. Ihr müsst weder verheiratet sein noch ein bestimmtes Datum angeben.",
+    "step1Label": "Wer seid ihr?",
+    "step2Label": "Euer Anlass",
+    "step3Label": "Euer Rhythmus",
+    "partnerSelectLabel": "Wer ist deine Partnerin oder dein Partner?",
+    "partnerSelectPlaceholder": "Konto auswählen",
+    "partnerSelectHint": "Beide brauchen ein eigenes Konto — nur so bleiben eure Antworten getrennt, bis ihr sie gemeinsam anseht.",
+    "noPartnerHeading": "Es gibt erst ein Konto",
+    "noPartnerBody": "Lade deine Partnerin oder deinen Partner ein. Sobald das zweite Konto besteht, könnt ihr hier weitermachen.",
+    "inviteCta": "Einladungslink erstellen",
+    "inviteCreating": "Wird erstellt…",
+    "inviteHint": "Der Link ist sieben Tage gültig und kann einmal eingelöst werden.",
+    "inviteCopy": "Link kopieren",
+    "inviteCopied": "Kopiert",
+    "occasionLabel": "Wie nennt ihr diesen Anlass?",
+    "occasionHint": "Nur eine Bezeichnung für euch beide — sie legt euch auf nichts fest.",
+    "customLabelLabel": "Eure Bezeichnung",
+    "customLabelPlaceholder": "z. B. Unser Abend im Dezember",
+    "rhythmRecurring": "Ein wiederkehrender Tag im Jahr",
+    "rhythmRecurringHint": "Nur zur Orientierung. Ihr könnt euren Rückblick jederzeit früher oder später machen.",
+    "rhythmManual": "Ohne festen Termin",
+    "rhythmManualHint": "Ihr beginnt ein neues Kapitel einfach dann, wenn es sich für euch beide richtig anfühlt.",
+    "dateLabel": "Tag und Monat",
+    "dayLabel": "Tag",
+    "monthLabel": "Monat",
+    "save": "Ritual einrichten",
+    "saving": "Wird eingerichtet…",
+    "editTitle": "Ritual ändern",
+    "editSave": "Änderungen speichern",
+    "cancel": "Abbrechen"
+  },
+  "occasions": {
+    "anniversary": "Unser Jahrestag",
+    "wedding": "Unser Hochzeitstag",
+    "firstMet": "Unser Kennenlerntag",
+    "newYear": "Unser Jahreswechsel",
+    "personal": "Unser persönlicher Rückblick",
+    "custom": "Eigene Bezeichnung"
+  },
+  "ritual": {
+    "onDate": "am {{date}}",
+    "noFixedDate": "Ohne festen Termin",
+    "nextIn_one": "Nächster Anlass in {{count}} Tag",
+    "nextIn_other": "Nächster Anlass in {{count}} Tagen",
+    "nextToday": "Heute ist euer Tag",
+    "edit": "Ändern",
+    "flexNote": "Das ist nur eine Orientierung — ein Kapitel könnt ihr jederzeit beginnen."
+  },
+  "chapter": {
+    "autoTitleYear": "Unser Jahr {{year}}",
+    "autoTitleYearSpan": "Unser Jahr {{from}}/{{to}}",
+    "autoTitleFallback": "Unser {{count}}. Kapitel",
+    "newTitle": "Neues Kapitel",
+    "newSubtitle": "Titel und Zeitraum sind Vorschläge — ändert sie so, wie es zu euch passt.",
+    "titleLabel": "Titel dieses Kapitels",
+    "titlePlaceholder": "z. B. Ein Jahr voller Veränderungen",
+    "titleHint": "Beispiele: Unser Jahr 2026 · Unser fünftes gemeinsames Jahr · Neustart",
+    "periodLabel": "Zeitraum",
+    "periodHint": "Ein Kapitel muss keine zwölf Monate umfassen.",
+    "from": "Von",
+    "to": "Bis",
+    "create": "Kapitel beginnen",
+    "creating": "Wird angelegt…",
+    "cancel": "Abbrechen",
+    "openBadge": "In Arbeit",
+    "closedBadge": "Abgeschlossen",
+    "openCta": "Kapitel öffnen",
+    "backToTimeline": "Zurück zur Timeline",
+    "delete": "Kapitel verwerfen",
+    "deleteConfirm": "Dieses Kapitel mit allem darin verwerfen? Das lässt sich nicht rückgängig machen.",
+    "notFound": "Dieses Kapitel gibt es nicht mehr.",
+    "closedNote": "Abgeschlossen am {{date}}",
+    "readOnly": "Dieses Kapitel ist abgeschlossen und bleibt so, wie ihr es festgehalten habt."
+  },
+  "steps": {
+    "reflection": "Rückblick",
+    "quiz": "Paar-Quiz",
+    "letter": "Brief",
+    "keepsakes": "Vier Erinnerungen",
+    "summary": "Abschluss",
+    "status": {
+      "todo": "Offen",
+      "partial": "Angefangen",
+      "waiting": "Wartet auf {{name}}",
+      "done": "Fertig"
+    }
+  },
+  "periodPhrase": {
+    "year": "in diesem Jahr",
+    "span": "in dieser gemeinsamen Zeit"
+  },
+  "reflection": {
+    "title": "Rückblick auf unsere gemeinsame Zeit",
+    "intro": "Ihr beantwortet dieselben fünf Fragen unabhängig voneinander. Erst wenn ihr beide fertig seid, werden die Antworten gemeinsam sichtbar.",
+    "questions": {
+      "moment": "Was war dein schönster Moment mit mir?",
+      "laugh": "Wann musste ich {{period}} wegen dir besonders lachen?",
+      "mastered": "Was haben wir als Paar gut gemeistert?",
+      "more": "Was möchtest du häufiger mit mir machen?",
+      "grateful": "Wofür bist du mir gerade dankbar?"
+    },
+    "placeholder": "Schreib, was dir zuerst einfällt.",
+    "save": "Entwurf speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "submit": "Ich bin fertig",
+    "submitting": "Wird abgegeben…",
+    "submitConfirm": "Danach kannst du deine Antworten nicht mehr ändern. Fertig?",
+    "submitHint": "Solange du nicht auf „Ich bin fertig\" tippst, sieht niemand deine Antworten.",
+    "needAnswer": "Beantworte mindestens eine Frage, bevor du abgibst.",
+    "waitingHeading": "Deine Antworten sind verwahrt",
+    "waitingBody": "Sobald {{name}} fertig ist, seht ihr beide Perspektiven nebeneinander.",
+    "partnerDoneHeading": "{{name}} ist schon fertig",
+    "partnerDoneBody": "Deine Antworten fehlen noch. Lass dir Zeit — {{name}} sieht bis dahin nichts von dir.",
+    "revealedHeading": "Eure beiden Perspektiven",
+    "revealedHint": "Es gibt kein Richtig und kein Falsch. Gerade die Unterschiede sind interessant.",
+    "noAnswer": "Keine Antwort"
+  },
+  "quiz": {
+    "title": "Unser Paar-Quiz",
+    "intro": "Erst getrennt beantworten, dann vergleichen. Es gibt keine Punkte und keine Gewinner — unterschiedliche Erinnerungen sind ausdrücklich erwünscht.",
+    "questions": {
+      "trip": "Was war unser schönster gemeinsamer Ausflug?",
+      "phrase": "Welchen Satz hat einer von uns ständig gesagt?",
+      "purchase": "Was wollte eine Person unbedingt kaufen?",
+      "pointlessDebate": "Worüber haben wir vollkommen unnötig diskutiert?",
+      "surprise": "Was hat uns {{period}} am meisten überrascht?",
+      "laughedHardest": "Worüber haben wir am lautesten gelacht?",
+      "kids": "Wer ist {{period}} häufiger nachts wegen der Kinder aufgestanden?",
+      "meal": "Was war unser bestes gemeinsames Essen?",
+      "hardestDay": "Welcher Tag war der schwerste?",
+      "proudest": "Worauf sind wir als Paar am stolzesten?"
+    },
+    "editQuestions": "Fragen anpassen",
+    "doneEditing": "Fertig",
+    "questionCount_one": "{{count}} Frage",
+    "questionCount_other": "{{count}} Fragen",
+    "ownQuestionLabel": "Eigene Frage",
+    "ownQuestionPlaceholder": "Worüber wollt ihr euch austauschen?",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "suggestionsHeading": "Vorschläge",
+    "suggestionsHint": "Nehmt, was passt. Alles andere lasst ihr weg.",
+    "emptyQuestions": "Noch keine Fragen. Nehmt einen Vorschlag oder schreibt eine eigene.",
+    "lockedHint": "Die Fragen lassen sich ändern, solange noch niemand geantwortet hat.",
+    "placeholder": "Deine Erinnerung.",
+    "save": "Entwurf speichern",
+    "saved": "Gespeichert",
+    "submit": "Ich bin fertig",
+    "submitConfirm": "Danach kannst du deine Antworten nicht mehr ändern. Fertig?",
+    "needAnswer": "Beantworte mindestens eine Frage, bevor du abgibst.",
+    "waitingHeading": "Deine Antworten sind verwahrt",
+    "waitingBody": "Sobald {{name}} fertig ist, vergleicht ihr eure Erinnerungen.",
+    "partnerDoneHeading": "{{name}} ist schon fertig",
+    "partnerDoneBody": "Jetzt fehlen nur noch deine Antworten.",
+    "revealedHeading": "Eure Erinnerungen im Vergleich",
+    "revealedHint": "Kein Punktestand, kein Gewinner. Haltet höchstens fest, wie es bei euch war.",
+    "noAnswer": "Keine Antwort",
+    "reactionLabel": "Wie war es bei euch?",
+    "reactionHint": "Optional — nur für euch beide.",
+    "reactions": {
+      "same": "Gleiche Erinnerung",
+      "different": "Unterschiedliche Erinnerung",
+      "forgotten": "Völlig vergessen",
+      "talk": "Darüber müssen wir reden"
+    }
+  },
+  "letter": {
+    "title": "Brief an unser zukünftiges Ich",
+    "intro": "Diesen Brief schreibt ihr gemeinsam. Danach wird er verschlossen — bis zu dem Tag, den ihr selbst wählt.",
+    "questions": {
+      "now": "Wo stehen wir gerade?",
+      "wishes": "Was wünschen wir uns für die nächste gemeinsame Zeit?",
+      "remember": "Was möchten wir nicht vergessen?"
+    },
+    "placeholder": "Schreibt so viel oder so wenig, wie ihr wollt.",
+    "save": "Entwurf speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "openAtLabel": "Wieder öffnen am",
+    "openAtHint": "Vorgeschlagen ist euer nächster Anlass. Ihr könnt jedes Datum wählen.",
+    "seal": "Brief gemeinsam verschließen",
+    "sealing": "Wird verschlossen…",
+    "sealConfirm": "Danach kann der Brief bis zum {{date}} weder gelesen noch geändert werden — auch von euch nicht. Verschließen?",
+    "sealedHeading": "Verschlossen",
+    "sealedBody": "Euer Brief öffnet sich am {{date}}.",
+    "sealedNote": "Bis dahin kann ihn niemand lesen. Auch ihr beide nicht.",
+    "waitingHeading": "Ein Brief von uns wartet auf uns.",
+    "waitingBody": "Geschrieben am {{date}}. Nehmt euch einen ruhigen Moment dafür.",
+    "openCta": "Brief öffnen",
+    "opening": "Wird geöffnet…",
+    "openedHeading": "Unser Brief",
+    "writtenOn": "Geschrieben am {{date}}",
+    "openedOn": "Geöffnet am {{date}}",
+    "emptySection": "Dazu haben wir nichts geschrieben.",
+    "needText": "Schreibt mindestens einen Satz, bevor ihr den Brief verschließt.",
+    "needFutureDate": "Das Öffnungsdatum muss in der Zukunft liegen."
+  },
+  "keepsakes": {
+    "title": "Ein Bild, ein Lied, ein Satz, ein Moment",
+    "intro": "Bewusst nur vier Dinge. Es geht nicht um möglichst viel, sondern um die Essenz dieser gemeinsamen Zeit.",
+    "progress": "{{count}} von 4 festgehalten",
+    "photo": {
+      "label": "Ein gemeinsames Foto",
+      "hint": "Ein Bild, das für diese Zeit steht.",
+      "empty": "Noch kein Foto"
+    },
+    "song": {
+      "label": "Ein Lied",
+      "hint": "Ein Lied, das zu dieser Zeit passt.",
+      "titleLabel": "Titel",
+      "titlePlaceholder": "Wie heißt das Lied?",
+      "artistLabel": "Interpretin oder Interpret",
+      "artistPlaceholder": "Von wem ist es?",
+      "linkLabel": "Link (optional)",
+      "linkPlaceholder": "https://…",
+      "empty": "Noch kein Lied",
+      "listen": "Anhören"
+    },
+    "quote": {
+      "label": "Ein prägender Satz",
+      "hint": "Etwas Emotionales, Lustiges oder einfach Typisches aus dieser Zeit.",
+      "placeholder": "„…\"",
+      "empty": "Noch kein Satz"
+    },
+    "moment": {
+      "label": "Ein besonderer Moment",
+      "hint": "In wenigen Sätzen beschrieben.",
+      "placeholder": "Was ist passiert?",
+      "empty": "Noch kein Moment"
+    },
+    "save": "Erinnerungen speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert"
+  },
+  "summary": {
+    "title": "Bevor ihr abschließt",
+    "intro": "Schaut euch noch einmal an, was aus dieser gemeinsamen Zeit bleibt.",
+    "readyHeading": "Alles beisammen",
+    "readyBody": "Ihr könnt dieses Kapitel jetzt gemeinsam abschließen. Danach wird es Teil eurer Timeline und bleibt so, wie es ist.",
+    "missingHeading": "Dafür fehlt noch etwas",
+    "missing": {
+      "reflection": "Euer Rückblick — eine Person hat noch nicht abgegeben.",
+      "quiz": "Das Paar-Quiz — eine Person hat noch nicht abgegeben.",
+      "letter": "Der Brief an euer zukünftiges Ich ist noch nicht verschlossen.",
+      "keepsakes": "Es fehlen noch Erinnerungen: Bild, Lied, Satz und Moment."
+    },
+    "close": "Kapitel gemeinsam abschließen",
+    "closing": "Wird abgeschlossen…",
+    "closeConfirm": "Dieses Kapitel abschließen? Danach bleibt es unverändert Teil eurer Timeline.",
+    "closedHeading": "Dieses Kapitel ist abgeschlossen",
+    "closedBody": "Abgeschlossen am {{date}}. Es bleibt so, wie ihr es festgehalten habt.",
+    "letterPending": "Euer Brief wartet noch auf den {{date}}."
+  },
+  "card": {
+    "song": "Lied",
+    "quote": "Satz",
+    "moment": "Moment",
+    "photoMissing": "Kein Foto",
+    "letterSealed": "Brief verschlossen bis {{date}}",
+    "letterWaiting": "Ein Brief wartet",
+    "letterOpened": "Brief geöffnet",
+    "letterNone": "Kein Brief"
+  },
+  "nudge": {
+    "eyebrow": "Unser Jahr",
+    "open": "Ansehen",
+    "letterWaiting": {
+      "title": "Ein Brief von uns wartet auf uns.",
+      "body": "Aus „{{chapter}}\". Öffnet ihn gemeinsam."
+    },
+    "partnerWaiting": {
+      "title": "{{name}} wartet auf dich",
+      "body": "In „{{chapter}}\" fehlen noch deine Antworten."
+    },
+    "chapterOpen": {
+      "title": "Euer Kapitel ist begonnen",
+      "body": "„{{chapter}}\" wartet auf euch."
+    },
+    "ritualDue": {
+      "title": "Euer Rückblick steht an",
+      "body": "{{occasion}} ist vorbei. Beginnt, wann es für euch beide passt."
+    },
+    "setup": {
+      "title": "Unser Jahr",
+      "body": "Ein gemeinsamer Rückblick als wiederkehrendes Ritual — nur für euch beide."
+    }
+  },
+  "errors": {
+    "saveFailed": "Konnte nicht gespeichert werden. Versuch es bitte noch einmal.",
+    "loadFailed": "Konnte nicht geladen werden.",
+    "inviteFailed": "Der Einladungslink konnte nicht erstellt werden.",
+    "periodInvalid": "Das Ende muss nach dem Anfang liegen.",
+    "titleRequired": "Gebt eurem Kapitel einen Titel.",
+    "partnerRequired": "Wählt aus, wer eure Partnerin oder euer Partner ist.",
+    "namesRequired": "Tragt beide Namen ein.",
+    "customLabelRequired": "Gebt eurer Bezeichnung einen Namen."
+  }
+}

@@ -10,6 +10,7 @@
     "recipes": "Recipes",
     "kidJournals": "Kid Journals",
     "blackBox": "Black Box",
+    "ourYear": "Our Year",
     "settings": "Settings"
   },
   "buttons": {
@@ -58,7 +59,9 @@
     "createScrapbookDesc": "Design beautiful memory pages with photos & stickers",
     "defaultScrapbookTitle": "My Scrapbook",
     "notAuthenticated": "Not authenticated — please reload the app.",
-    "createError": "Could not create scrapbook. Please try again."
+    "createError": "Could not create scrapbook. Please try again.",
+    "ourYearChapter": "Our Year",
+    "ourYearChapterDesc": "A shared look back as a couple — for the two of you only"
   },
   "pwa": {
     "dialogLabel": "Install Kaydo",

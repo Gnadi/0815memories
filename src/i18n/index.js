@@ -21,6 +21,7 @@ import enBlackbox from '../locales/en/blackbox.json'
 import enRecipes from '../locales/en/recipes.json'
 import enScrapbook from '../locales/en/scrapbook.json'
 import enTimeline from '../locales/en/timeline.json'
+import enOurYear from '../locales/en/ourYear.json'
 import enSettings from '../locales/en/settings.json'
 import enEmotions from '../locales/en/emotions.json'
 import enLegal from '../locales/en/legal.json'
@@ -35,6 +36,7 @@ import deBlackbox from '../locales/de/blackbox.json'
 import deRecipes from '../locales/de/recipes.json'
 import deScrapbook from '../locales/de/scrapbook.json'
 import deTimeline from '../locales/de/timeline.json'
+import deOurYear from '../locales/de/ourYear.json'
 import deSettings from '../locales/de/settings.json'
 import deEmotions from '../locales/de/emotions.json'
 import deLegal from '../locales/de/legal.json'
@@ -51,6 +53,7 @@ export const resources = {
     recipes: enRecipes,
     scrapbook: enScrapbook,
     timeline: enTimeline,
+    ourYear: enOurYear,
     settings: enSettings,
     emotions: enEmotions,
     legal: enLegal,
@@ -66,6 +69,7 @@ export const resources = {
     recipes: deRecipes,
     scrapbook: deScrapbook,
     timeline: deTimeline,
+    ourYear: deOurYear,
     settings: deSettings,
     emotions: deEmotions,
     legal: deLegal,

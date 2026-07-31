@@ -10,6 +10,7 @@
     "recipes": "Rezepte",
     "kidJournals": "Kinder-Tagebücher",
     "blackBox": "Black Box",
+    "ourYear": "Unser Jahr",
     "settings": "Einstellungen"
   },
   "buttons": {
@@ -58,7 +59,9 @@
     "createScrapbookDesc": "Gestalte schöne Erinnerungsseiten mit Fotos & Stickern",
     "defaultScrapbookTitle": "Mein Sammelalbum",
     "notAuthenticated": "Nicht angemeldet – bitte lade die App neu.",
-    "createError": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut."
+    "createError": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "ourYearChapter": "Unser Jahr",
+    "ourYearChapterDesc": "Gemeinsamer Rückblick als Paar — nur für euch beide"
   },
   "pwa": {
     "dialogLabel": "Kaydo installieren",

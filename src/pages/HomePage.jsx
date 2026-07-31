@@ -8,6 +8,7 @@ import MomentViewer from '../components/home/MomentViewer'
 import FeaturedJourney from '../components/home/FeaturedJourney'
 import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
+import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import PostMemoryModal from '../components/admin/PostMemoryModal'
 import PostMomentModal from '../components/admin/PostMomentModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
@@ -112,6 +113,9 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+
+          {/* "Our Year" — renders only for the two partners of a ritual */}
+          <OurYearHomeCard />
         </main>
       </div>
 
