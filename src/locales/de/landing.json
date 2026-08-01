@@ -16,7 +16,8 @@
       "Familien-Rezeptbaum mit Versionsverlauf",
       "Digitales Sammelalbum mit PDF-Export",
       "Geplante Briefe an Familienmitglieder für die Zukunft",
-      "AES-256-verschlüsselter Tresor für wertvolle Originale"
+      "AES-256-verschlüsselter Tresor für wertvolle Originale",
+      "Gemeinsamer Jahresrückblick für Paare mit versiegeltem Zukunftsbrief"
     ]
   },
   "nav": {
@@ -41,7 +42,8 @@
     "scrapbookAlt": "Der Kaydo-Scrapbook-Editor mit Fotos, Text und Stickern per Drag & Drop",
     "recipeAlt": "Ein Kaydo-Rezept-Stammbaum, der ein Familienrezept über Generationen zeigt",
     "journalAlt": "Das private Tagebuch eines Kindes in Kaydo mit datierten Briefen",
-    "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten"
+    "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten",
+    "ourYearAlt": "Die Timeline von „Unser Jahr\" in Kaydo mit zwei abgeschlossenen Kapiteln"
   },
   "pillars": {
     "sectionTitle": "Die Säulen des Zuhauses",
@@ -55,12 +57,20 @@
         "Tägliche Momente — Story-Kreise für schnelle Alltags-Schnappschüsse",
         "Die smarte Timeline ordnet Erinnerungen nach Jahreszeit und \"Heute vor ...\""
       ],
-      "pills": { "photos": "Fotos", "videos": "Videos", "voiceMemos": "Sprachnachrichten" }
+      "pills": {
+        "photos": "Fotos",
+        "videos": "Videos",
+        "voiceMemos": "Sprachnachrichten"
+      }
     },
     "vault": {
       "title": "Bewahren: Der Tresor",
       "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden.",
-      "bullets": ["AES-256-Verschlüsselung", "Auf deinem Gerät verschlüsselt — vor dem Upload", "Zeitkapseln — versiegelt bis zu einem Datum deiner Wahl"]
+      "bullets": [
+        "AES-256-Verschlüsselung",
+        "Auf deinem Gerät verschlüsselt — vor dem Upload",
+        "Zeitkapseln — versiegelt bis zu einem Datum deiner Wahl"
+      ]
     },
     "letters": {
       "title": "Schreiben: Die Briefe",
@@ -80,6 +90,17 @@
         "Fertige Sammelalben als PDF exportieren"
       ],
       "button": "Sammelalben öffnen"
+    },
+    "ourYear": {
+      "title": "Zu zweit: Unser Jahr",
+      "desc": "Ein wiederkehrendes Ritual für die beiden Menschen, die diese Familie tragen. Ihr blickt gemeinsam auf einen selbst gewählten Zeitraum zurück, vergleicht eure Erinnerungen und bewahrt das Wichtigste als Kapitel auf — an eurem Tag, in eurem Rhythmus.",
+      "bullets": [
+        "Beide beantworten dieselben fünf Fragen unabhängig voneinander — sichtbar erst, wenn ihr beide fertig seid",
+        "Ein Paar-Quiz, dessen Fragen ihr für jedes Kapitel neu schreibt — ohne Punkte, ohne Gewinner",
+        "Ein Brief an euer zukünftiges Ich, verschlossen bis zu dem Tag, den ihr wählt",
+        "Vier Erinnerungen je Kapitel: ein Bild, ein Lied, ein Satz, ein Moment"
+      ],
+      "note": "Setzt weder Ehe noch Kinder noch zwölf Monate voraus. Sichtbar ausschließlich für euch beide — kein anderes Konto der Familie hat Zugriff."
     },
     "export": {
       "title": "Besitzen: Deine Daten, dein Weg",
@@ -200,9 +221,18 @@
   },
   "footer": {
     "links": [
-      { "label": "Nutzungsbedingungen", "to": "/terms" },
-      { "label": "Datenschutzerklärung", "to": "/privacy-policy" },
-      { "label": "Kontakt", "to": "/contact" }
+      {
+        "label": "Nutzungsbedingungen",
+        "to": "/terms"
+      },
+      {
+        "label": "Datenschutzerklärung",
+        "to": "/privacy-policy"
+      },
+      {
+        "label": "Kontakt",
+        "to": "/contact"
+      }
     ],
     "safety": "Sicherheitsrichtlinien",
     "safetyTo": "/safety",

@@ -9,13 +9,25 @@
  * Run with:  npm run test:rules
  * (Skipped by default — `npm test` stays emulator-free.)
  */
-import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import {
   initializeTestEnvironment,
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  where,
+  Timestamp,
+} from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
@@ -48,7 +60,10 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
   beforeAll(async () => {
     const [host, port] = EMULATOR.split(':')
     testEnv = await initializeTestEnvironment({
-      projectId: 'demo-kaydo',
+      // Deliberately NOT 'demo-kaydo': these tests wipe the project between
+      // cases, and that is the project `npm run seed:emulator` fills with the
+      // demo family used for the landing-page screenshots.
+      projectId: 'demo-kaydo-rules',
       firestore: { rules: readFileSync('firestore.rules', 'utf8'), host, port: Number(port) },
     })
   })
@@ -85,6 +100,80 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
   })
 
   const as = (uid) => testEnv.authenticatedContext(uid).firestore()
+
+  // Queries, not just single-document reads. A `list` is evaluated differently:
+  // reaching straight into a field throws during the engine's validation pass,
+  // which denied the whole chapter timeline until the rules used `.get()` with a
+  // default. Single-document tests never caught it.
+  describe('listing chapters', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'ourYearChapters', CHAPTER), {
+          periodStart: Timestamp.fromDate(new Date(2025, 4, 13)),
+        })
+      })
+    })
+
+    it('lets a partner query their own timeline', async () => {
+      const snap = await assertSucceeds(
+        getDocs(
+          query(
+            collection(as(A), 'ourYearChapters'),
+            where('participantUids', 'array-contains', A),
+            where('ritualId', '==', 'ritual-1'),
+            orderBy('periodStart', 'desc'),
+          ),
+        ),
+      )
+      expect(snap.size).toBe(1)
+    })
+
+    it('rejects a query that does not constrain itself to the asker', async () => {
+      // Not a leak, a design constraint: rules are not filters, so a list is
+      // refused outright unless the query proves the read rule holds. This is
+      // why useOurYearChapters always filters on participantUids.
+      await assertFails(
+        getDocs(
+          query(collection(as(A), 'ourYearChapters'), where('ritualId', '==', 'ritual-1')),
+        ),
+      )
+    })
+
+    it('refuses a third admin asking for the couple by name', async () => {
+      await assertFails(
+        getDocs(
+          query(
+            collection(as(OUTSIDER), 'ourYearChapters'),
+            where('participantUids', 'array-contains', A),
+            where('ritualId', '==', 'ritual-1'),
+          ),
+        ),
+      )
+    })
+
+    it('hands a third admin nothing when they ask about themselves', async () => {
+      // Constraining the query to their own uid is allowed — and returns an
+      // empty set, because they are in nobody's ritual.
+      const snap = await assertSucceeds(
+        getDocs(
+          query(
+            collection(as(OUTSIDER), 'ourYearChapters'),
+            where('participantUids', 'array-contains', OUTSIDER),
+          ),
+        ),
+      )
+      expect(snap.size).toBe(0)
+    })
+
+    it('lets a partner find their ritual by membership', async () => {
+      const snap = await assertSucceeds(
+        getDocs(
+          query(collection(as(B), 'ourYearRituals'), where('participantUids', 'array-contains', B)),
+        ),
+      )
+      expect(snap.size).toBe(1)
+    })
+  })
 
   describe('a third admin of the same family', () => {
     it('cannot read the ritual, the chapter, or any answer', async () => {

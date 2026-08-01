@@ -16,7 +16,8 @@
       "Family recipe tree with version history",
       "Digital scrapbook with PDF export",
       "Scheduled future letters to family members",
-      "AES-256 encrypted vault for precious originals"
+      "AES-256 encrypted vault for precious originals",
+      "Shared yearly review for couples with a sealed letter to the future"
     ]
   },
   "nav": {
@@ -41,7 +42,8 @@
     "scrapbookAlt": "The Kaydo scrapbook editor with drag-and-drop photos, text and stickers",
     "recipeAlt": "A Kaydo recipe evolution tree tracing a family recipe across generations",
     "journalAlt": "A child's private journal in Kaydo with dated letters",
-    "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages"
+    "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages",
+    "ourYearAlt": "The \"Our Year\" timeline in Kaydo showing two completed chapters"
   },
   "pillars": {
     "sectionTitle": "The Pillars of Home",
@@ -55,12 +57,20 @@
         "Daily Moments — story circles for quick everyday snapshots",
         "A smart timeline sorts memories by season and \"on this day\""
       ],
-      "pills": { "photos": "Photos", "videos": "Videos", "voiceMemos": "Voice Memos" }
+      "pills": {
+        "photos": "Photos",
+        "videos": "Videos",
+        "voiceMemos": "Voice Memos"
+      }
     },
     "vault": {
       "title": "Preserve: The Vault",
       "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos — encrypted with AES-256 in your browser before they're uploaded.",
-      "bullets": ["AES-256 encryption", "Encrypted on your device, before upload", "Time-locked capsules — sealed until a date you choose"]
+      "bullets": [
+        "AES-256 encryption",
+        "Encrypted on your device, before upload",
+        "Time-locked capsules — sealed until a date you choose"
+      ]
     },
     "letters": {
       "title": "Write: The Letters",
@@ -80,6 +90,17 @@
         "Export finished scrapbooks to PDF"
       ],
       "button": "Open Scrapbooks"
+    },
+    "ourYear": {
+      "title": "Just the two of you: Our Year",
+      "desc": "A recurring ritual for the two people who carry this family. You look back together on a stretch of time you choose, compare your memories and keep what matters as a chapter — on your day, at your own pace.",
+      "bullets": [
+        "You both answer the same five questions independently — visible only once both of you are done",
+        "A couple's quiz whose questions you rewrite for every chapter — no points, no winner",
+        "A letter to your future selves, sealed until the day you pick",
+        "Four keepsakes per chapter: one picture, one song, one sentence, one moment"
+      ],
+      "note": "Assumes no marriage, no children and no twelve-month cycle. Visible to the two of you only — no other account in the family has access."
     },
     "export": {
       "title": "Own: Your Data, Your Way",
@@ -200,9 +221,18 @@
   },
   "footer": {
     "links": [
-      { "label": "Terms of Service", "to": "/terms" },
-      { "label": "Privacy Policy", "to": "/privacy-policy" },
-      { "label": "Contact", "to": "/contact" }
+      {
+        "label": "Terms of Service",
+        "to": "/terms"
+      },
+      {
+        "label": "Privacy Policy",
+        "to": "/privacy-policy"
+      },
+      {
+        "label": "Contact",
+        "to": "/contact"
+      }
     ],
     "safety": "Safety Guidelines",
     "safetyTo": "/safety",

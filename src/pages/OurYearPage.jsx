@@ -33,6 +33,7 @@ export default function OurYearPage() {
   const { ritual, loading: ritualLoading } = useOurYearRitual(familyId, uid, encryptionKey)
   const { chapters, loading: chaptersLoading, addChapter } = useOurYearChapters(
     ritual?.id ?? null,
+    uid,
     encryptionKey,
   )
   const [creating, setCreating] = useState(false)

@@ -151,18 +151,28 @@ export function useOurYearRitual(familyId, uid, encryptionKey) {
 // Chapters
 // ---------------------------------------------------------------------------
 
-export function useOurYearChapters(ritualId, encryptionKey) {
+/**
+ * The couple's chapters, newest first.
+ *
+ * The `participantUids` filter is not redundant with `ritualId` — it is what
+ * makes the query legal. Security rules are not filters: for a list, Firestore
+ * rejects the whole query unless its constraints prove the read rule holds for
+ * every possible match. The rule allows a chapter only to its participants, so
+ * the query has to say so.
+ */
+export function useOurYearChapters(ritualId, uid, encryptionKey) {
   const [chapters, setChapters] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!ritualId || !db) {
+    if (!ritualId || !uid || !db) {
       setChapters([])
       setLoading(false)
       return
     }
     const q = query(
       collection(db, CHAPTERS),
+      where('participantUids', 'array-contains', uid),
       where('ritualId', '==', ritualId),
       orderBy('periodStart', 'desc'),
     )
@@ -179,7 +189,7 @@ export function useOurYearChapters(ritualId, encryptionKey) {
       },
     )
     return unsubscribe
-  }, [ritualId, encryptionKey])
+  }, [ritualId, uid, encryptionKey])
 
   const addChapter = useCallback(
     async (ritual, data) => {

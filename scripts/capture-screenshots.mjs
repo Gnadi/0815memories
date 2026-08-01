@@ -31,6 +31,9 @@ const SHOTS = [
   { name: 'recipe-tree-desktop', path: '/recipes/recipe-root', width: 1280, height: 800, out: 1200 },
   { name: 'journal-desktop', path: '/journal/child-emma', width: 1280, height: 800, out: 1200 },
   { name: 'blackbox-desktop', path: '/blackbox', width: 1280, height: 800, out: 1200 },
+  // Taller than the rest on purpose: the point of this one is the timeline, so
+  // the frame has to reach past the ritual header to a second chapter.
+  { name: 'our-year-desktop', path: '/our-year', width: 1280, height: 1080, out: 1200 },
 ]
 
 // Note: the app keeps an open Firestore websocket to the emulator, so the network

@@ -26,6 +26,7 @@ import {
   Smartphone,
   Zap,
   Bell,
+  CalendarHeart,
   ChevronDown,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
@@ -421,7 +422,40 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 6 — Own: Data Export */}
+            {/* Card 6 — Just the two of you: Our Year (full-width) */}
+            <div className="md:col-span-2 bg-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
+              {/* Left — text */}
+              <div className="flex-1">
+                <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center mb-5">
+                  <CalendarHeart className="w-5 h-5 text-kaydo" />
+                </div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.ourYear.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed mb-6 max-w-lg">
+                  {t('pillars.ourYear.desc')}
+                </p>
+                <ul className="space-y-2">
+                  {t('pillars.ourYear.bullets', { returnObjects: true }).map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                      <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-bark-muted mt-5 max-w-lg">{t('pillars.ourYear.note')}</p>
+              </div>
+
+              {/* Right — real "Our Year" timeline screenshot */}
+              <div className="lg:w-96 w-full flex-shrink-0">
+                <BrowserFrame
+                  src="/screenshots/our-year-desktop.webp"
+                  alt={t('screens.ourYearAlt')}
+                  width={1200}
+                  height={1013}
+                />
+              </div>
+            </div>
+
+            {/* Card 7 — Own: Data Export */}
             <div className="bg-[#E0F4F8] rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center">
                 <Download className="w-5 h-5 text-teal-700" />
