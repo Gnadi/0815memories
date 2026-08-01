@@ -423,7 +423,9 @@ export default function LandingPage() {
             </div>
 
             {/* Card 6 — Just the two of you: Our Year (full-width) */}
-            <div className="md:col-span-2 bg-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
+            {/* lg:items-center, unlike its siblings: the phone frame is much
+                taller than this card's text, so top-aligning leaves a hole. */}
+            <div className="md:col-span-2 bg-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
               {/* Left — text */}
               <div className="flex-1">
                 <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center mb-5">
@@ -444,13 +446,14 @@ export default function LandingPage() {
                 <p className="text-xs text-bark-muted mt-5 max-w-lg">{t('pillars.ourYear.note')}</p>
               </div>
 
-              {/* Right — real "Our Year" timeline screenshot */}
+              {/* Right — real "Our Year" timeline, on a phone: that is where a
+                  couple actually sits down with this. */}
               <div className="lg:w-96 w-full flex-shrink-0">
-                <BrowserFrame
-                  src="/screenshots/our-year-desktop.webp"
-                  alt={t('screens.ourYearAlt')}
-                  width={1200}
-                  height={1013}
+                <PhoneFrame
+                  src="/screenshots/our-year-mobile.webp"
+                  alt={t('screens.ourYearMobileAlt')}
+                  width={440}
+                  height={1128}
                 />
               </div>
             </div>
