@@ -1,8 +1,9 @@
 import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
-import { NetworkFirst, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
 // Take control immediately on update. This SW is built with the `injectManifest`
 // strategy, so — unlike `generateSW` — vite-plugin-pwa does NOT auto-inject the
@@ -43,16 +44,44 @@ registerRoute(
   })
 )
 
-// Cloudinary — NetworkOnly: blobs are AES-256-GCM encrypted; the SW
-// can't serve them usefully from cache (the browser can't render raw
-// ciphertext), and serving a stale/opaque cached response breaks the
-// fetch→arrayBuffer()→decrypt pipeline in useDecryptedMedia.
+// Encrypted media on Cloudinary — CacheFirst.
+//
+// These blobs are never handed to the renderer as-is: useDecryptedMedia reads
+// them with fetch().arrayBuffer() and decrypts them in the page. A cached
+// ciphertext deserialises exactly like a freshly fetched one, and it is the
+// same ciphertext Cloudinary serves to anyone with the URL, so caching it adds
+// no exposure — the plaintext still only ever exists in memory. What it does
+// remove is a full re-download of every photo on every reload, since the
+// in-memory decrypted cache dies with the page.
+//
+// statuses: [200] only. An opaque (status 0) cross-origin response cannot be
+// read into an ArrayBuffer, so caching one would permanently poison the
+// decrypt path for that URL.
+registerRoute(
+  ({ url }) =>
+    /^https:\/\/res\.cloudinary\.com\//i.test(url.href) && /\/raw\/upload\//i.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'encrypted-media-cache',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({
+        maxEntries: 300,
+        maxAgeSeconds: 60 * 60 * 24 * 30,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+)
+
+// Everything else on Cloudinary is unencrypted (login header images, legacy
+// uploads) and stays on the network so edits show up immediately.
 registerRoute(
   ({ url }) => /^https:\/\/res\.cloudinary\.com\//i.test(url.href),
   new NetworkOnly()
 )
 
-// Firebase Storage — same reasoning as Cloudinary above.
+// Firebase Storage — left on the network: nothing distinguishes encrypted from
+// unencrypted objects by URL here.
 registerRoute(
   ({ url }) => /^https:\/\/firebasestorage\.googleapis\.com\//i.test(url.href),
   new NetworkOnly()

@@ -8,6 +8,7 @@ import MomentViewer from '../components/home/MomentViewer'
 import PostMomentModal from '../components/admin/PostMomentModal'
 import { formatRelativeDate } from '../utils/helpers'
 import EncryptedImage from '../components/media/EncryptedImage'
+import { thumbAt } from '../utils/mediaThumbs'
 
 const MomentCard = memo(function MomentCard({ moment, onOpen }) {
   return (
@@ -18,6 +19,7 @@ const MomentCard = memo(function MomentCard({ moment, onOpen }) {
       {moment.images?.[0] ? (
         <EncryptedImage
           src={moment.images[0]}
+          thumbSrc={thumbAt(moment, 0)}
           alt={moment.caption}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />

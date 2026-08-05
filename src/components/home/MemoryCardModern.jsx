@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
+import { thumbAt } from '../../utils/mediaThumbs'
 
 export default function MemoryCardModern({ memory, onEdit, onDelete }) {
   const { t } = useTranslation('home')
@@ -63,7 +64,11 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
           onTouchEnd={allImages.length > 1 ? onTouchEnd : undefined}
         >
           {/* Blurred backdrop fills letterbox space around the photo */}
-          <EncryptedPhotoFrame src={allImages[imgIndex]} alt={memory.title} />
+          <EncryptedPhotoFrame
+                src={allImages[imgIndex]}
+                thumbSrc={thumbAt(memory, imgIndex)}
+                alt={memory.title}
+              />
           <div className="absolute bottom-2 left-2 z-10 flex gap-1.5">
             {memory.voiceMemos?.length > 0 && (
               <span className="flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">

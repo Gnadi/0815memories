@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { encryptAndUpload } from '../utils/encryptedUpload'
+import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { MAX_VIDEO_DURATION_SECONDS } from '../constants/media'
 import { devError } from '../utils/devLog'
 
@@ -44,11 +44,19 @@ export function useMediaUploader(encryptionKey, {
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
 
     try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      // Images get a second, downscaled encrypted asset so grids and story
+      // circles stop pulling the full-resolution original. thumbUrl is '' when
+      // one could not be made; every reader falls back to `url`.
+      const { url, publicId, thumbUrl, thumbPublicId } =
+        await encryptAndUploadWithThumb(file, encryptionKey)
       setImages((prev) =>
-        prev.map((img) => (img.id === tempId ? { ...img, url, publicId, uploading: false } : img))
+        prev.map((img) =>
+          img.id === tempId
+            ? { ...img, url, publicId, thumbUrl, thumbPublicId, uploading: false }
+            : img
+        )
       )
-      return { id: tempId, url, publicId }
+      return { id: tempId, url, publicId, thumbUrl, thumbPublicId }
     } catch (err) {
       devError('Image upload failed:', err)
       setImages((prev) => prev.filter((img) => img.id !== tempId))

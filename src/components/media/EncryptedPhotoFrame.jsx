@@ -14,13 +14,14 @@ import { TRANSPARENT_PIXEL, PLACEHOLDER_CLASSES } from './placeholder'
  */
 function EncryptedPhotoFrame({
   src,
+  thumbSrc,
   alt = '',
   backdropClassName = 'absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70',
   photoClassName = 'relative z-[1] w-full h-full object-contain',
 }) {
-  const { decryptedUrl, loading, ref } = useDecryptedMedia(src, 'image/*', { lazy: true })
+  const { decryptedUrl, loading, ref } = useDecryptedMedia(thumbSrc || src, 'image/*', { lazy: true })
 
-  if (!src) return null
+  if (!src && !thumbSrc) return null
 
   const url = decryptedUrl || TRANSPARENT_PIXEL
 
