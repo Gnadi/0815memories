@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
+import { thumbAt } from '../../utils/mediaThumbs'
 
 export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
   const { t } = useTranslation('home')
@@ -43,6 +44,7 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
                 {moment.images?.[0] ? (
                   <EncryptedImage
                     src={moment.images[0]}
+                    thumbSrc={thumbAt(moment, 0)}
                     alt={moment.caption}
                     className="w-16 h-16 rounded-full object-cover"
                   />

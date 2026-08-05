@@ -52,8 +52,10 @@ export default function MemoryHero({ images, imageUrl, category }) {
       >
         {allImages.length > 0 ? (
           <>
+            {/* No key on the src: remounting per slide threw away the element
+                and re-showed the placeholder even for an already-decrypted
+                neighbour. The hook re-resolves from cache on src change. */}
             <EncryptedImage
-              key={allImages[index]}
               src={allImages[index]}
               alt=""
               className="w-full h-full object-cover"

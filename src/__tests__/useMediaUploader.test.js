@@ -1,22 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-// encryptAndUpload is the only side-effect we care about; mocking it at
+// The upload helpers are the only side-effect we care about; mocking them at
 // module-load time keeps the hook isolated from Cloudinary + Web Crypto.
+// Images go through encryptAndUploadWithThumb, videos through encryptAndUpload.
 vi.mock('../utils/encryptedUpload', () => ({
   encryptAndUpload: vi.fn(),
+  encryptAndUploadWithThumb: vi.fn(),
 }))
 vi.mock('../utils/devLog', () => ({
   devError: vi.fn(),
   devWarn: vi.fn(),
 }))
 
-import { encryptAndUpload } from '../utils/encryptedUpload'
+import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 
 // jsdom's URL.createObjectURL is absent by default.
 beforeEach(() => {
   encryptAndUpload.mockReset()
+  encryptAndUploadWithThumb.mockReset()
   if (!URL.createObjectURL) {
     URL.createObjectURL = vi.fn(() => 'blob:fake')
     URL.revokeObjectURL = vi.fn()
@@ -29,7 +32,12 @@ function makeFile(name = 'pic.jpg', type = 'image/jpeg') {
 
 describe('useMediaUploader', () => {
   it('adds an image with a temp entry, then swaps in the uploaded URL', async () => {
-    encryptAndUpload.mockResolvedValue({ url: 'https://cdn/example.enc', publicId: 'pub123' })
+    encryptAndUploadWithThumb.mockResolvedValue({
+      url: 'https://cdn/example.enc',
+      publicId: 'pub123',
+      thumbUrl: 'https://cdn/example-thumb.enc',
+      thumbPublicId: 'pub123-thumb',
+    })
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
     await act(async () => {
@@ -39,12 +47,13 @@ describe('useMediaUploader', () => {
     expect(result.current.images).toHaveLength(1)
     expect(result.current.images[0].url).toBe('https://cdn/example.enc')
     expect(result.current.images[0].publicId).toBe('pub123')
+    expect(result.current.images[0].thumbUrl).toBe('https://cdn/example-thumb.enc')
     expect(result.current.images[0].uploading).toBe(false)
     expect(result.current.hasUploading).toBe(false)
   })
 
   it('removes the temp image when the upload throws', async () => {
-    encryptAndUpload.mockRejectedValue(new Error('boom'))
+    encryptAndUploadWithThumb.mockRejectedValue(new Error('boom'))
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
     await act(async () => {
@@ -64,11 +73,11 @@ describe('useMediaUploader', () => {
 
     expect(ret).toBe(null)
     expect(result.current.images).toEqual([])
-    expect(encryptAndUpload).not.toHaveBeenCalled()
+    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
 
   it('removes images via removeImage', async () => {
-    encryptAndUpload.mockResolvedValue({ url: 'u', publicId: 'p' })
+    encryptAndUploadWithThumb.mockResolvedValue({ url: 'u', publicId: 'p', thumbUrl: '', thumbPublicId: '' })
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
     let added

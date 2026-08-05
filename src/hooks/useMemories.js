@@ -30,6 +30,44 @@ async function encryptMemoryData(key, data) {
 const DEFAULT_MEMORIES_LIMIT = 50
 const DEFAULT_MOMENTS_LIMIT = 10
 
+/**
+ * Write operations only — no Firestore subscription.
+ *
+ * Components that just need a "create memory" action (the global admin bottom
+ * nav, for one) used to call useMemories() for it, which opened a second
+ * 50-document listener and re-decrypted six fields per memory on every
+ * snapshot, in parallel with the page's own listener.
+ */
+export function useMemoryWriter(familyId, encryptionKey) {
+  const addMemory = async (memory) => {
+    const encrypted = await encryptMemoryData(encryptionKey, memory)
+    const ref = await addDoc(collection(db, 'memories'), {
+      ...encrypted,
+      familyId,
+      createdAt: serverTimestamp(),
+    })
+    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
+    addDoc(collection(db, 'notificationsQueue'), {
+      familyId,
+      title: 'New memory added',
+      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
+      url: `/memory/${ref.id}`,
+      createdAt: serverTimestamp(),
+    }).catch(() => {})
+  }
+
+  const updateMemory = async (id, updates) => {
+    const encrypted = await encryptMemoryData(encryptionKey, updates)
+    await updateDoc(doc(db, 'memories', id), encrypted)
+  }
+
+  const deleteMemory = async (id) => {
+    await deleteDoc(doc(db, 'memories', id))
+  }
+
+  return { addMemory, updateMemory, deleteMemory }
+}
+
 export function useMemories(familyId, encryptionKey, pageSize = DEFAULT_MEMORIES_LIMIT) {
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -68,35 +106,11 @@ export function useMemories(familyId, encryptionKey, pageSize = DEFAULT_MEMORIES
     return unsubscribe
   }, [familyId, encryptionKey, pageSize])
 
-  const addMemory = async (memory) => {
-    const encrypted = await encryptMemoryData(encryptionKey, memory)
-    const ref = await addDoc(collection(db, 'memories'), {
-      ...encrypted,
-      familyId,
-      createdAt: serverTimestamp(),
-    })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New memory added',
-      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
-      url: `/memory/${ref.id}`,
-      createdAt: serverTimestamp(),
-    }).catch(() => {})
-  }
-
-  const updateMemory = async (id, updates) => {
-    const encrypted = await encryptMemoryData(encryptionKey, updates)
-    await updateDoc(doc(db, 'memories', id), encrypted)
-  }
-
-  const deleteMemory = async (id) => {
-    await deleteDoc(doc(db, 'memories', id))
-  }
+  const writer = useMemoryWriter(familyId, encryptionKey)
 
   const featuredMemory = memories.find((m) => m.featured)
 
-  return { memories, featuredMemory, loading, error, addMemory, updateMemory, deleteMemory }
+  return { memories, featuredMemory, loading, error, ...writer }
 }
 
 export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {

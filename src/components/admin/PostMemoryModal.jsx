@@ -11,12 +11,22 @@ import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import PolaroidBorderEditor from './PolaroidBorderEditor'
 import { resolvePolaroidBorder } from '../home/polaroidBorder'
+import { thumbsFor, buildThumbs } from '../../utils/mediaThumbs'
 
 const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
 
 function buildInitialImages(memory) {
   if (memory?.images?.length) {
-    return memory.images.map((url, i) => ({ id: `init-img-${i}`, preview: url, url, uploading: false }))
+    // Carry each image's existing thumb along so an edit that reorders or
+    // removes photos rewrites `thumbs` in step instead of orphaning it.
+    const thumbs = thumbsFor(memory)
+    return memory.images.map((url, i) => ({
+      id: `init-img-${i}`,
+      preview: url,
+      url,
+      thumbUrl: thumbs[i] || '',
+      uploading: false,
+    }))
   }
   if (memory?.imageUrl) {
     return [{ id: 'init-img-0', preview: memory.imageUrl, url: memory.imageUrl, uploading: false }]
@@ -135,10 +145,14 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       const readyImages = images.filter((img) => img.url)
       const imageUrls = readyImages.map((img) => img.url)
       const readyVideos = videos.filter((v) => v.url)
+      const thumbs = buildThumbs(readyImages)
 
       const data = {
         ...form,
         images: imageUrls,
+        // Additive: written only when at least one image has a thumbnail, and
+        // always positionally aligned with `images`.
+        ...(thumbs ? { thumbs } : {}),
         imageUrl: imageUrls[0] || '',
         date: Timestamp.fromDate(new Date(form.date)),
         voiceMemos,

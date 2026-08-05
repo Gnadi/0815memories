@@ -6,10 +6,18 @@ import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
+import { thumbsFor, buildThumbs } from '../../utils/mediaThumbs'
 
 function buildInitialImages(moment) {
   if (moment?.images?.length) {
-    return moment.images.map((url, i) => ({ id: `init-img-${i}`, preview: url, url, uploading: false }))
+    const thumbs = thumbsFor(moment)
+    return moment.images.map((url, i) => ({
+      id: `init-img-${i}`,
+      preview: url,
+      url,
+      thumbUrl: thumbs[i] || '',
+      uploading: false,
+    }))
   }
   return []
 }
@@ -90,9 +98,13 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     }
     setSaving(true)
     try {
+      const thumbs = buildThumbs(readyImages)
       const data = {
         ...form,
         images: readyImages.map((img) => img.url),
+        // Additive, positionally aligned with `images`; omitted when no image
+        // has a thumbnail.
+        ...(thumbs ? { thumbs } : {}),
         videos: readyVideos.map((v) => ({ url: v.url, publicId: v.publicId })),
       }
       if (isEditing) {
