@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useMemories } from '../../hooks/useMemories'
-import { useScrapbooks } from '../../hooks/useScrapbooks'
+import { useMemoryWriter } from '../../hooks/useMemories'
+import { useScrapbookWriter } from '../../hooks/useScrapbooks'
 import PostMemoryModal from '../admin/PostMemoryModal'
 import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
 import { devError } from '../../utils/devLog'
@@ -37,8 +37,10 @@ export default function AdminMobileBottomNav() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
 
-  const { addMemory } = useMemories(isAdmin ? familyId : null, encryptionKey)
-  const { addScrapbook } = useScrapbooks(isAdmin ? familyId : null, encryptionKey)
+  // Writer-only: this nav is mounted on every route, so subscribing here would
+  // duplicate the page's own memory and scrapbook listeners.
+  const { addMemory } = useMemoryWriter(isAdmin ? familyId : null, encryptionKey)
+  const { addScrapbook } = useScrapbookWriter(isAdmin ? familyId : null, encryptionKey)
 
   // Hide on public/auth pages and the scrapbook editor
   if (!isAdmin) return null

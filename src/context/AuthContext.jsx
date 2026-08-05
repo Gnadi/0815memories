@@ -1,95 +1,47 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
 import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import bcrypt from 'bcryptjs'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey } from '../utils/encryption'
+import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 
 const AuthContext = createContext(null)
 
 const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
 const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
 
+const readStored = (key) => (typeof window !== 'undefined' ? localStorage.getItem(key) : null)
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
   const [isViewer, setIsViewer] = useState(false)
-  const [familyId, setFamilyId] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('fh_familyId') : null
-  )
+  const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
   const [encryptionKey, setEncryptionKey] = useState(null)
-  const [keyLoading, setKeyLoading] = useState(false)
-  const [memoryCardStyle, setMemoryCardStyle] = useState('modern')
+  // Start "loading" whenever a family is already known from localStorage. The
+  // key fetch cannot begin until after the first paint, and ProtectedRoute
+  // gates on this flag — leaving it false meant the app painted once with a
+  // null key, then unmounted the whole tree for the spinner, then remounted it.
+  const [keyLoading, setKeyLoading] = useState(() => !!readStored('fh_familyId'))
+  // Remembered so the first frame picks the same card component the family doc
+  // will confirm. Guessing 'modern' and correcting later swaps the component
+  // type and remounts every card, and with it every image.
+  const [memoryCardStyle, setMemoryCardStyle] = useState(() =>
+    normalizeCardStyle(readStored('fh_cardStyle'))
+  )
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
-  useEffect(() => {
-    // Check localStorage for viewer session
-    const viewerSession = localStorage.getItem('fh_viewer')
-    if (viewerSession === 'true') {
-      setIsViewer(true)
-    }
+  // Family whose key is already imported. Guards against re-importing on every
+  // auth-object change: importEncryptionKey() mints a new CryptoKey each call,
+  // and that identity sits in the dependency array of every Firestore listener
+  // and every media decrypt effect in the app.
+  const keyLoadedForRef = useRef(null)
 
-    if (!auth) {
-      setLoading(false)
-      return
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      // If a Firebase session is restored but fh_familyId was cleared (e.g. logged out
-      // on another tab), resolve it now so the key-loading effect can run.
-      if (firebaseUser && !localStorage.getItem('fh_familyId')) {
-        await resolveFamilyId(firebaseUser.uid)
-      }
-      setLoading(false)
-    })
-
-    return unsubscribe
-  }, [])
-
-  // Load encryption key whenever familyId or auth state changes.
-  // Depending on user ensures a retry when Firebase Auth is restored after the
-  // initial mount, which fixes the race where familyId was set from localStorage
-  // before the auth token was ready and the first Firestore read failed silently.
-  useEffect(() => {
-    if (!familyId || !db) return
-    setKeyLoading(true)
-    setEncryptionKey(null)
-    async function loadKey() {
-      try {
-        const familyDoc = await getDoc(doc(db, 'families', familyId))
-        if (familyDoc.exists()) {
-          const data = familyDoc.data()
-          if (data.encryptionKeyJwk) {
-            const key = await importEncryptionKey(data.encryptionKeyJwk)
-            setEncryptionKey(key)
-          }
-          setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
-        }
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
-      } finally {
-        setKeyLoading(false)
-      }
-    }
-    loadKey()
-  }, [familyId, user])
-
-  // Live-subscribe to memoryCardStyle changes so admins flipping the toggle
-  // in Settings see the home feed switch without a reload.
-  useEffect(() => {
-    if (!familyId || !db) return
-    const unsub = onSnapshot(doc(db, 'families', familyId), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data()
-        setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
-      }
-    })
-    return unsub
-  }, [familyId])
-
-  const resolveFamilyId = async (uid) => {
+  // Defined before the effects that depend on it: the dependency array is read
+  // during render, so a `const` declared further down would be in its TDZ.
+  const resolveFamilyId = useCallback(async (uid) => {
     // Primary lookup: multi-admin shape.
     const byAdmins = await getDocs(
       query(collection(db, 'families'), where('adminUids', 'array-contains', uid))
@@ -117,19 +69,104 @@ export function AuthProvider({ children }) {
     setFamilyId(id)
     localStorage.setItem('fh_familyId', id)
     return id
-  }
+  }, [])
+
+  useEffect(() => {
+    // Check localStorage for viewer session
+    const viewerSession = localStorage.getItem('fh_viewer')
+    if (viewerSession === 'true') {
+      setIsViewer(true)
+    }
+
+    if (!auth) {
+      setLoading(false)
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser)
+      // If a Firebase session is restored but fh_familyId was cleared (e.g. logged out
+      // on another tab), resolve it now so the key-loading effect can run.
+      if (firebaseUser && !localStorage.getItem('fh_familyId')) {
+        await resolveFamilyId(firebaseUser.uid)
+      }
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [resolveFamilyId])
+
+  // Load encryption key whenever familyId or auth state changes.
+  // Depending on user ensures a retry when Firebase Auth is restored after the
+  // initial mount, which fixes the race where familyId was set from localStorage
+  // before the auth token was ready and the first Firestore read failed silently.
+  useEffect(() => {
+    if (!familyId || !db) return
+    // Already resolved for this family — this run is only the auth object
+    // changing identity. Re-importing would churn the key for no reason.
+    if (keyLoadedForRef.current === familyId) return
+
+    // Only a genuine family switch invalidates the key we hold.
+    if (keyLoadedForRef.current !== null) setEncryptionKey(null)
+    setKeyLoading(true)
+
+    let cancelled = false
+    async function loadKey() {
+      try {
+        const familyDoc = await getDoc(doc(db, 'families', familyId))
+        if (cancelled) return
+        if (familyDoc.exists()) {
+          const data = familyDoc.data()
+          if (data.encryptionKeyJwk) {
+            const key = await importEncryptionKey(data.encryptionKeyJwk)
+            if (cancelled) return
+            setEncryptionKey(key)
+          }
+          setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
+          // Mark resolved only on a successful read. A failure here is usually
+          // the Firestore call racing the auth token, and the `user` dependency
+          // exists precisely so it can be retried once the token lands.
+          keyLoadedForRef.current = familyId
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
+      } finally {
+        if (!cancelled) setKeyLoading(false)
+      }
+    }
+    loadKey()
+
+    return () => {
+      cancelled = true
+    }
+  }, [familyId, user])
+
+  // Live-subscribe to memoryCardStyle changes so admins flipping the toggle
+  // in Settings see the home feed switch without a reload.
+  useEffect(() => {
+    if (!familyId || !db) return
+    const unsub = onSnapshot(doc(db, 'families', familyId), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data()
+        const style = normalizeCardStyle(data.memoryCardStyle)
+        setMemoryCardStyle(style)
+        if (typeof window !== 'undefined') localStorage.setItem('fh_cardStyle', style)
+      }
+    })
+    return unsub
+  }, [familyId])
 
   // Explicitly bind the session to a family without going through a lookup.
   // Used right after invite redemption, where the new admin's UID has just been
   // added to the family but a fresh resolveFamilyId() query may race the write
   // (or the onAuthStateChanged-triggered lookup already ran before the write).
-  const setActiveFamilyId = (id) => {
+  const setActiveFamilyId = useCallback((id) => {
     if (!id) return
     setFamilyId(id)
     localStorage.setItem('fh_familyId', id)
-  }
+  }, [])
 
-  const loginAsViewer = async (password, viewerFamilyId) => {
+  const loginAsViewer = useCallback(async (password, viewerFamilyId) => {
     if (!db) throw new Error('Firebase not configured — add env vars and reload')
     if (!viewerFamilyId) throw new Error('No family link provided')
 
@@ -152,9 +189,9 @@ export function AuthProvider({ children }) {
     setFamilyId(viewerFamilyId)
     localStorage.setItem('fh_viewer', 'true')
     localStorage.setItem('fh_familyId', viewerFamilyId)
-  }
+  }, [])
 
-  const loginAsAdmin = async (email, password) => {
+  const loginAsAdmin = useCallback(async (email, password) => {
     if (!auth) throw new Error('Firebase not configured — add env vars and reload')
     const result = await signInWithEmailAndPassword(auth, email, password)
     const resolved = await resolveFamilyId(result.user.uid)
@@ -165,9 +202,9 @@ export function AuthProvider({ children }) {
       await signOut(auth)
       throw new Error('This account is no longer associated with any family. Ask a family admin for a new invite link.')
     }
-  }
+  }, [resolveFamilyId])
 
-  const signup = async (email, password, displayName, familyName) => {
+  const signup = useCallback(async (email, password, displayName, familyName) => {
     if (!auth || !db) throw new Error('Firebase not configured — add env vars and reload')
 
     const name = familyName || displayName + "'s Family"
@@ -195,46 +232,59 @@ export function AuthProvider({ children }) {
       encryptionKeyJwk: jwk,
       createdAt: serverTimestamp(),
     })
+    // The key was just generated locally — no need for the loader effect to
+    // fetch and re-import it, which would hand every consumer a fresh identity.
+    keyLoadedForRef.current = familyRef.id
     setFamilyId(familyRef.id)
     localStorage.setItem('fh_familyId', familyRef.id)
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     if (user && auth) {
       await signOut(auth)
     }
+    keyLoadedForRef.current = null
     setIsViewer(false)
     setFamilyId(null)
     setEncryptionKey(null)
+    setKeyLoading(false)
     setMemoryCardStyle('modern')
+    // Decrypted media outlives the session otherwise: the object URLs stay
+    // resolvable for as long as the tab is open.
+    clearDecryptedMediaCache()
     localStorage.removeItem('fh_viewer')
     localStorage.removeItem('fh_familyId')
-  }
+    localStorage.removeItem('fh_cardStyle')
+  }, [user])
 
   const isAuthenticated = !!user || isViewer
   const isAdmin = !!user
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isViewer,
-      isAdmin,
-      isAuthenticated,
-      familyId,
-      encryptionKey,
-      memoryCardStyle,
-      loading,
-      keyLoading,
-      firebaseReady,
-      loginAsViewer,
-      loginAsAdmin,
-      signup,
-      logout,
-      setActiveFamilyId,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  // A fresh object literal here re-renders every consumer in the app on any
+  // state change, and hands each of them new function identities to depend on.
+  const value = useMemo(() => ({
+    user,
+    isViewer,
+    isAdmin,
+    isAuthenticated,
+    familyId,
+    encryptionKey,
+    memoryCardStyle,
+    loading,
+    keyLoading,
+    firebaseReady,
+    loginAsViewer,
+    loginAsAdmin,
+    signup,
+    logout,
+    setActiveFamilyId,
+  }), [
+    user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
+    memoryCardStyle, loading, keyLoading, firebaseReady,
+    loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
+  ])
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

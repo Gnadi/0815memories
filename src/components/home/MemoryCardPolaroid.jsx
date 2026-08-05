@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
-import EncryptedImage from '../media/EncryptedImage'
+import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
 import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFramePattern } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
@@ -109,17 +109,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
         >
           {allImages.length > 0 ? (
             <>
-              <EncryptedImage
-                src={allImages[imgIndex]}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70"
-              />
-              <EncryptedImage
-                src={allImages[imgIndex]}
-                alt={memory.title}
-                className="relative z-[1] w-full h-full object-contain"
-              />
+              <EncryptedPhotoFrame src={allImages[imgIndex]} alt={memory.title} />
             </>
           ) : (
             <MemoryPlaceholderImage title={memory.title} />

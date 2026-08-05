@@ -1,26 +1,24 @@
+import { memo } from 'react'
 import useDecryptedMedia from './useDecryptedMedia'
+import { TRANSPARENT_PIXEL, PLACEHOLDER_CLASSES } from './placeholder'
 
-export default function EncryptedImage({ src, alt = '', className = '', style, onClick, ...rest }) {
-  const { decryptedUrl, loading } = useDecryptedMedia(src, 'image/*')
+function EncryptedImage({ src, alt = '', className = '', style, onClick, ...rest }) {
+  const { decryptedUrl, loading, ref } = useDecryptedMedia(src, 'image/*', { lazy: true })
 
   if (!src) return null
 
-  if (loading) {
-    return (
-      <div className={className} style={style}>
-        <div className="w-full h-full bg-cream-dark animate-pulse rounded-xl" />
-      </div>
-    )
-  }
-
   return (
     <img
-      src={decryptedUrl}
-      alt={alt}
-      className={className}
+      ref={ref}
+      src={decryptedUrl || TRANSPARENT_PIXEL}
+      alt={loading ? '' : alt}
+      className={loading ? `${className} ${PLACEHOLDER_CLASSES}` : className}
       style={style}
       onClick={onClick}
+      decoding="async"
       {...rest}
     />
   )
 }
+
+export default memo(EncryptedImage)

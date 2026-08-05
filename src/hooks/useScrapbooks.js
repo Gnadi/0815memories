@@ -30,6 +30,37 @@ async function decryptScrapbook(key, data) {
   return result
 }
 
+/**
+ * Write operations only — no Firestore subscription. See useMemoryWriter for
+ * why this is split out.
+ */
+export function useScrapbookWriter(familyId, encryptionKey) {
+  const addScrapbook = async (data) => {
+    const encrypted = await encryptScrapbook(encryptionKey, data)
+    const ref = await addDoc(collection(db, 'scrapbooks'), {
+      ...encrypted,
+      familyId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    return ref.id
+  }
+
+  const updateScrapbook = async (id, data) => {
+    const encrypted = await encryptScrapbook(encryptionKey, data)
+    await updateDoc(doc(db, 'scrapbooks', id), {
+      ...encrypted,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  const deleteScrapbook = async (id) => {
+    await deleteDoc(doc(db, 'scrapbooks', id))
+  }
+
+  return { addScrapbook, updateScrapbook, deleteScrapbook }
+}
+
 export function useScrapbooks(familyId, encryptionKey) {
   const [scrapbooks, setScrapbooks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -58,28 +89,7 @@ export function useScrapbooks(familyId, encryptionKey) {
     return unsubscribe
   }, [familyId, encryptionKey])
 
-  const addScrapbook = async (data) => {
-    const encrypted = await encryptScrapbook(encryptionKey, data)
-    const ref = await addDoc(collection(db, 'scrapbooks'), {
-      ...encrypted,
-      familyId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    return ref.id
-  }
+  const writer = useScrapbookWriter(familyId, encryptionKey)
 
-  const updateScrapbook = async (id, data) => {
-    const encrypted = await encryptScrapbook(encryptionKey, data)
-    await updateDoc(doc(db, 'scrapbooks', id), {
-      ...encrypted,
-      updatedAt: serverTimestamp(),
-    })
-  }
-
-  const deleteScrapbook = async (id) => {
-    await deleteDoc(doc(db, 'scrapbooks', id))
-  }
-
-  return { scrapbooks, loading, addScrapbook, updateScrapbook, deleteScrapbook }
+  return { scrapbooks, loading, ...writer }
 }

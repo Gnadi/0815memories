@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video }
 import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
-import EncryptedImage from '../media/EncryptedImage'
+import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
 
 const SPROCKET_COUNT = 14
 
@@ -91,18 +91,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
           {allImages.length > 0 ? (
             <>
               {/* Blurred backdrop fills letterbox space around the photo */}
-              <EncryptedImage
-                src={allImages[imgIndex]}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70"
-              />
-              {/* Actual photo, fully visible */}
-              <EncryptedImage
-                src={allImages[imgIndex]}
-                alt={memory.title}
-                className="relative z-[1] w-full h-full object-contain"
-              />
+              <EncryptedPhotoFrame src={allImages[imgIndex]} alt={memory.title} />
 
               {allImages.length > 1 && (
                 <>
