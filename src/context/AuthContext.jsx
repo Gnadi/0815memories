@@ -2,10 +2,10 @@ import { createContext, useContext, useState, useEffect, useRef, useMemo, useCal
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
 import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
-import bcrypt from 'bcryptjs'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
-import { generateEncryptionKey, importEncryptionKey } from '../utils/encryption'
+import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
+import { terminateDecryptPool } from '../utils/decryptPool'
 
 const AuthContext = createContext(null)
 
@@ -96,65 +96,72 @@ export function AuthProvider({ children }) {
     return unsubscribe
   }, [resolveFamilyId])
 
-  // Load encryption key whenever familyId or auth state changes.
-  // Depending on user ensures a retry when Firebase Auth is restored after the
+  // One live subscription to the family document, serving both the encryption
+  // key and the card style.
+  //
+  // This used to be a getDoc for the key plus a separate onSnapshot for the
+  // style — two reads of the same document, with the getDoc sitting on the
+  // critical path before ProtectedRoute would open.
+  //
+  // Depending on user re-subscribes when Firebase Auth is restored after the
   // initial mount, which fixes the race where familyId was set from localStorage
   // before the auth token was ready and the first Firestore read failed silently.
   useEffect(() => {
     if (!familyId || !db) return
-    // Already resolved for this family — this run is only the auth object
-    // changing identity. Re-importing would churn the key for no reason.
-    if (keyLoadedForRef.current === familyId) return
 
     // Only a genuine family switch invalidates the key we hold.
-    if (keyLoadedForRef.current !== null) setEncryptionKey(null)
-    setKeyLoading(true)
+    if (keyLoadedForRef.current !== null && keyLoadedForRef.current !== familyId) {
+      setEncryptionKey(null)
+      keyLoadedForRef.current = null
+    }
+    if (keyLoadedForRef.current !== familyId) setKeyLoading(true)
 
     let cancelled = false
-    async function loadKey() {
-      try {
-        const familyDoc = await getDoc(doc(db, 'families', familyId))
-        if (cancelled) return
-        if (familyDoc.exists()) {
-          const data = familyDoc.data()
-          if (data.encryptionKeyJwk) {
-            const key = await importEncryptionKey(data.encryptionKeyJwk)
-            if (cancelled) return
-            setEncryptionKey(key)
-          }
-          setMemoryCardStyle(normalizeCardStyle(data.memoryCardStyle))
-          // Mark resolved only on a successful read. A failure here is usually
-          // the Firestore call racing the auth token, and the `user` dependency
-          // exists precisely so it can be retried once the token lands.
-          keyLoadedForRef.current = familyId
-        }
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('Failed to load encryption key:', err)
-      } finally {
-        if (!cancelled) setKeyLoading(false)
-      }
-    }
-    loadKey()
 
-    return () => {
-      cancelled = true
-    }
-  }, [familyId, user])
-
-  // Live-subscribe to memoryCardStyle changes so admins flipping the toggle
-  // in Settings see the home feed switch without a reload.
-  useEffect(() => {
-    if (!familyId || !db) return
-    const unsub = onSnapshot(doc(db, 'families', familyId), (snap) => {
-      if (snap.exists()) {
+    const unsub = onSnapshot(
+      doc(db, 'families', familyId),
+      async (snap) => {
+        if (cancelled || !snap.exists()) return
         const data = snap.data()
+
         const style = normalizeCardStyle(data.memoryCardStyle)
         setMemoryCardStyle(style)
         if (typeof window !== 'undefined') localStorage.setItem('fh_cardStyle', style)
-      }
-    })
-    return unsub
-  }, [familyId])
+
+        // Import once per family. importEncryptionKey() mints a new CryptoKey on
+        // every call, and that identity sits in the dependency array of every
+        // Firestore listener and every media decrypt effect in the app — so
+        // re-importing on each snapshot would restart all of them.
+        if (keyLoadedForRef.current !== familyId) {
+          try {
+            if (data.encryptionKeyJwk) {
+              const key = await importEncryptionKey(data.encryptionKeyJwk)
+              if (cancelled) return
+              setEncryptionKey(key)
+            }
+            // Resolved: a family doc without a key is a family that predates
+            // encryption, which is a valid end state, not a failure.
+            keyLoadedForRef.current = familyId
+          } catch (err) {
+            if (import.meta.env.DEV) console.error('Failed to import encryption key:', err)
+          } finally {
+            if (!cancelled) setKeyLoading(false)
+          }
+        }
+      },
+      (err) => {
+        if (import.meta.env.DEV) console.error('Failed to load family document:', err)
+        // Left unresolved on purpose: usually the read racing the auth token,
+        // and the `user` dependency exists so it can be retried once it lands.
+        if (!cancelled) setKeyLoading(false)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      unsub()
+    }
+  }, [familyId, user])
 
   // Explicitly bind the session to a family without going through a lookup.
   // Used right after invite redemption, where the new admin's UID has just been
@@ -180,6 +187,10 @@ export function AuthProvider({ children }) {
       throw new Error('This family has not set a shared password yet')
     }
 
+    // Loaded on demand: AuthContext is imported by App, so a static import puts
+    // bcrypt in the startup bundle for every visitor, including the many who
+    // never see a password field.
+    const { default: bcrypt } = await import('bcryptjs')
     const isMatch = await bcrypt.compare(password, sharedPassword)
     if (!isMatch) {
       throw new Error('Invalid password')
@@ -252,6 +263,9 @@ export function AuthProvider({ children }) {
     // Decrypted media outlives the session otherwise: the object URLs stay
     // resolvable for as long as the tab is open.
     clearDecryptedMediaCache()
+    clearDecryptedTextCache()
+    // The workers hold the family key; tearing them down drops it with the session.
+    terminateDecryptPool()
     localStorage.removeItem('fh_viewer')
     localStorage.removeItem('fh_familyId')
     localStorage.removeItem('fh_cardStyle')

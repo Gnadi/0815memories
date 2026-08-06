@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
-import bcrypt from 'bcryptjs'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
+import OptimizePhotosPanel from './OptimizePhotosPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
@@ -65,6 +65,7 @@ export default function SettingsPanel() {
 
     setSaving(true)
     try {
+      const { default: bcrypt } = await import('bcryptjs')
       const hashed = await bcrypt.hash(newPassword, 10)
       await setDoc(
         doc(db, 'families', familyId),
@@ -380,6 +381,9 @@ export default function SettingsPanel() {
         </p>
         <NasExportButton />
       </div>
+
+      {/* One-off thumbnail migration for photos predating thumbnails */}
+      <OptimizePhotosPanel />
     </div>
   )
 }

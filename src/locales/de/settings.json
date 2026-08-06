@@ -147,6 +147,18 @@
     "download": "Vollständiges Backup herunterladen (ZIP)",
     "failed": "Export fehlgeschlagen"
   },
+  "optimizePhotos": {
+    "label": "Fotos optimieren",
+    "description": "Fotos, die vor dieser Funktion hochgeladen wurden, werden überall noch in voller Auflösung geladen. Hier wird von jedem eine kleine Vorschau erzeugt. Die Originale bleiben unverändert.",
+    "scanning": "Fotos werden geprüft …",
+    "allDone": "Alle {{count}} Beiträge mit Fotos sind optimiert.",
+    "remaining": "Noch {{pending}} von {{total}} Beiträgen.",
+    "start": "Fotos optimieren",
+    "stop": "Abbrechen",
+    "progress": "{{done}} von {{total}}",
+    "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
+    "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
+  },
   "admins": {
     "label": "Admins verwalten",
     "description": "Erstelle einen einmaligen Einladungslink, um eine weitere Admin-Person hinzuzufügen. Sie legt ihr eigenes Passwort fest. Jede Admin-Person ist nur an diese Familie gebunden.",

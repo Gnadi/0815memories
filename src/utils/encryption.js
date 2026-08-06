@@ -47,8 +47,10 @@ async function encryptBuffer(key, data) {
 
 async function decryptBuffer(key, data) {
   const bytes = new Uint8Array(data)
-  const iv = bytes.slice(0, IV_LENGTH)
-  const ciphertext = bytes.slice(IV_LENGTH)
+  // subarray, not slice: both are views onto the same bytes, whereas slice()
+  // would copy the entire payload — several megabytes for a photo.
+  const iv = bytes.subarray(0, IV_LENGTH)
+  const ciphertext = bytes.subarray(IV_LENGTH)
   return crypto.subtle.decrypt({ name: ALGO, iv }, key, ciphertext)
 }
 
@@ -82,16 +84,48 @@ export async function encryptText(key, plaintext) {
   return arrayBufferToBase64(encrypted)
 }
 
+// Memo of ciphertext -> plaintext.
+//
+// Firestore re-emits a snapshot on every metadata change and on every write to
+// the collection, and each emit used to re-run the full decrypt for every field
+// of every document — 300 AES operations for the home feed alone. Moving
+// between routes paid it again, because each route sets up its own listener.
+//
+// It also covers the most wasteful case: for data written before encryption
+// existed, every decrypt throws a DOMException that is caught and discarded —
+// per field, per document, per emit. That outcome is cached too.
+//
+// Ciphertexts are unique (random IV per encryption), so the ciphertext alone is
+// a safe key. Cleared on logout together with the decrypted media cache.
+const textCache = new Map()
+const MAX_TEXT_CACHE_ENTRIES = 5000
+
+export function clearDecryptedTextCache() {
+  textCache.clear()
+}
+
 export async function decryptText(key, ciphertext) {
   if (!ciphertext) return ciphertext
+
+  const cached = textCache.get(ciphertext)
+  if (cached !== undefined) return cached
+
+  let plaintext
   try {
     const buffer = base64ToArrayBuffer(ciphertext)
     const decrypted = await decryptBuffer(key, buffer)
-    return decoder.decode(decrypted)
+    plaintext = decoder.decode(decrypted)
   } catch {
     // Return as-is if decryption fails (e.g. plaintext data from before encryption)
-    return ciphertext
+    plaintext = ciphertext
   }
+
+  if (textCache.size >= MAX_TEXT_CACHE_ENTRIES) {
+    // Map preserves insertion order, so this drops the oldest entry.
+    textCache.delete(textCache.keys().next().value)
+  }
+  textCache.set(ciphertext, plaintext)
+  return plaintext
 }
 
 // ── Blob encrypt / decrypt ──────────────────────────────────────────
@@ -122,11 +156,16 @@ export async function encryptFields(key, obj, fields) {
 export async function decryptFields(key, obj, fields) {
   if (!key) return obj
   const result = { ...obj }
-  for (const field of fields) {
-    if (result[field] != null && typeof result[field] === 'string') {
-      result[field] = await decryptText(key, result[field])
-    }
-  }
+  // In parallel: the fields are independent, and awaiting them one after the
+  // other made a six-field document six serial round trips through the crypto
+  // engine.
+  await Promise.all(
+    fields.map(async (field) => {
+      if (result[field] != null && typeof result[field] === 'string') {
+        result[field] = await decryptText(key, result[field])
+      }
+    })
+  )
   return result
 }
 

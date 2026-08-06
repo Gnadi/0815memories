@@ -147,6 +147,18 @@
     "download": "Download Full Backup (ZIP)",
     "failed": "Export failed"
   },
+  "optimizePhotos": {
+    "label": "Optimise photos",
+    "description": "Photos uploaded before this feature existed are still loaded at full resolution everywhere. This creates a small preview copy of each one. Originals are never changed.",
+    "scanning": "Checking your photos…",
+    "allDone": "All {{count}} posts with photos are optimised.",
+    "remaining": "{{pending}} of {{total}} posts still to do.",
+    "start": "Optimise photos",
+    "stop": "Stop",
+    "progress": "{{done}} of {{total}}",
+    "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
+    "error": "Something went wrong. You can safely try again."
+  },
   "admins": {
     "label": "Manage Admins",
     "description": "Generate a one-time invite link to add another admin. They'll set their own password. Each admin is bound to this family only.",

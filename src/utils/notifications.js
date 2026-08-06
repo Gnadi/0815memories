@@ -1,4 +1,3 @@
-import { getToken, onMessage } from 'firebase/messaging'
 import {
   collection,
   addDoc,
@@ -8,7 +7,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore'
-import { messaging, db } from '../config/firebase'
+import { getMessagingInstance, db } from '../config/firebase'
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 
@@ -20,12 +19,20 @@ const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
  * @returns {string|null} The FCM token, or null if permission was denied or unavailable.
  */
 export async function requestAndSaveFCMToken(familyId) {
-  if (!messaging || !db || !familyId || !VAPID_KEY) return null
+  if (!db || !familyId || !VAPID_KEY) return null
   if (!('Notification' in window)) return null
   if (Notification.permission === 'denied') return null
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return null
+
+  // Both the SDK and the messaging instance are fetched here rather than at
+  // module scope — this only ever runs after a deliberate user action.
+  const [messaging, { getToken }] = await Promise.all([
+    getMessagingInstance(),
+    import('firebase/messaging'),
+  ])
+  if (!messaging) return null
 
   // Use the VitePWA-registered service worker so FCM tokens are scoped to it
   const swReg = await navigator.serviceWorker.ready
@@ -53,9 +60,17 @@ export async function requestAndSaveFCMToken(familyId) {
  * Subscribes to foreground FCM messages (app is open).
  * Returns an unsubscribe function.
  *
+ * Async because the messaging SDK is code-split; the returned unsubscribe is
+ * safe to call before the subscription has actually been established.
+ *
  * @param {function({title: string, body: string}): void} onNotification
+ * @returns {Promise<function(): void>}
  */
-export function listenForegroundMessages(onNotification) {
+export async function listenForegroundMessages(onNotification) {
+  const [messaging, { onMessage }] = await Promise.all([
+    getMessagingInstance(),
+    import('firebase/messaging'),
+  ])
   if (!messaging) return () => {}
   return onMessage(messaging, (payload) => {
     onNotification?.({

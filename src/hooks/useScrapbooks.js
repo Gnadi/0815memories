@@ -22,11 +22,16 @@ async function encryptScrapbook(key, data) {
   return result
 }
 
-async function decryptScrapbook(key, data) {
+async function decryptScrapbook(key, data, { withPages = true } = {}) {
   if (!key) return data
   const result = { ...data }
   if (result.title != null && typeof result.title === 'string') result.title = await decryptText(key, result.title)
-  if (result.pages != null && typeof result.pages === 'string') result.pages = await decryptJSON(key, result.pages)
+  // `pages` holds every element of every page of the whole book. Decrypting and
+  // JSON-parsing it for a list that only shows a title and a cover is the most
+  // expensive thing this hook could do, so callers have to ask for it.
+  if (withPages && result.pages != null && typeof result.pages === 'string') {
+    result.pages = await decryptJSON(key, result.pages)
+  }
   return result
 }
 
@@ -61,7 +66,12 @@ export function useScrapbookWriter(familyId, encryptionKey) {
   return { addScrapbook, updateScrapbook, deleteScrapbook }
 }
 
-export function useScrapbooks(familyId, encryptionKey) {
+/**
+ * Live list of the family's scrapbooks. `pages` stays encrypted unless asked
+ * for — the overview only needs `title` and `coverImageUrl`, and the editor
+ * loads its one book itself.
+ */
+export function useScrapbooks(familyId, encryptionKey, { withPages = false } = {}) {
   const [scrapbooks, setScrapbooks] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -78,7 +88,9 @@ export function useScrapbooks(familyId, encryptionKey) {
     )
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
-      const decrypted = await Promise.all(docs.map((d) => decryptScrapbook(encryptionKey, d)))
+      const decrypted = await Promise.all(
+        docs.map((d) => decryptScrapbook(encryptionKey, d, { withPages }))
+      )
       setScrapbooks(decrypted)
       setLoading(false)
     }, (error) => {
@@ -87,7 +99,7 @@ export function useScrapbooks(familyId, encryptionKey) {
     })
 
     return unsubscribe
-  }, [familyId, encryptionKey])
+  }, [familyId, encryptionKey, withPages])
 
   const writer = useScrapbookWriter(familyId, encryptionKey)
 

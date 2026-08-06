@@ -6,7 +6,7 @@ import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
-import i18n from './i18n'
+import i18n, { ensureAppTranslations } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -24,30 +24,40 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import InviteRedeemPage from './pages/InviteRedeemPage'
-import LegalPage from './pages/LegalPage'
+
+// Every page below needs translation namespaces that are not in the startup
+// bundle. Waiting for them here — inside the boundary React already suspends
+// on — means a page never paints with raw translation keys, which is what a
+// load-from-inside-a-hook approach would do (useSuspense is off for SSG).
+const lazyPage = (loader) =>
+  lazy(async () => {
+    const [module] = await Promise.all([loader(), ensureAppTranslations()])
+    return module
+  })
 
 // Lazy loaded — protected pages, only needed after authentication
-const HomePage = lazy(() => import('./pages/HomePage'))
-const MemoryDetailPage = lazy(() => import('./pages/MemoryDetailPage'))
-const MomentsAllPage = lazy(() => import('./pages/MomentsAllPage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const LoginDesignerPage = lazy(() => import('./pages/LoginDesignerPage'))
-const KidsJournalPage = lazy(() => import('./pages/KidsJournalPage'))
-const JournalArchivePage = lazy(() => import('./pages/JournalArchivePage'))
-const JournalEntryPage = lazy(() => import('./pages/JournalEntryPage'))
-const JournalDetailPage = lazy(() => import('./pages/JournalDetailPage'))
-const BlackBoxPage = lazy(() => import('./pages/BlackBoxPage'))
-const CreateBlackBoxPage = lazy(() => import('./pages/CreateBlackBoxPage'))
-const RecipesPage = lazy(() => import('./pages/RecipesPage'))
-const RecipeJourneyPage = lazy(() => import('./pages/RecipeJourneyPage'))
-const RecipeVersionDetailPage = lazy(() => import('./pages/RecipeVersionDetailPage'))
-const CreateRecipePage = lazy(() => import('./pages/CreateRecipePage'))
-const ScrapbooksPage = lazy(() => import('./pages/ScrapbooksPage'))
-const ScrapbookEditorPage = lazy(() => import('./pages/ScrapbookEditorPage'))
-const SmartTimelinePage = lazy(() => import('./pages/SmartTimelinePage'))
-const OurYearPage = lazy(() => import('./pages/OurYearPage'))
-const OurYearSetupPage = lazy(() => import('./pages/OurYearSetupPage'))
-const OurYearChapterPage = lazy(() => import('./pages/OurYearChapterPage'))
+const LegalPage = lazyPage(() => import('./pages/LegalPage'))
+const HomePage = lazyPage(() => import('./pages/HomePage'))
+const MemoryDetailPage = lazyPage(() => import('./pages/MemoryDetailPage'))
+const MomentsAllPage = lazyPage(() => import('./pages/MomentsAllPage'))
+const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
+const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
+const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
+const JournalArchivePage = lazyPage(() => import('./pages/JournalArchivePage'))
+const JournalEntryPage = lazyPage(() => import('./pages/JournalEntryPage'))
+const JournalDetailPage = lazyPage(() => import('./pages/JournalDetailPage'))
+const BlackBoxPage = lazyPage(() => import('./pages/BlackBoxPage'))
+const CreateBlackBoxPage = lazyPage(() => import('./pages/CreateBlackBoxPage'))
+const RecipesPage = lazyPage(() => import('./pages/RecipesPage'))
+const RecipeJourneyPage = lazyPage(() => import('./pages/RecipeJourneyPage'))
+const RecipeVersionDetailPage = lazyPage(() => import('./pages/RecipeVersionDetailPage'))
+const CreateRecipePage = lazyPage(() => import('./pages/CreateRecipePage'))
+const ScrapbooksPage = lazyPage(() => import('./pages/ScrapbooksPage'))
+const ScrapbookEditorPage = lazyPage(() => import('./pages/ScrapbookEditorPage'))
+const SmartTimelinePage = lazyPage(() => import('./pages/SmartTimelinePage'))
+const OurYearPage = lazyPage(() => import('./pages/OurYearPage'))
+const OurYearSetupPage = lazyPage(() => import('./pages/OurYearSetupPage'))
+const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 
 // On a family subdomain (e.g. the-millers.kaydo.app) send visitors to /login;
 // on the apex domain show the marketing landing page. The redirect runs in an
@@ -93,11 +103,21 @@ function AppNotifications() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-    const unsub = listenForegroundMessages(({ title, body }) => {
+    // The messaging SDK is code-split, so subscribing resolves a tick later.
+    // Unsubscribing before then still has to work.
+    let unsub = null
+    let cancelled = false
+    listenForegroundMessages(({ title, body }) => {
       setToast({ title, body })
       setTimeout(() => setToast(null), 5000)
+    }).then((fn) => {
+      if (cancelled) fn()
+      else unsub = fn
     })
-    return unsub
+    return () => {
+      cancelled = true
+      unsub?.()
+    }
   }, [isAuthenticated])
 
   // Silently refresh the FCM token on each app load when the user already

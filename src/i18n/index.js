@@ -1,12 +1,22 @@
 // i18next setup for Kaydo.
 //
-// Translations are imported statically (no HTTP backend) so that:
+// The public shell — landing page, login, signup, invite redemption — is
+// imported statically so that:
 //   1. the vite-react-ssg Node pre-render of "/" is fully synchronous — the
 //      static HTML is emitted with real strings, never empty placeholders;
 //   2. the PWA keeps working offline without caching extra translation files.
 //
+// Everything the signed-in app needs lives in ./appTranslations and is fetched
+// on demand. Statically importing all 14 namespaces in both languages put
+// 162 KB of raw JSON in front of the login form, most of it for screens the
+// visitor had not reached — `legal`, `ourYear`, `settings` and `recipes` alone
+// were more than half of it.
+//
 // `react: { useSuspense: false }` is required for the same SSG reason: it lets
 // useTranslation() return a ready `t()` on the first synchronous render in Node.
+// It also means a missing namespace renders as raw keys rather than suspending,
+// which is why lazy pages must await ensureAppTranslations() before they mount
+// (see lazyPage() in App.jsx) instead of loading namespaces from inside a hook.
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
@@ -14,70 +24,54 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import enCommon from '../locales/en/common.json'
 import enLanding from '../locales/en/landing.json'
 import enAuth from '../locales/en/auth.json'
-import enHome from '../locales/en/home.json'
-import enMemory from '../locales/en/memory.json'
-import enJournal from '../locales/en/journal.json'
-import enBlackbox from '../locales/en/blackbox.json'
-import enRecipes from '../locales/en/recipes.json'
-import enScrapbook from '../locales/en/scrapbook.json'
-import enTimeline from '../locales/en/timeline.json'
-import enOurYear from '../locales/en/ourYear.json'
-import enSettings from '../locales/en/settings.json'
-import enEmotions from '../locales/en/emotions.json'
-import enLegal from '../locales/en/legal.json'
 
 import deCommon from '../locales/de/common.json'
 import deLanding from '../locales/de/landing.json'
 import deAuth from '../locales/de/auth.json'
-import deHome from '../locales/de/home.json'
-import deMemory from '../locales/de/memory.json'
-import deJournal from '../locales/de/journal.json'
-import deBlackbox from '../locales/de/blackbox.json'
-import deRecipes from '../locales/de/recipes.json'
-import deScrapbook from '../locales/de/scrapbook.json'
-import deTimeline from '../locales/de/timeline.json'
-import deOurYear from '../locales/de/ourYear.json'
-import deSettings from '../locales/de/settings.json'
-import deEmotions from '../locales/de/emotions.json'
-import deLegal from '../locales/de/legal.json'
+
+// Loaded before first paint: the public pages and the globally mounted chrome
+// (bottom nav, install/notification prompts, error screen) use only these.
+export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
+
+// Loaded with the first protected route.
+export const LAZY_NAMESPACES = [
+  'home', 'memory', 'journal', 'blackbox', 'recipes', 'scrapbook',
+  'timeline', 'ourYear', 'settings', 'emotions', 'legal',
+]
+
+export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]
+export const SUPPORTED_LANGUAGES = ['en', 'de']
 
 export const resources = {
-  en: {
-    common: enCommon,
-    landing: enLanding,
-    auth: enAuth,
-    home: enHome,
-    memory: enMemory,
-    journal: enJournal,
-    blackbox: enBlackbox,
-    recipes: enRecipes,
-    scrapbook: enScrapbook,
-    timeline: enTimeline,
-    ourYear: enOurYear,
-    settings: enSettings,
-    emotions: enEmotions,
-    legal: enLegal,
-  },
-  de: {
-    common: deCommon,
-    landing: deLanding,
-    auth: deAuth,
-    home: deHome,
-    memory: deMemory,
-    journal: deJournal,
-    blackbox: deBlackbox,
-    recipes: deRecipes,
-    scrapbook: deScrapbook,
-    timeline: deTimeline,
-    ourYear: deOurYear,
-    settings: deSettings,
-    emotions: deEmotions,
-    legal: deLegal,
-  },
+  en: { common: enCommon, landing: enLanding, auth: enAuth },
+  de: { common: deCommon, landing: deLanding, auth: deAuth },
 }
 
-export const NAMESPACES = Object.keys(resources.en)
-export const SUPPORTED_LANGUAGES = ['en', 'de']
+let appTranslationsPromise = null
+
+/**
+ * Fetch and register the signed-in app's namespaces. Idempotent, and safe to
+ * call from several routes at once — they all await the same promise.
+ */
+export function ensureAppTranslations() {
+  if (!appTranslationsPromise) {
+    appTranslationsPromise = import('./appTranslations')
+      .then(({ default: bundles }) => {
+        for (const lng of SUPPORTED_LANGUAGES) {
+          for (const ns of LAZY_NAMESPACES) {
+            i18n.addResourceBundle(lng, ns, bundles[lng][ns], true, true)
+          }
+        }
+      })
+      .catch((err) => {
+        // Let a later navigation retry rather than leaving the app permanently
+        // stuck on raw keys because one chunk request failed.
+        appTranslationsPromise = null
+        throw err
+      })
+  }
+  return appTranslationsPromise
+}
 
 i18n
   .use(LanguageDetector)
@@ -89,6 +83,9 @@ i18n
     load: 'languageOnly', // de-DE, de-AT, ... → de
     ns: NAMESPACES,
     defaultNS: 'common',
+    // Namespaces arrive after init via addResourceBundle, so i18next must not
+    // decide up front that a language is missing them.
+    partialBundledLanguages: true,
     interpolation: { escapeValue: false }, // React already escapes
     react: { useSuspense: false }, // CRITICAL: keeps SSG pre-render synchronous
     detection: {

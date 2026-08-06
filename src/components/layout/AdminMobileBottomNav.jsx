@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemoryWriter } from '../../hooks/useMemories'
 import { useScrapbookWriter } from '../../hooks/useScrapbooks'
-import PostMemoryModal from '../admin/PostMemoryModal'
 import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
 import { devError } from '../../utils/devLog'
+
+// Lazy: this nav is mounted on every route, so a static import dragged the
+// whole upload stack — media uploader, encrypted image/video, voice recorder,
+// polaroid editor — into the startup bundle, landing page included.
+const PostMemoryModal = lazy(() => import('../admin/PostMemoryModal'))
 
 function makeCoverPage() {
   const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
@@ -221,10 +225,12 @@ export default function AdminMobileBottomNav() {
       )}
 
       {showCreateModal && (
-        <PostMemoryModal
-          onClose={() => setShowCreateModal(false)}
-          onSave={addMemory}
-        />
+        <Suspense fallback={null}>
+          <PostMemoryModal
+            onClose={() => setShowCreateModal(false)}
+            onSave={addMemory}
+          />
+        </Suspense>
       )}
     </>
   )
