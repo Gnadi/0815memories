@@ -188,9 +188,9 @@ describe('EncryptedImage', () => {
     const img = container.querySelector('img')
     expect(img).toBeTruthy()
     expect(img.className).toContain('rounded-xl')
-    expect(img.className).toContain('animate-pulse')
+    expect(img.className).toContain('media-decrypting')
 
-    await waitFor(() => expect(container.querySelector('img').className).not.toContain('animate-pulse'))
+    await waitFor(() => expect(container.querySelector('img').className).not.toContain('media-decrypting'))
     // Same node, so the browser never tore down and re-decoded the element.
     expect(container.querySelector('img')).toBe(img)
     expect(img.getAttribute('src')).toBe('blob:decrypted-1')
@@ -204,5 +204,25 @@ describe('EncryptedImage', () => {
     const img = container.querySelector('img')
     expect(img.getAttribute('src')).not.toBe(ENCRYPTED_URL)
     expect(img.getAttribute('src').startsWith('data:image/gif')).toBe(true)
+  })
+
+  it('shows the decrypting placeholder for as long as the key is still loading', () => {
+    authState = { encryptionKey: null, keyLoading: true }
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+
+    expect(container.querySelector('img').className).toContain('media-decrypting')
+  })
+
+  it('carries no placeholder when the media resolves during render', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    const warm = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+    await waitFor(() =>
+      expect(warm.container.querySelector('img').getAttribute('src')).toBe('blob:decrypted-1')
+    )
+    warm.unmount()
+
+    // A cache hit must never paint the spinner, not even for one frame.
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+    expect(container.querySelector('img').className).not.toContain('media-decrypting')
   })
 })
