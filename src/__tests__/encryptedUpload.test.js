@@ -11,13 +11,16 @@ vi.mock('../config/cloudinary', () => ({
 }))
 
 import { createThumbnail } from '../utils/imageThumbnail'
-import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
+import { encryptBlob } from '../utils/encryption'
+import { encryptAndUpload, encryptAndUploadWithThumb, UPLOAD_TOO_LARGE } from '../utils/encryptedUpload'
+import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
 let uploadCount
 
 beforeEach(() => {
   uploadCount = 0
   createThumbnail.mockReset()
+  encryptBlob.mockClear()
 
   globalThis.fetch = vi.fn(async (url) => {
     if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
@@ -50,6 +53,58 @@ describe('encryptAndUpload', () => {
     const result = await encryptAndUpload(file(), { fake: 'key' })
     expect(result).toEqual({ url: 'https://cdn/asset-1.enc', publicId: 'pub-1' })
     expect(uploadCount).toBe(1)
+  })
+
+  it('refuses an oversized file before encrypting or uploading it', async () => {
+    // Encrypting first would pull the whole clip into memory three times over
+    // just to have Cloudinary answer 400.
+    const err = await encryptAndUpload(file(MAX_PLAINTEXT_BYTES + 1), { fake: 'key' })
+      .then(() => null, (e) => e)
+
+    expect(err?.code).toBe(UPLOAD_TOO_LARGE)
+    expect(err.size).toBe(MAX_PLAINTEXT_BYTES + 1)
+    expect(err.limit).toBe(MAX_PLAINTEXT_BYTES)
+    expect(encryptBlob).not.toHaveBeenCalled()
+    expect(uploadCount).toBe(0)
+  })
+
+  it('tags a Cloudinary size rejection so callers can explain it', async () => {
+    globalThis.fetch = vi.fn(async (url) => {
+      if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
+        return {
+          ok: true,
+          json: async () => ({ timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k' }),
+        }
+      }
+      return {
+        ok: false,
+        status: 400,
+        headers: { get: () => null },
+        json: async () => ({ error: { message: 'File size too large. Got 24000000. Maximum is 10485760.' } }),
+      }
+    })
+
+    const err = await encryptAndUpload(file(1024), { fake: 'key' }).then(() => null, (e) => e)
+    expect(err?.code).toBe(UPLOAD_TOO_LARGE)
+  })
+
+  it('falls back to the X-Cld-Error header when the body carries no reason', async () => {
+    globalThis.fetch = vi.fn(async (url) => {
+      if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
+        return {
+          ok: true,
+          json: async () => ({ timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k' }),
+        }
+      }
+      return {
+        ok: false,
+        status: 400,
+        headers: { get: (h) => (h === 'x-cld-error' ? 'Invalid signature' : null) },
+        json: async () => { throw new Error('not json') },
+      }
+    })
+
+    await expect(encryptAndUpload(file(1024), { fake: 'key' })).rejects.toThrow('Invalid signature')
   })
 })
 

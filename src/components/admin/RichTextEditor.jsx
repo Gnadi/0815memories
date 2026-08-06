@@ -6,8 +6,12 @@ import { Placeholder } from '@tiptap/extensions'
 import { X, Minimize2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../../utils/encryptedUpload'
-import { getVideoDuration } from '../../hooks/useMediaUploader'
-import { MAX_VIDEO_DURATION_SECONDS } from '../../constants/media'
+import { getVideoDuration, uploadErrorMessage } from '../../hooks/useMediaUploader'
+import {
+  MAX_VIDEO_DURATION_SECONDS,
+  MAX_PLAINTEXT_BYTES,
+  formatBytes,
+} from '../../constants/media'
 import { devError } from '../../utils/devLog'
 import { EMPTY_RICH_DOC, isRichDoc } from '../../utils/richText'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
@@ -30,6 +34,9 @@ import { setPreview, clearPreview, clearAllPreviews } from './richTextEditor/pre
  */
 export default function RichTextEditor({ value, onChange, onPendingChange, disabled = false }) {
   const { t } = useTranslation('memory')
+  // Upload failures are worded once, in `common`, so the inline editor and the
+  // Moment/Memory forms explain the same failure the same way.
+  const { t: tCommon } = useTranslation('common')
   const { encryptionKey } = useAuth()
 
   const [showRecorder, setShowRecorder] = useState(false)
@@ -121,13 +128,13 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
       } catch (err) {
         devError('Inline media upload failed:', err)
         removeByUploadId(editor, uploadId)
-        setError(t('richEditor.uploadFailed'))
+        setError(uploadErrorMessage(err, tCommon))
       } finally {
         clearPreview(uploadId)
         setPending((n) => n - 1)
       }
     },
-    [editor, t]
+    [editor, tCommon]
   )
 
   const handleImagePick = async (e, inputRef) => {
@@ -154,10 +161,19 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
     if (inputRef?.current) inputRef.current.value = ''
     if (!file) return
 
-    // Same cap as the separate video section, checked before anything uploads.
+    // Same caps as the separate video section, checked before anything uploads.
     const duration = await getVideoDuration(file)
     if (duration > MAX_VIDEO_DURATION_SECONDS) {
       setError(t('richEditor.videoTooLong', { seconds: MAX_VIDEO_DURATION_SECONDS }))
+      return
+    }
+    if (file.size > MAX_PLAINTEXT_BYTES) {
+      setError(
+        tCommon('upload.tooLarge', {
+          size: formatBytes(file.size),
+          limit: formatBytes(MAX_PLAINTEXT_BYTES),
+        })
+      )
       return
     }
 

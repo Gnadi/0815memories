@@ -39,6 +39,7 @@ export default function CreateBlackBoxPage() {
     removeImage,
     removeVideo,
     videoError,
+    imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey)
 
@@ -330,6 +331,7 @@ export default function CreateBlackBoxPage() {
                       {t('create.camera')}
                     </button>
                   </div>
+                  {imageError && <p className="text-xs text-kaydo">{imageError}</p>}
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImagePick(e, fileInputRef)} />
                   <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImagePick(e, cameraInputRef)} />
                 </div>

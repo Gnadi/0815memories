@@ -43,6 +43,7 @@ export default function JournalEntryPage() {
     removeImage,
     removeVideo,
     videoError,
+    imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey)
   const [voiceMemos, setVoiceMemos] = useState([])
@@ -299,8 +300,8 @@ export default function JournalEntryPage() {
           )}
 
           {/* Errors */}
-          {(error || videoError) && (
-            <p className="px-5 pt-2 text-xs text-red-500">{error || videoError}</p>
+          {(error || videoError || imageError) && (
+            <p className="px-5 pt-2 text-xs text-red-500">{error || videoError || imageError}</p>
           )}
 
           {/* Main textarea */}

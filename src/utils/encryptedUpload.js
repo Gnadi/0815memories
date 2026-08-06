@@ -1,8 +1,28 @@
 import { encryptBlob } from './encryption'
 import { createThumbnail } from './imageThumbnail'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
+import { MAX_PLAINTEXT_BYTES } from '../constants/media'
+
+// Thrown before anything is encrypted or sent when the file cannot possibly fit
+// under Cloudinary's raw-resource cap. Callers match on `code` rather than
+// `instanceof` so the check survives module mocks and bundler boundaries.
+export const UPLOAD_TOO_LARGE = 'upload/too-large'
+
+export function uploadTooLargeError(size, limit) {
+  const err = new Error(`File is ${size} bytes, upload limit is ${limit} bytes`)
+  err.code = UPLOAD_TOO_LARGE
+  err.size = size
+  err.limit = limit
+  return err
+}
 
 async function uploadEncryptedBlob(blob, encryptionKey) {
+  // 0. Refuse oversized files up front. Encrypting first would read the whole
+  // file into memory (three copies at peak) only for Cloudinary to answer 400.
+  if (blob.size > MAX_PLAINTEXT_BYTES) {
+    throw uploadTooLargeError(blob.size, MAX_PLAINTEXT_BYTES)
+  }
+
   // 1. Encrypt
   const encryptedBuffer = await encryptBlob(encryptionKey, blob)
   const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
@@ -27,7 +47,16 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    throw new Error(err?.error?.message ?? `Upload failed (${response.status})`)
+    // Cloudinary reports the reason in the body, and also in X-Cld-Error when
+    // the body is empty (which is what a rejected oversized upload returns).
+    const reason =
+      err?.error?.message ||
+      response.headers?.get?.('x-cld-error') ||
+      `Upload failed (${response.status})`
+    if (/file size too large|too large/i.test(reason)) {
+      throw uploadTooLargeError(blob.size, MAX_PLAINTEXT_BYTES)
+    }
+    throw new Error(reason)
   }
 
   const data = await response.json()

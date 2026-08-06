@@ -77,6 +77,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
     removeImage,
     removeVideo,
     videoError,
+    imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey, {
     initialImages: buildInitialImages(memory),
@@ -313,6 +314,9 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
                 <span className="text-xs text-bark-muted text-center leading-tight">{t('postMemory.camera')}</span>
               </button>
             </div>
+            {imageError && (
+              <p className="text-xs text-kaydo mt-1">{imageError}</p>
+            )}
           </div>
 
           {/* Video upload */}
