@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
-import { getMessaging } from 'firebase/messaging'
 
 // Dev-only: route Auth + Firestore to the local Firebase Emulator Suite.
 // Strictly gated so production never connects to an emulator.
@@ -11,7 +10,6 @@ const USE_EMULATOR =
 let app = null
 let auth = null
 let db = null
-let messaging = null
 
 try {
   const firebaseConfig = {
@@ -35,15 +33,6 @@ try {
       console.info('🔧 Firebase running against local emulators (Auth:9099, Firestore:8080)')
     }
 
-    // Messaging is only available in browser windows, not service workers.
-    // It also has no emulator, so skip it entirely in emulator mode.
-    if (!USE_EMULATOR && typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        messaging = getMessaging(app)
-      } catch (e) {
-        if (import.meta.env.DEV) console.warn('Firebase Messaging unavailable:', e.message)
-      }
-    }
   } else if (import.meta.env.DEV) {
     console.warn('Firebase env vars not set — app running in demo mode')
   }
@@ -51,5 +40,28 @@ try {
   if (import.meta.env.DEV) console.error('Firebase initialization failed:', e)
 }
 
-export { auth, db, messaging }
+// Messaging is loaded on demand rather than at module scope: push is never
+// needed for the first frame, and a static import pulled the whole
+// firebase/messaging SDK into the startup bundle for every visitor.
+//
+// It is only available in browser windows (not service workers), and has no
+// emulator, so it stays off in emulator mode. Returns null when unavailable.
+let messagingPromise = null
+
+export function getMessagingInstance() {
+  if (!app || USE_EMULATOR) return Promise.resolve(null)
+  if (typeof window === 'undefined' || !('Notification' in window)) return Promise.resolve(null)
+
+  if (!messagingPromise) {
+    messagingPromise = import('firebase/messaging')
+      .then(({ getMessaging }) => getMessaging(app))
+      .catch((e) => {
+        if (import.meta.env.DEV) console.warn('Firebase Messaging unavailable:', e.message)
+        return null
+      })
+  }
+  return messagingPromise
+}
+
+export { auth, db }
 export default app

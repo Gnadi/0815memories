@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { decryptBlob } from '../../utils/encryption'
+import { decryptBlobOffThread } from '../../utils/decryptPool'
 import { devError } from '../../utils/devLog'
 
 // ── Session cache ───────────────────────────────────────────────────
@@ -106,7 +106,9 @@ async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
   const response = await fetch(encryptedUrl)
   if (!response.ok) throw new Error(`Fetch failed (${response.status})`)
   const encryptedBuffer = await response.arrayBuffer()
-  const decrypted = await decryptBlob(encryptionKey, encryptedBuffer, mimeType)
+  // Runs in a worker when one is available; falls back to the main thread
+  // otherwise. The buffer is transferred, so it must not be touched after this.
+  const decrypted = await decryptBlobOffThread(encryptionKey, encryptedBuffer, mimeType)
 
   // Blob.slice() is by reference, so re-typing the blob costs no extra copy.
   const header = new Uint8Array(await decrypted.slice(0, 16).arrayBuffer())

@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { useScrapbooks } from '../hooks/useScrapbooks'
+import { useScrapbookWriter } from '../hooks/useScrapbooks'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
 import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
@@ -145,7 +145,9 @@ export default function ScrapbookEditorPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { familyId, encryptionKey } = useAuth()
-  const { updateScrapbook } = useScrapbooks(familyId, encryptionKey)
+  // Writer-only: the editor loads its one scrapbook itself, so subscribing here
+  // would live-decrypt the full page JSON of every other scrapbook while editing.
+  const { updateScrapbook } = useScrapbookWriter(familyId, encryptionKey)
 
   const [state, dispatch] = useReducer(editorReducer, initialState)
   const { pages, currentPageIndex, selectedId, isDirty, title, history } = state

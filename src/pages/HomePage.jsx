@@ -12,7 +12,6 @@ import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import PostMemoryModal from '../components/admin/PostMemoryModal'
 import PostMomentModal from '../components/admin/PostMomentModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
-import { useThumbnailBackfill } from '../hooks/useThumbnailBackfill'
 import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
@@ -26,11 +25,6 @@ export default function HomePage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId, encryptionKey)
   const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId)
-
-  // Give older memories and moments the downscaled copies new uploads get, a
-  // few per session, in idle time. Admin-only and purely additive.
-  useThumbnailBackfill('memories', memories, { enabled: isAdmin, encryptionKey })
-  useThumbnailBackfill('moments', moments, { enabled: isAdmin, encryptionKey })
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 

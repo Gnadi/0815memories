@@ -1,7 +1,18 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import i18n, { resources, NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
+import i18n, { NAMESPACES, EAGER_NAMESPACES, LAZY_NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+
+// Read the locale files straight from disk rather than through the i18n module:
+// only the eager namespaces are bundled there, the rest is code-split behind
+// ensureAppTranslations(). Completeness has to be checked over all of them.
+const localeModules = import.meta.glob('../locales/*/*.json', { eager: true })
+const resources = {}
+for (const [path, mod] of Object.entries(localeModules)) {
+  const [, lng, file] = path.match(/\/locales\/([^/]+)\/([^/]+)\.json$/)
+  resources[lng] ??= {}
+  resources[lng][file] = mod.default
+}
 
 // Recursively collect leaf key paths from a nested translation object.
 // Arrays are treated as leaves (their position/shape is what matters).
@@ -37,6 +48,21 @@ describe('i18n translation completeness', () => {
   it('German is available for the expected namespaces', () => {
     expect(SUPPORTED_LANGUAGES).toContain('de')
     expect(resources.de.common.language.de).toBe('Deutsch')
+  })
+
+  it('every namespace on disk is registered as either eager or lazy', () => {
+    const onDisk = Object.keys(resources.en).sort()
+    expect([...NAMESPACES].sort()).toEqual(onDisk)
+    // A namespace in both lists would be shipped twice; in neither, never at all.
+    expect(EAGER_NAMESPACES.filter((ns) => LAZY_NAMESPACES.includes(ns))).toEqual([])
+  })
+
+  it('keeps the public shell namespaces in the startup bundle', () => {
+    // The pre-rendered landing page and the login form must have real strings
+    // on their first synchronous render — they cannot wait for a chunk.
+    expect(EAGER_NAMESPACES).toEqual(['common', 'landing', 'auth'])
+    expect(i18n.getResourceBundle('en', 'landing')).toBeTruthy()
+    expect(i18n.getResourceBundle('en', 'auth')).toBeTruthy()
   })
 })
 

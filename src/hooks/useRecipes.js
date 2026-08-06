@@ -57,9 +57,13 @@ export function useRecipes(familyId, encryptionKey) {
       q,
       async (snapshot) => {
         const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        const decrypted = await Promise.all(all.map((d) => decryptRecipe(encryptionKey, d)))
-        // Root recipes have no parentId (or parentId is null/undefined)
-        setRecipes(decrypted.filter((r) => !r.parentId))
+        // Filter before decrypting, not after. Root recipes have no parentId;
+        // every fork used to be decrypted in full — 7 fields including the
+        // ingredients JSON — only to be thrown away on the next line.
+        // The query itself stays as-is deliberately: `where('parentId','==',null)`
+        // would silently drop root recipes that have no parentId field at all.
+        const roots = all.filter((r) => !r.parentId)
+        setRecipes(await Promise.all(roots.map((d) => decryptRecipe(encryptionKey, d))))
         setLoading(false)
       },
       (err) => {
