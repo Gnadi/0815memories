@@ -11,19 +11,22 @@ import { useCollages } from '../hooks/useCollages'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { devError } from '../utils/devLog'
 
-// Templates come in several shapes; sizing each card by its own ratio leaves
-// every row ragged and the labels unaligned. Instead every card gets the same
+// Templates come in several shapes; sizing each tile by its own ratio leaves
+// every row ragged and the labels unaligned. Instead every tile gets the same
 // stage height and the collage is sized *from that height*, so a portrait
 // template still looks portrait — a square-ish crop would misrepresent it in
 // the very screen where the customer picks a shape.
+//
+// No card, no border: the artwork is the thing being chosen, and a frame drawn
+// around a template that already has its own frame just reads as noise.
 function PreviewTile({ doc }) {
   return (
-    <div className="h-32 sm:h-40 flex items-center justify-center">
+    <div className="h-52 sm:h-64 lg:h-72 flex items-center justify-center">
       <CollagePreview
         doc={doc}
         preferThumbs
         fit="box"
-        className="rounded-xl overflow-hidden"
+        className="rounded-2xl overflow-hidden shadow-[0_6px_20px_rgba(45,27,14,0.12)]"
         style={{
           aspectRatio: String(aspectRatioOf(doc)),
           height: '100%',
@@ -86,7 +89,7 @@ export default function CollagesPage() {
 
           {/* Warm header */}
           <header
-            className="rounded-3xl border border-cream-dark px-5 py-7 sm:px-9 sm:py-9"
+            className="rounded-3xl border border-cream-dark px-5 py-5 sm:px-8 sm:py-6"
             style={{ background: 'linear-gradient(135deg, #FFFDF9 0%, #FDF1E4 55%, #FAE2D1 100%)' }}
           >
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-kaydo">
@@ -96,9 +99,6 @@ export default function CollagesPage() {
             <h1 className="mt-2.5 text-3xl sm:text-[2.6rem] leading-tight font-bold text-bark">
               {t('collages.title')}
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-bark-muted max-w-md leading-relaxed">
-              {t('collages.subtitle')}
-            </p>
           </header>
 
           {/* Templates */}
@@ -107,18 +107,18 @@ export default function CollagesPage() {
               {t('collages.templatesHeading')}
             </h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
               {COLLAGE_TEMPLATES.map((template) => (
                 <button
                   key={template.id}
                   type="button"
                   disabled={!isAdmin || creating != null}
                   onClick={() => handleCreate(template)}
-                  className="group text-left rounded-2xl bg-warm-white border border-cream-dark p-2 shadow-[0_2px_10px_rgba(45,27,14,0.05)] transition-all hover:-translate-y-0.5 hover:border-kaydo/40 hover:shadow-[0_10px_24px_rgba(45,27,14,0.10)] disabled:opacity-60 disabled:hover:translate-y-0"
+                  className="group text-left transition-transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
                 >
                   <PreviewTile doc={fillTemplate(template, previewPhotos)} />
-                  <span className="flex items-center gap-1.5 px-1 pt-2 pb-1 text-xs font-medium text-bark group-hover:text-kaydo">
-                    {creating === template.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                  <span className="flex items-center justify-center gap-1.5 pt-2.5 text-sm font-medium text-bark group-hover:text-kaydo">
+                    {creating === template.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     {t(template.labelKey)}
                   </span>
                 </button>
@@ -153,16 +153,16 @@ export default function CollagesPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
                 {collages.map((collage) => (
                   <div key={collage.id} className="group relative">
                     <button
                       type="button"
                       onClick={() => navigate(`/collage/${collage.id}`)}
-                      className="w-full text-left rounded-2xl bg-warm-white border border-cream-dark p-2 shadow-[0_2px_10px_rgba(45,27,14,0.05)] transition-all hover:-translate-y-0.5 hover:border-kaydo/40 hover:shadow-[0_10px_24px_rgba(45,27,14,0.10)]"
+                      className="w-full text-left transition-transform hover:-translate-y-1 active:scale-[0.98]"
                     >
                       <PreviewTile doc={collage.doc} />
-                      <span className="block px-1 pt-2 pb-1 text-xs font-medium text-bark truncate">
+                      <span className="block pt-2.5 text-sm font-medium text-bark text-center truncate">
                         {collage.title || t('defaultTitle')}
                       </span>
                     </button>
@@ -170,7 +170,7 @@ export default function CollagesPage() {
                       type="button"
                       onClick={() => deleteCollage(collage.id)}
                       aria-label={t('editor.delete')}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-warm-white/95 border border-cream-dark text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center shadow-sm"
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-warm-white/95 text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center shadow-md"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
