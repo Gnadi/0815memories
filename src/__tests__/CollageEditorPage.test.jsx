@@ -64,7 +64,7 @@ const CollageEditorPage = (await import('../pages/CollageEditorPage')).default
 
 const savedDoc = () => mockUpdateCollage.mock.calls.at(-1)[1].doc
 
-function mockCollage(templateId = 'four-grid') {
+function mockCollage(templateId = 'mint-four') {
   mockGetDoc.mockResolvedValue({
     exists: () => true,
     id: 'collage-1',
@@ -89,14 +89,14 @@ describe('CollageEditorPage', () => {
   })
 
   it('shows one empty slot per template slot', async () => {
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
     expect(screen.getAllByLabelText('Add a photo here')).toHaveLength(4)
     expect(screen.queryAllByLabelText('Select this photo')).toHaveLength(0)
   })
 
   it('fills the slot the customer tapped with the photo they picked', async () => {
     const user = userEvent.setup()
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
 
     await user.click(screen.getAllByLabelText('Add a photo here')[1])
     // The photo strip opens on the memories library.
@@ -116,27 +116,27 @@ describe('CollageEditorPage', () => {
 
   it('keeps the placed photos when the template changes', async () => {
     const user = userEvent.setup()
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
 
     await user.click(screen.getAllByLabelText('Add a photo here')[0])
     await user.click(screen.getByTitle('Beach day'))
 
     // The template strip carries every template; switch to the single-slot one.
-    const target = COLLAGE_TEMPLATES.find((tpl) => tpl.id === 'pill-hero')
-    await user.click(screen.getByText('Portrait'))
+    const target = COLLAGE_TEMPLATES.find((tpl) => tpl.id === 'daisy-field')
+    await user.click(screen.getByText('Daisies'))
 
     expect(screen.getAllByLabelText('Select this photo')).toHaveLength(1)
     expect(screen.queryAllByLabelText('Add a photo here')).toHaveLength(target.slots.length - 1)
 
     await user.click(screen.getByText('Save'))
     await waitFor(() => expect(mockUpdateCollage).toHaveBeenCalled())
-    expect(savedDoc().templateId).toBe('pill-hero')
+    expect(savedDoc().templateId).toBe('daisy-field')
     expect(savedDoc().slots[0].url).toBe('beach.enc')
   })
 
   it('saves the border and background chosen in the Borders tab', async () => {
     const user = userEvent.setup()
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
 
     await user.click(screen.getByText('Borders'))
     await user.click(screen.getAllByLabelText('Frame colour')[2])
@@ -153,7 +153,7 @@ describe('CollageEditorPage', () => {
 
   it('writes the pending change out when the editor is closed', async () => {
     const user = userEvent.setup()
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
 
     // Autosave is debounced by two seconds; closing straight away used to drop
     // whatever had just been placed.
@@ -168,7 +168,7 @@ describe('CollageEditorPage', () => {
 
   it('does not write anything when nothing changed', async () => {
     const user = userEvent.setup()
-    await renderEditor('four-grid')
+    await renderEditor('mint-four')
 
     await user.click(screen.getByLabelText('Close'))
 

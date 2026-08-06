@@ -98,31 +98,71 @@ function fakeContext() {
     quadraticCurveTo: record('quadraticCurveTo'),
     clip: record('clip'),
     stroke: record('stroke'),
+    fill: record('fill'),
     save: record('save'),
     restore: record('restore'),
     translate: record('translate'),
     rotate: record('rotate'),
     scale: record('scale'),
     drawImage: record('drawImage'),
+    // Decoration painters reach for these.
+    arc: record('arc'),
+    bezierCurveTo: record('bezierCurveTo'),
+    setLineDash: record('setLineDash'),
+    createLinearGradient: (...args) => {
+      calls.push(['createLinearGradient', ...args])
+      return { addColorStop: (...stop) => calls.push(['addColorStop', ...stop]) }
+    },
+    createRadialGradient: (...args) => {
+      calls.push(['createRadialGradient', ...args])
+      return { addColorStop: (...stop) => calls.push(['addColorStop', ...stop]) }
+    },
   }
 }
 
 const fakeImage = (width = 400, height = 400) => ({ naturalWidth: width, naturalHeight: height })
 
 describe('drawCollage', () => {
-  it('fills the background before drawing any slot', () => {
+  it('clears and fills the background before drawing any slot', () => {
     const ctx = fakeContext()
-    const doc = makeCollageDoc(getTemplate('four-grid'))
+    const doc = makeCollageDoc(getTemplate('mint-four'))
     drawCollage(ctx, doc, new Map(), { width: 400, height: 400 })
 
     const names = ctx.calls.map(([name]) => name)
     expect(names[0]).toBe('clearRect')
-    expect(names[1]).toBe('fillRect')
+    // This template's background is a gradient, so the fill is built first.
+    expect(names.indexOf('fillRect')).toBeLessThan(names.indexOf('clip'))
+    expect(names.indexOf('createLinearGradient')).toBeLessThan(names.indexOf('fillRect'))
+  })
+
+  it('paints a solid background for a template that asks for one', () => {
+    const ctx = fakeContext()
+    drawCollage(ctx, makeCollageDoc(getTemplate('love-note')), new Map(), { width: 400, height: 500 })
+    expect(ctx.calls.some(([name]) => name === 'createLinearGradient')).toBe(false)
+    expect(ctx.calls[1][0]).toBe('fillRect')
+  })
+
+  it('draws a template\'s decorations, behind and in front of the photos', () => {
+    const ctx = fakeContext()
+    // pop-hearts has a colour band behind and two heart stickers in front.
+    drawCollage(ctx, makeCollageDoc(getTemplate('pop-hearts')), new Map(), { width: 400, height: 500 })
+    const names = ctx.calls.map(([name]) => name)
+    expect(names.filter((n) => n === 'bezierCurveTo').length).toBeGreaterThan(0)
+    // The last heart is painted after the final slot was clipped.
+    expect(names.lastIndexOf('bezierCurveTo')).toBeGreaterThan(names.lastIndexOf('clip'))
+  })
+
+  it('lays a photo mat under a framed slot', () => {
+    const framed = fakeContext()
+    drawCollage(framed, makeCollageDoc(getTemplate('polaroid-pair')), new Map(), { width: 400, height: 500 })
+    // The mat is a filled rounded rect drawn before the slot is clipped.
+    const names = framed.calls.map(([name]) => name)
+    expect(names.indexOf('fill')).toBeLessThan(names.indexOf('clip'))
   })
 
   it('draws one image per filled slot and skips the empty ones', () => {
     const ctx = fakeContext()
-    const doc = makeCollageDoc(getTemplate('four-grid'))
+    const doc = makeCollageDoc(getTemplate('mint-four'))
     doc.slots[0].url = 'a.jpg'
     doc.slots[2].url = 'b.jpg'
     const images = new Map([['a.jpg', fakeImage()], ['b.jpg', fakeImage()]])
@@ -134,22 +174,22 @@ describe('drawCollage', () => {
 
   it('clips a circular slot with an ellipse and a rounded one with a rounded rect', () => {
     const circle = fakeContext()
-    drawCollage(circle, makeCollageDoc(getTemplate('circle-center')), new Map(), { width: 400, height: 400 })
+    drawCollage(circle, makeCollageDoc(getTemplate('sunburst')), new Map(), { width: 400, height: 400 })
     expect(circle.calls.some(([name]) => name === 'ellipse')).toBe(true)
 
     const rounded = fakeContext()
-    drawCollage(rounded, makeCollageDoc(getTemplate('four-grid')), new Map(), { width: 400, height: 400 })
+    drawCollage(rounded, makeCollageDoc(getTemplate('mint-four')), new Map(), { width: 400, height: 400 })
     expect(rounded.calls.some(([name]) => name === 'roundRect')).toBe(true)
   })
 
   it('rotates the slots a tilted template asks for', () => {
     const ctx = fakeContext()
-    drawCollage(ctx, makeCollageDoc(getTemplate('polaroid-scatter')), new Map(), { width: 400, height: 500 })
+    drawCollage(ctx, makeCollageDoc(getTemplate('polaroid-pair')), new Map(), { width: 400, height: 500 })
     expect(ctx.calls.filter(([name]) => name === 'rotate').length).toBeGreaterThan(0)
   })
 
   it('only strokes a border when one is set', () => {
-    const doc = makeCollageDoc(getTemplate('four-grid'))
+    const doc = makeCollageDoc(getTemplate('mint-four'))
 
     const none = fakeContext()
     drawCollage(none, doc, new Map(), { width: 400, height: 400 })
@@ -162,20 +202,20 @@ describe('drawCollage', () => {
 
   it('paints placeholders only when asked (preview, never export)', () => {
     const preview = fakeContext()
-    drawCollage(preview, makeCollageDoc(getTemplate('four-grid')), new Map(), {
+    drawCollage(preview, makeCollageDoc(getTemplate('mint-four')), new Map(), {
       width: 400, height: 400, placeholders: true,
     })
     // One background fill plus one per empty slot.
     expect(preview.calls.filter(([name]) => name === 'fillRect')).toHaveLength(5)
 
     const exported = fakeContext()
-    drawCollage(exported, makeCollageDoc(getTemplate('four-grid')), new Map(), { width: 400, height: 400 })
+    drawCollage(exported, makeCollageDoc(getTemplate('mint-four')), new Map(), { width: 400, height: 400 })
     expect(exported.calls.filter(([name]) => name === 'fillRect')).toHaveLength(1)
   })
 
   it('survives a photo whose image failed to decrypt', () => {
     const ctx = fakeContext()
-    const doc = makeCollageDoc(getTemplate('four-grid'))
+    const doc = makeCollageDoc(getTemplate('mint-four'))
     doc.slots[0].url = 'missing.jpg'
     expect(() => drawCollage(ctx, doc, new Map(), { width: 400, height: 400 })).not.toThrow()
     expect(ctx.calls.some(([name]) => name === 'drawImage')).toBe(false)

@@ -85,6 +85,16 @@ export default function BorderPanel({ border, background, onChangeBorder, onChan
         <h3 className="text-[11px] font-semibold text-bark-muted uppercase tracking-wide">{t('borders.background')}</h3>
       </div>
       <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pb-1">
+        {/* Back to the template's own colour or artwork. */}
+        <button
+          type="button"
+          onClick={() => onChangeBackground(null)}
+          className={`flex-shrink-0 h-8 px-3 rounded-lg border-2 text-[11px] font-medium transition-transform active:scale-95 ${
+            background ? 'border-cream-dark text-bark-muted' : 'border-kaydo text-kaydo'
+          }`}
+        >
+          {t('borders.templateBackground')}
+        </button>
         {BG_SWATCHES.map((color) => (
           <button
             key={color}

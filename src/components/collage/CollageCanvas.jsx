@@ -5,11 +5,13 @@ import { ASPECTS, DEFAULT_ASPECT, getTemplate } from './collageTemplates'
 
 // CSS mirror of the canvas shapes — used only for the selection ring and the
 // hit area, never for the photo itself (the canvas draws that).
-function cssRadius(shape, border) {
-  if (shape === 'circle') return '50%'
-  if (shape === 'pill') return '9999px'
-  if (shape === 'rect') return '0'
-  return `${Math.round((border?.radius ?? 0.08) * 100)}%`
+function cssRadius(slot, border) {
+  if (slot.shape === 'circle') return '50%'
+  if (slot.shape === 'pill') return '9999px'
+  if (slot.shape === 'rect') return '0'
+  // An arch is round on top, square at the bottom.
+  if (slot.shape === 'arch') return '50% 50% 0 0 / 32% 32% 0 0'
+  return `${Math.round((slot.radius ?? border?.radius ?? 0.08) * 100)}%`
 }
 
 /**
@@ -67,7 +69,12 @@ export default function CollageCanvas({
                 width: `${slot.w * 100}%`,
                 height: `${slot.h * 100}%`,
                 transform: slot.rotation ? `rotate(${slot.rotation}deg)` : undefined,
-                borderRadius: cssRadius(slot.shape, doc?.border),
+                // Matches the renderer: a slot with a pivot turns about that
+                // point (the film strip's centre), not about its own.
+                transformOrigin: slot.rotation && slot.pivot
+                  ? `${((slot.pivot[0] - slot.x) / slot.w) * 100}% ${((slot.pivot[1] - slot.y) / slot.h) * 100}%`
+                  : undefined,
+                borderRadius: cssRadius(slot, doc?.border),
                 boxShadow: isSelected
                   ? '0 0 0 3px var(--color-kaydo)'
                   : isSwapTarget

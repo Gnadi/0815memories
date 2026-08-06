@@ -8,6 +8,7 @@
 // thumbnail and the exported file all come from one function.
 
 import { getTemplate, templateSize, DEFAULT_BORDER } from '../components/collage/collageTemplates'
+import { paintDecoration, roundRectPath } from '../components/collage/collageDecorations'
 import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
 
 /**
@@ -98,6 +99,19 @@ function slotPath(ctx, w, h, shape, radiusFraction) {
     return
   }
 
+  // A window arch: semicircular top, straight sides and base.
+  if (shape === 'arch') {
+    const cap = Math.min(hw, h * 0.5)
+    ctx.moveTo(-hw, hh)
+    ctx.lineTo(-hw, -hh + cap)
+    ctx.quadraticCurveTo(-hw, -hh, -hw + cap, -hh)
+    ctx.lineTo(hw - cap, -hh)
+    ctx.quadraticCurveTo(hw, -hh, hw, -hh + cap)
+    ctx.lineTo(hw, hh)
+    ctx.closePath()
+    return
+  }
+
   const short = Math.min(w, h)
   const r = shape === 'pill'
     ? short / 2
@@ -129,6 +143,63 @@ function slotPath(ctx, w, h, shape, radiusFraction) {
 }
 
 /**
+ * Paint a template background: a colour string, or a gradient spec
+ * ({ type: 'linear'|'radial', colors, angle }).
+ */
+function paintBackground(ctx, background, width, height) {
+  if (!background) {
+    ctx.fillStyle = '#FDF6EC'
+  } else if (typeof background === 'string') {
+    ctx.fillStyle = background
+  } else if (background.type === 'radial') {
+    const [cx, cy] = background.center || [0.5, 0.5]
+    const gradient = ctx.createRadialGradient(
+      cx * width, cy * height, 0,
+      cx * width, cy * height, Math.max(width, height) * (background.radius ?? 0.8)
+    )
+    const colors = background.colors || ['#FFFFFF', '#000000']
+    colors.forEach((color, i) => gradient.addColorStop(i / Math.max(1, colors.length - 1), color))
+    ctx.fillStyle = gradient
+  } else {
+    // Linear, by angle in degrees (0 = left→right, 90 = top→bottom).
+    const angle = ((background.angle ?? 90) * Math.PI) / 180
+    const dx = Math.cos(angle)
+    const dy = Math.sin(angle)
+    const gradient = ctx.createLinearGradient(
+      width / 2 - (dx * width) / 2, height / 2 - (dy * height) / 2,
+      width / 2 + (dx * width) / 2, height / 2 + (dy * height) / 2
+    )
+    const colors = background.colors || ['#FFFFFF', '#000000']
+    colors.forEach((color, i) => gradient.addColorStop(i / Math.max(1, colors.length - 1), color))
+    ctx.fillStyle = gradient
+  }
+  ctx.fillRect(0, 0, width, height)
+}
+
+/**
+ * The photo mat a slot sits on — the white polaroid border, the cream card in
+ * the "bloom" template. Drawn (with its shadow) before the photo itself.
+ */
+function paintFrame(ctx, frame, w, h, width) {
+  const pad = (frame.pad ?? 0.02) * width
+  const padBottom = (frame.padBottom ?? frame.pad ?? 0.02) * width
+  const fw = w + pad * 2
+  const fh = h + pad + padBottom
+  const radius = (frame.radius ?? 0.012) * width
+
+  ctx.save()
+  if (frame.shadow !== false) {
+    ctx.shadowColor = 'rgba(30,20,10,0.28)'
+    ctx.shadowBlur = width * 0.03
+    ctx.shadowOffsetY = width * 0.008
+  }
+  ctx.fillStyle = frame.color || '#FFFFFF'
+  roundRectPath(ctx, -fw / 2, -h / 2 - pad, fw, fh, radius)
+  ctx.fill()
+  ctx.restore()
+}
+
+/**
  * Draw a whole collage.
  *
  * @param ctx     2D context sized to width × height
@@ -140,10 +211,17 @@ function slotPath(ctx, w, h, shape, radiusFraction) {
 export function drawCollage(ctx, doc, images, { width, height, placeholders = false } = {}) {
   const template = getTemplate(doc?.templateId)
   const border = { ...DEFAULT_BORDER, ...(doc?.border || {}) }
+  const decorations = template.decorations || []
 
   ctx.clearRect(0, 0, width, height)
-  ctx.fillStyle = doc?.background || template.background || '#FDF6EC'
-  ctx.fillRect(0, 0, width, height)
+  // A background the customer picked in the Borders tab wins; otherwise the
+  // template's own colour or gradient.
+  paintBackground(ctx, doc?.background || template.background, width, height)
+
+  for (const decoration of decorations) {
+    if (decoration.layer === 'front') continue
+    paintDecoration(ctx, decoration, { width, height })
+  }
 
   template.slots.forEach((slot, index) => {
     const fill = doc?.slots?.find((s) => s.id === slot.id) || doc?.slots?.[index] || {}
@@ -151,21 +229,42 @@ export function drawCollage(ctx, doc, images, { width, height, placeholders = fa
     const img = fill.url ? images?.get?.(fill.url) : null
 
     ctx.save()
-    ctx.translate(cx, cy)
-    if (slot.rotation) ctx.rotate((slot.rotation * Math.PI) / 180)
+    if (slot.rotation && slot.pivot) {
+      // Rotate around a shared pivot — a photo lying on a tilted film strip has
+      // to turn about the strip's centre, not its own, or it slides off the
+      // sprockets as the angle grows.
+      const px = slot.pivot[0] * width
+      const py = slot.pivot[1] * height
+      ctx.translate(px, py)
+      ctx.rotate((slot.rotation * Math.PI) / 180)
+      ctx.translate(cx - px, cy - py)
+    } else {
+      ctx.translate(cx, cy)
+      if (slot.rotation) ctx.rotate((slot.rotation * Math.PI) / 180)
+    }
 
-    slotPath(ctx, w, h, slot.shape, border.radius)
+    if (slot.frame) paintFrame(ctx, slot.frame, w, h, width)
+
+    slotPath(ctx, w, h, slot.shape, slot.radius ?? border.radius)
     ctx.save()
     ctx.clip()
     if (img) {
       ctx.translate(-w / 2, -h / 2)
       drawImageCovered(ctx, img, w, h, fill.imageScale, fill.flipped, fill.offsetX, fill.offsetY)
     } else if (placeholders) {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)'
+      // Empty slots read as a soft window on the artwork rather than a hole.
+      ctx.fillStyle = slot.frame ? 'rgba(45,27,14,0.10)' : 'rgba(255,255,255,0.45)'
       ctx.fillRect(-w / 2, -h / 2, w, h)
     }
     ctx.restore()
 
+    // The template's own outline (gold trim, coloured keyline), then the
+    // customer's border from the Borders tab on top of it.
+    if (slot.stroke?.width > 0) {
+      ctx.lineWidth = slot.stroke.width * width
+      ctx.strokeStyle = slot.stroke.color || '#FFFFFF'
+      ctx.stroke()
+    }
     if (border.width > 0) {
       ctx.lineWidth = border.width * width
       ctx.strokeStyle = border.color || DEFAULT_BORDER.color
@@ -173,6 +272,11 @@ export function drawCollage(ctx, doc, images, { width, height, placeholders = fa
     }
     ctx.restore()
   })
+
+  for (const decoration of decorations) {
+    if (decoration.layer !== 'front') continue
+    paintDecoration(ctx, decoration, { width, height })
+  }
 }
 
 /**

@@ -20,18 +20,20 @@
     "noSuggestions": "Lade noch ein paar Fotos hoch — dann erscheinen hier fertige Ideen."
   },
   "templates": {
-    "pillHero": "Hochformat",
-    "fullBleed": "Randlos",
-    "circleCenter": "Kreis",
-    "twoUp": "Zwei übereinander",
-    "sideBySide": "Nebeneinander",
-    "heroTwo": "Groß + zwei",
-    "fourGrid": "Vierer-Raster",
-    "sixGrid": "Sechser-Raster",
+    "daisyField": "Gänseblümchen",
+    "bloomRed": "Mohn",
+    "loveNote": "Liebesbrief",
+    "confettiGold": "Konfetti",
+    "sunburst": "Sonne",
     "filmStrip": "Filmstreifen",
-    "magazine": "Magazin",
-    "polaroidScatter": "Verstreut",
-    "stackedCircles": "Blasen"
+    "polaroidPair": "Polaroids",
+    "popHearts": "Herzen",
+    "stackedTrio": "Dreier",
+    "storyTrio": "Story",
+    "mintFour": "Minze",
+    "nightSix": "Nacht",
+    "sunHero": "Sonnenschein",
+    "fullBleed": "Randlos"
   },
   "tabs": {
     "templates": "Vorlagen",
@@ -60,7 +62,8 @@
     "thickness": "Rahmen",
     "corners": "Ecken",
     "spacing": "Abstand",
-    "background": "Hintergrund"
+    "background": "Hintergrund",
+    "templateBackground": "Vorlage"
   },
   "slotActions": {
     "done": "Fertig",

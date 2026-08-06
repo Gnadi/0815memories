@@ -20,18 +20,20 @@
     "noSuggestions": "Post a few more photos and ready-made ideas will show up here."
   },
   "templates": {
-    "pillHero": "Portrait",
-    "fullBleed": "Full bleed",
-    "circleCenter": "Circle",
-    "twoUp": "Two up",
-    "sideBySide": "Side by side",
-    "heroTwo": "Hero + two",
-    "fourGrid": "Four grid",
-    "sixGrid": "Six grid",
+    "daisyField": "Daisies",
+    "bloomRed": "Poppy",
+    "loveNote": "Love note",
+    "confettiGold": "Confetti",
+    "sunburst": "Sunburst",
     "filmStrip": "Film strip",
-    "magazine": "Magazine",
-    "polaroidScatter": "Scatter",
-    "stackedCircles": "Bubbles"
+    "polaroidPair": "Polaroids",
+    "popHearts": "Pop hearts",
+    "stackedTrio": "Trio",
+    "storyTrio": "Story",
+    "mintFour": "Mint four",
+    "nightSix": "Night six",
+    "sunHero": "Sunshine",
+    "fullBleed": "Full bleed"
   },
   "tabs": {
     "templates": "Templates",
@@ -60,7 +62,8 @@
     "thickness": "Frame",
     "corners": "Corners",
     "spacing": "Spacing",
-    "background": "Background"
+    "background": "Background",
+    "templateBackground": "Template"
   },
   "slotActions": {
     "done": "Done",
