@@ -6,25 +6,56 @@ import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
+import { ASPECTS } from '../components/collage/collageTemplates'
 import { useHighlights } from '../hooks/useHighlights'
 import { useHighlightSuggestions } from '../hooks/useHighlightSuggestions'
 import { makeHighlightDoc } from '../utils/reelRenderer'
 import { devError } from '../utils/devLog'
 
-// Three photos from the reel, arranged as a little mosaic — a warmer, more
-// honest preview than one dark full-bleed poster.
+// Every tile on this page stands on the same stage, the way the collage
+// gallery does — no card, no border, just the artwork and a soft shadow.
+const STAGE = 'h-52 sm:h-64 lg:h-72'
+
+// Three photos from the reel: one large, two stacked beside it. A warmer, more
+// honest preview than a single dark poster, and it shows the reel has more than
+// one shot in it.
 function ShotMosaic({ shots }) {
   const [first, second, third] = shots
   return (
-    <div className="grid grid-cols-3 grid-rows-2 gap-1 h-32 sm:h-36">
-      <div className="col-span-2 row-span-2 rounded-xl overflow-hidden bg-cream-dark">
+    <div className={`${STAGE} grid grid-cols-3 grid-rows-2 gap-1.5`}>
+      <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]">
         {first && <EncryptedImage src={first.url} thumbSrc={first.thumbUrl || ''} alt="" className="w-full h-full object-cover" />}
       </div>
-      <div className="rounded-xl overflow-hidden bg-cream-dark">
+      <div className="rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]">
         {second && <EncryptedImage src={second.url} thumbSrc={second.thumbUrl || ''} alt="" className="w-full h-full object-cover" />}
       </div>
-      <div className="rounded-xl overflow-hidden bg-cream-dark">
+      <div className="rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]">
         {third && <EncryptedImage src={third.url} thumbSrc={third.thumbUrl || ''} alt="" className="w-full h-full object-cover" />}
+      </div>
+    </div>
+  )
+}
+
+// A saved reel's poster: its first shot, in the shape that reel actually
+// renders at (9:16 by default), fitted to the shared stage height.
+function ReelPoster({ shot, aspect }) {
+  const ratio = ASPECTS[aspect] ?? ASPECTS['9:16']
+  return (
+    <div className={`${STAGE} flex items-center justify-center`}>
+      <div
+        className="relative rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]"
+        style={{ aspectRatio: String(ratio), height: '100%', width: 'auto', maxWidth: '100%' }}
+      >
+        {shot?.url ? (
+          <EncryptedImage src={shot.url} thumbSrc={shot.thumbUrl || ''} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Film className="w-7 h-7 text-bark-muted" />
+          </div>
+        )}
+        <span className="absolute bottom-2 left-2 w-9 h-9 rounded-full bg-warm-white/90 text-kaydo flex items-center justify-center shadow-sm">
+          <Play className="w-4 h-4 ml-0.5" />
+        </span>
       </div>
     </div>
   )
@@ -85,7 +116,7 @@ export default function HighlightsPage() {
 
           {/* Warm header */}
           <header
-            className="rounded-3xl border border-cream-dark px-5 py-7 sm:px-9 sm:py-9"
+            className="rounded-3xl border border-cream-dark px-5 py-5 sm:px-8 sm:py-6"
             style={{ background: 'linear-gradient(135deg, #FFFDF9 0%, #FBF0E6 50%, #F6E2D8 100%)' }}
           >
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-kaydo">
@@ -95,9 +126,6 @@ export default function HighlightsPage() {
             <h1 className="mt-2.5 text-3xl sm:text-[2.6rem] leading-tight font-bold text-bark">
               {t('highlights.title')}
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-bark-muted max-w-md leading-relaxed">
-              {t('highlights.subtitle')}
-            </p>
           </header>
 
           {/* Suggestions */}
@@ -106,31 +134,25 @@ export default function HighlightsPage() {
               {t('highlights.suggestionsHeading')}
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion.id}
                   type="button"
                   disabled={!isAdmin || creating != null}
                   onClick={() => create(suggestion.id, suggestionLabel(suggestion), suggestion.shots)}
-                  className="group text-left rounded-2xl bg-warm-white border border-cream-dark p-2.5 shadow-[0_2px_10px_rgba(45,27,14,0.05)] transition-all hover:-translate-y-0.5 hover:border-kaydo/40 hover:shadow-[0_10px_24px_rgba(45,27,14,0.10)] disabled:opacity-60 disabled:hover:translate-y-0"
+                  className="group text-left transition-transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
                 >
                   <ShotMosaic shots={suggestion.shots} />
-                  <div className="flex items-center gap-2.5 px-1 pt-3 pb-1">
-                    <span className="w-8 h-8 rounded-full bg-kaydo/10 text-kaydo flex items-center justify-center flex-shrink-0 group-hover:bg-kaydo group-hover:text-white transition-colors">
-                      {creating === suggestion.id
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <Play className="w-4 h-4 ml-0.5" />}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-bark truncate">
-                        {suggestionLabel(suggestion)}
-                      </span>
-                      <span className="block text-[11px] text-bark-muted">
-                        {t('reel.shots', { count: suggestion.shots.length })}
-                      </span>
-                    </span>
-                  </div>
+                  <span className="flex items-center justify-center gap-1.5 pt-2.5 text-sm font-medium text-bark group-hover:text-kaydo">
+                    {creating === suggestion.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <Play className="w-3.5 h-3.5" />}
+                    <span className="truncate">{suggestionLabel(suggestion)}</span>
+                  </span>
+                  <span className="block text-center text-[11px] text-bark-muted">
+                    {t('reel.shots', { count: suggestion.shots.length })}
+                  </span>
                 </button>
               ))}
 
@@ -139,13 +161,17 @@ export default function HighlightsPage() {
                 type="button"
                 disabled={!isAdmin || creating != null}
                 onClick={() => create('blank', t('reel.defaultTitle'), [])}
-                className="rounded-2xl border border-dashed border-cream-dark bg-warm-white/60 p-2.5 flex flex-col items-center justify-center gap-2 min-h-[11.5rem] text-bark-muted transition-colors hover:border-kaydo hover:text-kaydo hover:bg-kaydo/5 disabled:opacity-60"
+                className="group text-left transition-transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
               >
-                {creating === 'blank'
-                  ? <Loader2 className="w-7 h-7 animate-spin" />
-                  : <Plus className="w-7 h-7" />}
-                <span className="text-sm font-medium">{t('highlights.startBlank')}</span>
-                <span className="text-[11px] px-6 text-center leading-relaxed">{t('highlights.startBlankHint')}</span>
+                <span className={`${STAGE} rounded-2xl border-2 border-dashed border-cream-dark bg-warm-white/50 flex flex-col items-center justify-center gap-2 text-bark-muted transition-colors group-hover:border-kaydo group-hover:text-kaydo group-hover:bg-kaydo/5`}>
+                  {creating === 'blank'
+                    ? <Loader2 className="w-8 h-8 animate-spin" />
+                    : <Plus className="w-8 h-8" />}
+                  <span className="text-[11px] px-6 text-center leading-relaxed">{t('highlights.startBlankHint')}</span>
+                </span>
+                <span className="block text-center pt-2.5 text-sm font-medium text-bark group-hover:text-kaydo">
+                  {t('highlights.startBlank')}
+                </span>
               </button>
             </div>
 
@@ -181,7 +207,7 @@ export default function HighlightsPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
                 {highlights.map((highlight) => {
                   const shots = highlight.doc?.shots || []
                   return (
@@ -189,29 +215,13 @@ export default function HighlightsPage() {
                       <button
                         type="button"
                         onClick={() => navigate(`/highlight/${highlight.id}`)}
-                        className="w-full text-left rounded-2xl bg-warm-white border border-cream-dark p-2 shadow-[0_2px_10px_rgba(45,27,14,0.05)] transition-all hover:-translate-y-0.5 hover:border-kaydo/40 hover:shadow-[0_10px_24px_rgba(45,27,14,0.10)]"
+                        className="w-full text-left transition-transform hover:-translate-y-1 active:scale-[0.98]"
                       >
-                        <div className="w-full aspect-[4/5] rounded-xl overflow-hidden bg-cream-dark relative">
-                          {shots[0]?.url ? (
-                            <EncryptedImage
-                              src={shots[0].url}
-                              thumbSrc={shots[0].thumbUrl || ''}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Film className="w-6 h-6 text-bark-muted" />
-                            </div>
-                          )}
-                          <span className="absolute bottom-2 left-2 w-8 h-8 rounded-full bg-warm-white/90 text-kaydo flex items-center justify-center shadow-sm">
-                            <Play className="w-4 h-4 ml-0.5" />
-                          </span>
-                        </div>
-                        <span className="block px-1 pt-2 text-xs font-medium text-bark truncate">
+                        <ReelPoster shot={shots[0]} aspect={highlight.doc?.aspect} />
+                        <span className="block pt-2.5 text-sm font-medium text-bark text-center truncate">
                           {highlight.title || t('reel.defaultTitle')}
                         </span>
-                        <span className="block px-1 pb-1 text-[11px] text-bark-muted">
+                        <span className="block text-center text-[11px] text-bark-muted">
                           {t('reel.shots', { count: shots.length })}
                         </span>
                       </button>
@@ -219,7 +229,7 @@ export default function HighlightsPage() {
                         type="button"
                         onClick={() => deleteHighlight(highlight.id)}
                         aria-label={t('editor.delete')}
-                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-warm-white/95 border border-cream-dark text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center shadow-sm"
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-warm-white/95 text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center shadow-md"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
