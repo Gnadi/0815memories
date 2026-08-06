@@ -20,6 +20,7 @@ vi.mock('../context/AuthContext', () => ({
 import { decryptBlob } from '../utils/encryption'
 import useDecryptedMedia, {
   clearDecryptedMediaCache,
+  prefetchDecryptedMedia,
 } from '../components/media/useDecryptedMedia'
 import EncryptedImage from '../components/media/EncryptedImage'
 
@@ -211,6 +212,42 @@ describe('EncryptedImage', () => {
     const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
 
     expect(container.querySelector('img').className).toContain('media-decrypting')
+  })
+
+  it('adopts a photo that was cached while it was still off-screen', async () => {
+    // The home page renders the same photos twice: once in the feed, once in
+    // AlbumGlimpse below the fold. The second copy mounts on a cache miss, so
+    // nothing resolves it during render — and by the time it scrolls into view
+    // the first copy has filled the cache. Becoming visible has to pick that up.
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+
+    // An observer that reports intersection only when this test says so.
+    let intersect = null
+    globalThis.IntersectionObserver = class {
+      constructor(callback) {
+        this.callback = callback
+      }
+      observe(node) {
+        intersect = () => act(() => this.callback([{ isIntersecting: true, target: node }]))
+      }
+      disconnect() {}
+      unobserve() {}
+    }
+
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+    expect(container.querySelector('img').className).toContain('media-decrypting')
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    // Somebody else decrypts the same photo while this one is still off-screen.
+    await act(() => prefetchDecryptedMedia(ENCRYPTED_URL, FAKE_KEY, 'image/*'))
+
+    intersect()
+
+    await waitFor(() =>
+      expect(container.querySelector('img').getAttribute('src')).toBe('blob:decrypted-1')
+    )
+    expect(container.querySelector('img').className).not.toContain('media-decrypting')
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
   })
 
   it('carries no placeholder when the media resolves during render', async () => {

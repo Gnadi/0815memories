@@ -274,9 +274,18 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
   useEffect(() => () => observerRef.current?.disconnect(), [])
 
   useEffect(() => {
-    // Everything resolvable without a network round trip is already in state.
+    // No `cache.has()` shortcut here, deliberately. Everything resolvable
+    // without a network round trip is already in state — but only as of the
+    // last render, and the cache can fill *after* that: another component
+    // decrypting the same photo, or a prefetch landing. Nothing re-resolves it
+    // then, because the render-phase re-resolve watches the URL and the key,
+    // not `visible`. Bailing out on a cache hit therefore stranded the lazy
+    // copy of a photo on its placeholder forever — the home page renders the
+    // same photos in the feed and again in AlbumGlimpse below the fold, so by
+    // the time the second copy scrolled into view the first had already cached
+    // it. loadDecrypted answers a hit from the cache anyway; going through it
+    // costs a microtask and a setState React discards when nothing changed.
     if (!encryptedUrl || isDirectUrl(encryptedUrl)) return
-    if (cache.has(encryptedUrl)) return
     if (!encryptionKey) return
     if (!visible) return
 
