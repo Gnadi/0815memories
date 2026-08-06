@@ -1,22 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
 import PostMemoryModal from '../components/admin/PostMemoryModal'
 import { useAuth } from '../context/AuthContext'
-import { encryptFields, decryptFields } from '../utils/encryption'
-
-const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
+import { useMemoryWriter, decryptMemoryDoc } from '../hooks/useMemories'
+import { parseRichDoc } from '../utils/richText'
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t } = useTranslation('memory')
   const { familyId, isAdmin, encryptionKey } = useAuth()
+  // Writes go through the shared writer so there is exactly one place in the app
+  // that encrypts a memory.
+  const { updateMemory, deleteMemory } = useMemoryWriter(familyId, encryptionKey)
   const [memory, setMemory] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
@@ -30,7 +32,7 @@ export default function MemoryDetailPage() {
         const data = docSnap.data()
         // Only show memory if it belongs to the current family
         if (data.familyId === familyId) {
-          const decrypted = await decryptFields(encryptionKey, data, ENCRYPTED_FIELDS)
+          const decrypted = await decryptMemoryDoc(encryptionKey, data)
           setMemory({ id: docSnap.id, ...decrypted })
         }
       }
@@ -57,14 +59,19 @@ export default function MemoryDetailPage() {
   const handleDelete = async () => {
     setShowMenu(false)
     if (!window.confirm(t('detail.deleteConfirm'))) return
-    await deleteDoc(doc(db, 'memories', id))
+    await deleteMemory(id)
     navigate('/home')
   }
 
   const handleSaveEdit = async (memId, updates) => {
-    const encrypted = await encryptFields(encryptionKey, updates, ENCRYPTED_FIELDS)
-    await updateDoc(doc(db, 'memories', memId), encrypted)
-    setMemory((prev) => ({ ...prev, ...updates }))
+    await updateMemory(memId, updates)
+    // `updates.contentRich` is the JSON string that was persisted; this view
+    // renders from the parsed document.
+    setMemory((prev) => ({
+      ...prev,
+      ...updates,
+      ...(updates.contentRich != null ? { contentRich: parseRichDoc(updates.contentRich) } : {}),
+    }))
     setShowEditModal(false)
   }
 

@@ -2,6 +2,8 @@ import { Calendar, MapPin } from 'lucide-react'
 import { formatDate } from '../../utils/helpers'
 import VoiceMemoPlayer from './VoiceMemoPlayer'
 import MemoryVideoPlayer from './MemoryVideoPlayer'
+import RichContent from './RichContent'
+import { isRichDoc } from '../../utils/richText'
 
 export default function MemoryBody({ memory }) {
   return (
@@ -34,13 +36,22 @@ export default function MemoryBody({ memory }) {
         </blockquote>
       )}
 
-      {/* Body text */}
-      {memory.content && (
-        <div className="prose prose-lg text-bark-light leading-relaxed space-y-4">
-          {memory.content.split('\n\n').map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
+      {/* Body — the rich description when there is one, else the legacy text.
+          `contentRich` is only a parsed document on single-document reads; the
+          feed leaves it as ciphertext, and memories written before this feature
+          have no such field at all. Both fall back to the plain-text mirror. */}
+      {isRichDoc(memory.contentRich) ? (
+        <RichContent doc={memory.contentRich} />
+      ) : (
+        memory.content && (
+          <div className="text-bark-light text-lg leading-relaxed space-y-4">
+            {memory.content.split('\n\n').map((paragraph, i) => (
+              <p key={i} className="whitespace-pre-wrap">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        )
       )}
 
       {/* Voice Memos */}

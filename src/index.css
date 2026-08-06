@@ -103,3 +103,75 @@ select {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Rich description editor (src/components/admin/RichTextEditor.jsx).
+   Only the parts Tailwind classes cannot reach: ProseMirror's own generated
+   markup, and the placeholder pseudo-element. The read-path renderer
+   (RichContent.jsx) styles the same node types with explicit classes — keep the
+   two in step. */
+.kaydo-editor p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+.kaydo-editor p:last-child {
+  margin-bottom: 0;
+}
+.kaydo-editor h2,
+.kaydo-editor h3 {
+  font-family: var(--font-family-serif);
+  font-weight: 700;
+  color: var(--color-bark);
+  margin: 1.5rem 0 0.75rem;
+}
+.kaydo-editor h2 {
+  font-size: 1.5rem;
+}
+.kaydo-editor h3 {
+  font-size: 1.25rem;
+}
+.kaydo-editor ul,
+.kaydo-editor ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.kaydo-editor ul {
+  list-style: disc;
+}
+.kaydo-editor ol {
+  list-style: decimal;
+}
+.kaydo-editor li p {
+  margin-bottom: 0;
+}
+.kaydo-editor blockquote {
+  border-left: 4px solid var(--color-kaydo);
+  padding-left: 1.25rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: var(--color-bark-light);
+}
+.kaydo-editor a {
+  color: var(--color-kaydo);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.kaydo-editor hr {
+  margin: 2rem 0;
+  border-color: var(--color-cream-dark);
+}
+
+/* The placeholder is a pseudo-element on the first empty paragraph. */
+.kaydo-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-bark-muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* A selected media atom needs a visible outline — it has no text cursor. */
+.kaydo-editor .ProseMirror-selectednode {
+  outline: 2px solid var(--color-kaydo);
+  outline-offset: 2px;
+  border-radius: 1rem;
+}

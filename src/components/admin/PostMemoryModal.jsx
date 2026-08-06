@@ -3,17 +3,34 @@ import { useTranslation } from 'react-i18next'
 import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../../context/AuthContext'
-import { decryptFields } from '../../utils/encryption'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
+import { decryptMemoryDoc } from '../../hooks/useMemories'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import PolaroidBorderEditor from './PolaroidBorderEditor'
+import RichTextEditorLazy, { EditorSkeleton } from './RichTextEditorLazy'
 import { resolvePolaroidBorder } from '../home/polaroidBorder'
 import { thumbsFor, buildThumbs } from '../../utils/mediaThumbs'
+import {
+  EMPTY_RICH_DOC,
+  isRichDoc,
+  plainTextToRich,
+  richToPlainText,
+  stripPendingMedia,
+} from '../../utils/richText'
 
-const ENCRYPTED_FIELDS = ['title', 'content', 'quote', 'location', 'authorName', 'category']
+/**
+ * Ceiling on the serialized description, checked before the write.
+ *
+ * Encryption turns this into roughly 1.33x as much base64, and the document
+ * shares a 1 MiB Firestore document with the plain-text mirror, so the limit has
+ * to sit well below both that and the 700 KB cap firestore.rules enforces on the
+ * ciphertext. 300k characters is around fifty thousand words — generous for a
+ * memory, and it fails with a message instead of an opaque Firestore error.
+ */
+const MAX_RICH_DOC_CHARS = 300_000
 
 function buildInitialImages(memory) {
   if (memory?.images?.length) {
@@ -68,7 +85,6 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
 
   const [form, setForm] = useState({
     title: memory?.title || '',
-    content: memory?.content || '',
     quote: memory?.quote || '',
     category: memory?.category || '',
     location: memory?.location || '',
@@ -82,23 +98,44 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       : new Date().toISOString().split('T')[0],
   })
 
+  // The description document, and whether it has been decrypted yet.
+  //
+  // The home feed hands this modal a memory whose `contentRich` is still
+  // ciphertext — the feed listener skips that field on purpose. So for an
+  // existing memory the editor must not mount until the effect below has
+  // decrypted it, or it would seed itself from ciphertext and then overwrite
+  // the real description on save.
+  const [richDoc, setRichDoc] = useState(memory ? null : { ...EMPTY_RICH_DOC })
+  const [richReady, setRichReady] = useState(!memory)
+  const [pendingInline, setPendingInline] = useState(0)
+  const [saveError, setSaveError] = useState('')
+
   // Ensure form fields are plaintext even if the caller passes an
   // encrypted memory (e.g. direct getDoc reads that bypass the hooks).
   useEffect(() => {
-    if (!memory || !encryptionKey) return
+    if (!memory) return
     let cancelled = false
-    decryptFields(encryptionKey, memory, ENCRYPTED_FIELDS).then((decrypted) => {
+    const seed = async () => {
+      const decrypted = encryptionKey ? await decryptMemoryDoc(encryptionKey, memory) : memory
       if (cancelled) return
       setForm((prev) => ({
         ...prev,
         title: decrypted.title || '',
-        content: decrypted.content || '',
         quote: decrypted.quote || '',
         category: decrypted.category || '',
         location: decrypted.location || '',
         authorName: decrypted.authorName || '',
       }))
-    })
+      // A memory written before this feature has no document — seed the editor
+      // from its plain text so nothing is lost when it is saved again.
+      setRichDoc(
+        isRichDoc(decrypted.contentRich)
+          ? decrypted.contentRich
+          : plainTextToRich(decrypted.content || '')
+      )
+      setRichReady(true)
+    }
+    seed()
     return () => {
       cancelled = true
     }
@@ -139,6 +176,22 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSaveError('')
+
+    // Belt and braces: media still uploading has no URL yet. The submit button
+    // is already disabled while any upload is in flight, and the blob: preview
+    // never enters the document (see previewStore), so this only ever drops a
+    // node the user abandoned.
+    const doc = stripPendingMedia(isRichDoc(richDoc) ? richDoc : { ...EMPTY_RICH_DOC })
+
+    // Serialized here, not in the encryption layer: contentRich must reach
+    // Firestore as a string so it rides the ordinary encryptFields path.
+    const contentRich = JSON.stringify(doc)
+    if (contentRich.length > MAX_RICH_DOC_CHARS) {
+      setSaveError(t('richEditor.tooLarge'))
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -149,6 +202,11 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
 
       const data = {
         ...form,
+        contentRich,
+        // Derived mirror. Every preview surface — feed cards, timeline, Web
+        // Share — reads `content`, so it is rewritten from the document on each
+        // save rather than edited directly.
+        content: richToPlainText(doc),
         images: imageUrls,
         // Additive: written only when at least one image has a thumbnail, and
         // always positionally aligned with `images`.
@@ -167,6 +225,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       onClose()
     } catch (err) {
       devError('Failed to save memory:', err)
+      setSaveError(t('postMemory.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -403,17 +462,19 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             />
           </div>
 
-          {/* Story content */}
+          {/* Story content — text with photos, videos and voice memos inline */}
           <div>
             <label className="block text-sm font-medium text-bark mb-1">{t('postMemory.storyLabel')}</label>
-            <textarea
-              name="content"
-              value={form.content}
-              onChange={handleChange}
-              placeholder={t('postMemory.storyPlaceholder')}
-              rows={4}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-            />
+            {richReady ? (
+              <RichTextEditorLazy
+                value={richDoc}
+                onChange={setRichDoc}
+                onPendingChange={setPendingInline}
+                disabled={saving}
+              />
+            ) : (
+              <EditorSkeleton />
+            )}
           </div>
 
           {/* Quote */}
@@ -498,15 +559,21 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
             />
           )}
 
+          {saveError && (
+            <p className="flex items-center gap-1.5 text-sm text-red-600" role="alert">
+              <X className="w-4 h-4 flex-shrink-0" /> {saveError}
+            </p>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
-            disabled={saving || hasUploading}
+            disabled={saving || hasUploading || pendingInline > 0 || !richReady}
             className="btn-kaydo w-full flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : hasUploading ? (
+            ) : hasUploading || pendingInline > 0 ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {t('postMemory.uploading')}
