@@ -46,6 +46,7 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     removeImage,
     removeVideo,
     videoError,
+    imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey, {
     initialImages: buildInitialImages(moment),
@@ -201,6 +202,9 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.camera')}</span>
               </button>
             </div>
+            {imageError && (
+              <p className="text-xs text-kaydo mt-1">{imageError}</p>
+            )}
           </div>
 
           {/* Video upload */}

@@ -76,5 +76,10 @@
     "enable": "Aktivieren",
     "enabling": "Wird aktiviert…",
     "notNow": "Nicht jetzt"
+  },
+  "upload": {
+    "failed": "Upload fehlgeschlagen. Bitte versuche es erneut.",
+    "tooLarge": "Diese Datei ist {{size}} groß — erlaubt sind {{limit}} pro Datei. Bitte nimm einen kürzeren oder stärker komprimierten Clip.",
+    "videoTooLong": "Das Video darf höchstens {{seconds}} Sekunden lang sein."
   }
 }

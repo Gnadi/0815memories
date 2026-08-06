@@ -1,7 +1,25 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
-import { MAX_VIDEO_DURATION_SECONDS } from '../constants/media'
+import {
+  MAX_VIDEO_DURATION_SECONDS,
+  MAX_PLAINTEXT_BYTES,
+  formatBytes,
+} from '../constants/media'
 import { devError } from '../utils/devLog'
+
+// Turns whatever the upload pipeline threw into something a person can act on.
+// Anything else would leave the user staring at a spinner that ends in nothing,
+// which is exactly the bug this replaces.
+export function uploadErrorMessage(err, t) {
+  if (err?.code === 'upload/too-large') {
+    return t('upload.tooLarge', {
+      size: formatBytes(err.size),
+      limit: formatBytes(err.limit ?? MAX_PLAINTEXT_BYTES),
+    })
+  }
+  return t('upload.failed')
+}
 
 // Probes a local video file for its duration without uploading. Returns 0 on
 // failure so callers can decide whether to treat the file as invalid.
@@ -33,12 +51,26 @@ export function useMediaUploader(encryptionKey, {
   initialVideos = [],
   maxVideoDurationSec = MAX_VIDEO_DURATION_SECONDS,
 } = {}) {
+  const { t } = useTranslation('common')
   const [images, setImages] = useState(initialImages)
   const [videos, setVideos] = useState(initialVideos)
   const [videoError, setVideoError] = useState('')
+  const [imageError, setImageError] = useState('')
 
   const addImage = useCallback(async (file) => {
     if (!file) return null
+    setImageError('')
+
+    if (file.size > MAX_PLAINTEXT_BYTES) {
+      setImageError(
+        t('upload.tooLarge', {
+          size: formatBytes(file.size),
+          limit: formatBytes(MAX_PLAINTEXT_BYTES),
+        })
+      )
+      return null
+    }
+
     const preview = URL.createObjectURL(file)
     const tempId = generateId()
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
@@ -60,9 +92,10 @@ export function useMediaUploader(encryptionKey, {
     } catch (err) {
       devError('Image upload failed:', err)
       setImages((prev) => prev.filter((img) => img.id !== tempId))
+      setImageError(uploadErrorMessage(err, t))
       return null
     }
-  }, [encryptionKey])
+  }, [encryptionKey, t])
 
   const addVideo = useCallback(async (file) => {
     if (!file) return null
@@ -70,7 +103,20 @@ export function useMediaUploader(encryptionKey, {
 
     const duration = await getVideoDuration(file)
     if (duration > maxVideoDurationSec) {
-      setVideoError(`Video must be ${maxVideoDurationSec} seconds or shorter.`)
+      setVideoError(t('upload.videoTooLong', { seconds: maxVideoDurationSec }))
+      return null
+    }
+
+    // A short clip is not automatically a small one: 13 seconds of 4K comes to
+    // tens of megabytes, well past Cloudinary's raw cap. Checked here so the
+    // message appears immediately rather than after a doomed upload.
+    if (file.size > MAX_PLAINTEXT_BYTES) {
+      setVideoError(
+        t('upload.tooLarge', {
+          size: formatBytes(file.size),
+          limit: formatBytes(MAX_PLAINTEXT_BYTES),
+        })
+      )
       return null
     }
 
@@ -90,9 +136,10 @@ export function useMediaUploader(encryptionKey, {
     } catch (err) {
       devError('Video upload failed:', err)
       setVideos((prev) => prev.filter((v) => v.id !== tempId))
+      setVideoError(uploadErrorMessage(err, t))
       return null
     }
-  }, [encryptionKey, maxVideoDurationSec])
+  }, [encryptionKey, maxVideoDurationSec, t])
 
   const removeImage = useCallback((id) => {
     setImages((prev) => prev.filter((img) => img.id !== id))
@@ -118,6 +165,8 @@ export function useMediaUploader(encryptionKey, {
     removeVideo,
     videoError,
     setVideoError,
+    imageError,
+    setImageError,
     hasUploading,
   }
 }
