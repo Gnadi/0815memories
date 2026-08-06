@@ -4,8 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
-  MessageCircle,
-  Share2,
   MapPin,
   MoreHorizontal,
   Pencil,
@@ -563,7 +561,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
           {/* Caption pill — first media item only */}
           {currentMediaIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
-            <div className="mx-4 -mt-6 relative z-10">
+            <div className="mx-4 -mt-6 mb-4 relative z-10">
               <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
                 <button
                   onClick={() => setInfoVisible(false)}
@@ -598,20 +596,6 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             </div>
           )}
 
-          {/* Reaction row */}
-          <div className="flex items-center gap-5 px-4 py-3 mt-1">
-            <button className="flex items-center gap-1.5 text-bark-muted hover:text-kaydo transition-colors">
-              <Heart className="w-5 h-5" />
-              <span className="text-xs font-medium">0</span>
-            </button>
-            <button className="flex items-center gap-1.5 text-bark-muted hover:text-bark transition-colors">
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-xs font-medium">0</span>
-            </button>
-            <button className="flex items-center gap-1.5 text-bark-muted hover:text-bark transition-colors ml-auto">
-              <Share2 className="w-5 h-5" />
-            </button>
-          </div>
         </div>
 
         {/* Right arrow */}
