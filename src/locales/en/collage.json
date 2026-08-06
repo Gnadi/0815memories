@@ -1,15 +1,23 @@
 {
   "defaultTitle": "My Collage",
-  "hub": {
-    "collagesTitle": "Collages",
-    "collagesSubtitle": "Select a template",
-    "yourCollages": "Your collages",
-    "noCollages": "No collages yet — pick a template above to make your first one.",
-    "highlightTitle": "Highlight video",
-    "highlightSubtitle": "Create a video about…",
-    "yourHighlights": "Your highlight videos",
-    "noHighlights": "No highlight videos yet.",
-    "noSuggestions": "Post a few photos first — highlight videos are built from your memories."
+  "collages": {
+    "eyebrow": "Create",
+    "title": "Collages",
+    "subtitle": "Pick a template and fill it with photos from your memories.",
+    "templatesHeading": "Select a template",
+    "yoursHeading": "Your collages",
+    "empty": "Nothing here yet. Choose a template above and your first collage appears here."
+  },
+  "highlights": {
+    "eyebrow": "Create",
+    "title": "Highlight video",
+    "subtitle": "A short reel from photos you have already shared — a year, a season, a trip.",
+    "suggestionsHeading": "Create a video about…",
+    "yoursHeading": "Your highlight videos",
+    "empty": "Nothing here yet. Start from one of the ideas above.",
+    "startBlank": "Start from scratch",
+    "startBlankHint": "Choose every photo yourself",
+    "noSuggestions": "Post a few more photos and ready-made ideas will show up here."
   },
   "templates": {
     "pillHero": "Portrait",
@@ -39,11 +47,12 @@
     "download": "Download image",
     "delete": "Delete",
     "confirmDelete": "Delete this collage? This cannot be undone.",
-    "backToCreate": "Back to Create",
     "titleLabel": "Title",
     "addPhotoToSlot": "Add a photo here",
     "selectPhoto": "Select this photo",
-    "pickHint": "Tap a photo to place it"
+    "pickHint": "Tap a photo to place it",
+    "backToCollages": "Back to collages",
+    "backToHighlights": "Back to highlight videos"
   },
   "borders": {
     "heading": "Borders",

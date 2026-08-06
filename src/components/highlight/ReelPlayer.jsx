@@ -80,7 +80,7 @@ const ReelPlayer = forwardRef(function ReelPlayer(
   return (
     <div className="w-full flex flex-col items-center gap-3">
       <div
-        className="relative w-full max-w-[min(100%,20rem)] rounded-2xl overflow-hidden bg-black shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
+        className="relative w-full max-w-[min(100%,20rem)] rounded-2xl overflow-hidden bg-bark border border-cream-dark shadow-[0_8px_28px_rgba(45,27,14,0.16)]"
         style={{ aspectRatio: String(ratio) }}
       >
         <canvas ref={canvasRef} className="w-full h-full block" />
@@ -97,11 +97,11 @@ const ReelPlayer = forwardRef(function ReelPlayer(
           {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
         </button>
 
-        <div className="flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+        <div className="flex-1 h-1.5 rounded-full bg-cream-dark overflow-hidden">
           <div className="h-full bg-kaydo transition-[width] duration-100" style={{ width: `${progress * 100}%` }} />
         </div>
 
-        <span className="text-[11px] tabular-nums text-warm-white/70 w-16 text-right">
+        <span className="text-[11px] tabular-nums text-bark-muted w-16 text-right">
           {clock(position)} / {clock(timeline.durationMs)}
         </span>
 
@@ -109,7 +109,7 @@ const ReelPlayer = forwardRef(function ReelPlayer(
           type="button"
           onClick={() => { stop(); setPosition(0) }}
           aria-label={t('reel.restart')}
-          className="w-9 h-9 rounded-full text-warm-white/70 hover:bg-white/10 flex items-center justify-center"
+          className="w-9 h-9 rounded-full text-bark-muted hover:bg-cream-dark/60 flex items-center justify-center"
         >
           <RotateCcw className="w-4 h-4" />
         </button>

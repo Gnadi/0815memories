@@ -1,15 +1,23 @@
 {
   "defaultTitle": "Meine Collage",
-  "hub": {
-    "collagesTitle": "Collagen",
-    "collagesSubtitle": "Vorlage auswählen",
-    "yourCollages": "Deine Collagen",
-    "noCollages": "Noch keine Collagen — wähle oben eine Vorlage für deine erste.",
-    "highlightTitle": "Highlight-Video",
-    "highlightSubtitle": "Erstelle ein Video über…",
-    "yourHighlights": "Deine Highlight-Videos",
-    "noHighlights": "Noch keine Highlight-Videos.",
-    "noSuggestions": "Lade zuerst ein paar Fotos hoch — Highlight-Videos entstehen aus euren Erinnerungen."
+  "collages": {
+    "eyebrow": "Erstellen",
+    "title": "Collagen",
+    "subtitle": "Wähle eine Vorlage und füll sie mit Fotos aus euren Erinnerungen.",
+    "templatesHeading": "Vorlage auswählen",
+    "yoursHeading": "Deine Collagen",
+    "empty": "Noch nichts da. Wähle oben eine Vorlage — deine erste Collage erscheint dann hier."
+  },
+  "highlights": {
+    "eyebrow": "Erstellen",
+    "title": "Highlight-Video",
+    "subtitle": "Ein kurzes Reel aus Fotos, die ihr schon geteilt habt — ein Jahr, eine Jahreszeit, eine Reise.",
+    "suggestionsHeading": "Erstelle ein Video über…",
+    "yoursHeading": "Deine Highlight-Videos",
+    "empty": "Noch nichts da. Fang mit einer der Ideen oben an.",
+    "startBlank": "Leer beginnen",
+    "startBlankHint": "Jedes Foto selbst auswählen",
+    "noSuggestions": "Lade noch ein paar Fotos hoch — dann erscheinen hier fertige Ideen."
   },
   "templates": {
     "pillHero": "Hochformat",
@@ -39,11 +47,12 @@
     "download": "Bild herunterladen",
     "delete": "Löschen",
     "confirmDelete": "Diese Collage löschen? Das lässt sich nicht rückgängig machen.",
-    "backToCreate": "Zurück zu Erstellen",
     "titleLabel": "Titel",
     "addPhotoToSlot": "Hier ein Foto einfügen",
     "selectPhoto": "Dieses Foto auswählen",
-    "pickHint": "Tippe ein Foto an, um es einzusetzen"
+    "pickHint": "Tippe ein Foto an, um es einzusetzen",
+    "backToCollages": "Zurück zu Collagen",
+    "backToHighlights": "Zurück zu Highlight-Videos"
   },
   "borders": {
     "heading": "Rahmen",

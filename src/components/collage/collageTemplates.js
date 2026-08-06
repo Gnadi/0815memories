@@ -196,6 +196,14 @@ export function getTemplate(templateId) {
 }
 
 /**
+ * The width ÷ height ratio a collage document renders at.
+ */
+export function aspectRatioOf(docOrTemplate) {
+  const aspect = docOrTemplate?.aspect || getTemplate(docOrTemplate?.templateId).aspect
+  return ASPECTS[aspect] ?? ASPECTS[DEFAULT_ASPECT]
+}
+
+/**
  * Canvas pixel size for a template at a given width.
  */
 export function templateSize(template, width) {

@@ -151,6 +151,31 @@ describe('CollageEditorPage', () => {
     expect(savedDoc().background).toBe('#A8C7FA')
   })
 
+  it('writes the pending change out when the editor is closed', async () => {
+    const user = userEvent.setup()
+    await renderEditor('four-grid')
+
+    // Autosave is debounced by two seconds; closing straight away used to drop
+    // whatever had just been placed.
+    await user.click(screen.getAllByLabelText('Add a photo here')[0])
+    await user.click(screen.getByTitle('Beach day'))
+    await user.click(screen.getByLabelText('Close'))
+
+    await waitFor(() => expect(mockUpdateCollage).toHaveBeenCalled())
+    expect(savedDoc().slots[0].url).toBe('beach.enc')
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/collages'))
+  })
+
+  it('does not write anything when nothing changed', async () => {
+    const user = userEvent.setup()
+    await renderEditor('four-grid')
+
+    await user.click(screen.getByLabelText('Close'))
+
+    expect(mockUpdateCollage).not.toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith('/collages')
+  })
+
   it('reports a collage belonging to another family as not found', async () => {
     mockGetDoc.mockResolvedValue({
       exists: () => true,

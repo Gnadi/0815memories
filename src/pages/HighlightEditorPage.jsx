@@ -123,7 +123,27 @@ export default function HighlightEditorPage() {
     return () => clearTimeout(saveTimerRef.current)
   }, [isDirty, doc, title, save])
 
-  useEffect(() => () => clearTimeout(saveTimerRef.current), [])
+  // Autosave is debounced, so a shot added in the last two seconds only exists
+  // in memory. Leaving has to write it out rather than drop it.
+  const latestRef = useRef({ doc, title, isDirty, save })
+  latestRef.current = { doc, title, isDirty, save }
+
+  const flushSave = useCallback(async () => {
+    clearTimeout(saveTimerRef.current)
+    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
+    if (dirty) await saveNow(pendingDoc, pendingTitle)
+  }, [])
+
+  useEffect(() => () => {
+    clearTimeout(saveTimerRef.current)
+    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
+    if (dirty) saveNow(pendingDoc, pendingTitle)
+  }, [])
+
+  const handleClose = async () => {
+    await flushSave()
+    navigate('/highlights')
+  }
 
   const patchDoc = (updates) => {
     setDoc((prev) => ({ ...prev, ...updates }))
@@ -247,7 +267,7 @@ export default function HighlightEditorPage() {
     if (!window.confirm(t('reel.confirmDelete'))) return
     try {
       await deleteHighlight(id)
-      navigate('/create')
+      navigate('/highlights')
     } catch (err) {
       devError('Highlight delete failed', err)
       setError(t('errors.deleteFailed'))
@@ -256,7 +276,7 @@ export default function HighlightEditorPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bark flex items-center justify-center">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-kaydo" />
       </div>
     )
@@ -264,9 +284,9 @@ export default function HighlightEditorPage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-bark flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-warm-white font-semibold">{loadError}</p>
-        <button onClick={() => navigate('/create')} className="btn-kaydo">{t('editor.backToCreate')}</button>
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-bark font-semibold">{loadError}</p>
+        <button onClick={() => navigate('/highlights')} className="btn-kaydo">{t('editor.backToHighlights')}</button>
       </div>
     )
   }
@@ -274,13 +294,13 @@ export default function HighlightEditorPage() {
   const shot = doc.shots[selectedShot]
 
   return (
-    <div className="min-h-dvh flex flex-col bg-bark">
+    <div className="min-h-dvh flex flex-col bg-cream">
       {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2">
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 bg-warm-white border-b border-cream-dark">
         <button
-          onClick={() => navigate('/create')}
+          onClick={handleClose}
           aria-label={t('editor.close')}
-          className="w-10 h-10 rounded-full bg-white/10 text-warm-white flex items-center justify-center hover:bg-white/20"
+          className="w-10 h-10 rounded-full bg-cream text-bark flex items-center justify-center hover:bg-cream-dark transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -290,10 +310,10 @@ export default function HighlightEditorPage() {
           onChange={(e) => { setTitle(e.target.value); setIsDirty(true) }}
           placeholder={t('reel.defaultTitle')}
           aria-label={t('editor.titleLabel')}
-          className="flex-1 min-w-0 bg-transparent text-warm-white text-sm font-medium placeholder:text-warm-white/40 outline-none px-2"
+          className="flex-1 min-w-0 bg-transparent text-bark text-sm font-semibold placeholder:text-bark-muted/60 outline-none px-2"
         />
 
-        <span className="text-[11px] text-warm-white/60 min-w-[3.5rem] text-right">
+        <span className="text-[11px] text-bark-muted min-w-[3.5rem] text-right">
           {saveStatus === 'saving' ? t('editor.saving') : saveStatus === 'saved' ? t('editor.saved') : ''}
         </span>
 
@@ -301,7 +321,7 @@ export default function HighlightEditorPage() {
           onClick={handleShare}
           disabled={busy != null || !recordingSupported}
           aria-label={t('editor.share')}
-          className="w-10 h-10 rounded-full bg-white/10 text-warm-white flex items-center justify-center hover:bg-white/20 disabled:opacity-50"
+          className="w-10 h-10 rounded-full bg-cream text-bark flex items-center justify-center hover:bg-cream-dark transition-colors disabled:opacity-50"
         >
           {busy === 'share' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
         </button>
@@ -309,7 +329,11 @@ export default function HighlightEditorPage() {
         <button
           onClick={() => save(doc, title)}
           disabled={busy != null}
-          className="px-4 h-10 rounded-full bg-white/10 text-warm-white text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+          className="px-5 h-10 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-shadow"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light))',
+            boxShadow: '0 3px 10px rgba(194,90,46,0.28)',
+          }}
         >
           {t('editor.save')}
         </button>
@@ -318,12 +342,12 @@ export default function HighlightEditorPage() {
           <button
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={t('editor.more')}
-            className="w-10 h-10 rounded-full text-warm-white flex items-center justify-center hover:bg-white/10"
+            className="w-10 h-10 rounded-full text-bark flex items-center justify-center hover:bg-cream transition-colors"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-11 z-30 w-60 rounded-xl bg-warm-white shadow-xl py-1">
+            <div className="absolute right-0 top-11 z-30 w-60 rounded-2xl bg-warm-white border border-cream-dark shadow-xl py-1 overflow-hidden">
               {recordingSupported && (
                 <button
                   onClick={handleDownload}
@@ -347,23 +371,23 @@ export default function HighlightEditorPage() {
       </div>
 
       {error && (
-        <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-red-500/15 text-red-200 text-xs">{error}</div>
+        <div className="mx-3 mt-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{error}</div>
       )}
 
       {busy && (
-        <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-white/10 text-warm-white text-xs flex items-center gap-2">
+        <div className="mx-3 mt-2 px-3 py-2 rounded-xl bg-kaydo/10 text-kaydo text-xs font-medium flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" />
           {t('reel.rendering', { percent: Math.round(renderProgress * 100) })}
         </div>
       )}
 
       {/* Player */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-4">
         <ReelPlayer ref={canvasRef} doc={doc} images={images} disabled={busy != null} />
       </div>
 
       {!recordingSupported && (
-        <p className="px-6 pb-3 text-[11px] text-warm-white/60 text-center">{t('reel.noRecording')}</p>
+        <p className="px-6 pb-3 text-[11px] text-bark-muted text-center leading-relaxed">{t('reel.noRecording')}</p>
       )}
 
       {/* Title card */}
@@ -372,13 +396,13 @@ export default function HighlightEditorPage() {
           value={doc.titleCard?.text || ''}
           onChange={(e) => patchDoc({ titleCard: { ...doc.titleCard, text: e.target.value } })}
           placeholder={t('reel.titleCardText')}
-          className="w-full rounded-xl bg-white/10 text-warm-white text-sm px-3 py-2 placeholder:text-warm-white/40 outline-none"
+          className="w-full rounded-xl bg-warm-white border border-cream-dark text-bark text-sm px-3 py-2.5 placeholder:text-bark-muted/70 outline-none focus:border-kaydo/50"
         />
         <input
           value={doc.titleCard?.subtitle || ''}
           onChange={(e) => patchDoc({ titleCard: { ...doc.titleCard, subtitle: e.target.value } })}
           placeholder={t('reel.titleCardSubtitle')}
-          className="w-full rounded-xl bg-white/10 text-warm-white text-sm px-3 py-2 placeholder:text-warm-white/40 outline-none"
+          className="w-full rounded-xl bg-warm-white border border-cream-dark text-bark text-sm px-3 py-2.5 placeholder:text-bark-muted/70 outline-none focus:border-kaydo/50"
         />
       </div>
 
@@ -389,19 +413,19 @@ export default function HighlightEditorPage() {
             key={aspect}
             onClick={() => patchDoc({ aspect })}
             className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-              doc.aspect === aspect ? 'bg-kaydo text-white' : 'bg-white/10 text-warm-white/80'
+              doc.aspect === aspect ? 'bg-kaydo text-white' : 'bg-warm-white border border-cream-dark text-bark-muted hover:border-kaydo/40'
             }`}
           >
             {aspect}
           </button>
         ))}
-        <span className="w-px h-5 bg-white/15 mx-1" />
+        <span className="w-px h-5 bg-cream-dark mx-1" />
         {REEL_THEMES.map((theme) => (
           <button
             key={theme.id}
             onClick={() => patchDoc({ theme: theme.id })}
             aria-label={t(`reel.themes.${theme.id}`)}
-            className={`w-7 h-7 rounded-full border-2 ${doc.theme === theme.id ? 'border-kaydo scale-110' : 'border-white/20'}`}
+            className={`w-7 h-7 rounded-full border-2 transition-transform ${doc.theme === theme.id ? 'border-kaydo scale-110' : 'border-cream-dark'}`}
             style={{ backgroundColor: theme.background }}
           />
         ))}
@@ -409,7 +433,7 @@ export default function HighlightEditorPage() {
 
       {/* Shot list */}
       <div className="px-4 pb-2">
-        <h3 className="text-xs font-semibold text-warm-white/70 mb-2">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-bark-muted mb-2">
           {t('reel.shots', { count: doc.shots.length })}
         </h3>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
@@ -418,14 +442,14 @@ export default function HighlightEditorPage() {
               key={`${s.url}-${index}`}
               onClick={() => setSelectedShot(index)}
               className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 ${
-                index === selectedShot ? 'border-kaydo' : 'border-white/15'
+                index === selectedShot ? 'border-kaydo' : 'border-cream-dark'
               }`}
             >
               <EncryptedImage src={s.url} thumbSrc={s.thumbUrl || ''} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
           {doc.shots.length === 0 && (
-            <p className="text-xs text-warm-white/50 italic py-4">{t('reel.emptyShots')}</p>
+            <p className="text-xs text-bark-muted italic py-4">{t('reel.emptyShots')}</p>
           )}
         </div>
       </div>
@@ -436,19 +460,19 @@ export default function HighlightEditorPage() {
           <button
             onClick={() => moveShot(selectedShot, -1)}
             aria-label={t('reel.moveEarlier')}
-            className="w-8 h-8 rounded-full bg-white/10 text-warm-white flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-warm-white border border-cream-dark text-bark flex items-center justify-center hover:border-kaydo/50"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => moveShot(selectedShot, 1)}
             aria-label={t('reel.moveLater')}
-            className="w-8 h-8 rounded-full bg-white/10 text-warm-white flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-warm-white border border-cream-dark text-bark flex items-center justify-center hover:border-kaydo/50"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <label className="flex-1 flex items-center gap-2">
-            <span className="text-[11px] text-warm-white/70 whitespace-nowrap">{t('reel.duration')}</span>
+            <span className="text-[11px] text-bark-muted whitespace-nowrap">{t('reel.duration')}</span>
             <input
               type="range"
               min={MIN_SHOT_MS}
@@ -458,14 +482,14 @@ export default function HighlightEditorPage() {
               onChange={(e) => patchShot(selectedShot, { durationMs: parseInt(e.target.value, 10) })}
               className="flex-1 accent-kaydo"
             />
-            <span className="text-[11px] tabular-nums text-warm-white/70 w-10 text-right">
+            <span className="text-[11px] tabular-nums text-bark-muted w-10 text-right">
               {((shot.durationMs || DEFAULT_SHOT_MS) / 1000).toFixed(1)}s
             </span>
           </label>
           <button
             onClick={() => removeShot(selectedShot)}
             aria-label={t('reel.removeShot')}
-            className="w-8 h-8 rounded-full text-red-300 hover:bg-red-500/15 flex items-center justify-center"
+            className="w-8 h-8 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center"
           >
             <Trash2 className="w-4 h-4" />
           </button>

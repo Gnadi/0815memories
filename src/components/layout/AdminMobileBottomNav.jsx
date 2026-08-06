@@ -198,7 +198,7 @@ export default function AdminMobileBottomNav() {
               </button>
 
               <button
-                onClick={() => { setShowChoiceSheet(false); navigate('/create') }}
+                onClick={() => { setShowChoiceSheet(false); navigate('/collages') }}
                 className="flex items-center gap-4 p-4 rounded-2xl bg-cream hover:bg-cream-dark transition-colors text-left"
                 style={TAP}
               >
@@ -213,12 +213,12 @@ export default function AdminMobileBottomNav() {
               </button>
 
               <button
-                onClick={() => { setShowChoiceSheet(false); navigate('/create') }}
+                onClick={() => { setShowChoiceSheet(false); navigate('/highlights') }}
                 className="flex items-center gap-4 p-4 rounded-2xl bg-cream hover:bg-cream-dark transition-colors text-left"
                 style={TAP}
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #1C1917, #4A4340)' }}>
+                  style={{ background: 'linear-gradient(135deg, #C25A2E, #E0946A)' }}>
                   <Film className="w-6 h-6 text-white" />
                 </div>
                 <div>

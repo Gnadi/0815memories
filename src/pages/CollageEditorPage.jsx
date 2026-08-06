@@ -178,7 +178,29 @@ export default function CollageEditorPage() {
     return () => clearTimeout(saveTimerRef.current)
   }, [isDirty, doc, title, save])
 
-  useEffect(() => () => clearTimeout(saveTimerRef.current), [])
+  // Autosave is debounced, so anything typed or placed in the last two seconds
+  // is still only in memory. Leaving the editor has to write it out — closing
+  // right after dropping in a photo otherwise loses that photo silently.
+  const latestRef = useRef({ doc, title, isDirty, save })
+  latestRef.current = { doc, title, isDirty, save }
+
+  const flushSave = useCallback(async () => {
+    clearTimeout(saveTimerRef.current)
+    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
+    if (dirty) await saveNow(pendingDoc, pendingTitle)
+  }, [])
+
+  useEffect(() => () => {
+    clearTimeout(saveTimerRef.current)
+    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
+    // Fire and forget: the component is going away, but the write still has to.
+    if (dirty) saveNow(pendingDoc, pendingTitle)
+  }, [])
+
+  const handleClose = async () => {
+    await flushSave()
+    navigate('/collages')
+  }
 
   // ── Slot interaction ────────────────────────────────────────────────────
   const selectedSlot = doc.slots.find((s) => s.id === selectedSlotId) || null
@@ -269,7 +291,7 @@ export default function CollageEditorPage() {
     if (!window.confirm(t('editor.confirmDelete'))) return
     try {
       await deleteCollage(id)
-      navigate('/create')
+      navigate('/collages')
     } catch (err) {
       devError('Collage delete failed', err)
       setError(t('errors.deleteFailed'))
@@ -284,7 +306,7 @@ export default function CollageEditorPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bark flex items-center justify-center">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-kaydo" />
       </div>
     )
@@ -292,9 +314,9 @@ export default function CollageEditorPage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-bark flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-warm-white font-semibold">{loadError}</p>
-        <button onClick={() => navigate('/create')} className="btn-kaydo">{t('editor.backToCreate')}</button>
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-bark font-semibold">{loadError}</p>
+        <button onClick={() => navigate('/collages')} className="btn-kaydo">{t('editor.backToCollages')}</button>
       </div>
     )
   }
@@ -302,13 +324,13 @@ export default function CollageEditorPage() {
   const showPhotoBar = mode === 'fill' || mode === 'replace' || (!selectedSlot && filledCount === 0)
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden bg-bark">
+    <div className="h-dvh flex flex-col overflow-hidden bg-cream">
       {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2">
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 bg-warm-white border-b border-cream-dark">
         <button
-          onClick={() => navigate('/create')}
+          onClick={handleClose}
           aria-label={t('editor.close')}
-          className="w-10 h-10 rounded-full bg-white/10 text-warm-white flex items-center justify-center hover:bg-white/20"
+          className="w-10 h-10 rounded-full bg-cream text-bark flex items-center justify-center hover:bg-cream-dark transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -318,10 +340,10 @@ export default function CollageEditorPage() {
           onChange={(e) => dispatch({ type: 'SET_TITLE', title: e.target.value })}
           placeholder={t('defaultTitle')}
           aria-label={t('editor.titleLabel')}
-          className="flex-1 min-w-0 bg-transparent text-warm-white text-sm font-medium placeholder:text-warm-white/40 outline-none px-2"
+          className="flex-1 min-w-0 bg-transparent text-bark text-sm font-semibold placeholder:text-bark-muted/60 outline-none px-2"
         />
 
-        <span className="text-[11px] text-warm-white/60 min-w-[3.5rem] text-right">
+        <span className="text-[11px] text-bark-muted min-w-[3.5rem] text-right">
           {saveStatus === 'saving' ? t('editor.saving') : saveStatus === 'saved' ? t('editor.saved') : ''}
         </span>
 
@@ -329,7 +351,7 @@ export default function CollageEditorPage() {
           onClick={handleShare}
           disabled={busy != null}
           aria-label={t('editor.share')}
-          className="w-10 h-10 rounded-full bg-white/10 text-warm-white flex items-center justify-center hover:bg-white/20 disabled:opacity-50"
+          className="w-10 h-10 rounded-full bg-cream text-bark flex items-center justify-center hover:bg-cream-dark transition-colors disabled:opacity-50"
         >
           {busy === 'share' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
         </button>
@@ -337,7 +359,11 @@ export default function CollageEditorPage() {
         <button
           onClick={() => save(doc, title)}
           disabled={busy != null}
-          className="px-4 h-10 rounded-full bg-white/10 text-warm-white text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+          className="px-5 h-10 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-shadow"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light))',
+            boxShadow: '0 3px 10px rgba(194,90,46,0.28)',
+          }}
         >
           {t('editor.save')}
         </button>
@@ -346,12 +372,12 @@ export default function CollageEditorPage() {
           <button
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={t('editor.more')}
-            className="w-10 h-10 rounded-full text-warm-white flex items-center justify-center hover:bg-white/10"
+            className="w-10 h-10 rounded-full text-bark flex items-center justify-center hover:bg-cream transition-colors"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-11 z-30 w-56 rounded-xl bg-warm-white shadow-xl py-1">
+            <div className="absolute right-0 top-11 z-30 w-56 rounded-2xl bg-warm-white border border-cream-dark shadow-xl py-1 overflow-hidden">
               <button
                 onClick={handleDownload}
                 disabled={busy != null || filledCount === 0}
@@ -373,7 +399,7 @@ export default function CollageEditorPage() {
       </div>
 
       {error && (
-        <div className="mx-3 mb-2 px-3 py-2 rounded-lg bg-red-500/15 text-red-200 text-xs">{error}</div>
+        <div className="mx-3 mt-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">{error}</div>
       )}
 
       {/* Canvas */}
@@ -440,7 +466,7 @@ export default function CollageEditorPage() {
         )}
 
         {/* Tab row */}
-        <div className="grid grid-cols-2 gap-2 px-3 py-3 bg-bark">
+        <div className="grid grid-cols-2 gap-2 px-3 py-3 bg-warm-white border-t border-cream-dark">
           {[
             { id: 'templates', icon: LayoutGrid, label: t('tabs.templates') },
             { id: 'borders', icon: Square, label: t('tabs.borders') },
@@ -451,7 +477,7 @@ export default function CollageEditorPage() {
                 key={entry.id}
                 onClick={() => setTab((current) => (current === entry.id ? null : entry.id))}
                 className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-colors ${
-                  tab === entry.id ? 'bg-white/15 text-warm-white' : 'text-warm-white/60 hover:bg-white/5'
+                  tab === entry.id ? 'bg-kaydo/10 text-kaydo' : 'text-bark-muted hover:bg-cream'
                 }`}
               >
                 <TabIcon className="w-5 h-5" />
