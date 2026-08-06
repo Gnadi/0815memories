@@ -14,6 +14,7 @@ import enJournal from '../locales/en/journal.json'
 import enBlackbox from '../locales/en/blackbox.json'
 import enRecipes from '../locales/en/recipes.json'
 import enScrapbook from '../locales/en/scrapbook.json'
+import enCollage from '../locales/en/collage.json'
 import enTimeline from '../locales/en/timeline.json'
 import enOurYear from '../locales/en/ourYear.json'
 import enSettings from '../locales/en/settings.json'
@@ -26,6 +27,7 @@ import deJournal from '../locales/de/journal.json'
 import deBlackbox from '../locales/de/blackbox.json'
 import deRecipes from '../locales/de/recipes.json'
 import deScrapbook from '../locales/de/scrapbook.json'
+import deCollage from '../locales/de/collage.json'
 import deTimeline from '../locales/de/timeline.json'
 import deOurYear from '../locales/de/ourYear.json'
 import deSettings from '../locales/de/settings.json'
@@ -40,6 +42,7 @@ export default {
     blackbox: enBlackbox,
     recipes: enRecipes,
     scrapbook: enScrapbook,
+    collage: enCollage,
     timeline: enTimeline,
     ourYear: enOurYear,
     settings: enSettings,
@@ -53,6 +56,7 @@ export default {
     blackbox: deBlackbox,
     recipes: deRecipes,
     scrapbook: deScrapbook,
+    collage: deCollage,
     timeline: deTimeline,
     ourYear: deOurYear,
     settings: deSettings,

@@ -1,0 +1,116 @@
+{
+  "defaultTitle": "Meine Collage",
+  "hub": {
+    "collagesTitle": "Collagen",
+    "collagesSubtitle": "Vorlage auswählen",
+    "yourCollages": "Deine Collagen",
+    "noCollages": "Noch keine Collagen — wähle oben eine Vorlage für deine erste.",
+    "highlightTitle": "Highlight-Video",
+    "highlightSubtitle": "Erstelle ein Video über…",
+    "yourHighlights": "Deine Highlight-Videos",
+    "noHighlights": "Noch keine Highlight-Videos.",
+    "noSuggestions": "Lade zuerst ein paar Fotos hoch — Highlight-Videos entstehen aus euren Erinnerungen."
+  },
+  "templates": {
+    "pillHero": "Hochformat",
+    "fullBleed": "Randlos",
+    "circleCenter": "Kreis",
+    "twoUp": "Zwei übereinander",
+    "sideBySide": "Nebeneinander",
+    "heroTwo": "Groß + zwei",
+    "fourGrid": "Vierer-Raster",
+    "sixGrid": "Sechser-Raster",
+    "filmStrip": "Filmstreifen",
+    "magazine": "Magazin",
+    "polaroidScatter": "Verstreut",
+    "stackedCircles": "Blasen"
+  },
+  "tabs": {
+    "templates": "Vorlagen",
+    "borders": "Rahmen"
+  },
+  "editor": {
+    "close": "Schließen",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "share": "Im Feed teilen",
+    "more": "Weitere Optionen",
+    "download": "Bild herunterladen",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Collage löschen? Das lässt sich nicht rückgängig machen.",
+    "backToCreate": "Zurück zu Erstellen",
+    "titleLabel": "Titel",
+    "addPhotoToSlot": "Hier ein Foto einfügen",
+    "selectPhoto": "Dieses Foto auswählen",
+    "pickHint": "Tippe ein Foto an, um es einzusetzen"
+  },
+  "borders": {
+    "heading": "Rahmen",
+    "frameColor": "Rahmenfarbe",
+    "thickness": "Rahmen",
+    "corners": "Ecken",
+    "spacing": "Abstand",
+    "background": "Hintergrund"
+  },
+  "slotActions": {
+    "done": "Fertig",
+    "change": "Ändern",
+    "swap": "Tauschen",
+    "zoom": "Zoom",
+    "reposition": "Verschieben",
+    "flip": "Spiegeln",
+    "clear": "Foto entfernen",
+    "reset": "Zurücksetzen"
+  },
+  "reel": {
+    "defaultTitle": "Unsere Highlights",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "restart": "Zum Anfang",
+    "download": "Video herunterladen",
+    "rendering": "Video wird erstellt… {{percent}} %",
+    "noRecording": "Dieser Browser kann das Video nicht als Datei speichern. Das Reel läuft hier trotzdem — zum Herunterladen in Chrome oder Edge öffnen.",
+    "titleCardText": "Titelkarte",
+    "titleCardSubtitle": "Untertitel (optional)",
+    "shots_one": "{{count}} Foto",
+    "shots_other": "{{count}} Fotos",
+    "emptyShots": "Füge unten Fotos hinzu, um das Reel zu bauen.",
+    "duration": "Dauer",
+    "moveEarlier": "Nach vorne",
+    "moveLater": "Nach hinten",
+    "removeShot": "Aus dem Reel entfernen",
+    "pickHint": "Tippe ein Foto an, um es ins Reel zu legen",
+    "confirmDelete": "Dieses Highlight-Video löschen? Das lässt sich nicht rückgängig machen.",
+    "themes": {
+      "warm": "Warm",
+      "cream": "Creme",
+      "night": "Nacht",
+      "forest": "Wald"
+    }
+  },
+  "suggestions": {
+    "year": "{{year}}",
+    "month": "{{month}}",
+    "recent": "Neueste Erinnerungen",
+    "seasons": {
+      "winter": "Unsere Winter",
+      "spring": "Unsere Frühlinge",
+      "summer": "Unsere Sommer",
+      "autumn": "Unsere Herbste"
+    }
+  },
+  "errors": {
+    "notFound": "Das konnte nicht gefunden werden.",
+    "notAuthenticated": "Nicht angemeldet — bitte lade die App neu.",
+    "createFailed": "Konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "saveFailed": "Konnte nicht gespeichert werden. Deine letzte Änderung ist noch da — versuch es erneut.",
+    "exportFailed": "Das Bild konnte nicht exportiert werden.",
+    "shareFailed": "Konnte nicht im Feed geteilt werden.",
+    "deleteFailed": "Konnte nicht gelöscht werden.",
+    "renderFailed": "Das Video konnte nicht erstellt werden.",
+    "needPhoto": "Füge zuerst mindestens ein Foto ein.",
+    "needShots": "Füge dem Reel zuerst mindestens ein Foto hinzu.",
+    "videoTooLarge": "Das fertige Video ist {{size}} groß, verschlüsselte Uploads sind auf {{limit}} begrenzt. Kürze das Reel oder wähle ein kleineres Format — herunterladen klappt in jeder Größe."
+  }
+}

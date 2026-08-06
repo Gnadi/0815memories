@@ -55,6 +55,9 @@ const CreateRecipePage = lazyPage(() => import('./pages/CreateRecipePage'))
 const ScrapbooksPage = lazyPage(() => import('./pages/ScrapbooksPage'))
 const ScrapbookEditorPage = lazyPage(() => import('./pages/ScrapbookEditorPage'))
 const SmartTimelinePage = lazyPage(() => import('./pages/SmartTimelinePage'))
+const CreatePage = lazyPage(() => import('./pages/CreatePage'))
+const CollageEditorPage = lazyPage(() => import('./pages/CollageEditorPage'))
+const HighlightEditorPage = lazyPage(() => import('./pages/HighlightEditorPage'))
 const OurYearPage = lazyPage(() => import('./pages/OurYearPage'))
 const OurYearSetupPage = lazyPage(() => import('./pages/OurYearSetupPage'))
 const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
@@ -238,6 +241,10 @@ export const routes = [
       { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
       { path: 'scrapbook', element: protect(<ScrapbooksPage />) },
       { path: 'scrapbook/:id', element: protect(<ScrapbookEditorPage />) },
+      // Collages and highlight videos — the "Create" hub and its two editors.
+      { path: 'create', element: protect(<CreatePage />) },
+      { path: 'collage/:id', element: protect(<CollageEditorPage />) },
+      { path: 'highlight/:id', element: protect(<HighlightEditorPage />) },
       // "Our Year" — the couple's recurring review. Private to two people;
       // the pages and the security rules both enforce that.
       { path: 'our-year', element: protect(<OurYearPage />) },

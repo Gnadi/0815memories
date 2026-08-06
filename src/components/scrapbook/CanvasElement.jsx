@@ -4,47 +4,12 @@ import { useDraggable } from '@dnd-kit/core'
 import { Trash2, RotateCw, ImagePlus, ChevronsUp } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import useDecryptedMedia from '../media/useDecryptedMedia'
+// object-cover + zoom + mirror maths, shared with the collage renderer so both
+// editors crop a photo the same way. Drawing onto a <canvas> is what bypasses
+// html2canvas's broken overflow:hidden handling.
+import { drawImageCovered } from '../../utils/collageRenderer'
 
 const HANDLE_SIZE = 10
-
-// Draw an image onto a canvas exactly as the editor shows it:
-// object-cover behaviour (fill container, crop to centre) + imageScale zoom.
-// This bypasses html2canvas's broken overflow:hidden handling entirely.
-function drawImageCoveredAndScaled(ctx, img, w, h, imageScale, flipped) {
-  const iw = img.naturalWidth
-  const ih = img.naturalHeight
-  if (!iw || !ih) return
-
-  // --- object-cover: find the source rect that fills w×h ---
-  let coverW, coverH
-  if (iw / ih > w / h) {
-    // image wider than container: fit height, crop sides
-    coverH = ih
-    coverW = (w / h) * ih
-  } else {
-    // image taller than container: fit width, crop top/bottom
-    coverW = iw
-    coverH = (h / w) * iw
-  }
-  const coverX = (iw - coverW) / 2
-  const coverY = (ih - coverH) / 2
-
-  // --- imageScale zoom: show centre 1/imageScale of the covered area ---
-  const srcW = coverW / imageScale
-  const srcH = coverH / imageScale
-  const srcX = coverX + (coverW - srcW) / 2
-  const srcY = coverY + (coverH - srcH) / 2
-
-  if (flipped) {
-    ctx.save()
-    ctx.translate(w, 0)
-    ctx.scale(-1, 1)
-    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h)
-    ctx.restore()
-  } else {
-    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h)
-  }
-}
 
 export default function CanvasElement({
   element,
@@ -83,7 +48,7 @@ export default function CanvasElement({
     const flipped = !!element.flipped
     const ctx = canvas.getContext('2d')
     const img = new Image()
-    img.onload = () => drawImageCoveredAndScaled(ctx, img, cw, ch, imageScale, flipped)
+    img.onload = () => drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
     img.src = decryptedUrl
   }, [exporting, type, decryptedUrl, element.imageScale, element.flipped, width, height])
 

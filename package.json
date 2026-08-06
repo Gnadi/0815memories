@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-kaydo",
     "seed:emulator": "node scripts/seed-emulator.mjs"
   },
