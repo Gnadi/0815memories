@@ -13,6 +13,8 @@ import {
   Video,
   Mic,
   Camera,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 
 function ToolButton({ onClick, active, label, children, disabled }) {
@@ -44,6 +46,8 @@ export default function RichTextToolbar({
   onTakePhoto,
   onPickVideo,
   onAddAudio,
+  fullscreen,
+  onToggleFullscreen,
 }) {
   const { t } = useTranslation('memory')
 
@@ -170,6 +174,19 @@ export default function RichTextToolbar({
       <ToolButton onClick={onAddAudio} label={t('richEditor.insertAudio')} disabled={disabled}>
         <Mic className="w-4 h-4 text-kaydo" />
       </ToolButton>
+
+      {/* Pinned right: a long, media-heavy story is hard to write in the modal's
+          narrow column, and this is the way out of it. `ml-auto` keeps it in the
+          same place no matter how the row scrolls. */}
+      <span className="ml-auto pl-1 flex sticky right-0 bg-warm-white">
+        <ToolButton
+          onClick={onToggleFullscreen}
+          active={fullscreen}
+          label={fullscreen ? t('richEditor.exitFullscreen') : t('richEditor.fullscreen')}
+        >
+          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </ToolButton>
+      </span>
     </div>
   )
 }

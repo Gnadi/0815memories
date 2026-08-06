@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Placeholder } from '@tiptap/extensions'
-import { X } from 'lucide-react'
+import { X, Minimize2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../../utils/encryptedUpload'
 import { getVideoDuration } from '../../hooks/useMediaUploader'
@@ -35,6 +35,7 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   const [showRecorder, setShowRecorder] = useState(false)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(0)
+  const [fullscreen, setFullscreen] = useState(false)
 
   const imageInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -70,6 +71,33 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   useEffect(() => {
     editor?.setEditable(!disabled)
   }, [editor, disabled])
+
+  // Escape leaves fullscreen. The event is stopped so it cannot also reach a
+  // future modal-level Escape handler and close the whole form, losing the draft.
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      setFullscreen(false)
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    // The modal behind stays scrollable otherwise, which on a phone means the
+    // page drifts under the editor while you type.
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [fullscreen])
+
+  const toggleFullscreen = () => {
+    setFullscreen((v) => !v)
+    // Keep the caret where the writer left it rather than dropping focus on the
+    // way in or out.
+    requestAnimationFrame(() => editor?.commands.focus())
+  }
 
   /**
    * Insert a placeholder node now, upload, then patch the node.
@@ -159,7 +187,32 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   }
 
   return (
-    <div className="rounded-xl bg-cream-dark/60 border border-cream-dark overflow-hidden">
+    // Fullscreen is a plain fixed overlay rather than a portal: the component
+    // stays inside the form, so nothing about saving or focus order changes.
+    // z-[60] clears the modal at z-50, the highest layer in the app.
+    <div
+      className={
+        fullscreen
+          ? 'kaydo-fullscreen fixed inset-0 z-[60] bg-warm-white flex flex-col'
+          : 'rounded-xl bg-cream-dark/60 border border-cream-dark overflow-hidden'
+      }
+    >
+      {fullscreen && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-cream-dark flex-shrink-0">
+          <span className="text-sm font-medium text-bark">{t('postMemory.storyLabel')}</span>
+          {/* The save button lives in the form below, out of reach from here —
+              so this has to read as "back to the form", not as "discard". */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cream-dark text-sm font-medium text-bark hover:bg-cream-dark/70 transition-colors"
+          >
+            <Minimize2 className="w-4 h-4" />
+            {t('richEditor.doneEditing')}
+          </button>
+        </div>
+      )}
+
       <RichTextToolbar
         editor={editor}
         disabled={disabled}
@@ -167,18 +220,30 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
         onTakePhoto={() => cameraInputRef.current?.click()}
         onPickVideo={() => videoInputRef.current?.click()}
         onAddAudio={() => setShowRecorder((v) => !v)}
+        fullscreen={fullscreen}
+        onToggleFullscreen={toggleFullscreen}
       />
 
-      <EditorContent editor={editor} />
+      {fullscreen ? (
+        <div className="flex-1 overflow-y-auto">
+          {/* Same measure as the reading view (MemoryBody), so the line length
+              the writer sees is the line length the family will read. */}
+          <div className="max-w-2xl mx-auto w-full px-2 py-6">
+            <EditorContent editor={editor} />
+          </div>
+        </div>
+      ) : (
+        <EditorContent editor={editor} />
+      )}
 
       {showRecorder && (
-        <div className="p-3 border-t border-cream-dark">
+        <div className="p-3 border-t border-cream-dark flex-shrink-0">
           <VoiceMemoRecorder onMemoAdded={handleMemoAdded} />
         </div>
       )}
 
       {error && (
-        <p className="flex items-center gap-1.5 px-4 py-2 text-xs text-red-600 border-t border-cream-dark">
+        <p className="flex items-center gap-1.5 px-4 py-2 text-xs text-red-600 border-t border-cream-dark flex-shrink-0">
           <X className="w-3.5 h-3.5 flex-shrink-0" /> {error}
         </p>
       )}

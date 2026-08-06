@@ -169,6 +169,13 @@ select {
   pointer-events: none;
 }
 
+/* In fullscreen the editable region should reach far enough down that clicking
+   into the empty space below the text still lands the caret in the document,
+   instead of hitting an inert container. */
+.kaydo-fullscreen .kaydo-editor {
+  min-height: 65vh;
+}
+
 /* A selected media atom needs a visible outline — it has no text cursor. */
 .kaydo-editor .ProseMirror-selectednode {
   outline: 2px solid var(--color-kaydo);
