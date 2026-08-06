@@ -20,7 +20,6 @@ vi.mock('../context/AuthContext', () => ({
 import { decryptBlob } from '../utils/encryption'
 import useDecryptedMedia, {
   clearDecryptedMediaCache,
-  prefetchDecryptedMedia,
 } from '../components/media/useDecryptedMedia'
 import EncryptedImage from '../components/media/EncryptedImage'
 
@@ -214,39 +213,49 @@ describe('EncryptedImage', () => {
     expect(container.querySelector('img').className).toContain('media-decrypting')
   })
 
-  it('adopts a photo that was cached while it was still off-screen', async () => {
-    // The home page renders the same photos twice: once in the feed, once in
-    // AlbumGlimpse below the fold. The second copy mounts on a cache miss, so
-    // nothing resolves it during render — and by the time it scrolls into view
-    // the first copy has filled the cache. Becoming visible has to pick that up.
+  it('resolves the below-the-fold copy of a photo the feed already decrypted', async () => {
+    // The shape of the home page on a first load: MemoryFeed and AlbumGlimpse
+    // are handed the same memories, so the same photo is mounted twice — once
+    // on screen and once past the fold. The second copy mounts on a cache miss,
+    // so nothing resolves it during render, and by the time it scrolls into
+    // view the first copy has filled the cache. Becoming visible has to pick
+    // that up; bailing out on the cache hit stranded it on its placeholder.
     authState = { encryptionKey: FAKE_KEY, keyLoading: false }
 
-    // An observer that reports intersection only when this test says so.
-    let intersect = null
+    // Observers that report intersection only when this test says so, so the
+    // two copies can be scrolled into view independently.
+    const observers = []
     globalThis.IntersectionObserver = class {
       constructor(callback) {
         this.callback = callback
+        observers.push(this)
       }
       observe(node) {
-        intersect = () => act(() => this.callback([{ isIntersecting: true, target: node }]))
+        this.node = node
       }
       disconnect() {}
       unobserve() {}
     }
+    const scrollIntoView = (i) =>
+      act(() => observers[i].callback([{ isIntersecting: true, target: observers[i].node }]))
 
-    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
-    expect(container.querySelector('img').className).toContain('media-decrypting')
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-
-    // Somebody else decrypts the same photo while this one is still off-screen.
-    await act(() => prefetchDecryptedMedia(ENCRYPTED_URL, FAKE_KEY, 'image/*'))
-
-    intersect()
-
-    await waitFor(() =>
-      expect(container.querySelector('img').getAttribute('src')).toBe('blob:decrypted-1')
+    const { container } = render(
+      <>
+        <EncryptedImage src={ENCRYPTED_URL} alt="feed card" />
+        <EncryptedImage src={ENCRYPTED_URL} alt="album glimpse" />
+      </>
     )
-    expect(container.querySelector('img').className).not.toContain('media-decrypting')
+    const [feed, glimpse] = container.querySelectorAll('img')
+    expect(glimpse.className).toContain('media-decrypting')
+
+    scrollIntoView(0)
+    await waitFor(() => expect(feed.getAttribute('src')).toBe('blob:decrypted-1'))
+
+    // Only now does the user scroll far enough to reach AlbumGlimpse.
+    scrollIntoView(1)
+
+    await waitFor(() => expect(glimpse.getAttribute('src')).toBe('blob:decrypted-1'))
+    expect(glimpse.className).not.toContain('media-decrypting')
     expect(globalThis.fetch).toHaveBeenCalledTimes(1)
   })
 
