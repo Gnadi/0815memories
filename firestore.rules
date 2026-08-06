@@ -127,13 +127,41 @@ service cloud.firestore {
 
     // Memories — anyone can read (viewers are unauthenticated),
     // only an admin of the memory's family can write.
+    //
+    // `contentRich` is the rich description document. Memory docs are
+    // world-readable, so confidentiality rests entirely on the client
+    // encrypting before it writes — there is no privileged server path that
+    // could re-encrypt after the fact. This is the backstop for the one way
+    // that can silently go wrong: encryptFields() skips any value that is not
+    // a string, so a document object would land here readable. Requiring a
+    // string rejects exactly that. The leading-character check catches the
+    // next case up — stringified but unencrypted JSON — because encryptText()
+    // emits base64, which can never begin with '{' or '['.
+    //
+    // Deliberately scoped to this one field: the older text fields have
+    // pre-encryption data in the wild that a type check would now block.
+    function memoryContentOk() {
+      let d = request.resource.data;
+      return !('contentRich' in d)
+        || (d.contentRich is string
+            && d.contentRich.size() > 0
+            && d.contentRich.size() <= 700000
+            && d.contentRich[0:1] != '{'
+            && d.contentRich[0:1] != '[');
+    }
+
     match /memories/{memoryId} {
       allow read: if true;
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
-      allow update, delete: if request.auth != null
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && memoryContentOk();
+      allow update: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && memoryContentOk();
+      allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
     }

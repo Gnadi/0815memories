@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { Mic, Play, Pause } from 'lucide-react'
 import EncryptedAudio from '../media/EncryptedAudio'
 
-function SingleMemoPlayer({ memo }) {
+/**
+ * Exported so inline voice memos inside a rich description reuse this player
+ * rather than growing a second seek/progress implementation. See RichContent.
+ */
+export function SingleMemoPlayer({ memo }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)

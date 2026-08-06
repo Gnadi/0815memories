@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, decryptBlob } from './encryption'
+import { MEMORY_WRITE_FIELDS } from '../hooks/useMemories'
+import { collectRichMediaUrls, parseRichDoc } from './richText'
 
 /**
  * Recursively convert Firestore Timestamps to ISO strings.
@@ -84,6 +86,13 @@ function collectMediaUrls(data, prefix) {
         addUrl(doc.imageUrl, doc.id, 'hero')
         addArrayUrls(doc.videos, doc.id, 'video')
         addArrayUrls(doc.voiceMemos, doc.id, 'voicememo')
+        // Media living inside the rich description is not in any of the arrays
+        // above; without this a backup would quietly lose it. Safe here because
+        // collectMediaUrls runs after decryptCollectionData has parsed the
+        // document. Originals only — thumbnails are not exported either.
+        collectRichMediaUrls(doc.contentRich).forEach((m, i) =>
+          addUrl(m.url, doc.id, `inline-${m.kind}-${i}`)
+        )
         break
       case 'moments':
         addArrayUrls(doc.images, doc.id, 'image')
@@ -168,7 +177,7 @@ async function downloadMedia(mediaEntries, onProgress, signal, encKey, concurren
 async function decryptCollectionData(data, collectionName, encryptionKey) {
   if (!encryptionKey) return data
   const fieldMap = {
-    memories: ['title', 'content', 'quote', 'location', 'authorName', 'category'],
+    memories: MEMORY_WRITE_FIELDS,
     journals: ['content'],
     children: ['name'],
     blackbox: ['content'],
@@ -185,6 +194,11 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
     }
     if (collectionName === 'scrapbooks' && typeof decrypted.pages === 'string') {
       decrypted.pages = await decryptJSON(encryptionKey, decrypted.pages)
+    }
+    // The rich description is decrypted by the field list above; parse it so the
+    // export writes a readable document and collectMediaUrls can walk it.
+    if (collectionName === 'memories' && decrypted.contentRich != null) {
+      decrypted.contentRich = parseRichDoc(decrypted.contentRich)
     }
     return decrypted
   }))
