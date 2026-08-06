@@ -188,9 +188,9 @@ describe('EncryptedImage', () => {
     const img = container.querySelector('img')
     expect(img).toBeTruthy()
     expect(img.className).toContain('rounded-xl')
-    expect(img.className).toContain('animate-pulse')
+    expect(img.className).toContain('media-decrypting')
 
-    await waitFor(() => expect(container.querySelector('img').className).not.toContain('animate-pulse'))
+    await waitFor(() => expect(container.querySelector('img').className).not.toContain('media-decrypting'))
     // Same node, so the browser never tore down and re-decoded the element.
     expect(container.querySelector('img')).toBe(img)
     expect(img.getAttribute('src')).toBe('blob:decrypted-1')
@@ -204,5 +204,71 @@ describe('EncryptedImage', () => {
     const img = container.querySelector('img')
     expect(img.getAttribute('src')).not.toBe(ENCRYPTED_URL)
     expect(img.getAttribute('src').startsWith('data:image/gif')).toBe(true)
+  })
+
+  it('shows the decrypting placeholder for as long as the key is still loading', () => {
+    authState = { encryptionKey: null, keyLoading: true }
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+
+    expect(container.querySelector('img').className).toContain('media-decrypting')
+  })
+
+  it('resolves the below-the-fold copy of a photo the feed already decrypted', async () => {
+    // The shape of the home page on a first load: MemoryFeed and AlbumGlimpse
+    // are handed the same memories, so the same photo is mounted twice — once
+    // on screen and once past the fold. The second copy mounts on a cache miss,
+    // so nothing resolves it during render, and by the time it scrolls into
+    // view the first copy has filled the cache. Becoming visible has to pick
+    // that up; bailing out on the cache hit stranded it on its placeholder.
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+
+    // Observers that report intersection only when this test says so, so the
+    // two copies can be scrolled into view independently.
+    const observers = []
+    globalThis.IntersectionObserver = class {
+      constructor(callback) {
+        this.callback = callback
+        observers.push(this)
+      }
+      observe(node) {
+        this.node = node
+      }
+      disconnect() {}
+      unobserve() {}
+    }
+    const scrollIntoView = (i) =>
+      act(() => observers[i].callback([{ isIntersecting: true, target: observers[i].node }]))
+
+    const { container } = render(
+      <>
+        <EncryptedImage src={ENCRYPTED_URL} alt="feed card" />
+        <EncryptedImage src={ENCRYPTED_URL} alt="album glimpse" />
+      </>
+    )
+    const [feed, glimpse] = container.querySelectorAll('img')
+    expect(glimpse.className).toContain('media-decrypting')
+
+    scrollIntoView(0)
+    await waitFor(() => expect(feed.getAttribute('src')).toBe('blob:decrypted-1'))
+
+    // Only now does the user scroll far enough to reach AlbumGlimpse.
+    scrollIntoView(1)
+
+    await waitFor(() => expect(glimpse.getAttribute('src')).toBe('blob:decrypted-1'))
+    expect(glimpse.className).not.toContain('media-decrypting')
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('carries no placeholder when the media resolves during render', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    const warm = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+    await waitFor(() =>
+      expect(warm.container.querySelector('img').getAttribute('src')).toBe('blob:decrypted-1')
+    )
+    warm.unmount()
+
+    // A cache hit must never paint the spinner, not even for one frame.
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+    expect(container.querySelector('img').className).not.toContain('media-decrypting')
   })
 })

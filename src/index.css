@@ -104,6 +104,58 @@ select {
   display: none;
 }
 
+/* Placeholder for media that is still being fetched and decrypted
+   (src/components/media/placeholder.js). A tinted box straight away, and a
+   spinner once the wait is long enough to be worth explaining.
+
+   Why the element's own background rather than an overlay node: useDecryptedMedia
+   deliberately keeps a single <img> mounted across the whole transition so the
+   browser never tears the element down and re-decodes the photo. An absolutely
+   positioned sibling would need a positioned ancestor at every one of the ~25
+   call sites, several of which size the <img> itself (flex-1, absolute inset-0,
+   w-full h-full) and would hand that sizing to the overlay instead. A background
+   layer needs no ancestor, adds no node, and cannot affect layout.
+
+   The spinner is delayed ~320ms by animating background-size up from zero — a
+   decrypt served by the worker pool in 40ms should never flash one. The delay
+   is per element and needs no timer, no state and no re-render, which matters
+   when a feed mounts dozens of these at once.
+
+   The artwork, before percent-encoding:
+
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+       <style>
+         circle,path{fill:none;stroke:#C25A2E;stroke-width:2.5}
+         circle{opacity:.2}
+         path{stroke-linecap:round;transform-origin:12px 12px;animation:s .8s linear infinite}
+         @keyframes s{to{transform:rotate(1turn)}}
+         @media (prefers-reduced-motion:reduce){path{animation-duration:2.4s}}
+       </style>
+       <circle cx="12" cy="12" r="9"/>
+       <path d="M12 3a9 9 0 0 1 9 9"/>
+     </svg>
+
+   An SVG referenced as an image renders as its own document: its stylesheet and
+   animations run, its scripts do not. So the rotation costs one composited
+   layer per placeholder and no main-thread work, and reduced-motion is answered
+   inside the artwork instead of by a second CSS rule out here. */
+.media-decrypting {
+  background-color: var(--color-cream-dark);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cstyle%3Ecircle,path%7Bfill:none;stroke:%23C25A2E;stroke-width:2.5%7Dcircle%7Bopacity:.2%7Dpath%7Bstroke-linecap:round;transform-origin:12px 12px;animation:s .8s linear infinite%7D@keyframes s%7Bto%7Btransform:rotate(1turn)%7D%7D@media (prefers-reduced-motion:reduce)%7Bpath%7Banimation-duration:2.4s%7D%7D%3C/style%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 3a9 9 0 0 1 9 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 28px 28px;
+  animation: kaydo-decrypt-spinner 200ms ease-out 320ms both;
+}
+
+/* Only a `from`: the implicit 100% keyframe is the declared background-size, so
+   the spinner grows into the size above and stays there. */
+@keyframes kaydo-decrypt-spinner {
+  from {
+    background-size: 0 0;
+  }
+}
+
 /* Rich description editor (src/components/admin/RichTextEditor.jsx).
    Only the parts Tailwind classes cannot reach: ProseMirror's own generated
    markup, and the placeholder pseudo-element. The read-path renderer

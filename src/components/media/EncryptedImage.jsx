@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import useDecryptedMedia from './useDecryptedMedia'
-import { TRANSPARENT_PIXEL, PLACEHOLDER_CLASSES } from './placeholder'
+import { BLANK_IMAGE, PLACEHOLDER_CLASSES } from './placeholder'
 
 /**
  * `thumbSrc` — a downscaled encrypted copy to load instead of `src`. Pass it
@@ -16,7 +16,7 @@ function EncryptedImage({ src, thumbSrc, alt = '', className = '', style, onClic
   return (
     <img
       ref={ref}
-      src={decryptedUrl || TRANSPARENT_PIXEL}
+      src={decryptedUrl || BLANK_IMAGE}
       alt={loading ? '' : alt}
       className={loading ? `${className} ${PLACEHOLDER_CLASSES}` : className}
       style={style}
