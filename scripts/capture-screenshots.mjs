@@ -31,6 +31,13 @@ const SHOTS = [
   { name: 'recipe-tree-desktop', path: '/recipes/recipe-root', width: 1280, height: 800, out: 1200 },
   { name: 'journal-desktop', path: '/journal/child-emma', width: 1280, height: 800, out: 1200 },
   { name: 'blackbox-desktop', path: '/blackbox', width: 1280, height: 800, out: 1200 },
+  // Taller than the rest, and each height ends on a row boundary rather than
+  // slicing a tile in half: 1000 reaches past the reel suggestions to the
+  // family's own saved reels, 920 holds two full rows of collage templates.
+  // The two stay close in aspect on purpose — they sit side by side in the
+  // same row of the landing page.
+  { name: 'highlights-desktop', path: '/highlights', width: 1280, height: 1000, out: 1200 },
+  { name: 'collages-desktop', path: '/collages', width: 1280, height: 908, out: 1200 },
   // Phone, not desktop: this is a ritual couples do on the sofa, and the
   // landing page should show it the way it is actually used. Taller than the
   // other mobile shot so the frame reaches past the ritual header to a chapter.

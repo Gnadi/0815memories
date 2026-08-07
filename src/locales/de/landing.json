@@ -15,6 +15,8 @@
       "Privates Teilen von Familienfotos und -videos",
       "Familien-Rezeptbaum mit Versionsverlauf",
       "Digitales Sammelalbum mit PDF-Export",
+      "Highlight-Videos aus euren Familienfotos",
+      "Fotocollagen mit 14 fertigen Vorlagen",
       "Geplante Briefe an Familienmitglieder für die Zukunft",
       "AES-256-verschlüsselter Tresor für wertvolle Originale",
       "Gemeinsamer Jahresrückblick für Paare mit versiegeltem Zukunftsbrief"
@@ -43,6 +45,8 @@
     "recipeAlt": "Ein Kaydo-Rezept-Stammbaum, der ein Familienrezept über Generationen zeigt",
     "journalAlt": "Das private Tagebuch eines Kindes in Kaydo mit datierten Briefen",
     "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten",
+    "highlightsAlt": "Die Highlight-Video-Seite in Kaydo — fertige Reel-Ideen aus den Fotos der Familie und die Reels, die sie behalten hat",
+    "collagesAlt": "Die Collagen-Galerie in Kaydo — jede Vorlage in der Vorschau mit den eigenen Fotos der Familie",
     "ourYearMobileAlt": "Die Timeline von „Unser Jahr\" in Kaydo auf dem Smartphone, mit einem abgeschlossenen Kapitel und einem versiegelten Brief"
   },
   "pillars": {
@@ -90,6 +94,28 @@
         "Fertige Sammelalben als PDF exportieren"
       ],
       "button": "Sammelalben öffnen"
+    },
+    "highlights": {
+      "title": "Erleben: Highlight-Videos",
+      "desc": "Aus einem Stapel Fotos wird ein kurzer Film. Kaydo schlägt fertige Reels aus dem vor, was eure Familie ohnehin gepostet hat — \"Unsere Sommer\" oder das Jahr, das gerade zu Ende ging — oder du wählst jede Aufnahme selbst. Titelkarte dazu, Tempo einstellen, dann im Feed teilen oder als Video herunterladen.",
+      "bullets": [
+        "Fertige Ideen aus euren eigenen Fotos — eine Jahreszeit, ein Jahr, die letzten Wochen",
+        "Titelkarte, Reihenfolge und Dauer bestimmst du",
+        "Vier Stimmungen sowie Hoch-, Quer- und quadratisches Format",
+        "Im Familien-Feed teilen oder das fertige Video herunterladen"
+      ],
+      "button": "Highlight-Video erstellen"
+    },
+    "collages": {
+      "title": "Anordnen: Collagen",
+      "desc": "Vierzehn gestaltete Vorlagen — Polaroid-Paare, Filmstreifen, randlose Hero-Bilder — warten auf eure Fotos. Bilder in die Felder ziehen, jedes einzeln zoomen und verschieben, dann Rahmenfarbe, Stärke und Ecken einstellen, bis es nach euch aussieht.",
+      "bullets": [
+        "14 Vorlagen — vom einzelnen Hero-Bild bis zum Sechser-Raster",
+        "Jedes Foto im Feld zoomen, verschieben, tauschen oder spiegeln",
+        "Rahmenfarbe, Stärke, Ecken und Hintergrund bestimmt ihr",
+        "Als Bild herunterladen oder direkt im Feed posten"
+      ],
+      "button": "Collagen öffnen"
     },
     "ourYear": {
       "title": "Zu zweit: Unser Jahr",
