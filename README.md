@@ -19,6 +19,8 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Create & evolve
 - **Recipe tree** — family recipes with version history, forks and photo logs across generations
 - **Digital scrapbook** — freeform drag-and-drop canvas with polaroid frames, stickers and text; export finished books as PDF
+- **Collages** — pick a template from the gallery, drop family photos into its shaped slots, restyle the frame and background, then download the image or post it to the feed. Preview, thumbnail and export all come from one Canvas 2D renderer, so what you see is what you get
+- **Highlight videos** — turn a year, a season or a run of memories into a short reel with a title card, Ken Burns moves and crossfades. It plays in the app anywhere; where the browser supports `MediaRecorder` it also downloads as a video file. Posting a reel to the feed is bounded by the same encrypted-upload cap as any other video (10 MB on the free Cloudinary plan) — the app says so with real numbers instead of failing the upload, and downloading works at any size
 - **Login page designer** — give your family's address its own front door, from starter templates to a custom photo welcome page
 
 ### Just the two of you

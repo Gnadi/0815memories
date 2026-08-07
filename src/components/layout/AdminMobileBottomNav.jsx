@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, X } from 'lucide-react'
+import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, LayoutGrid, Film, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemoryWriter } from '../../hooks/useMemories'
 import { useScrapbookWriter } from '../../hooks/useScrapbooks'
@@ -46,12 +46,12 @@ export default function AdminMobileBottomNav() {
   const { addMemory } = useMemoryWriter(isAdmin ? familyId : null, encryptionKey)
   const { addScrapbook } = useScrapbookWriter(isAdmin ? familyId : null, encryptionKey)
 
-  // Hide on public/auth pages and the scrapbook editor
+  // Hide on public/auth pages and on the full-screen editors
   if (!isAdmin) return null
   const publicPaths = ['/', '/login', '/signup']
   if (publicPaths.includes(location.pathname)) return null
   if (location.pathname.startsWith('/family/')) return null
-  if (location.pathname.match(/^\/scrapbook\/.+/)) return null
+  if (location.pathname.match(/^\/(scrapbook|collage|highlight)\/.+/)) return null
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -194,6 +194,36 @@ export default function AdminMobileBottomNav() {
                 <div>
                   <p className="font-semibold text-bark text-sm">{t('createSheet.createScrapbook')}</p>
                   <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.createScrapbookDesc')}</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setShowChoiceSheet(false); navigate('/collages') }}
+                className="flex items-center gap-4 p-4 rounded-2xl bg-cream hover:bg-cream-dark transition-colors text-left"
+                style={TAP}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #7B3F6E, #A8628F)' }}>
+                  <LayoutGrid className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-bark text-sm">{t('createSheet.createCollage')}</p>
+                  <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.createCollageDesc')}</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setShowChoiceSheet(false); navigate('/highlights') }}
+                className="flex items-center gap-4 p-4 rounded-2xl bg-cream hover:bg-cream-dark transition-colors text-left"
+                style={TAP}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #C25A2E, #E0946A)' }}>
+                  <Film className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-bark text-sm">{t('createSheet.createHighlight')}</p>
+                  <p className="text-xs text-bark-muted mt-0.5">{t('createSheet.createHighlightDesc')}</p>
                 </div>
               </button>
 

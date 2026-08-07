@@ -36,7 +36,7 @@ export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
 // Loaded with the first protected route.
 export const LAZY_NAMESPACES = [
   'home', 'memory', 'journal', 'blackbox', 'recipes', 'scrapbook',
-  'timeline', 'ourYear', 'settings', 'emotions', 'legal',
+  'collage', 'timeline', 'ourYear', 'settings', 'emotions', 'legal',
 ]
 
 export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]

@@ -246,6 +246,36 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // Collages — admin only (template-based photo collages)
+    match /collages/{collageId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId);
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+    }
+
+    // Highlight videos — admin only. The document is the recipe (shot list,
+    // durations, title card); the rendered video never leaves the browser
+    // unless it is posted to the feed as an ordinary memory.
+    match /highlights/{highlightId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId);
+      allow update, delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+    }
+
     // Recipes — admin only (version-controlled family recipes)
     match /recipes/{recipeId} {
       allow read: if request.auth != null

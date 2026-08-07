@@ -1,4 +1,4 @@
-import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock, CalendarHeart } from 'lucide-react'
+import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock, CalendarHeart, LayoutGrid, Film } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import LanguageSwitcher from '../LanguageSwitcher'
@@ -9,6 +9,10 @@ const navItems = [
   { icon: Home, labelKey: 'nav.home', route: '/home' },
   { icon: Clock, labelKey: 'nav.timeline', route: '/timeline' },
   { icon: BookMarked, labelKey: 'nav.scrapbooks', route: '/scrapbook' },
+  // Collages and reels write to the family's own collections, so these two are
+  // admin-only like "Our Year".
+  { icon: LayoutGrid, labelKey: 'nav.collages', route: '/collages', adminOnly: true },
+  { icon: Film, labelKey: 'nav.highlights', route: '/highlights', adminOnly: true },
   { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes' },
   { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal' },
   { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox' },

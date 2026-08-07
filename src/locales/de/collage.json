@@ -1,0 +1,126 @@
+{
+  "defaultTitle": "Meine Collage",
+  "collages": {
+    "eyebrow": "Erstellen",
+    "title": "Collagen",
+    "templatesHeading": "Vorlage auswählen",
+    "yoursHeading": "Deine Collagen",
+    "empty": "Noch nichts da. Wähle oben eine Vorlage — deine erste Collage erscheint dann hier."
+  },
+  "highlights": {
+    "eyebrow": "Erstellen",
+    "title": "Highlight-Video",
+    "suggestionsHeading": "Erstelle ein Video über…",
+    "yoursHeading": "Deine Highlight-Videos",
+    "empty": "Noch nichts da. Fang mit einer der Ideen oben an.",
+    "startBlank": "Leer beginnen",
+    "startBlankHint": "Jedes Foto selbst auswählen",
+    "noSuggestions": "Lade noch ein paar Fotos hoch — dann erscheinen hier fertige Ideen."
+  },
+  "templates": {
+    "daisyField": "Gänseblümchen",
+    "bloomRed": "Mohn",
+    "loveNote": "Liebesbrief",
+    "confettiGold": "Konfetti",
+    "sunburst": "Sonne",
+    "filmStrip": "Filmstreifen",
+    "polaroidPair": "Polaroids",
+    "popHearts": "Herzen",
+    "stackedTrio": "Dreier",
+    "storyTrio": "Story",
+    "mintFour": "Minze",
+    "nightSix": "Nacht",
+    "sunHero": "Sonnenschein",
+    "fullBleed": "Randlos"
+  },
+  "tabs": {
+    "templates": "Vorlagen",
+    "borders": "Rahmen"
+  },
+  "editor": {
+    "close": "Schließen",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "share": "Im Feed teilen",
+    "more": "Weitere Optionen",
+    "download": "Bild herunterladen",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Collage löschen? Das lässt sich nicht rückgängig machen.",
+    "titleLabel": "Titel",
+    "addPhotoToSlot": "Hier ein Foto einfügen",
+    "selectPhoto": "Dieses Foto auswählen",
+    "pickHint": "Tippe ein Foto an, um es einzusetzen",
+    "backToCollages": "Zurück zu Collagen",
+    "backToHighlights": "Zurück zu Highlight-Videos"
+  },
+  "borders": {
+    "heading": "Rahmen",
+    "frameColor": "Rahmenfarbe",
+    "thickness": "Rahmen",
+    "corners": "Ecken",
+    "spacing": "Abstand",
+    "background": "Hintergrund",
+    "templateBackground": "Vorlage"
+  },
+  "slotActions": {
+    "done": "Fertig",
+    "change": "Ändern",
+    "swap": "Tauschen",
+    "zoom": "Zoom",
+    "reposition": "Verschieben",
+    "flip": "Spiegeln",
+    "clear": "Foto entfernen",
+    "reset": "Zurücksetzen"
+  },
+  "reel": {
+    "defaultTitle": "Unsere Highlights",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "restart": "Zum Anfang",
+    "download": "Video herunterladen",
+    "rendering": "Video wird erstellt… {{percent}} %",
+    "noRecording": "Dieser Browser kann das Video nicht als Datei speichern. Das Reel läuft hier trotzdem — zum Herunterladen in Chrome oder Edge öffnen.",
+    "titleCardText": "Titelkarte",
+    "titleCardSubtitle": "Untertitel (optional)",
+    "shots_one": "{{count}} Foto",
+    "shots_other": "{{count}} Fotos",
+    "emptyShots": "Füge unten Fotos hinzu, um das Reel zu bauen.",
+    "duration": "Dauer",
+    "moveEarlier": "Nach vorne",
+    "moveLater": "Nach hinten",
+    "removeShot": "Aus dem Reel entfernen",
+    "pickHint": "Tippe ein Foto an, um es ins Reel zu legen",
+    "confirmDelete": "Dieses Highlight-Video löschen? Das lässt sich nicht rückgängig machen.",
+    "themes": {
+      "warm": "Warm",
+      "cream": "Creme",
+      "night": "Nacht",
+      "forest": "Wald"
+    }
+  },
+  "suggestions": {
+    "year": "{{year}}",
+    "month": "{{month}}",
+    "recent": "Neueste Erinnerungen",
+    "seasons": {
+      "winter": "Unsere Winter",
+      "spring": "Unsere Frühlinge",
+      "summer": "Unsere Sommer",
+      "autumn": "Unsere Herbste"
+    }
+  },
+  "errors": {
+    "notFound": "Das konnte nicht gefunden werden.",
+    "notAuthenticated": "Nicht angemeldet — bitte lade die App neu.",
+    "createFailed": "Konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "saveFailed": "Konnte nicht gespeichert werden. Deine letzte Änderung ist noch da — versuch es erneut.",
+    "exportFailed": "Das Bild konnte nicht exportiert werden.",
+    "shareFailed": "Konnte nicht im Feed geteilt werden.",
+    "deleteFailed": "Konnte nicht gelöscht werden.",
+    "renderFailed": "Das Video konnte nicht erstellt werden.",
+    "needPhoto": "Füge zuerst mindestens ein Foto ein.",
+    "needShots": "Füge dem Reel zuerst mindestens ein Foto hinzu.",
+    "videoTooLarge": "Das fertige Video ist {{size}} groß, verschlüsselte Uploads sind auf {{limit}} begrenzt. Kürze das Reel oder wähle ein kleineres Format — herunterladen klappt in jeder Größe."
+  }
+}

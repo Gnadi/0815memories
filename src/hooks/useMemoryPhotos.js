@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
 import { useMemories } from './useMemories'
+import { thumbAt } from '../utils/mediaThumbs'
 
 /**
  * Returns a flat, de-duplicated list of every photo URL found across all
- * family memories. Each entry includes the memory id + title for context.
+ * family memories. Each entry includes the memory id + title for context, the
+ * memory's date (so callers can group by year or season) and the downscaled
+ * copy when one exists — pickers and reels show these small.
  *
- * Shape: [{ id: `${memoryId}:${index}`, url, memoryId, memoryTitle }]
+ * Shape: [{ id: `${memoryId}:${index}`, url, thumbUrl, memoryId, memoryTitle, date }]
  */
 export function useMemoryPhotos(familyId, encryptionKey) {
   const { memories, loading } = useMemories(familyId, encryptionKey)
@@ -23,8 +26,10 @@ export function useMemoryPhotos(familyId, encryptionKey) {
         out.push({
           id: `${m.id}:${i}`,
           url,
+          thumbUrl: thumbAt(m, i) || '',
           memoryId: m.id,
           memoryTitle: m.title || '',
+          date: m.date?.toDate?.() || (m.date instanceof Date ? m.date : null),
         })
       })
     }

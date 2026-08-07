@@ -11,7 +11,9 @@
     "kidJournals": "Kinder-Tagebücher",
     "blackBox": "Black Box",
     "ourYear": "Unser Jahr",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "collages": "Collagen",
+    "highlights": "Highlight-Videos"
   },
   "buttons": {
     "postMemory": "Erinnerung teilen",
@@ -61,7 +63,11 @@
     "notAuthenticated": "Nicht angemeldet – bitte lade die App neu.",
     "createError": "Sammelalbum konnte nicht erstellt werden. Bitte versuche es erneut.",
     "ourYearChapter": "Unser Jahr",
-    "ourYearChapterDesc": "Gemeinsamer Rückblick als Paar — nur für euch beide"
+    "ourYearChapterDesc": "Gemeinsamer Rückblick als Paar — nur für euch beide",
+    "createCollage": "Collage erstellen",
+    "createCollageDesc": "Vorlage wählen und mit euren Fotos füllen",
+    "createHighlight": "Highlight-Video",
+    "createHighlightDesc": "Ein Jahr, eine Jahreszeit oder eine Reise als kurzes Reel"
   },
   "pwa": {
     "dialogLabel": "Kaydo installieren",

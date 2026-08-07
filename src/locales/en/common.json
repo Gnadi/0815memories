@@ -11,7 +11,9 @@
     "kidJournals": "Kid Journals",
     "blackBox": "Black Box",
     "ourYear": "Our Year",
-    "settings": "Settings"
+    "settings": "Settings",
+    "collages": "Collages",
+    "highlights": "Highlight Videos"
   },
   "buttons": {
     "postMemory": "Post a Memory",
@@ -61,7 +63,11 @@
     "notAuthenticated": "Not authenticated — please reload the app.",
     "createError": "Could not create scrapbook. Please try again.",
     "ourYearChapter": "Our Year",
-    "ourYearChapterDesc": "A shared look back as a couple — for the two of you only"
+    "ourYearChapterDesc": "A shared look back as a couple — for the two of you only",
+    "createCollage": "Create a Collage",
+    "createCollageDesc": "Pick a template and fill it with your photos",
+    "createHighlight": "Highlight Video",
+    "createHighlightDesc": "Turn a year, a season or a trip into a short reel"
   },
   "pwa": {
     "dialogLabel": "Install Kaydo",

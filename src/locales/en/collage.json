@@ -1,0 +1,126 @@
+{
+  "defaultTitle": "My Collage",
+  "collages": {
+    "eyebrow": "Create",
+    "title": "Collages",
+    "templatesHeading": "Select a template",
+    "yoursHeading": "Your collages",
+    "empty": "Nothing here yet. Choose a template above and your first collage appears here."
+  },
+  "highlights": {
+    "eyebrow": "Create",
+    "title": "Highlight video",
+    "suggestionsHeading": "Create a video about…",
+    "yoursHeading": "Your highlight videos",
+    "empty": "Nothing here yet. Start from one of the ideas above.",
+    "startBlank": "Start from scratch",
+    "startBlankHint": "Choose every photo yourself",
+    "noSuggestions": "Post a few more photos and ready-made ideas will show up here."
+  },
+  "templates": {
+    "daisyField": "Daisies",
+    "bloomRed": "Poppy",
+    "loveNote": "Love note",
+    "confettiGold": "Confetti",
+    "sunburst": "Sunburst",
+    "filmStrip": "Film strip",
+    "polaroidPair": "Polaroids",
+    "popHearts": "Pop hearts",
+    "stackedTrio": "Trio",
+    "storyTrio": "Story",
+    "mintFour": "Mint four",
+    "nightSix": "Night six",
+    "sunHero": "Sunshine",
+    "fullBleed": "Full bleed"
+  },
+  "tabs": {
+    "templates": "Templates",
+    "borders": "Borders"
+  },
+  "editor": {
+    "close": "Close",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "share": "Share to the feed",
+    "more": "More options",
+    "download": "Download image",
+    "delete": "Delete",
+    "confirmDelete": "Delete this collage? This cannot be undone.",
+    "titleLabel": "Title",
+    "addPhotoToSlot": "Add a photo here",
+    "selectPhoto": "Select this photo",
+    "pickHint": "Tap a photo to place it",
+    "backToCollages": "Back to collages",
+    "backToHighlights": "Back to highlight videos"
+  },
+  "borders": {
+    "heading": "Borders",
+    "frameColor": "Frame colour",
+    "thickness": "Frame",
+    "corners": "Corners",
+    "spacing": "Spacing",
+    "background": "Background",
+    "templateBackground": "Template"
+  },
+  "slotActions": {
+    "done": "Done",
+    "change": "Change",
+    "swap": "Swap",
+    "zoom": "Zoom",
+    "reposition": "Move",
+    "flip": "Flip",
+    "clear": "Remove photo",
+    "reset": "Reset"
+  },
+  "reel": {
+    "defaultTitle": "Our highlights",
+    "play": "Play",
+    "pause": "Pause",
+    "restart": "Back to start",
+    "download": "Download video",
+    "rendering": "Rendering video… {{percent}}%",
+    "noRecording": "This browser cannot save the video to a file. The reel still plays here, and you can open it in Chrome or Edge to download it.",
+    "titleCardText": "Title card",
+    "titleCardSubtitle": "Subtitle (optional)",
+    "shots_one": "{{count}} photo",
+    "shots_other": "{{count}} photos",
+    "emptyShots": "Add photos below to build the reel.",
+    "duration": "Length",
+    "moveEarlier": "Move earlier",
+    "moveLater": "Move later",
+    "removeShot": "Remove from reel",
+    "pickHint": "Tap a photo to add it to the reel",
+    "confirmDelete": "Delete this highlight video? This cannot be undone.",
+    "themes": {
+      "warm": "Warm",
+      "cream": "Cream",
+      "night": "Night",
+      "forest": "Forest"
+    }
+  },
+  "suggestions": {
+    "year": "{{year}}",
+    "month": "{{month}}",
+    "recent": "Recent memories",
+    "seasons": {
+      "winter": "Our winters",
+      "spring": "Our springs",
+      "summer": "Our summers",
+      "autumn": "Our autumns"
+    }
+  },
+  "errors": {
+    "notFound": "This creation could not be found.",
+    "notAuthenticated": "Not authenticated — please reload the app.",
+    "createFailed": "Could not create this. Please try again.",
+    "saveFailed": "Could not save. Your last change is still on screen — try again.",
+    "exportFailed": "Could not export the image.",
+    "shareFailed": "Could not post this to the feed.",
+    "deleteFailed": "Could not delete this.",
+    "renderFailed": "Could not render the video.",
+    "needPhoto": "Add at least one photo first.",
+    "needShots": "Add at least one photo to the reel first.",
+    "videoTooLarge": "The finished video is {{size}}, and encrypted uploads are capped at {{limit}}. Shorten the reel or pick a smaller format, then try again — downloading still works at any size."
+  }
+}
