@@ -131,6 +131,7 @@ async function main() {
   console.log('② Resetting emulator data …')
   for (const c of [
     'families', 'memories', 'moments', 'recipes', 'children', 'journals', 'scrapbooks', 'blackbox',
+    'collages', 'highlights',
     'ourYearRituals', 'ourYearChapters', 'ourYearEntries', 'ourYearLetters',
   ]) {
     await clearCollection(c)
@@ -342,7 +343,91 @@ async function main() {
     })
   }
 
-  console.log('⑫ Seeding "Our Year" …')
+  console.log('⑫ Seeding collages & highlight videos …')
+  // Both documents are normally written by makeCollageDoc / makeHighlightDoc
+  // (src/components/collage/collageTemplates.js, src/utils/reelRenderer.js).
+  // Node cannot import those modules — the app's imports are extension-less —
+  // so their shapes are mirrored here. Slot ids are the template's own
+  // ('a', 'b', …); if a template ever renames its slots, the seeded collage
+  // renders empty rather than breaking, and this list is what to update.
+  const collageSlot = (id, file) => ({
+    id, url: url(file), thumbUrl: null, imageScale: 1, offsetX: 0, offsetY: 0, flipped: false,
+  })
+  // DEFAULT_BORDER — width 0, because every template already frames itself.
+  const collageBorder = { color: '#FFFDF9', width: 0, radius: 0.08, gap: 0 }
+
+  const collages = [
+    {
+      id: 'collage-summer', title: 'Summer at the Bay',
+      templateId: 'polaroid-pair', aspect: '4:5',
+      slots: [collageSlot('a', 'beach.jpg'), collageSlot('b', 'picnic.jpg')],
+      createdAt: ts('2024-09-02'),
+    },
+    {
+      id: 'collage-kitchen', title: "Grandma's Kitchen",
+      templateId: 'stacked-trio', aspect: '4:5',
+      slots: [collageSlot('a', 'kitchen.jpg'), collageSlot('b', 'pie.jpg'), collageSlot('c', 'cookies.jpg')],
+      createdAt: ts('2024-11-30'),
+    },
+    {
+      id: 'collage-year', title: 'Our Year in Four',
+      templateId: 'mint-four', aspect: '1:1',
+      slots: [
+        collageSlot('a', 'birthday.jpg'), collageSlot('b', 'garden.jpg'),
+        collageSlot('c', 'mountains.jpg'), collageSlot('d', 'moment-3.jpg'),
+      ],
+      createdAt: ts('2024-12-18'),
+    },
+  ]
+  for (const c of collages) {
+    await db.collection('collages').doc(c.id).set({
+      title: c.title,
+      templateId: c.templateId,
+      doc: {
+        templateId: c.templateId, aspect: c.aspect,
+        background: null, border: { ...collageBorder }, slots: c.slots,
+      },
+      familyId, createdAt: c.createdAt, updatedAt: c.createdAt,
+    })
+  }
+
+  // A reel document is the recipe, not a rendered file: shot list, per-shot
+  // duration, crossfade length, title card and theme (DEFAULT_SHOT_MS /
+  // DEFAULT_TRANSITION_MS in reelRenderer).
+  const reelShot = (file) => ({ url: url(file), thumbUrl: null, memoryId: null, durationMs: 2600 })
+  const highlights = [
+    {
+      id: 'reel-summers', title: 'Our summers', subtitle: 'Monterey, the garden, the long evenings',
+      aspect: '9:16', theme: 'warm',
+      files: ['beach.jpg', 'picnic.jpg', 'garden.jpg', 'moment-2.jpg', 'mountains.jpg'],
+      createdAt: ts('2024-10-06'),
+    },
+    {
+      id: 'reel-kitchen', title: 'A year of baking', subtitle: 'With Grandma Rose',
+      aspect: '4:5', theme: 'cream',
+      files: ['kitchen.jpg', 'pie.jpg', 'cookies.jpg', 'pasta.jpg'],
+      createdAt: ts('2024-12-22'),
+    },
+    {
+      id: 'reel-firsts', title: "Emma's firsts", subtitle: 'Six years in ninety seconds',
+      aspect: '9:16', theme: 'forest',
+      files: ['birthday.jpg', 'kid-emma.jpg', 'moment-1.jpg', 'moment-3.jpg'],
+      createdAt: ts('2025-01-08'),
+    },
+  ]
+  for (const h of highlights) {
+    await db.collection('highlights').doc(h.id).set({
+      title: h.title,
+      doc: {
+        aspect: h.aspect, theme: h.theme, transitionMs: 600,
+        titleCard: { text: h.title, subtitle: h.subtitle },
+        shots: h.files.map(reelShot),
+      },
+      familyId, createdAt: h.createdAt, updatedAt: h.createdAt,
+    })
+  }
+
+  console.log('⑬ Seeding "Our Year" …')
   // Admin metadata, so the ritual setup can offer the partner by name.
   await db.collection('families').doc(familyId).collection('admins').doc(uid)
     .set({ email: ADMIN_EMAIL, addedAt: ts('2023-01-01') })
