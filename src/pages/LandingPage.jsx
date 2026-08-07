@@ -14,6 +14,9 @@ import {
   Star,
   Camera,
   Video,
+  Film,
+  Play,
+  LayoutGrid,
   Mic,
   KeyRound,
   Scissors,
@@ -48,6 +51,89 @@ function OctocatIcon({ className }) {
     >
       <path d="M12 0C5.37 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.386-1.332-1.755-1.332-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.776.42-1.305.763-1.605-2.665-.3-5.467-1.334-5.467-5.931 0-1.31.468-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.046.138 3.006.404 2.29-1.552 3.296-1.23 3.296-1.23.653 1.653.243 2.874.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.628-5.48 5.922.43.372.815 1.102.815 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
     </svg>
+  )
+}
+
+/**
+ * Decorative preview of a highlight video: a 9:16 poster in the "warm" reel
+ * theme, the shot strip that feeds it, and the four moods the editor actually
+ * offers (REEL_THEMES in src/utils/reelRenderer.js).
+ *
+ * Illustrative on purpose — every real reel is made of a family's own photos,
+ * so unlike the other pillars there is nothing here we could screenshot for a
+ * public page. Swap in a real capture once a demo-family reel exists.
+ */
+function ReelMockup() {
+  return (
+    <div className="mt-2 rounded-2xl bg-white/60 border border-kaydo/10 p-4 flex gap-4" aria-hidden="true">
+      {/* Poster — 9:16, the reel default, on the warm theme's background */}
+      <div className="relative w-24 flex-shrink-0 rounded-xl overflow-hidden bg-[#2D1B0E] aspect-[9/16]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#D4784A]/50 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center">
+            <Play className="w-4 h-4 text-kaydo ml-0.5" />
+          </span>
+        </div>
+        {/* Title card lines */}
+        <div className="absolute bottom-2.5 left-2.5 right-2.5 space-y-1.5">
+          <div className="h-1.5 w-3/4 rounded-full bg-white/75" />
+          <div className="h-1 w-1/2 rounded-full bg-white/40" />
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-3">
+        {/* Shot strip */}
+        <div className="flex gap-1.5">
+          {['from-amber-200 to-amber-100', 'from-rose-200 to-amber-100', 'from-teal-200 to-cream-dark', 'from-amber-300 to-rose-100'].map((tint) => (
+            <div key={tint} className={`h-9 flex-1 rounded-md bg-gradient-to-br ${tint}`} />
+          ))}
+        </div>
+        {/* Playhead */}
+        <div className="flex items-center gap-2">
+          <div className="h-1 flex-1 bg-cream-dark rounded-full overflow-hidden">
+            <div className="h-full w-2/5 bg-kaydo rounded-full" />
+          </div>
+          <span className="text-[10px] font-medium text-bark-muted tabular-nums">0:24</span>
+        </div>
+        {/* The four reel moods */}
+        <div className="flex gap-1.5">
+          {['#2D1B0E', '#FDF6EC', '#0F0F0F', '#1B4332'].map((color) => (
+            <span
+              key={color}
+              className="w-5 h-5 rounded-full border border-bark/20"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Decorative preview of the collage templates: three of the fourteen layouts
+ * (COLLAGE_TEMPLATES in src/components/collage/collageTemplates.js) — a hero
+ * with two stacked shots, a four-up grid, and a full-bleed single behind a
+ * wide frame — drawn as empty slots rather than borrowed photos.
+ */
+function CollageMockup() {
+  const slot = 'rounded-sm bg-gradient-to-br from-rose-200 to-amber-100'
+  return (
+    <div className="mt-2 grid grid-cols-3 gap-3" aria-hidden="true">
+      <div className="bg-white rounded-xl p-1.5 shadow-sm aspect-[4/5] grid grid-cols-3 grid-rows-2 gap-1">
+        <div className={`${slot} col-span-2 row-span-2`} />
+        <div className={slot} />
+        <div className={slot} />
+      </div>
+      <div className="bg-white rounded-xl p-1.5 shadow-sm aspect-[4/5] grid grid-cols-2 grid-rows-2 gap-1">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className={slot} />
+        ))}
+      </div>
+      <div className="bg-white rounded-xl p-3 shadow-sm aspect-[4/5]">
+        <div className={`${slot} w-full h-full`} />
+      </div>
+    </div>
   )
 }
 
@@ -243,7 +329,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Six Pillars ── */}
+      {/* ── The Pillars ── */}
       <section id="features" className="bg-warm-white py-20">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-12">
@@ -330,7 +416,7 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Card 2 — Write: The Letters */}
+            {/* Card 3 — Write: The Letters */}
             <div className="bg-kaydo-dark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
@@ -359,7 +445,7 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Card 3 — Evolve: Recipe Tree */}
+            {/* Card 4 — Evolve: Recipe Tree */}
             <div className="bg-[#E8F5E0] rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-green-600/10 rounded-xl flex items-center justify-center">
                 <Utensils className="w-5 h-5 text-green-700" />
@@ -422,7 +508,67 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 6 — Just the two of you: Our Year (full-width) */}
+            {/* Card 6 — Relive: Highlight Videos */}
+            <div className="bg-[#FBE7DC] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-kaydo/10 rounded-xl flex items-center justify-center">
+                <Film className="w-5 h-5 text-kaydo" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.highlights.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('pillars.highlights.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {t('pillars.highlights.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                    <Check className="w-4 h-4 text-kaydo mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-auto">
+                <button
+                  onClick={() => navigate(isAuthenticated ? '/highlights' : '/login?admin=1')}
+                  className="px-5 py-2.5 rounded-full border-2 border-kaydo/40 text-kaydo-dark text-sm font-semibold hover:bg-kaydo/10 transition-colors"
+                >
+                  {t('pillars.highlights.button')}
+                </button>
+              </div>
+              <ReelMockup />
+            </div>
+
+            {/* Card 7 — Arrange: Collages */}
+            <div className="bg-[#F7E7EF] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-rose-600/10 rounded-xl flex items-center justify-center">
+                <LayoutGrid className="w-5 h-5 text-rose-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.collages.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('pillars.collages.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {t('pillars.collages.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                    <Check className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-auto">
+                <button
+                  onClick={() => navigate(isAuthenticated ? '/collages' : '/login?admin=1')}
+                  className="px-5 py-2.5 rounded-full border-2 border-rose-400/60 text-rose-800 text-sm font-semibold hover:bg-rose-100 transition-colors"
+                >
+                  {t('pillars.collages.button')}
+                </button>
+              </div>
+              <CollageMockup />
+            </div>
+
+            {/* Card 8 — Just the two of you: Our Year (full-width) */}
             {/* lg:items-center, unlike its siblings: the phone frame is much
                 taller than this card's text, so top-aligning leaves a hole. */}
             <div className="md:col-span-2 bg-cream-dark rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
@@ -458,7 +604,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 7 — Own: Data Export */}
+            {/* Card 9 — Own: Data Export */}
             <div className="bg-[#E0F4F8] rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center">
                 <Download className="w-5 h-5 text-teal-700" />
@@ -505,7 +651,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Card 7 — Open Source */}
+            {/* Card 10 — Open Source */}
             <div className="bg-bark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
                 <OctocatIcon className="w-5 h-5 text-white" />

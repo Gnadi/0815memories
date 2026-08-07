@@ -15,6 +15,8 @@
       "Private family photo and video sharing",
       "Family recipe tree with version history",
       "Digital scrapbook with PDF export",
+      "Highlight videos built from your family photos",
+      "Photo collages with 14 ready-made layouts",
       "Scheduled future letters to family members",
       "AES-256 encrypted vault for precious originals",
       "Shared yearly review for couples with a sealed letter to the future"
@@ -90,6 +92,28 @@
         "Export finished scrapbooks to PDF"
       ],
       "button": "Open Scrapbooks"
+    },
+    "highlights": {
+      "title": "Relive: Highlight Videos",
+      "desc": "Turn a pile of photos into a short film. Kaydo suggests ready-made reels from what your family already posted — \"Our summers\", or the year that just ended — or you pick every shot yourself. Add a title card, set the pace, then share it to the feed or download the video.",
+      "bullets": [
+        "Ready-made ideas built from your own photos — a season, a year, the last few weeks",
+        "Title card, shot order and timing all under your control",
+        "Four moods and portrait, square or landscape formats",
+        "Share to the family feed or download the finished video"
+      ],
+      "button": "Make a highlight video"
+    },
+    "collages": {
+      "title": "Arrange: Collages",
+      "desc": "Fourteen hand-built layouts — polaroid pairs, film strips, full-bleed heroes — waiting for your pictures. Drop photos into the slots, zoom and reposition each one, then set the frame colour, thickness and corners until it looks like yours.",
+      "bullets": [
+        "14 layouts, from a single hero shot to a six-photo grid",
+        "Zoom, move, swap or flip any photo inside its slot",
+        "Frame colour, thickness, corners and background are yours to set",
+        "Download as an image or post it straight to the feed"
+      ],
+      "button": "Open Collages"
     },
     "ourYear": {
       "title": "Just the two of you: Our Year",
