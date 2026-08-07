@@ -3,16 +3,38 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
+// Horizontal swipe detection. Deliberately conservative: while looking at a
+// photo, an accidental nudge, a vertical scroll or a pinch-zoom must never
+// flip to the next image. A swipe therefore has to travel a good distance,
+// stay clearly horizontal, be quick and use a single finger.
+const SWIPE_MIN_DISTANCE = 90    // px the finger has to travel horizontally
+const SWIPE_MAX_OFF_AXIS = 0.6   // |dy| may be at most 60% of |dx|
+const SWIPE_MAX_DURATION = 800   // ms – slower drags read as scroll/hold
+
 function useSwipe(onPrev, onNext) {
-  const startX = useRef(null)
+  const start = useRef(null)
+  const reset = () => { start.current = null }
   return {
-    onTouchStart: (e) => { startX.current = e.touches[0].clientX },
-    onTouchEnd: (e) => {
-      if (startX.current === null) return
-      const delta = startX.current - e.changedTouches[0].clientX
-      if (Math.abs(delta) > 40) delta > 0 ? onNext() : onPrev()
-      startX.current = null
+    onTouchStart: (e) => {
+      if (e.touches.length !== 1) { reset(); return }
+      const touch = e.touches[0]
+      start.current = { x: touch.clientX, y: touch.clientY, time: Date.now() }
     },
+    // A second finger means pinch-zoom, not a swipe — drop the gesture.
+    onTouchMove: (e) => { if (e.touches.length > 1) reset() },
+    onTouchEnd: (e) => {
+      const from = start.current
+      reset()
+      if (!from) return
+      const touch = e.changedTouches[0]
+      const dx = touch.clientX - from.x
+      const dy = touch.clientY - from.y
+      if (Date.now() - from.time > SWIPE_MAX_DURATION) return
+      if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return
+      if (Math.abs(dy) > Math.abs(dx) * SWIPE_MAX_OFF_AXIS) return
+      dx < 0 ? onNext() : onPrev()
+    },
+    onTouchCancel: reset,
   }
 }
 
