@@ -160,6 +160,7 @@ export default function MemoryHero({ images, imageUrl, category }) {
           <EncryptedImage
             src={allImages[index]}
             alt=""
+            tone="dark"
             className="max-w-full max-h-full object-contain select-none"
             onClick={(e) => e.stopPropagation()}
           />

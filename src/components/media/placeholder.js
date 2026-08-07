@@ -17,3 +17,8 @@ export const BLANK_IMAGE =
 // the tint immediately and a spinner once the wait is long enough to notice —
 // see `.media-decrypting` in index.css for why both live on one class.
 export const PLACEHOLDER_CLASSES = 'media-decrypting'
+
+// For media sitting on a dark surface (the lightbox), where the cream tint
+// would be a bright box on black: spinner only, in white. Pass `tone="dark"`
+// to EncryptedImage rather than reaching for this directly.
+export const PLACEHOLDER_CLASSES_DARK = 'media-decrypting media-decrypting-dark'
