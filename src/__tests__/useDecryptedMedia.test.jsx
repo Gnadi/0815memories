@@ -213,6 +213,26 @@ describe('EncryptedImage', () => {
     expect(container.querySelector('img').className).toContain('media-decrypting')
   })
 
+  it('paints the dark placeholder on dark surfaces and drops it once decrypted', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" tone="dark" />)
+
+    const img = container.querySelector('img')
+    expect(img.className).toContain('media-decrypting-dark')
+    // tone is ours, not an <img> attribute.
+    expect(img.getAttribute('tone')).toBe(null)
+
+    await waitFor(() => expect(container.querySelector('img').className).not.toContain('media-decrypting'))
+  })
+
+  it('keeps the cream placeholder when no tone is given', () => {
+    authState = { encryptionKey: null, keyLoading: true }
+    const { container } = render(<EncryptedImage src={ENCRYPTED_URL} alt="A photo" />)
+
+    expect(container.querySelector('img').className).toContain('media-decrypting')
+    expect(container.querySelector('img').className).not.toContain('media-decrypting-dark')
+  })
+
   it('resolves the below-the-fold copy of a photo the feed already decrypted', async () => {
     // The shape of the home page on a first load: MemoryFeed and AlbumGlimpse
     // are handed the same memories, so the same photo is mounted twice — once

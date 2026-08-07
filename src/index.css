@@ -148,6 +148,19 @@ select {
   animation: kaydo-decrypt-spinner 200ms ease-out 320ms both;
 }
 
+/* Dark surfaces — the memory lightbox — where the cream tint above would flash
+   a bright box onto a black screen, the worse for being the placeholder's own
+   64px intrinsic size rather than the photo's. Dropping the fill leaves the
+   backdrop showing through, so all that appears is the spinner; it is restated
+   in white because the orange has no contrast against black, and drawn a little
+   larger since it now carries the whole placeholder on a full-screen surface.
+   Same artwork as above, only the stroke colour and the track opacity differ. */
+.media-decrypting-dark {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cstyle%3Ecircle,path%7Bfill:none;stroke:%23FFFFFF;stroke-width:2.5%7Dcircle%7Bopacity:.25%7Dpath%7Bstroke-linecap:round;transform-origin:12px 12px;animation:s .8s linear infinite%7D@keyframes s%7Bto%7Btransform:rotate(1turn)%7D%7D@media (prefers-reduced-motion:reduce)%7Bpath%7Banimation-duration:2.4s%7D%7D%3C/style%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 3a9 9 0 0 1 9 9'/%3E%3C/svg%3E");
+  background-size: 36px 36px;
+}
+
 /* Only a `from`: the implicit 100% keyframe is the declared background-size, so
    the spinner grows into the size above and stays there. */
 @keyframes kaydo-decrypt-spinner {
