@@ -6,23 +6,22 @@ import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
+import GalleryRail from '../components/collage/GalleryRail'
+import GalleryStage from '../components/collage/GalleryStage'
+import { CARD_FOCUS, CARD_MOTION, REFERENCE_RATIO, railItemClass } from '../components/collage/galleryLayout'
 import { ASPECTS } from '../components/collage/collageTemplates'
 import { useHighlights } from '../hooks/useHighlights'
 import { useHighlightSuggestions } from '../hooks/useHighlightSuggestions'
 import { makeHighlightDoc } from '../utils/reelRenderer'
 import { devError } from '../utils/devLog'
 
-// Every tile on this page stands on the same stage, the way the collage
-// gallery does — no card, no border, just the artwork and a soft shadow.
-const STAGE = 'h-52 sm:h-64 lg:h-72'
-
 // Three photos from the reel: one large, two stacked beside it. A warmer, more
 // honest preview than a single dark poster, and it shows the reel has more than
-// one shot in it.
+// one shot in it. It has no ratio of its own, so it takes the stage's.
 function ShotMosaic({ shots }) {
   const [first, second, third] = shots
   return (
-    <div className={`${STAGE} grid grid-cols-3 grid-rows-2 gap-1.5`}>
+    <div className="w-full h-full grid grid-cols-3 grid-rows-2 gap-1.5">
       <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]">
         {first && <EncryptedImage src={first.url} thumbSrc={first.thumbUrl || ''} alt="" className="w-full h-full object-cover" />}
       </div>
@@ -37,26 +36,20 @@ function ShotMosaic({ shots }) {
 }
 
 // A saved reel's poster: its first shot, in the shape that reel actually
-// renders at (9:16 by default), fitted to the shared stage height.
-function ReelPoster({ shot, aspect }) {
-  const ratio = ASPECTS[aspect] ?? ASPECTS['9:16']
+// renders at (9:16 by default). The stage handles the sizing.
+function ReelPoster({ shot }) {
   return (
-    <div className={`${STAGE} flex items-center justify-center`}>
-      <div
-        className="relative rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]"
-        style={{ aspectRatio: String(ratio), height: '100%', width: 'auto', maxWidth: '100%' }}
-      >
-        {shot?.url ? (
-          <EncryptedImage src={shot.url} thumbSrc={shot.thumbUrl || ''} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Film className="w-7 h-7 text-bark-muted" />
-          </div>
-        )}
-        <span className="absolute bottom-2 left-2 w-9 h-9 rounded-full bg-warm-white/90 text-kaydo flex items-center justify-center shadow-sm">
-          <Play className="w-4 h-4 ml-0.5" />
-        </span>
-      </div>
+    <div className="relative w-full h-full rounded-2xl overflow-hidden bg-cream-dark shadow-[0_6px_20px_rgba(45,27,14,0.12)]">
+      {shot?.url ? (
+        <EncryptedImage src={shot.url} thumbSrc={shot.thumbUrl || ''} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Film className="w-7 h-7 text-bark-muted" />
+        </div>
+      )}
+      <span className="absolute bottom-2 left-2 w-9 h-9 rounded-full bg-warm-white/90 text-kaydo flex items-center justify-center shadow-sm">
+        <Play className="w-4 h-4 ml-0.5" />
+      </span>
     </div>
   )
 }
@@ -114,36 +107,30 @@ export default function HighlightsPage() {
             </div>
           )}
 
-          {/* Warm header */}
-          <header
-            className="rounded-3xl border border-cream-dark px-5 py-5 sm:px-8 sm:py-6"
-            style={{ background: 'linear-gradient(135deg, #FFFDF9 0%, #FBF0E6 50%, #F6E2D8 100%)' }}
-          >
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-kaydo">
-              <Film className="w-3.5 h-3.5" />
-              {t('highlights.eyebrow')}
-            </span>
-            <h1 className="mt-2.5 text-3xl sm:text-[2.6rem] leading-tight font-bold text-bark">
+          <header className="pt-2 pb-7 text-center sm:pt-8 sm:pb-10">
+            <h1 className="text-[2.75rem] leading-[1.05] font-bold tracking-tight text-bark sm:text-6xl lg:text-7xl">
               {t('highlights.title')}
             </h1>
+            <h2 className="mt-3 text-base text-bark-muted sm:text-lg">
+              {t('highlights.suggestionsHeading')}
+            </h2>
           </header>
 
           {/* Suggestions */}
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-bark-muted mb-4">
-              {t('highlights.suggestionsHeading')}
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
+          <section>
+            <GalleryRail>
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion.id}
                   type="button"
                   disabled={!isAdmin || creating != null}
+                  aria-busy={creating === suggestion.id}
                   onClick={() => create(suggestion.id, suggestionLabel(suggestion), suggestion.shots)}
-                  className="group text-left transition-transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
+                  className={`${railItemClass()} ${CARD_MOTION} ${CARD_FOCUS} relative disabled:opacity-60 disabled:hover:translate-y-0`}
                 >
-                  <ShotMosaic shots={suggestion.shots} />
+                  <GalleryStage ratio={REFERENCE_RATIO}>
+                    <ShotMosaic shots={suggestion.shots} />
+                  </GalleryStage>
                   <span className="flex items-center justify-center gap-1.5 pt-2.5 text-sm font-medium text-bark group-hover:text-kaydo">
                     {creating === suggestion.id
                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -160,30 +147,33 @@ export default function HighlightsPage() {
               <button
                 type="button"
                 disabled={!isAdmin || creating != null}
+                aria-busy={creating === 'blank'}
                 onClick={() => create('blank', t('reel.defaultTitle'), [])}
-                className="group text-left transition-transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
+                className={`${railItemClass()} ${CARD_MOTION} ${CARD_FOCUS} group relative disabled:opacity-60 disabled:hover:translate-y-0`}
               >
-                <span className={`${STAGE} rounded-2xl border-2 border-dashed border-cream-dark bg-warm-white/50 flex flex-col items-center justify-center gap-2 text-bark-muted transition-colors group-hover:border-kaydo group-hover:text-kaydo group-hover:bg-kaydo/5`}>
-                  {creating === 'blank'
-                    ? <Loader2 className="w-8 h-8 animate-spin" />
-                    : <Plus className="w-8 h-8" />}
-                  <span className="text-[11px] px-6 text-center leading-relaxed">{t('highlights.startBlankHint')}</span>
-                </span>
+                <GalleryStage ratio={REFERENCE_RATIO}>
+                  <span className="w-full h-full rounded-3xl border-2 border-dashed border-cream-dark bg-warm-white/50 flex flex-col items-center justify-center gap-2 text-bark-muted transition-colors group-hover:border-kaydo group-hover:text-kaydo group-hover:bg-kaydo/5">
+                    {creating === 'blank'
+                      ? <Loader2 className="w-8 h-8 animate-spin" />
+                      : <Plus className="w-8 h-8" />}
+                    <span className="text-[11px] px-6 text-center leading-relaxed">{t('highlights.startBlankHint')}</span>
+                  </span>
+                </GalleryStage>
                 <span className="block text-center pt-2.5 text-sm font-medium text-bark group-hover:text-kaydo">
                   {t('highlights.startBlank')}
                 </span>
               </button>
-            </div>
+            </GalleryRail>
 
             {suggestions.length === 0 && (
-              <p className="mt-3 text-xs text-bark-muted">{t('highlights.noSuggestions')}</p>
+              <p className="text-center text-xs text-bark-muted">{t('highlights.noSuggestions')}</p>
             )}
           </section>
 
           {/* Saved reels */}
-          <section className="mt-10">
-            <div className="flex items-baseline gap-2 mb-4">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-bark-muted">
+          <section className="mt-6 sm:mt-10">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <h2 className="text-2xl font-semibold text-bark sm:text-3xl">
                 {t('highlights.yoursHeading')}
               </h2>
               {highlights.length > 0 && (
@@ -207,17 +197,19 @@ export default function HighlightsPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
+              <GalleryRail variant="list">
                 {highlights.map((highlight) => {
                   const shots = highlight.doc?.shots || []
                   return (
-                    <div key={highlight.id} className="group relative">
+                    <div key={highlight.id} className={`${railItemClass('list')} group relative`}>
                       <button
                         type="button"
                         onClick={() => navigate(`/highlight/${highlight.id}`)}
-                        className="w-full text-left transition-transform hover:-translate-y-1 active:scale-[0.98]"
+                        className={`w-full ${CARD_MOTION} ${CARD_FOCUS}`}
                       >
-                        <ReelPoster shot={shots[0]} aspect={highlight.doc?.aspect} />
+                        <GalleryStage ratio={ASPECTS[highlight.doc?.aspect] ?? ASPECTS['9:16']} size="list">
+                          <ReelPoster shot={shots[0]} />
+                        </GalleryStage>
                         <span className="block pt-2.5 text-sm font-medium text-bark text-center truncate">
                           {highlight.title || t('reel.defaultTitle')}
                         </span>
@@ -225,18 +217,19 @@ export default function HighlightsPage() {
                           {t('reel.shots', { count: shots.length })}
                         </span>
                       </button>
+                      {/* Visible on touch, where there is no hover to reveal it. */}
                       <button
                         type="button"
                         onClick={() => deleteHighlight(highlight.id)}
                         aria-label={t('editor.delete')}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-warm-white/95 text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center shadow-md"
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-warm-white/95 text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 flex items-center justify-center shadow-md"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )
                 })}
-              </div>
+              </GalleryRail>
             )}
           </section>
         </main>

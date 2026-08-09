@@ -1,14 +1,12 @@
 {
   "defaultTitle": "Meine Collage",
   "collages": {
-    "eyebrow": "Erstellen",
     "title": "Collagen",
     "templatesHeading": "Vorlage auswählen",
     "yoursHeading": "Deine Collagen",
     "empty": "Noch nichts da. Wähle oben eine Vorlage — deine erste Collage erscheint dann hier."
   },
   "highlights": {
-    "eyebrow": "Erstellen",
     "title": "Highlight-Video",
     "suggestionsHeading": "Erstelle ein Video über…",
     "yoursHeading": "Deine Highlight-Videos",
