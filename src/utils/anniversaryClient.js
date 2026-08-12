@@ -43,15 +43,3 @@ export async function countAnniversaryMemories(db, familyId, now = new Date()) {
   if (snap.empty) return null
   return { count: snap.size, year }
 }
-
-// Builds the notificationsQueue payload that dispatchPushNotifications consumes.
-// German strings preserved verbatim from the previous Vercel cron so no
-// user-visible text changes.
-export function buildAnniversaryQueueDoc(familyId, count, year) {
-  return {
-    familyId,
-    title: '📷 3 Jahre ist es her…',
-    body: `Du hast ${count} ${count === 1 ? 'Erinnerung' : 'Erinnerungen'} vom ${year}.`,
-    url: '/timeline?filter=onthisday',
-  }
-}

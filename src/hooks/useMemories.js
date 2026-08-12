@@ -15,6 +15,7 @@ import {
 import { db } from '../config/firebase'
 import { encryptFields, decryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
+import { sendPush } from '../utils/pushTrigger'
 
 /**
  * Text fields every reader needs. The feed decrypts exactly these.
@@ -92,14 +93,10 @@ export function useMemoryWriter(familyId, encryptionKey) {
       familyId,
       createdAt: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New memory added',
-      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
-      url: `/memory/${ref.id}`,
-      createdAt: serverTimestamp(),
-    }).catch(() => {})
+    // Fire-and-forget: api/send-push fans out to the family's other devices.
+    // The title stays out of it on purpose — it is encrypted at rest, and a
+    // push payload would hand it to Firestore and Google in plaintext.
+    sendPush('memory', familyId, { memoryId: ref.id })
   }
 
   const updateMemory = async (id, updates) => {
@@ -202,14 +199,8 @@ export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
       familyId,
       date: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New moment shared',
-      body: moment.caption || 'A new moment was added to the feed.',
-      url: '/',
-      createdAt: serverTimestamp(),
-    }).catch(() => {})
+    // Fire-and-forget: api/send-push fans out to the family's other devices.
+    sendPush('moment', familyId)
   }
 
   const updateMoment = async (id, updates) => {

@@ -38,6 +38,11 @@ export default function NotificationPrompt({ familyId }) {
     setLoading(true)
     try {
       await requestAndSaveFCMToken(familyId)
+    } catch (err) {
+      // Swallowed for the user — but never silently. A permission-denied here
+      // is exactly how push broke before: the prompt closed, the browser asked,
+      // and nothing was ever stored.
+      if (import.meta.env.DEV) console.warn('[push] enabling failed', err)
     } finally {
       setLoading(false)
       setVisible(false)

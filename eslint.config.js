@@ -34,4 +34,12 @@ export default defineConfig([
       globals: globals.serviceworker,
     },
   },
+  {
+    // Vercel Serverless Functions run in Node, where `process` and friends exist
+    // and no browser globals do.
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
