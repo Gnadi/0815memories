@@ -25,7 +25,6 @@ const {
   todayDateKey,
   threeYearsAgoWindow,
   countAnniversaryMemories,
-  buildAnniversaryQueueDoc,
 } = await import('../utils/anniversaryClient.js')
 
 describe('todayDateKey', () => {
@@ -92,22 +91,5 @@ describe('countAnniversaryMemories', () => {
   })
 })
 
-describe('buildAnniversaryQueueDoc', () => {
-  it('uses singular form for exactly one memory', () => {
-    const doc = buildAnniversaryQueueDoc('family-A', 1, 2023)
-    expect(doc.body).toContain('1 Erinnerung')
-    expect(doc.body).not.toContain('Erinnerungen')
-  })
-
-  it('uses plural form for multiple memories', () => {
-    const doc = buildAnniversaryQueueDoc('family-A', 4, 2023)
-    expect(doc.body).toContain('4 Erinnerungen')
-  })
-
-  it('includes the family id, anniversary URL, and German title', () => {
-    const doc = buildAnniversaryQueueDoc('family-A', 2, 2023)
-    expect(doc.familyId).toBe('family-A')
-    expect(doc.url).toBe('/timeline?filter=onthisday')
-    expect(doc.title).toContain('3 Jahre')
-  })
-})
+// The anniversary notification text moved to src/utils/pushMessages.js — it is
+// built server-side now, per recipient language. Covered by pushMessages.test.js.

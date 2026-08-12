@@ -622,7 +622,7 @@ export default function LandingPage() {
 
           {/* ── Works like an app (PWA) ──
               Backed by the real PWA setup: install prompt (usePWAInstall),
-              Workbox precache in src/sw.js, FCM push (functions/index.js)
+              Workbox precache in src/sw.js, FCM push (api/send-push.js)
               and the anniversary reminder hook. Media is deliberately not
               claimed to work offline — encrypted blobs are NetworkOnly. */}
           <div className="mt-12 bg-cream rounded-3xl px-8 py-7">

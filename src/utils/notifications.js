@@ -1,15 +1,17 @@
-import {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { getMessagingInstance, db } from '../config/firebase'
+import i18n from '../i18n'
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
+
+// The token of *this* device, once we know it. Trigger call sites pass it to
+// api/send-push as `excludeToken` so the author of a memory is not notified
+// about their own memory.
+let currentToken = null
+
+export function getCurrentToken() {
+  return currentToken
+}
 
 /**
  * Requests notification permission, obtains the FCM push token,
@@ -39,43 +41,25 @@ export async function requestAndSaveFCMToken(familyId) {
   const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
   if (!token) return null
 
-  // Upsert: one token document per physical device
-  const q = query(collection(db, 'fcmTokens'), where('token', '==', token))
-  const existing = await getDocs(q)
-  if (existing.empty) {
-    await addDoc(collection(db, 'fcmTokens'), {
+  // The token IS the document id — one document per physical device, and the
+  // upsert needs no read. That matters: firestore.rules denies reads on this
+  // collection (a client must not be able to enumerate a family's devices), so
+  // the previous "query by token, then add or update" dance failed on its very
+  // first step and no token was ever stored.
+  //
+  // `lang` travels with the token because api/send-push writes the notification
+  // text at send time, in the *recipient's* language rather than the sender's.
+  await setDoc(
+    doc(db, 'fcmTokens', token),
+    {
       familyId,
       token,
-      createdAt: serverTimestamp(),
-    })
-  } else {
-    // Keep familyId in sync in case the device logs into a different family
-    await updateDoc(existing.docs[0].ref, { familyId, updatedAt: serverTimestamp() })
-  }
+      lang: i18n.resolvedLanguage === 'en' ? 'en' : 'de',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  )
 
+  currentToken = token
   return token
-}
-
-/**
- * Subscribes to foreground FCM messages (app is open).
- * Returns an unsubscribe function.
- *
- * Async because the messaging SDK is code-split; the returned unsubscribe is
- * safe to call before the subscription has actually been established.
- *
- * @param {function({title: string, body: string}): void} onNotification
- * @returns {Promise<function(): void>}
- */
-export async function listenForegroundMessages(onNotification) {
-  const [messaging, { onMessage }] = await Promise.all([
-    getMessagingInstance(),
-    import('firebase/messaging'),
-  ])
-  if (!messaging) return () => {}
-  return onMessage(messaging, (payload) => {
-    onNotification?.({
-      title: payload.data?.title || 'Kaydo',
-      body: payload.data?.body || '',
-    })
-  })
 }

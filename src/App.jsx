@@ -15,7 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 import NotificationPrompt from './components/NotificationPrompt'
 import AnniversaryReminder from './components/AnniversaryReminder'
-import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
+import { requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
 
@@ -98,31 +98,16 @@ function SiteAnalytics() {
   return enabled ? <Analytics /> : null
 }
 
-// Handles push notification prompt + in-app foreground toast.
+// Handles the push notification prompt and keeps this device's FCM token fresh.
 // Must be inside AuthProvider to access familyId.
+//
+// There is deliberately no foreground listener here. FCM's onMessage() only
+// fires when the service worker carries the Firebase messaging SW code, which
+// bridges incoming pushes to open pages; src/sw.js is a plain Workbox worker
+// with its own `push` handler, so it renders every notification itself —
+// foreground included.
 function AppNotifications() {
   const { familyId, isAuthenticated } = useAuth()
-  const { t } = useTranslation('common')
-  const [toast, setToast] = useState(null)
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    // The messaging SDK is code-split, so subscribing resolves a tick later.
-    // Unsubscribing before then still has to work.
-    let unsub = null
-    let cancelled = false
-    listenForegroundMessages(({ title, body }) => {
-      setToast({ title, body })
-      setTimeout(() => setToast(null), 5000)
-    }).then((fn) => {
-      if (cancelled) fn()
-      else unsub = fn
-    })
-    return () => {
-      cancelled = true
-      unsub?.()
-    }
-  }, [isAuthenticated])
 
   // Silently refresh the FCM token on each app load when the user already
   // granted notification permission (covers return visits where the prompt
@@ -131,7 +116,9 @@ function AppNotifications() {
     if (!isAuthenticated || !familyId) return
     if (typeof window === 'undefined' || !('Notification' in window)) return
     if (Notification.permission === 'granted') {
-      requestAndSaveFCMToken(familyId).catch(() => {})
+      requestAndSaveFCMToken(familyId).catch((err) => {
+        if (import.meta.env.DEV) console.warn('[push] token refresh failed', err)
+      })
     }
   }, [isAuthenticated, familyId])
 
@@ -139,23 +126,6 @@ function AppNotifications() {
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
       {isAuthenticated && <AnniversaryReminder />}
-
-      {/* In-app toast for foreground push messages */}
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm bg-bark text-warm-white rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3 animate-fade-in">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-snug">{toast.title}</p>
-            {toast.body && <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.body}</p>}
-          </div>
-          <button
-            onClick={() => setToast(null)}
-            className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity mt-0.5"
-            aria-label={t('actions.dismiss')}
-          >
-            ×
-          </button>
-        </div>
-      )}
     </>
   )
 }

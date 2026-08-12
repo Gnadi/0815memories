@@ -427,24 +427,25 @@ service cloud.firestore {
     // FCM push tokens — any client (admin or viewer) can write their own token.
     // Viewers are not Firebase-authenticated, so we allow unauthenticated writes,
     // but we still require a well-formed shape so the collection can't be abused
-    // as anonymous scratch storage. Tokens are only read server-side via Firebase
-    // Admin SDK (bypasses these rules).
+    // as anonymous scratch storage. Tokens are only read server-side, by
+    // api/send-push via the Admin SDK (which bypasses these rules).
+    //
+    // The document id MUST be the token itself. That is what makes the client's
+    // upsert a pure write: with an auto-id the client had to query for an
+    // existing doc first, and `read: if false` denied exactly that query — so no
+    // token was ever stored and push silently did nothing. Requiring the id to
+    // match also stops a device from parking its token under someone else's id.
     match /fcmTokens/{tokenId} {
       allow create, update: if request.resource.data.familyId is string
                             && request.resource.data.familyId.size() > 0
                             && request.resource.data.familyId.size() < 128
                             && request.resource.data.token is string
                             && request.resource.data.token.size() > 0
-                            && request.resource.data.token.size() < 4096;
+                            // Firestore caps document ids at 1500 bytes.
+                            && request.resource.data.token.size() < 1500
+                            && tokenId == request.resource.data.token;
       allow delete: if false;
       allow read: if false;
-    }
-
-    // Notification queue — admin writes a doc here to trigger the Cloud Function.
-    // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
-    match /notificationsQueue/{docId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false;
     }
   }
 }
