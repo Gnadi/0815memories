@@ -23,10 +23,12 @@
     ]
   },
   "nav": {
+    "howItWorks": "So funktioniert's",
     "features": "Funktionen",
     "privacy": "Datenschutz",
     "security": "Sicherheit",
-    "login": "Anmelden"
+    "login": "Anmelden",
+    "skipToContent": "Zum Hauptinhalt springen"
   },
   "hero": {
     "badge": "Euer privates digitales Zuhause",
@@ -36,7 +38,30 @@
     "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
     "subtitleExample": "deinname.kaydo.app",
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
-    "demoCta": "Demo-Familie ansehen"
+    "demoCta": "Demo-Familie ansehen",
+    "assurances": {
+      "free": "Kostenlos, ohne Kreditkarte",
+      "noAds": "Keine Werbung, kein Tracking",
+      "openSource": "Open Source (MIT)"
+    }
+  },
+  "howItWorks": {
+    "sectionTitle": "In drei Schritten zur eigenen Familienadresse",
+    "sectionSubtitle": "Kein Einrichtungswochenende, kein Admin-Bereich zum Einarbeiten. Die meisten Familien posten ihre erste Erinnerung nach wenigen Minuten.",
+    "steps": [
+      {
+        "title": "Namen sichern",
+        "desc": "Nehmt den Namen, den eure Familie ohnehin benutzt. Er wird zu eurer privaten Adresse — deinname.kaydo.app — und niemand sonst kann sie euch wegnehmen."
+      },
+      {
+        "title": "Die Menschen einladen",
+        "desc": "Ein Link genügt. Oma und Opa öffnen ihn im Browser und sind drin — kein Umweg über den App Store, kein Konto, das man ihnen erklären muss."
+      },
+      {
+        "title": "Zuhause füllen",
+        "desc": "Ein Foto posten, eine Sprachnachricht aufnehmen, einen Brief schreiben, den eure Kinder später lesen. Was ihr hinzufügt, bleibt eures — und ihr könnt jederzeit alles exportieren."
+      }
+    ]
   },
   "screens": {
     "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",

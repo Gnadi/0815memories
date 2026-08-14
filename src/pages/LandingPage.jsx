@@ -53,6 +53,15 @@ function OctocatIcon({ className }) {
   )
 }
 
+/** In-page nav, shared by the desktop bar and the mobile dropdown so the two
+ *  can't drift apart. Each href must match a section id below. */
+const NAV_LINKS = [
+  { href: '#how-it-works', key: 'nav.howItWorks' },
+  { href: '#features', key: 'nav.features' },
+  { href: '#privacy', key: 'nav.privacy' },
+  { href: '#security', key: 'nav.security' },
+]
+
 export default function LandingPage() {
   const navigate = useNavigate()
   const { isAuthenticated, signup, firebaseReady } = useAuth()
@@ -145,6 +154,15 @@ export default function LandingPage() {
         </script>
       </Head>
 
+      {/* Keyboard users land on the sticky nav first; this lets them jump past
+          it without tabbing through every in-page anchor. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-3 focus:left-3 focus:rounded-full focus:bg-bark focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-cream"
+      >
+        {t('nav.skipToContent')}
+      </a>
+
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-cream border-b border-cream-dark">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -156,9 +174,15 @@ export default function LandingPage() {
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-bark-light">
-            <a href="#features" className="hover:text-bark transition-colors underline-offset-4 hover:underline">{t('nav.features')}</a>
-            <a href="#privacy" className="hover:text-bark transition-colors">{t('nav.privacy')}</a>
-            <a href="#security" className="hover:text-bark transition-colors">{t('nav.security')}</a>
+            {NAV_LINKS.map(({ href, key }) => (
+              <a
+                key={href}
+                href={href}
+                className="hover:text-bark transition-colors underline-offset-4 hover:underline"
+              >
+                {t(key)}
+              </a>
+            ))}
           </div>
 
           {/* CTA + mobile menu */}
@@ -186,9 +210,11 @@ export default function LandingPage() {
         {/* Mobile dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-cream border-t border-cream-dark px-5 py-4 flex flex-col gap-4 text-sm font-medium text-bark-light">
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.features')}</a>
-            <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.privacy')}</a>
-            <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.security')}</a>
+            {NAV_LINKS.map(({ href, key }) => (
+              <a key={href} href={href} onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">
+                {t(key)}
+              </a>
+            ))}
             <div className="pt-1">
               <LanguageSwitcher variant="sidebar" />
             </div>
@@ -196,7 +222,7 @@ export default function LandingPage() {
         )}
       </nav>
 
-      <main>
+      <main id="main">
       {/* ── Hero ── */}
       <section className="max-w-6xl mx-auto px-5 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left — claim your family name */}
@@ -232,6 +258,21 @@ export default function LandingPage() {
             {t('hero.demoCta')}
             <span aria-hidden="true">&rarr;</span>
           </a>
+
+          {/* The three objections people raise before typing a name go right
+              next to the field, instead of only in the trust strip far below. */}
+          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-bark-light">
+            {[
+              { icon: <Check className="w-3.5 h-3.5 text-kaydo" aria-hidden="true" />, label: t('hero.assurances.free') },
+              { icon: <Ban className="w-3.5 h-3.5 text-kaydo" aria-hidden="true" />, label: t('hero.assurances.noAds') },
+              { icon: <OctocatIcon className="w-3.5 h-3.5 text-kaydo" />, label: t('hero.assurances.openSource') },
+            ].map(({ icon, label }) => (
+              <li key={label} className="inline-flex items-center gap-1.5">
+                {icon}
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Right — real app screenshot */}
@@ -244,6 +285,37 @@ export default function LandingPage() {
             priority
             className="w-full max-w-xl lg:rotate-1"
           />
+        </div>
+      </section>
+
+      {/* ── How it works ──
+          The feature cards below answer "what is in it"; a visitor who has just
+          typed a family name first needs "what happens after I click", so this
+          sits between the hero and the catalogue. */}
+      <section id="how-it-works" className="py-20">
+        <div className="max-w-6xl mx-auto px-5">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold text-bark mb-3">{t('howItWorks.sectionTitle')}</h2>
+            <p className="text-bark-light max-w-xl mx-auto">{t('howItWorks.sectionSubtitle')}</p>
+          </div>
+
+          <ol className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {t('howItWorks.steps', { returnObjects: true }).map(({ title, desc }, i) => (
+              <li
+                key={title}
+                className="relative bg-warm-white rounded-3xl p-8 shadow-sm border border-cream-dark flex flex-col gap-3"
+              >
+                <span
+                  className="w-10 h-10 rounded-xl bg-kaydo/10 text-kaydo font-bold flex items-center justify-center"
+                  aria-hidden="true"
+                >
+                  {i + 1}
+                </span>
+                <h3 className="text-xl font-bold text-bark">{title}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">{desc}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
@@ -787,7 +859,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
-      <section className="bg-warm-white py-20">
+      <section id="faq" className="bg-warm-white py-20">
         <div className="max-w-2xl mx-auto px-5">
           <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
             {t('faq.sectionTitle')}
