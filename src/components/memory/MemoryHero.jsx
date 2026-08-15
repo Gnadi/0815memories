@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
+import { thumbsFor } from '../../utils/mediaThumbs'
+import { useAuth } from '../../context/AuthContext'
 
 function useSwipe(onPrev, onNext) {
   const startX = useRef(null)
@@ -16,14 +19,34 @@ function useSwipe(onPrev, onNext) {
   }
 }
 
-export default function MemoryHero({ images, imageUrl, category }) {
+export default function MemoryHero({ images, imageUrl, thumbs, category }) {
   const { t } = useTranslation('memory')
-  const allImages = images?.length ? images : (imageUrl ? [imageUrl] : [])
+  const { encryptionKey } = useAuth()
+  // Memoised because the prefetch effect below depends on it: a fresh array
+  // every render would re-run the effect on every render.
+  const allImages = useMemo(
+    () => (images?.length ? images : (imageUrl ? [imageUrl] : [])),
+    [images, imageUrl],
+  )
+  // thumbsFor carries the length check, so a document mid-backfill falls back to
+  // originals rather than risking a mismatched pairing.
+  const heroThumbs = useMemo(() => thumbsFor({ images: allImages, thumbs }), [allImages, thumbs])
   const [index, setIndex] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
 
   const prev = () => setIndex((i) => (i - 1 + allImages.length) % allImages.length)
   const next = () => setIndex((i) => (i + 1) % allImages.length)
+
+  // Warm the neighbours, the way MomentViewer already does. Without this every
+  // arrow press paid a full download from cold, because nothing had asked for
+  // the next photo until it was already on screen.
+  useEffect(() => {
+    if (!encryptionKey || allImages.length < 2) return
+    for (const offset of [1, -1]) {
+      const neighbour = allImages[(index + offset + allImages.length) % allImages.length]
+      if (neighbour) prefetchDecryptedMedia(neighbour, encryptionKey, 'image/*')
+    }
+  }, [index, allImages, encryptionKey])
 
   const heroSwipe = useSwipe(prev, next)
   const lightboxSwipe = useSwipe(prev, next)
@@ -54,9 +77,15 @@ export default function MemoryHero({ images, imageUrl, category }) {
           <>
             {/* No key on the src: remounting per slide threw away the element
                 and re-showed the placeholder even for an already-decrypted
-                neighbour. The hook re-resolves from cache on src change. */}
+                neighbour. The hook re-resolves from cache on src change.
+
+                thumbSrc: the hero is at most 520px tall and was downloading the
+                full original — the same file the lightbox needs. Both go through
+                one cache, so this is a src swap rather than a second pipeline,
+                and the lightbox below deliberately keeps the original. */}
             <EncryptedImage
               src={allImages[index]}
+              thumbSrc={heroThumbs[index]}
               alt=""
               className="w-full h-full object-cover"
               onClick={() => setFullscreen(true)}

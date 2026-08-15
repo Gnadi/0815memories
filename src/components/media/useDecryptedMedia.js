@@ -43,6 +43,16 @@ export function clearDecryptedMediaCache() {
   cache.clear()
   inflight.clear()
   cachedBytes = 0
+  // Queued jobs too. They were written to run against the family key of the
+  // session being torn down, and nothing was left that wanted them — the
+  // components that asked have unmounted. Both callers already handle a
+  // rejection: the hook via its catch, prefetch by swallowing.
+  //
+  // Jobs already in flight are not interrupted; there is no abort signal
+  // threaded through decryptToObjectUrl. They will finish and repopulate the
+  // cache this call just emptied, which is worth closing separately.
+  const abandoned = [...foreground.splice(0), ...prefetch.splice(0)]
+  for (const job of abandoned) job.reject(new Error('Decrypt cancelled: session ended'))
 }
 
 // ── Decrypt scheduling ──────────────────────────────────────────────
@@ -51,11 +61,23 @@ export function clearDecryptedMediaCache() {
 // actually looking at, so images trickle in over several seconds.
 const MAX_CONCURRENT_DECRYPTS = 6
 let activeDecrypts = 0
-const pending = []
+
+// Two lanes, not one. Prefetches used to share the single queue with on-screen
+// media, so opening a lightbox while the feed was still filling put the photo
+// the user was looking at *behind* up to six off-screen warm-ups — and a
+// full-resolution original behind a queue of thumbnails is a wait measured in
+// seconds. The prefetch lane only moves when nothing is waiting on screen.
+const foreground = []
+const prefetch = []
+
+function nextJob() {
+  return foreground.shift() ?? prefetch.shift()
+}
 
 function pump() {
-  while (activeDecrypts < MAX_CONCURRENT_DECRYPTS && pending.length > 0) {
-    const job = pending.shift()
+  while (activeDecrypts < MAX_CONCURRENT_DECRYPTS) {
+    const job = nextJob()
+    if (!job) return
     activeDecrypts++
     job
       .run()
@@ -67,11 +89,27 @@ function pump() {
   }
 }
 
-function schedule(run) {
+function schedule(run, { background = false, key = null } = {}) {
   return new Promise((resolve, reject) => {
-    pending.push({ run, resolve, reject })
+    ;(background ? prefetch : foreground).push({ run, resolve, reject, key })
     pump()
   })
+}
+
+/**
+ * Move a queued prefetch to the front of the foreground lane.
+ *
+ * Without this, a photo that was prefetched and then looked at would still be
+ * stuck behind the rest of the prefetch batch: the job already exists, so
+ * loadDecrypted returns the same in-flight promise and no new job is queued.
+ * That is the exact case a lightbox hits after MomentViewer warms its
+ * neighbours.
+ */
+function promoteToForeground(encryptedUrl) {
+  const index = prefetch.findIndex((job) => job.key === encryptedUrl)
+  if (index === -1) return
+  const [job] = prefetch.splice(index, 1)
+  foreground.unshift(job)
 }
 
 // ── MIME sniffing ───────────────────────────────────────────────────
@@ -122,15 +160,24 @@ async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
   return url
 }
 
-function loadDecrypted(encryptedUrl, encryptionKey, mimeType) {
+function loadDecrypted(encryptedUrl, encryptionKey, mimeType, { background = false } = {}) {
   const hit = cache.get(encryptedUrl)
   if (hit) return Promise.resolve(hit.objectUrl)
 
   let promise = inflight.get(encryptedUrl)
   if (!promise) {
-    promise = schedule(() => decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType))
+    promise = schedule(
+      () => decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType),
+      { background, key: encryptedUrl },
+    )
     inflight.set(encryptedUrl, promise)
-    promise.finally(() => inflight.delete(encryptedUrl))
+    // .finally() derives a new promise, and a derived promise that rejects with
+    // nobody attached is an unhandled rejection. The real callers handle their
+    // own copy; this branch exists only to tidy the map, so it swallows.
+    promise.finally(() => inflight.delete(encryptedUrl)).catch(() => {})
+  } else if (!background) {
+    // Already queued as a prefetch and now genuinely wanted: jump the lane.
+    promoteToForeground(encryptedUrl)
   }
   return promise
 }
@@ -144,7 +191,15 @@ export function prefetchDecryptedMedia(encryptedUrl, encryptionKey, mimeType = '
   const hit = cache.get(encryptedUrl)
   if (hit) return Promise.resolve(hit.objectUrl)
   // Swallow rejections here; the on-screen hook surfaces real errors.
-  return loadDecrypted(encryptedUrl, encryptionKey, mimeType).catch(() => null)
+  // background: these are warm-ups for media nobody is looking at yet, so they
+  // must never delay something on screen.
+  return loadDecrypted(encryptedUrl, encryptionKey, mimeType, { background: true })
+    .catch(() => null)
+}
+
+/** Queue depths, for tests. */
+export function __queueDepths() {
+  return { foreground: foreground.length, prefetch: prefetch.length, active: activeDecrypts }
 }
 
 // Local previews and inline data need no round trip through the decrypt path.
