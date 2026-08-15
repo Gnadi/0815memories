@@ -12,7 +12,7 @@ import VoiceMemoRecorder from './VoiceMemoRecorder'
 import PolaroidBorderEditor from './PolaroidBorderEditor'
 import RichTextEditorLazy, { EditorSkeleton } from './RichTextEditorLazy'
 import { resolvePolaroidBorder } from '../home/polaroidBorder'
-import { thumbsFor, buildThumbs } from '../../utils/mediaThumbs'
+import { thumbsFor, buildThumbs, buildTinyPreviews } from '../../utils/mediaThumbs'
 import {
   EMPTY_RICH_DOC,
   isRichDoc,
@@ -200,6 +200,7 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       const imageUrls = readyImages.map((img) => img.url)
       const readyVideos = videos.filter((v) => v.url)
       const thumbs = buildThumbs(readyImages)
+      const thumbsTiny = buildTinyPreviews(readyImages)
 
       const data = {
         ...form,
@@ -212,6 +213,9 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
         // Additive: written only when at least one image has a thumbnail, and
         // always positionally aligned with `images`.
         ...(thumbs ? { thumbs } : {}),
+        // Same contract again for the blur-up previews, which are encrypted
+        // data URLs carried on the document rather than uploaded assets.
+        ...(thumbsTiny ? { thumbsTiny } : {}),
         imageUrl: imageUrls[0] || '',
         date: Timestamp.fromDate(new Date(form.date)),
         voiceMemos,

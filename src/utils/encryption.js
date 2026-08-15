@@ -3,6 +3,8 @@
  * Each ciphertext is prefixed with a random 12-byte IV.
  */
 
+import { devWarn } from './devLog'
+
 const ALGO = 'AES-GCM'
 const KEY_LENGTH = 256
 const IV_LENGTH = 12 // bytes
@@ -142,15 +144,49 @@ export async function decryptBlob(key, encryptedArrayBuffer, mimeType = 'applica
 
 // ── Field-level helpers ─────────────────────────────────────────────
 
-export async function encryptFields(key, obj, fields) {
+/**
+ * Encrypt the named string fields of an object, in place on a shallow copy.
+ *
+ * A field that is absent is skipped in silence, which is what a partial update
+ * needs — `updateBox(id, { unlockDate })` must not be forced to carry every
+ * encrypted field. But that same silence let the Black Box ship plaintext for
+ * the life of the feature: the field list said 'content' while the create page
+ * wrote 'message', and nothing anywhere said so.
+ *
+ * So create paths, which do know the full shape of the document, can opt into
+ * `warnMissing` and hear about it in development. Keep it off for updates.
+ */
+export async function encryptFields(key, obj, fields, { warnMissing = false } = {}) {
   if (!key) return obj
   const result = { ...obj }
   for (const field of fields) {
     if (result[field] != null && typeof result[field] === 'string') {
       result[field] = await encryptText(key, result[field])
+    } else if (warnMissing && result[field] == null) {
+      devWarn(
+        `encryptFields: "${field}" is absent, so it will be stored unencrypted. ` +
+          'Either the field list or the document shape is wrong.',
+      )
     }
   }
   return result
+}
+
+/**
+ * Decrypt an array of independently-encrypted strings, in parallel.
+ *
+ * For companion arrays like `thumbsTiny`, where each entry is its own ciphertext
+ * rather than one encrypted blob. Non-strings and empty slots pass through, so a
+ * partially-filled positional array keeps its shape. Returns the input unchanged
+ * without a key.
+ */
+export async function decryptStringArray(key, values) {
+  if (!key || !Array.isArray(values)) return values
+  return Promise.all(
+    values.map((value) =>
+      typeof value === 'string' && value !== '' ? decryptText(key, value) : value,
+    ),
+  )
 }
 
 export async function decryptFields(key, obj, fields) {

@@ -14,6 +14,32 @@ service cloud.firestore {
             || request.auth.uid == fam.adminUid);
     }
 
+    // Has this capsule's unlock date arrived?
+    //
+    // Read from the capsule's own metadata document rather than duplicated onto
+    // the content document, so a legacy check-in that moves the date cannot
+    // leave the two disagreeing about when the letter opens. Costs one extra
+    // document read, and only on the path where someone opens a capsule.
+    //
+    // A capsule with no metadata document, or no date, never opens. Both are the
+    // safe direction: `get` returns null for a missing document and `.data` on
+    // null fails the rule, which denies.
+    function capsuleIsOpen(boxId) {
+      let meta = get(/databases/$(database)/documents/blackbox/$(boxId));
+      return meta != null
+        && meta.data.get('unlockDate', null) != null
+        && request.time >= meta.data.unlockDate;
+    }
+
+    // An unlock date may be set, cleared, or pushed further out — never pulled
+    // closer. Clearing it is permitted because it makes the capsule open later,
+    // not sooner: with no date, capsuleIsOpen() is false forever.
+    function unlockDateOnlyMovesForward() {
+      let current = resource.data.get('unlockDate', null);
+      let next = request.resource.data.get('unlockDate', null);
+      return current == null || next == null || next >= current;
+    }
+
     // Shape limits for the login-page customization fields. The family doc is
     // world-readable and served to every login-page visitor, so cap the sizes
     // (limits mirror src/utils/loginPageSanitizer.js) and constrain the mode
@@ -218,7 +244,18 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
-    // Black Box — admin only (time-release sealed messages)
+    // Black Box — a capsule is two documents.
+    //
+    // `blackbox/{boxId}` is the metadata: title, trigger, unlock date. Admins
+    // read it whenever, because the sealed card is built from it — that is what
+    // shows "sealed until March 2041" without anyone reading the letter.
+    //
+    // `blackboxContent/{boxId}` is the letter itself, and Firestore hands it to
+    // nobody before the date. The split is not cosmetic: `blackbox` is queried
+    // by familyId, and on a list operation one denied document fails the whole
+    // listener, so a time condition on the metadata would blank the page for any
+    // family holding one sealed capsule. The same shape as ourYearLetters, which
+    // gets away with a single document only because it is read by ID.
     match /blackbox/{boxId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -227,7 +264,43 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
-      allow update, delete: if request.auth != null
+      // The unlock date may only ever move further away. That is what makes the
+      // legacy check-in safe to expose — a capsule's deadline can be pushed
+      // back indefinitely by someone who is still here, and nobody can pull a
+      // date-triggered capsule forward to read it early. The cost is that a
+      // mistyped date cannot be corrected; the create page confirms it instead.
+      allow update: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && request.resource.data.familyId == resource.data.familyId
+                    && unlockDateOnlyMovesForward();
+      allow delete: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+    }
+
+    match /blackboxContent/{boxId} {
+      // `resource == null` is allowed so a capsule whose content has not been
+      // split out yet reads as absent rather than denied — that is how the card
+      // knows to fall back to the pre-split inline fields.
+      allow read: if request.auth != null
+                    && (resource == null
+                        || (resource.data.familyId != null
+                            && isFamilyAdmin(resource.data.familyId)
+                            && capsuleIsOpen(boxId)));
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId);
+      // Editing the letter is only possible once it has opened. Deleting is
+      // allowed while sealed: discarding a capsule you no longer want must not
+      // require waiting years for it, and the metadata delete is what the UI
+      // actually offers.
+      allow update: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && capsuleIsOpen(boxId);
+      allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
     }

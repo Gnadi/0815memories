@@ -13,7 +13,7 @@ import {
   limit,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { encryptFields, decryptFields } from '../utils/encryption'
+import { encryptFields, decryptFields, decryptStringArray } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 
 /**
@@ -44,7 +44,15 @@ export const MEMORY_WRITE_FIELDS = [...MEMORY_TEXT_FIELDS, 'contentRich']
  */
 async function decryptMemory(key, data) {
   if (!key) return data
-  return decryptFields(key, data, MEMORY_TEXT_FIELDS)
+  const result = await decryptFields(key, data, MEMORY_TEXT_FIELDS)
+  // The blur-up previews, which is the one thing here worth paying for on every
+  // snapshot: ~700 bytes each, measured at 0.19ms, so fifty of them cost about
+  // 10ms and replace fifty spinners with the photos' own colours. They are the
+  // reason this decrypt happens at all — there is nothing to fetch.
+  if (Array.isArray(result.thumbsTiny)) {
+    result.thumbsTiny = await decryptStringArray(key, result.thumbsTiny)
+  }
+  return result
 }
 
 /**

@@ -7,7 +7,7 @@ import { isOnThisDay } from '../utils/helpers'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
-import { thumbAt } from '../utils/mediaThumbs'
+import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
 
 const SEASONS = [
   { name: 'Winter', icon: Snowflake, months: [12, 1, 2] },
@@ -61,6 +61,7 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
             <EncryptedImage
               src={image}
               thumbSrc={thumbAt(memory, 0)}
+              tinyPreview={tinyPreviewAt(memory, 0)}
               alt={memory.title}
               className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
             />

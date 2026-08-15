@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import EncryptedImage from '../media/EncryptedImage'
-import { thumbAt } from '../../utils/mediaThumbs'
+import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
 export default function AlbumGlimpse({ memories }) {
   const { t } = useTranslation('home')
@@ -24,6 +24,7 @@ export default function AlbumGlimpse({ memories }) {
             <EncryptedImage
               src={photo.images?.[0] || photo.imageUrl}
               thumbSrc={thumbAt(photo, 0)}
+              tinyPreview={tinyPreviewAt(photo, 0)}
               alt={photo.title || t('albumGlimpse.photoAlt')}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               style={{ minHeight: i === 0 ? '240px' : '116px' }}

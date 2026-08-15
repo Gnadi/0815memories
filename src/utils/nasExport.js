@@ -112,6 +112,28 @@ function collectMediaUrls(data, prefix) {
       case 'blackbox':
         addArrayUrls(doc.photos, doc.id, 'photo')
         addArrayUrls(doc.videos, doc.id, 'video')
+        addUrl(doc.voiceNote?.url, doc.id, 'voicenote')
+        break
+      // The next three keep their photos inside an encrypted JSON blob, which
+      // decryptCollectionData has already parsed by the time this runs.
+      case 'scrapbooks':
+        // pages[].elements[] — photo elements carry `url`, empty slots do not.
+        for (const page of doc.pages ?? []) {
+          addArrayUrls(page?.elements?.filter((el) => el?.url), doc.id, 'photo')
+        }
+        break
+      case 'collages':
+        addArrayUrls(doc.doc?.slots?.filter((s) => s?.url), doc.id, 'photo')
+        break
+      case 'highlights':
+        // Originals only, as everywhere else — `thumbUrl` is a derivative.
+        addArrayUrls(doc.doc?.shots?.filter((s) => s?.url), doc.id, 'shot')
+        break
+      case 'ourYearChapters':
+        // keepsakes: one photo slot per chapter, alongside song/quote/moment.
+        for (const keepsake of Object.values(doc.keepsakes ?? {})) {
+          addUrl(keepsake?.url, doc.id, 'keepsake')
+        }
         break
     }
   }
@@ -180,20 +202,36 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
     memories: MEMORY_WRITE_FIELDS,
     journals: ['content'],
     children: ['name'],
-    blackbox: ['content'],
+    blackbox: ['title', 'message'],
     recipes: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'],
     scrapbooks: ['title'],
+    collages: ['title'],
+    highlights: ['title'],
+    ourYearRituals: [],
+    ourYearChapters: ['title'],
+    ourYearEntries: [],
+    ourYearLetters: [],
+  }
+  // Fields holding an encrypted JSON blob rather than a string, per collection.
+  const jsonFieldMap = {
+    recipes: ['ingredients'],
+    scrapbooks: ['pages'],
+    collages: ['doc'],
+    highlights: ['doc'],
+    ourYearRituals: ['partners'],
+    ourYearChapters: ['quizQuestions', 'quizReactions', 'keepsakes'],
+    ourYearEntries: ['answers'],
+    ourYearLetters: ['sections'],
   }
   const fields = fieldMap[collectionName]
   if (!fields) return data
+  const jsonFields = jsonFieldMap[collectionName] ?? []
   return Promise.all(data.map(async (item) => {
     let decrypted = await decryptFields(encryptionKey, item, fields)
-    // Handle JSON-encoded fields
-    if (collectionName === 'recipes' && typeof decrypted.ingredients === 'string') {
-      decrypted.ingredients = await decryptJSON(encryptionKey, decrypted.ingredients)
-    }
-    if (collectionName === 'scrapbooks' && typeof decrypted.pages === 'string') {
-      decrypted.pages = await decryptJSON(encryptionKey, decrypted.pages)
+    for (const field of jsonFields) {
+      if (typeof decrypted[field] === 'string') {
+        decrypted[field] = await decryptJSON(encryptionKey, decrypted[field])
+      }
     }
     // The rich description is decrypted by the field list above; parse it so the
     // export writes a readable document and collectMediaUrls can walk it.
@@ -204,7 +242,96 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
   }))
 }
 
-export async function runNasExport({ familyId, familyName, encryptionKey, onProgress, signal }) {
+/**
+ * Attach each capsule's letter, now that a capsule is two documents.
+ *
+ * A sealed capsule's content document is unreadable by design — firestore.rules
+ * withholds it until the unlock date — so it exports as metadata with `sealed:
+ * true` and no letter. That is the correct behaviour rather than a gap: an
+ * export must not be a way around the seal.
+ *
+ * Pre-split capsules still carry their payload inline, and are left as they are.
+ */
+async function attachCapsuleContents(capsules, encryptionKey) {
+  return Promise.all(capsules.map(async (capsule) => {
+    if (capsule.message != null || capsule.photos != null) return capsule
+    try {
+      const snap = await getDoc(doc(db, 'blackboxContent', capsule.id))
+      if (!snap.exists()) return { ...capsule, sealed: false }
+      const raw = serializeTimestamps(snap.data())
+      const [content] = await decryptCollectionData([raw], 'blackbox', encryptionKey)
+      const { familyId: _dropped, ...letter } = content
+      return { ...capsule, ...letter, sealed: false }
+    } catch {
+      // Still sealed. Say so in the export instead of writing an empty capsule
+      // that reads like data loss.
+      return { ...capsule, sealed: true }
+    }
+  }))
+}
+
+/**
+ * Everything belonging to the "Our Year" ritual the signed-in person is part of.
+ *
+ * Scoped to them, not to the family: these documents are readable by exactly two
+ * people, and the other eleven collections are family-wide. Two consequences
+ * worth stating —
+ *
+ *  - Entries are fetched by author. A list mixing a revealed answer with the
+ *    partner's unrevealed one is denied wholesale, so asking for both would
+ *    return nothing rather than half.
+ *  - A letter still sealed stays sealed. Same reasoning as a capsule.
+ */
+async function fetchOurYear(familyId, uid, encryptionKey) {
+  if (!uid) return { rituals: [], chapters: [], entries: [], letters: [] }
+
+  const ritualSnap = await getDocs(query(
+    collection(db, 'ourYearRituals'),
+    where('participantUids', 'array-contains', uid),
+  ))
+  const rituals = ritualSnap.docs
+    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .filter((r) => r.familyId === familyId)
+  if (rituals.length === 0) return { rituals: [], chapters: [], entries: [], letters: [] }
+
+  const chapterSnap = await getDocs(query(
+    collection(db, 'ourYearChapters'),
+    where('participantUids', 'array-contains', uid),
+  ))
+  const ritualIds = new Set(rituals.map((r) => r.id))
+  const chapters = chapterSnap.docs
+    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .filter((c) => ritualIds.has(c.ritualId))
+
+  const entrySnap = await getDocs(query(
+    collection(db, 'ourYearEntries'),
+    where('authorUid', '==', uid),
+  ))
+  const chapterIds = new Set(chapters.map((c) => c.id))
+  const entries = entrySnap.docs
+    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .filter((e) => chapterIds.has(e.chapterId))
+
+  const letters = []
+  for (const chapter of chapters) {
+    try {
+      const snap = await getDoc(doc(db, 'ourYearLetters', chapter.id))
+      if (snap.exists()) letters.push({ id: snap.id, ...serializeTimestamps(snap.data()) })
+    } catch {
+      letters.push({ id: chapter.id, chapterId: chapter.id, sealed: true })
+    }
+  }
+
+  const [decRituals, decChapters, decEntries, decLetters] = await Promise.all([
+    decryptCollectionData(rituals, 'ourYearRituals', encryptionKey),
+    decryptCollectionData(chapters, 'ourYearChapters', encryptionKey),
+    decryptCollectionData(entries, 'ourYearEntries', encryptionKey),
+    decryptCollectionData(letters, 'ourYearLetters', encryptionKey),
+  ])
+  return { rituals: decRituals, chapters: decChapters, entries: decEntries, letters: decLetters }
+}
+
+export async function runNasExport({ familyId, familyName, uid, encryptionKey, onProgress, signal }) {
   if (!familyId || !db) throw new Error('Not authenticated')
 
   const dateStr = new Date().toISOString().slice(0, 10)
@@ -213,33 +340,49 @@ export async function runNasExport({ familyId, familyName, encryptionKey, onProg
   // Phase 1: Fetch all Firestore data
   onProgress({ phase: 'data', current: 0, total: 1, message: 'Fetching family data...' })
 
-  const [memories, moments, journals, children, blackbox, recipes, familySnap] = await Promise.all([
+  const [
+    memories, moments, journals, children, blackbox, recipes,
+    scrapbooks, collages, highlights, familySnap,
+  ] = await Promise.all([
     fetchCollection('memories', familyId, 'date', 'desc'),
     fetchCollection('moments', familyId, 'date', 'desc'),
     fetchCollection('journals', familyId, 'date', 'desc'),
     fetchCollection('children', familyId, 'createdAt', 'asc'),
     fetchCollection('blackbox', familyId, 'createdAt', 'desc'),
     fetchCollection('recipes', familyId, 'createdAt', 'desc'),
+    fetchCollection('scrapbooks', familyId, 'createdAt', 'desc'),
+    fetchCollection('collages', familyId, 'createdAt', 'desc'),
+    fetchCollection('highlights', familyId, 'createdAt', 'desc'),
     getDoc(doc(db, 'families', familyId)),
   ])
 
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
 
   // Decrypt text fields
-  const [decMemories, decMoments, decJournals, decChildren, decBlackbox, decRecipes] = await Promise.all([
+  const [
+    decMemories, decJournals, decChildren, capsuleMetadata, decRecipes,
+    decScrapbooks, decCollages, decHighlights, ourYear,
+  ] = await Promise.all([
     decryptCollectionData(memories, 'memories', encryptionKey),
-    Promise.resolve(moments), // moments have no encrypted text fields
     decryptCollectionData(journals, 'journals', encryptionKey),
     decryptCollectionData(children, 'children', encryptionKey),
     decryptCollectionData(blackbox, 'blackbox', encryptionKey),
     decryptCollectionData(recipes, 'recipes', encryptionKey),
+    decryptCollectionData(scrapbooks, 'scrapbooks', encryptionKey),
+    decryptCollectionData(collages, 'collages', encryptionKey),
+    decryptCollectionData(highlights, 'highlights', encryptionKey),
+    fetchOurYear(familyId, uid, encryptionKey),
   ])
+  const decMoments = moments // moments have no encrypted text fields
+  const decBlackbox = await attachCapsuleContents(capsuleMetadata, encryptionKey)
 
   // Sanitize family doc (strip sensitive fields)
   let familyData = {}
   if (familySnap.exists()) {
     const raw = serializeTimestamps(familySnap.data())
-    const { sharedPassword, adminUid, encryptionKeyJwk, ...safe } = raw
+    // Underscore-prefixed so the lint rule reads these as deliberately discarded
+    // rather than forgotten. The family key especially must never leave here.
+    const { sharedPassword: _pw, adminUid: _admin, encryptionKeyJwk: _key, ...safe } = raw
     familyData = { id: familyId, ...safe }
   }
 
@@ -253,6 +396,10 @@ export async function runNasExport({ familyId, familyName, encryptionKey, onProg
     ...collectMediaUrls(decChildren, 'children'),
     ...collectMediaUrls(decRecipes, 'recipes'),
     ...collectMediaUrls(decBlackbox, 'blackbox'),
+    ...collectMediaUrls(decScrapbooks, 'scrapbooks'),
+    ...collectMediaUrls(decCollages, 'collages'),
+    ...collectMediaUrls(decHighlights, 'highlights'),
+    ...collectMediaUrls(ourYear.chapters, 'ourYearChapters'),
   ]
 
   // Deduplicate by URL
@@ -297,8 +444,19 @@ export async function runNasExport({ familyId, familyName, encryptionKey, onProg
       children: decChildren.length,
       blackbox: decBlackbox.length,
       recipes: decRecipes.length,
+      scrapbooks: decScrapbooks.length,
+      collages: decCollages.length,
+      highlights: decHighlights.length,
+      ourYearChapters: ourYear.chapters.length,
       mediaFiles: mediaResults.length,
       failedDownloads: failedDownloads.length,
+    },
+    // Capsules and letters that were still sealed when this export ran. They are
+    // present as metadata without their contents — deliberately, since an export
+    // must not be a way around the seal. Re-export after they open.
+    stillSealed: {
+      capsules: decBlackbox.filter((c) => c.sealed).map((c) => c.id),
+      ourYearLetters: ourYear.letters.filter((l) => l.sealed).map((l) => l.id),
     },
     failedDownloads,
   }
@@ -313,7 +471,20 @@ export async function runNasExport({ familyId, familyName, encryptionKey, onProg
   dataFolder.file('children.json', JSON.stringify(decChildren, null, 2))
   dataFolder.file('blackbox.json', JSON.stringify(decBlackbox, null, 2))
   dataFolder.file('recipes.json', JSON.stringify(decRecipes, null, 2))
+  dataFolder.file('scrapbooks.json', JSON.stringify(decScrapbooks, null, 2))
+  dataFolder.file('collages.json', JSON.stringify(decCollages, null, 2))
+  dataFolder.file('highlights.json', JSON.stringify(decHighlights, null, 2))
   dataFolder.file('family.json', JSON.stringify(familyData, null, 2))
+
+  // Our Year belongs to two people rather than the family, so it gets its own
+  // folder and is written only when the person exporting is one of them.
+  if (ourYear.rituals.length > 0) {
+    const ourYearFolder = root.folder('data/our-year')
+    ourYearFolder.file('rituals.json', JSON.stringify(ourYear.rituals, null, 2))
+    ourYearFolder.file('chapters.json', JSON.stringify(ourYear.chapters, null, 2))
+    ourYearFolder.file('entries.json', JSON.stringify(ourYear.entries, null, 2))
+    ourYearFolder.file('letters.json', JSON.stringify(ourYear.letters, null, 2))
+  }
 
   // Media files
   for (const { zipPath, blob } of mediaResults) {

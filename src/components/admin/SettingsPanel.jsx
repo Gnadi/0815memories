@@ -9,6 +9,7 @@ import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
+import SecureCapsulesPanel from './SecureCapsulesPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
@@ -384,6 +385,11 @@ export default function SettingsPanel() {
 
       {/* One-off thumbnail migration for photos predating thumbnails */}
       <OptimizePhotosPanel />
+
+      {/* One-off encryption repair for capsules sealed while the Black Box's
+          field list named a field the create page never wrote. Renders nothing
+          for families with no affected capsules. */}
+      <SecureCapsulesPanel />
     </div>
   )
 }

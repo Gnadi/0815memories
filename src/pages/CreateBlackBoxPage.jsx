@@ -6,7 +6,7 @@ import { Timestamp } from 'firebase/firestore'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
 import Sidebar from '../components/layout/Sidebar'
 import { useAuth } from '../context/AuthContext'
-import { useBlackBox } from '../hooks/useBlackBox'
+import { useBlackBox, addMonths, LEGACY_GRACE_MONTHS } from '../hooks/useBlackBox'
 import { useKids } from '../hooks/useKids'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { devError } from '../utils/devLog'
@@ -78,7 +78,14 @@ export default function CreateBlackBoxPage() {
   const selectedKid = kids.find((k) => k.id === form.childId)
 
   const getUnlockDate = () => {
-    if (form.triggerType === 'legacy') return null
+    // A legacy capsule is not dateless — it is a capsule whose date keeps being
+    // pushed forward. Give it the first grace window now, and it will open on its
+    // own if nobody ever checks in again. The old behaviour was a null date,
+    // which is why isUnlocked() had to return false for legacy unconditionally
+    // and those capsules could never open at all.
+    if (form.triggerType === 'legacy') {
+      return addMonths(new Date(), LEGACY_GRACE_MONTHS)
+    }
     if (form.triggerType === 'milestone') {
       return computeMilestoneDate(selectedKid?.birthdate, form.milestone)
     }
@@ -120,7 +127,7 @@ export default function CreateBlackBoxPage() {
       setSubmitError(t('errors.noContent'))
       return
     }
-    if (form.triggerType !== 'legacy' && !unlockDate) {
+    if (!unlockDate) {
       if (form.triggerType === 'milestone' && !selectedKid?.birthdate) {
         setSubmitError(t('errors.milestoneNeedsBirthday'))
       } else if (form.triggerType === 'specificDate') {
@@ -130,6 +137,18 @@ export default function CreateBlackBoxPage() {
       }
       return
     }
+    // A date already past would seal a capsule that is open the moment it exists
+    // — which is what a "18th birthday" milestone does for a 20-year-old. The
+    // rules only let an unlock date move further out, so this cannot be repaired
+    // afterwards; refuse it now instead.
+    if (unlockDate <= new Date()) {
+      setSubmitError(t('errors.unlockDateInPast'))
+      return
+    }
+    // The same forward-only rule means a mistyped year cannot be walked back, so
+    // the date gets read out loud once before anything is sealed.
+    if (!confirm(t('confirmSeal', { date: unlockDateStr }))) return
+
     setSaving(true)
     try {
       const data = {

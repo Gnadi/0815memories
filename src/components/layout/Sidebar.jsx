@@ -5,21 +5,26 @@ import LanguageSwitcher from '../LanguageSwitcher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
+// `adminOnly` must mirror firestore.rules. Scrapbooks, recipes, journals and the
+// Black Box were all missing it while their rules require isFamilyAdmin, so a
+// viewer was shown four items that led to a denied listener and an empty screen
+// — /scrapbook did not even redirect. Everything a viewer cannot read is now
+// flagged, and the routes carry the same check for anyone arriving by URL.
 const navItems = [
   { icon: Home, labelKey: 'nav.home', route: '/home' },
   { icon: Clock, labelKey: 'nav.timeline', route: '/timeline' },
-  { icon: BookMarked, labelKey: 'nav.scrapbooks', route: '/scrapbook' },
-  // Collages and reels write to the family's own collections, so these two are
-  // admin-only like "Our Year".
+  { icon: BookMarked, labelKey: 'nav.scrapbooks', route: '/scrapbook', adminOnly: true },
   { icon: LayoutGrid, labelKey: 'nav.collages', route: '/collages', adminOnly: true },
   { icon: Film, labelKey: 'nav.highlights', route: '/highlights', adminOnly: true },
-  { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes' },
-  { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal' },
-  { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox' },
-  // "Our Year" belongs to two people, so — unlike the rest of this list — it is
-  // never shown to viewers.
+  { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes', adminOnly: true },
+  { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal', adminOnly: true },
+  { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox', adminOnly: true },
+  // "Our Year" is narrower still: admin-only here, and the rules restrict it to
+  // the two participants rather than every admin.
   { icon: CalendarHeart, labelKey: 'nav.ourYear', route: '/our-year', adminOnly: true },
-  { icon: Settings, labelKey: 'nav.settings', route: '/settings' },
+  // SettingsPage itself already bounces viewers to /home, so offering it was the
+  // same defect one page further along.
+  { icon: Settings, labelKey: 'nav.settings', route: '/settings', adminOnly: true },
 ]
 
 export default function Sidebar({ onPostMemory }) {

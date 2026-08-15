@@ -1,19 +1,54 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Lock, Unlock, Trash2, MoreVertical, Calendar, Star, BookOpen } from 'lucide-react'
-import { isUnlocked } from '../../hooks/useBlackBox'
+import { Lock, Unlock, Trash2, MoreVertical, Calendar, Star, BookOpen, RefreshCw } from 'lucide-react'
+import { isUnlocked, daysUntilUnlock, LEGACY_GRACE_MONTHS } from '../../hooks/useBlackBox'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import EncryptedAudio from '../media/EncryptedAudio'
 
-export default function BlackBoxCard({ box, kidName, onDelete }) {
+// A legacy capsule this close to opening is worth mentioning on the card.
+const CHECK_IN_NUDGE_DAYS = 60
+
+export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, onCheckIn }) {
   const { t } = useTranslation('blackbox')
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // The letter is not on `box` — it lives on a document Firestore withholds
+  // until the capsule opens, so it is fetched when the reader asks for it.
+  const [content, setContent] = useState(null)
+  const [loadingContent, setLoadingContent] = useState(false)
+  const [contentError, setContentError] = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
   const unlocked = isUnlocked(box)
 
+  const handleToggleContents = async () => {
+    if (expanded) {
+      setExpanded(false)
+      return
+    }
+    setExpanded(true)
+    if (content || loadingContent) return
+    setLoadingContent(true)
+    setContentError(false)
+    const fetched = await onFetchContent?.(box)
+    setContent(fetched)
+    setContentError(!fetched)
+    setLoadingContent(false)
+  }
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true)
+    try {
+      await onCheckIn?.(box)
+    } finally {
+      setCheckingIn(false)
+    }
+  }
+
   function formatUnlockDate(box) {
-    if (box.triggerType === 'legacy') return t('card.uponLegacyTrigger')
+    // Legacy capsules used to read "upon legacy trigger" because they had no
+    // date. They have one now — a deadline that check-ins push back — so showing
+    // it is both honest and more useful than a euphemism.
     if (!box.unlockDate) return t('card.unknownDate')
     const d = box.unlockDate.toDate ? box.unlockDate.toDate() : new Date(box.unlockDate)
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -33,6 +68,7 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
 
   const triggerDesc = getTriggerDescription(box)
   const unlockDateStr = formatUnlockDate(box)
+  const daysLeft = daysUntilUnlock(box)
 
   return (
     <div
@@ -95,7 +131,7 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
 
       {/* Status bar */}
       {!unlocked ? (
-        <div className="px-5 pb-4">
+        <div className="px-5 pb-4 space-y-2">
           <div className="bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-kaydo flex-shrink-0" />
             <p className="text-xs text-white/80">
@@ -103,6 +139,27 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
               <span className="text-kaydo font-semibold">{unlockDateStr}</span>{t('card.sealedUntilSuffix')}
             </p>
           </div>
+
+          {/* A legacy capsule opens unless someone keeps putting it off. Say so
+              plainly, and put the button that does it right here. */}
+          {box.triggerType === 'legacy' && onCheckIn && (
+            <div className="bg-white/5 rounded-xl px-3 py-2.5">
+              <p className="text-xs text-white/70 leading-relaxed">
+                {daysLeft != null && daysLeft <= CHECK_IN_NUDGE_DAYS
+                  ? t('card.checkInDue', { days: Math.max(daysLeft, 0) })
+                  : t('card.checkInExplainer')}
+              </p>
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={checkingIn}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-kaydo hover:text-kaydo-light disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3 h-3 ${checkingIn ? 'animate-spin' : ''}`} aria-hidden="true" />
+                {t('card.checkInAction', { months: LEGACY_GRACE_MONTHS })}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div>
@@ -114,7 +171,7 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
           </div>
 
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={handleToggleContents}
             className="w-full text-left px-5 pb-4 text-sm text-kaydo font-semibold hover:text-kaydo/80"
           >
             {expanded ? t('card.hideContents') : t('card.viewContents')}
@@ -122,22 +179,28 @@ export default function BlackBoxCard({ box, kidName, onDelete }) {
 
           {expanded && (
             <div className="px-5 pb-5 border-t border-cream-dark pt-4 space-y-3">
-              {box.message && (
-                <p className="text-sm text-bark leading-relaxed whitespace-pre-wrap">{box.message}</p>
+              {loadingContent && (
+                <p className="text-sm text-bark-muted">{t('card.loadingContents')}</p>
               )}
-              {box.photos?.length > 0 && (
+              {contentError && !loadingContent && (
+                <p className="text-sm text-bark-muted">{t('card.contentsUnavailable')}</p>
+              )}
+              {content?.message && (
+                <p className="text-sm text-bark leading-relaxed whitespace-pre-wrap">{content.message}</p>
+              )}
+              {content?.photos?.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
-                  {box.photos.map((url, i) => (
+                  {content.photos.map((url, i) => (
                     <EncryptedImage key={i} src={url} alt="" className="w-24 h-24 rounded-xl object-cover" />
                   ))}
                 </div>
               )}
-              {box.voiceNote?.url && (
-                <EncryptedAudio src={box.voiceNote.url} controls className="w-full mt-2" />
+              {content?.voiceNote?.url && (
+                <EncryptedAudio src={content.voiceNote.url} controls className="w-full mt-2" />
               )}
-              {box.videos?.length > 0 && (
+              {content?.videos?.length > 0 && (
                 <div className="space-y-2 mt-2">
-                  {box.videos.map((v, i) => (
+                  {content.videos.map((v, i) => (
                     <EncryptedVideo
                       key={v.publicId || i}
                       src={v.url}

@@ -13,13 +13,16 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn(),
 }))
 vi.mock('../config/firebase', () => ({ db: {} }))
-vi.mock('../utils/encryption', () => ({ decryptBlob: vi.fn(async () => new Blob(['original'])) }))
-vi.mock('../utils/imageThumbnail', () => ({ createThumbnail: vi.fn() }))
+vi.mock('../utils/encryption', () => ({
+  decryptBlob: vi.fn(async () => new Blob(['original'])),
+  encryptText: vi.fn(async (_k, text) => `enc:${text}`),
+}))
+vi.mock('../utils/imageThumbnail', () => ({ createThumbnail: vi.fn(), createTinyPreview: vi.fn() }))
 vi.mock('../utils/encryptedUpload', () => ({ encryptAndUpload: vi.fn() }))
 vi.mock('../utils/devLog', () => ({ devError: vi.fn(), devWarn: vi.fn() }))
 
 import { getDocs } from 'firebase/firestore'
-import { createThumbnail } from '../utils/imageThumbnail'
+import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import {
   scanThumbnailStatus,
@@ -48,8 +51,8 @@ describe('scanThumbnailStatus', () => {
   it('selects only documents with images and no usable thumbs', async () => {
     getDocs.mockResolvedValueOnce(snapshot([
       { id: 'needs', images: ['a.enc', 'b.enc'] },
-      { id: 'done', images: ['c.enc'], thumbs: ['c-t.enc'] },
-      { id: 'mismatched', images: ['d.enc', 'e.enc'], thumbs: ['d-t.enc'] },
+      { id: 'done', images: ['c.enc'], thumbs: ['c-t.enc'], thumbsTiny: ['tiny'] },
+      { id: 'mismatched', images: ['d.enc', 'e.enc'], thumbs: ['d-t.enc'], thumbsTiny: ['x', 'y'] },
       { id: 'no-images', images: [] },
     ]))
 
@@ -62,7 +65,9 @@ describe('scanThumbnailStatus', () => {
   })
 
   it('reports nothing pending once every document is done', async () => {
-    getDocs.mockResolvedValueOnce(snapshot([{ id: 'done', images: ['c.enc'], thumbs: ['c-t.enc'] }]))
+    getDocs.mockResolvedValueOnce(snapshot([
+      { id: 'done', images: ['c.enc'], thumbs: ['c-t.enc'], thumbsTiny: ['tiny'] },
+    ]))
 
     const { total, pending } = await scanThumbnailStatus('fam1', ['memories'])
     expect(total).toBe(1)
@@ -197,5 +202,85 @@ describe('migrateThumbnails', () => {
     const result = await migrateThumbnails(items, KEY, {})
     expect(result.done).toBe(3)
     expect(result.stopped).toBe(false)
+  })
+})
+
+/* docs/media-performance.md §2. The blur-up preview is built from the same
+   decrypted original as the thumbnail, so the backfill does both in one visit
+   rather than downloading every photo twice. */
+describe('the blur-up preview backfill', () => {
+  const DATA_URL = 'data:image/webp;base64,AAAA'
+
+  beforeEach(() => {
+    createTinyPreview.mockResolvedValue(DATA_URL)
+  })
+
+  it('selects a document that has thumbnails but no previews', async () => {
+    getDocs.mockResolvedValueOnce(snapshot([
+      { id: 'half-done', images: ['a.enc'], thumbs: ['a-t.enc'] },
+    ]))
+
+    const { pending } = await scanThumbnailStatus('fam1', ['memories'])
+
+    expect(pending).toHaveLength(1)
+    // It only needs the half it is missing.
+    expect(pending[0]).toMatchObject({ wantThumbs: false, wantTiny: true })
+  })
+
+  it('stores the preview encrypted on the document rather than uploading it', async () => {
+    const item = { collectionName: 'memories', id: 'm1', images: ['a.enc'], wantThumbs: false, wantTiny: true }
+    const update = vi.fn()
+    runTransaction.mockImplementation(async (_db, fn) =>
+      fn({ get: async () => ({ exists: () => true, data: () => ({ images: ['a.enc'] }) }), update }),
+    )
+
+    await migrateDocument(item, KEY)
+
+    expect(update.mock.calls[0][1]).toEqual({ thumbsTiny: [`enc:${DATA_URL}`] })
+    // The whole point: no second asset on Cloudinary.
+    expect(encryptAndUpload).not.toHaveBeenCalled()
+  })
+
+  it('downloads the original once when both derivatives are missing', async () => {
+    const item = { collectionName: 'memories', id: 'm1', images: ['a.enc'], wantThumbs: true, wantTiny: true }
+    runTransaction.mockImplementation(async (_db, fn) =>
+      fn({ get: async () => ({ exists: () => true, data: () => ({ images: ['a.enc'] }) }), update: vi.fn() }),
+    )
+
+    await migrateDocument(item, KEY)
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the thumbnail when only the preview fails', async () => {
+    // These used to share one try/catch, so a failing preview lost the
+    // thumbnail that had already been uploaded.
+    createTinyPreview.mockRejectedValue(new Error('encode failed'))
+    const item = { collectionName: 'memories', id: 'm1', images: ['a.enc'], wantThumbs: true, wantTiny: true }
+    const update = vi.fn()
+    runTransaction.mockImplementation(async (_db, fn) =>
+      fn({ get: async () => ({ exists: () => true, data: () => ({ images: ['a.enc'] }) }), update }),
+    )
+
+    await migrateDocument(item, KEY)
+
+    expect(update.mock.calls[0][1].thumbs).toEqual(['https://cdn/thumb.enc'])
+  })
+
+  it('writes only the field that is missing', async () => {
+    const item = { collectionName: 'memories', id: 'm1', images: ['a.enc'], wantThumbs: false, wantTiny: true }
+    const update = vi.fn()
+    runTransaction.mockImplementation(async (_db, fn) =>
+      fn({
+        // Thumbs already present: leave them alone.
+        get: async () => ({ exists: () => true, data: () => ({ images: ['a.enc'], thumbs: ['a-t.enc'] }) }),
+        update,
+      }),
+    )
+
+    await migrateDocument(item, KEY)
+
+    expect(update.mock.calls[0][1]).not.toHaveProperty('thumbs')
+    expect(update.mock.calls[0][1]).toHaveProperty('thumbsTiny')
   })
 })

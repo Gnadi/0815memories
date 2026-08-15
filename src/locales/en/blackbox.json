@@ -63,14 +63,14 @@
     "milestoneNeedsBirthday": "Please select a child with a birthday to use a milestone trigger.",
     "incompleteDate": "Please fill in the complete unlock date (month, day, and year).",
     "noUnlockDate": "Please set an unlock date.",
-    "sealFailed": "Failed to seal. Please try again."
+    "sealFailed": "Failed to seal. Please try again.",
+    "unlockDateInPast": "That date has already passed, so the capsule would open immediately. Pick a date in the future."
   },
   "defaultTitle": "For {{name}}",
   "defaultTitleFallback": "the future",
   "card": {
     "untitled": "Untitled",
     "for": "For {{name}}",
-    "uponLegacyTrigger": "Upon legacy trigger",
     "unknownDate": "Unknown date",
     "legacyDescription": "Legacy Trigger — Release after my passing",
     "milestoneDescription": "Life Milestone — {{milestone}}",
@@ -79,6 +79,12 @@
     "sealedUntilSuffix": ". Your legacy is safe with us.",
     "unlocked": "Unlocked",
     "viewContents": "View Contents ↓",
-    "hideContents": "Hide Contents ↑"
-  }
+    "hideContents": "Hide Contents ↑",
+    "loadingContents": "Opening…",
+    "contentsUnavailable": "This capsule's contents could not be opened. It may still be sealed.",
+    "checkInExplainer": "This capsule opens on the date above unless you check in before then. Checking in pushes it back.",
+    "checkInDue": "Opens in {{days}} day(s) unless you check in.",
+    "checkInAction": "I'm still here — push it back {{months}} months"
+  },
+  "confirmSeal": "Seal this capsule until {{date}}?\n\nThe date can be pushed further out later, but never brought forward — not even by you."
 }

@@ -15,6 +15,7 @@ import { BLANK_IMAGE, PLACEHOLDER_CLASSES } from './placeholder'
 function EncryptedPhotoFrame({
   src,
   thumbSrc,
+  tinyPreview,
   alt = '',
   backdropClassName = 'absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-70',
   photoClassName = 'relative z-[1] w-full h-full object-contain',
@@ -23,7 +24,12 @@ function EncryptedPhotoFrame({
 
   if (!src && !thumbSrc) return null
 
-  const url = decryptedUrl || BLANK_IMAGE
+  // The blur-up preview (see utils/mediaThumbs.js) needs no extra element here:
+  // this component already paints the photo twice, so both layers just point at
+  // the ~20px copy until the real one lands. It arrives decrypted on the
+  // document, so there is nothing to wait for.
+  const preview = loading && tinyPreview ? tinyPreview : null
+  const url = decryptedUrl || preview || BLANK_IMAGE
 
   return (
     <>
@@ -38,12 +44,19 @@ function EncryptedPhotoFrame({
       />
       {/* The placeholder rides the front layer, not the backdrop: the backdrop
           is blurred, and a 40px blur erases a 28px spinner. Both layers span
-          the frame, so the tint covers it either way. */}
+          the frame, so the tint covers it either way.
+
+          With a preview there is no spinner to place — the frame already shows
+          the photo's own colours. The front layer gets its own blur so 20px
+          does not read as a pixelated mistake. */}
       <img
         src={url}
         alt={loading ? '' : alt}
         decoding="async"
-        className={loading ? `${photoClassName} ${PLACEHOLDER_CLASSES}` : photoClassName}
+        className={
+          loading && !preview ? `${photoClassName} ${PLACEHOLDER_CLASSES}` : photoClassName
+        }
+        style={preview ? { filter: 'blur(8px)' } : undefined}
       />
     </>
   )

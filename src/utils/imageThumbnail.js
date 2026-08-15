@@ -23,6 +23,14 @@ const THUMBNAIL_QUALITY = 0.75
 // the file bigger than the original.
 const MIN_SOURCE_BYTES = 60 * 1024
 
+// The blur-up preview. Small enough to travel inside the Firestore document as
+// base64 ciphertext — a 20px WebP is a few hundred bytes — and stretched over
+// the frame with a blur, so a photo appears as its own colours immediately
+// rather than as a spinner. 20px is the doc's suggested 16–24 range: below that
+// the shapes go; above it the base64 starts to matter across fifty of them.
+export const TINY_PREVIEW_MAX_EDGE = 20
+const TINY_PREVIEW_QUALITY = 0.6
+
 function targetSize(width, height, maxEdge) {
   const longest = Math.max(width, height)
   if (longest <= maxEdge) return null
@@ -52,10 +60,14 @@ export async function createThumbnail(file, options = {}) {
     maxEdge = THUMBNAIL_MAX_EDGE,
     type = THUMBNAIL_TYPE,
     quality = THUMBNAIL_QUALITY,
+    // The tiny preview wants a result for every photo, however small the
+    // original, because what it removes is a round trip rather than bytes.
+    minSourceBytes = MIN_SOURCE_BYTES,
+    allowUpscaleSkip = true,
   } = options
 
   if (!file || typeof file.type !== 'string' || !file.type.startsWith('image/')) return null
-  if (file.size <= MIN_SOURCE_BYTES) return null
+  if (file.size <= minSourceBytes) return null
   if (typeof createImageBitmap !== 'function') return null
 
   let bitmap
@@ -69,15 +81,20 @@ export async function createThumbnail(file, options = {}) {
 
   try {
     const size = targetSize(bitmap.width, bitmap.height, maxEdge)
-    if (!size) return null
+    // Already smaller than the target. For a real thumbnail that means there is
+    // nothing to do; for the tiny preview it still needs producing, at the
+    // source's own size.
+    if (!size && allowUpscaleSkip) return null
+
+    const target = size ?? { width: bitmap.width, height: bitmap.height }
 
     const canvas = typeof OffscreenCanvas === 'function'
-      ? new OffscreenCanvas(size.width, size.height)
-      : Object.assign(document.createElement('canvas'), size)
+      ? new OffscreenCanvas(target.width, target.height)
+      : Object.assign(document.createElement('canvas'), target)
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
-    ctx.drawImage(bitmap, 0, 0, size.width, size.height)
+    ctx.drawImage(bitmap, 0, 0, target.width, target.height)
 
     const blob = await encodeCanvas(canvas, type, quality)
     // A "thumbnail" that grew is not one.
@@ -88,4 +105,38 @@ export async function createThumbnail(file, options = {}) {
   } finally {
     bitmap.close?.()
   }
+}
+
+/**
+ * A blur-up preview small enough to live inside the Firestore document.
+ *
+ * Returns a `data:image/webp;base64,...` string rather than a Blob, because that
+ * is the shape that survives being encrypted as text and can go straight into an
+ * `<img src>` on the way out — no object URL, no fetch, no decrypt round trip.
+ * `useDecryptedMedia` already treats a `data:` URL as directly usable.
+ *
+ * There is no server-side alternative to this: Cloudinary stores these as `raw`
+ * because it cannot transform ciphertext, so any preview fetched separately
+ * costs a full round trip and defeats the point. This one arrives with the text
+ * fields the feed decrypts anyway.
+ *
+ * @returns {Promise<string|null>} null when a preview cannot be made
+ */
+export async function createTinyPreview(file) {
+  const blob = await createThumbnail(file, {
+    maxEdge: TINY_PREVIEW_MAX_EDGE,
+    quality: TINY_PREVIEW_QUALITY,
+    // Every photo gets one, and a source already under 20px still gets one at
+    // its own size.
+    minSourceBytes: 0,
+    allowUpscaleSkip: false,
+  })
+  if (!blob) return null
+
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(blob)
+  })
 }

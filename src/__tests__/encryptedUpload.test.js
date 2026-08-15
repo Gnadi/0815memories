@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../utils/encryption', () => ({
   encryptBlob: vi.fn(async () => new ArrayBuffer(8)),
+  encryptText: vi.fn(async (_key, text) => `encrypted:${text}`),
 }))
 vi.mock('../utils/imageThumbnail', () => ({
   createThumbnail: vi.fn(),
+  // The blur-up preview is encrypted onto the document rather than uploaded, so
+  // it must never add to the upload count asserted below.
+  createTinyPreview: vi.fn(async () => 'data:image/webp;base64,AAA'),
 }))
 vi.mock('../config/cloudinary', () => ({
   CLOUDINARY_CLOUD_NAME: 'demo',
@@ -120,6 +124,8 @@ describe('encryptAndUploadWithThumb', () => {
       publicId: 'pub-1',
       thumbUrl: 'https://cdn/asset-2.enc',
       thumbPublicId: 'pub-2',
+      // Encrypted text on the document; two uploads, not three.
+      tinyPreview: 'encrypted:data:image/webp;base64,AAA',
     })
   })
 
