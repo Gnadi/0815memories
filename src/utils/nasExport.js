@@ -180,7 +180,7 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
     memories: MEMORY_WRITE_FIELDS,
     journals: ['content'],
     children: ['name'],
-    blackbox: ['content'],
+    blackbox: ['title', 'message'],
     recipes: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'],
     scrapbooks: ['title'],
   }

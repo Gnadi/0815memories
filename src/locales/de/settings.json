@@ -159,6 +159,18 @@
     "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
     "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
   },
+  "secureCapsules": {
+    "label": "Zeitkapseln absichern",
+    "description": "Durch einen Fehler in einer früheren Version wurden Black-Box-Kapseln unverschlüsselt gespeichert. Hier werden sie mit demselben Schlüssel verschlüsselt wie alle anderen Daten eurer Familie. Die Kapseln selbst bleiben unverändert — nur ihre Speicherung.",
+    "scanning": "Kapseln werden geprüft …",
+    "allDone": "Eure Kapseln sind verschlüsselt.",
+    "remaining": "{{pending}} Kapsel(n) noch unverschlüsselt gespeichert.",
+    "start": "Jetzt verschlüsseln",
+    "stop": "Abbrechen",
+    "progress": "{{done}} von {{total}}",
+    "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
+    "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
+  },
   "admins": {
     "label": "Admins verwalten",
     "description": "Erstelle einen einmaligen Einladungslink, um eine weitere Admin-Person hinzuzufügen. Sie legt ihr eigenes Passwort fest. Jede Admin-Person ist nur an diese Familie gebunden.",

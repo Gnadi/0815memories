@@ -159,6 +159,18 @@
     "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
     "error": "Something went wrong. You can safely try again."
   },
+  "secureCapsules": {
+    "label": "Secure your time capsules",
+    "description": "A fault in an earlier version meant Black Box capsules were saved without encryption. This encrypts them, using the same key as the rest of your family's data. The capsules themselves are unchanged — only how they are stored.",
+    "scanning": "Checking your capsules…",
+    "allDone": "Your capsules are encrypted.",
+    "remaining": "{{pending}} capsule(s) still saved without encryption.",
+    "start": "Encrypt them now",
+    "stop": "Stop",
+    "progress": "{{done}} of {{total}}",
+    "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
+    "error": "Something went wrong. You can safely try again."
+  },
   "admins": {
     "label": "Manage Admins",
     "description": "Generate a one-time invite link to add another admin. They'll set their own password. Each admin is bound to this family only.",

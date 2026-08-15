@@ -14,7 +14,18 @@ import {
 import { db } from '../config/firebase'
 import { encryptFields, decryptFields } from '../utils/encryption'
 
-const ENCRYPTED_FIELDS = ['content']
+// The capsule's own words, and the title that names them. Both were previously
+// written in plaintext: this list said 'content', but CreateBlackBoxPage writes
+// 'message', and encryptFields skips a field that is not there. So every
+// capsule sealed before this fix is plaintext in Firestore. decryptText returns
+// its input unchanged when it cannot decrypt, which is the documented behaviour
+// for pre-encryption data, so those older capsules keep rendering while the
+// backfill in utils/blackboxMigration.js catches up.
+//
+// Not encrypted, deliberately: photo/video/voice URLs. The bytes behind them
+// are already ciphertext (see encryptedUpload.js) — encrypting the address too
+// would only stop the client fetching them.
+const ENCRYPTED_FIELDS = ['title', 'message']
 
 export function useBlackBox(familyId, encryptionKey) {
   const [boxes, setBoxes] = useState([])
@@ -51,7 +62,12 @@ export function useBlackBox(familyId, encryptionKey) {
   }, [familyId, encryptionKey])
 
   const addBox = async (box) => {
-    const encrypted = await encryptFields(encryptionKey, box, ENCRYPTED_FIELDS)
+    // warnMissing: the create page builds the whole document, so a field in the
+    // list that isn't in the object means one of the two is wrong. That is the
+    // exact mistake that kept these capsules in plaintext.
+    const encrypted = await encryptFields(encryptionKey, box, ENCRYPTED_FIELDS, {
+      warnMissing: true,
+    })
     await addDoc(collection(db, 'blackbox'), {
       ...encrypted,
       familyId,

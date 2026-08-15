@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { webcrypto } from 'node:crypto'
+
+vi.mock('../utils/devLog', () => ({ devWarn: vi.fn(), devError: vi.fn() }))
+
+import { devWarn } from '../utils/devLog'
 import {
   generateEncryptionKey,
   importEncryptionKey,
@@ -20,6 +24,10 @@ beforeAll(() => {
   if (!globalThis.crypto?.subtle) {
     Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true })
   }
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
 })
 
 describe('encryption helpers', () => {
@@ -84,6 +92,34 @@ describe('encryption helpers', () => {
     const obj = { title: 'plain' }
     expect(await encryptFields(null, obj, ['title'])).toBe(obj)
     expect(await decryptFields(null, obj, ['title'])).toBe(obj)
+  })
+
+  // The Black Box was stored in plaintext for the life of the feature because
+  // its field list named 'content' while the document carried 'message', and a
+  // field that isn't there is skipped without a word. Create paths can now ask
+  // to hear about that; update paths, which pass partial objects, must not.
+  it('warns about an absent field only when the caller opts in', async () => {
+    const { key } = await generateEncryptionKey()
+    const obj = { message: 'hello' }
+
+    await encryptFields(key, obj, ['message', 'content'])
+    expect(devWarn).not.toHaveBeenCalled()
+
+    await encryptFields(key, obj, ['message', 'content'], { warnMissing: true })
+    expect(devWarn).toHaveBeenCalledTimes(1)
+    expect(devWarn.mock.calls[0][0]).toContain('content')
+  })
+
+  it('still encrypts the fields that are present when warning about one that is not', async () => {
+    const { key } = await generateEncryptionKey()
+    const encrypted = await encryptFields(
+      key,
+      { message: 'hello' },
+      ['message', 'content'],
+      { warnMissing: true },
+    )
+    expect(encrypted.message).not.toBe('hello')
+    expect(await decryptText(key, encrypted.message)).toBe('hello')
   })
 
   it('round-trips JSON payloads', async () => {
