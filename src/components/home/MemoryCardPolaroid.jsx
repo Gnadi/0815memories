@@ -5,7 +5,7 @@ import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video }
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
-import { thumbAt } from '../../utils/mediaThumbs'
+import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFramePattern } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
@@ -113,6 +113,7 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
               <EncryptedPhotoFrame
                 src={allImages[imgIndex]}
                 thumbSrc={thumbAt(memory, imgIndex)}
+                tinyPreview={tinyPreviewAt(memory, imgIndex)}
                 alt={memory.title}
               />
             </>

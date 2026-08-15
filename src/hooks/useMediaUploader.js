@@ -79,16 +79,19 @@ export function useMediaUploader(encryptionKey, {
       // Images get a second, downscaled encrypted asset so grids and story
       // circles stop pulling the full-resolution original. thumbUrl is '' when
       // one could not be made; every reader falls back to `url`.
-      const { url, publicId, thumbUrl, thumbPublicId } =
+      // tinyPreview rides along too: an encrypted ~20px data URL that is stored
+      // on the document rather than uploaded, so the feed can show a blurred
+      // version of the real photo with no request at all.
+      const { url, publicId, thumbUrl, thumbPublicId, tinyPreview } =
         await encryptAndUploadWithThumb(file, encryptionKey)
       setImages((prev) =>
         prev.map((img) =>
           img.id === tempId
-            ? { ...img, url, publicId, thumbUrl, thumbPublicId, uploading: false }
+            ? { ...img, url, publicId, thumbUrl, thumbPublicId, tinyPreview, uploading: false }
             : img
         )
       )
-      return { id: tempId, url, publicId, thumbUrl, thumbPublicId }
+      return { id: tempId, url, publicId, thumbUrl, thumbPublicId, tinyPreview }
     } catch (err) {
       devError('Image upload failed:', err)
       setImages((prev) => prev.filter((img) => img.id !== tempId))

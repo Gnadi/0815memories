@@ -1,5 +1,5 @@
-import { encryptBlob } from './encryption'
-import { createThumbnail } from './imageThumbnail'
+import { encryptBlob, encryptText } from './encryption'
+import { createThumbnail, createTinyPreview } from './imageThumbnail'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -92,9 +92,22 @@ export async function encryptAndUploadWithThumb(file, encryptionKey) {
     thumb = null
   }
 
+  // The blur-up preview is not uploaded: it is encrypted as text and stored on
+  // the document itself, which is the whole point — it arrives with the fields
+  // the feed already decrypts, costing no request. Encrypted here so the caller
+  // never holds a plaintext copy of anything.
+  let tinyPreview = ''
+  try {
+    const dataUrl = await createTinyPreview(blob)
+    if (dataUrl) tinyPreview = await encryptText(encryptionKey, dataUrl)
+  } catch {
+    tinyPreview = ''
+  }
+
   return {
     ...original,
     thumbUrl: thumb?.url ?? '',
     thumbPublicId: thumb?.publicId ?? '',
+    tinyPreview,
   }
 }

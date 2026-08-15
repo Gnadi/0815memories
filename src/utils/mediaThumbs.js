@@ -43,3 +43,35 @@ export function buildThumbs(images) {
   const thumbs = images.map((img) => img?.thumbUrl || '')
   return thumbs.some(Boolean) ? thumbs : null
 }
+
+/**
+ * `thumbsTiny` is a second companion array, on exactly the same terms as
+ * `thumbs`: positional, additive, and ignored wholesale if it does not line up.
+ *
+ * Its entries are not URLs. Each is an encrypted `data:image/webp;base64,...`
+ * string of a ~20px copy, so the blur-up preview travels inside the document and
+ * arrives with the text the feed already decrypts — no request, no round trip.
+ * See utils/imageThumbnail.js for why there is no server-side alternative.
+ */
+export function tinyPreviewsFor(doc) {
+  const images = imagesOf(doc)
+  const tiny = Array.isArray(doc?.thumbsTiny) ? doc.thumbsTiny : []
+  if (images.length === 0 || tiny.length !== images.length) return []
+  return tiny
+}
+
+/** Preview for images[index], or '' when there is none to trust. */
+export function tinyPreviewAt(doc, index = 0) {
+  return tinyPreviewsFor(doc)[index] || ''
+}
+
+/** True when the document has images but no usable previews — needs backfill. */
+export function needsTinyPreviews(doc) {
+  return imagesOf(doc).length > 0 && tinyPreviewsFor(doc).length === 0
+}
+
+/** Build `thumbsTiny` to persist, or null when no image produced one. */
+export function buildTinyPreviews(images) {
+  const tiny = images.map((img) => img?.tinyPreview || '')
+  return tiny.some(Boolean) ? tiny : null
+}

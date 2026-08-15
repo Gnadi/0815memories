@@ -172,6 +172,23 @@ export async function encryptFields(key, obj, fields, { warnMissing = false } = 
   return result
 }
 
+/**
+ * Decrypt an array of independently-encrypted strings, in parallel.
+ *
+ * For companion arrays like `thumbsTiny`, where each entry is its own ciphertext
+ * rather than one encrypted blob. Non-strings and empty slots pass through, so a
+ * partially-filled positional array keeps its shape. Returns the input unchanged
+ * without a key.
+ */
+export async function decryptStringArray(key, values) {
+  if (!key || !Array.isArray(values)) return values
+  return Promise.all(
+    values.map((value) =>
+      typeof value === 'string' && value !== '' ? decryptText(key, value) : value,
+    ),
+  )
+}
+
 export async function decryptFields(key, obj, fields) {
   if (!key) return obj
   const result = { ...obj }

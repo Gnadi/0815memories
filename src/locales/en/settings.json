@@ -149,7 +149,7 @@
   },
   "optimizePhotos": {
     "label": "Optimise photos",
-    "description": "Photos uploaded before this feature existed are still loaded at full resolution everywhere. This creates a small preview copy of each one. Originals are never changed.",
+    "description": "Photos uploaded before this feature existed are still loaded at full resolution everywhere, and show a grey box while they arrive. This creates a small preview copy of each one, plus a tiny blurred version stored with the photo so it appears instantly. Originals are never changed.",
     "scanning": "Checking your photos…",
     "allDone": "All {{count}} posts with photos are optimised.",
     "remaining": "{{pending}} of {{total}} posts still to do.",

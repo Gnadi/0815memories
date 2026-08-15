@@ -10,10 +10,10 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { decryptBlob } from './encryption'
-import { createThumbnail } from './imageThumbnail'
+import { decryptBlob, encryptText } from './encryption'
+import { createThumbnail, createTinyPreview } from './imageThumbnail'
 import { encryptAndUpload } from './encryptedUpload'
-import { needsThumbs } from './mediaThumbs'
+import { needsThumbs, needsTinyPreviews } from './mediaThumbs'
 import { devError } from './devLog'
 
 // Collections whose documents carry an `images` array.
@@ -57,8 +57,17 @@ export async function scanThumbnailStatus(familyId, collections = MIGRATABLE_COL
         const data = docSnap.data()
         if (!Array.isArray(data.images) || data.images.length === 0) continue
         total++
-        if (needsThumbs(data)) {
-          pending.push({ collectionName, id: docSnap.id, images: [...data.images] })
+        // Either derivative missing is reason enough to visit the document —
+        // both are built from the same decrypted original, so doing them
+        // together costs one download instead of two.
+        if (needsThumbs(data) || needsTinyPreviews(data)) {
+          pending.push({
+            collectionName,
+            id: docSnap.id,
+            images: [...data.images],
+            wantThumbs: needsThumbs(data),
+            wantTiny: needsTinyPreviews(data),
+          })
         }
       }
 
@@ -89,21 +98,53 @@ async function decryptOriginal(imageUrl, encryptionKey) {
  * document is only ever visited once, instead of being re-downloaded on every
  * future run.
  */
-async function buildThumbs(images, encryptionKey) {
-  return Promise.all(
+async function buildDerivatives(images, encryptionKey, { wantThumbs, wantTiny }) {
+  const results = await Promise.all(
     images.map(async (imageUrl) => {
+      let original
       try {
-        const original = await decryptOriginal(imageUrl, encryptionKey)
-        const thumbBlob = await createThumbnail(original)
-        if (!thumbBlob) return ''
-        const { url } = await encryptAndUpload(thumbBlob, encryptionKey)
-        return url
+        // One download and one decrypt, feeding both derivatives.
+        original = await decryptOriginal(imageUrl, encryptionKey)
       } catch (err) {
-        devError('Thumbnail migration failed for an image:', err)
-        return ''
+        devError('Thumbnail migration could not read an image:', err)
+        return { thumb: '', tiny: '' }
       }
+
+      // Separately, so one derivative failing does not cost the other. They
+      // share only the download.
+      let thumb = ''
+      if (wantThumbs) {
+        try {
+          const thumbBlob = await createThumbnail(original)
+          if (thumbBlob) thumb = (await encryptAndUpload(thumbBlob, encryptionKey)).url
+        } catch (err) {
+          devError('Thumbnail migration failed for an image:', err)
+        }
+      }
+
+      let tiny = ''
+      if (wantTiny) {
+        try {
+          const dataUrl = await createTinyPreview(original)
+          // Encrypted as text and returned to the caller: unlike the thumbnail,
+          // this one is stored on the document rather than uploaded.
+          if (dataUrl) tiny = await encryptText(encryptionKey, dataUrl)
+        } catch (err) {
+          devError('Preview migration failed for an image:', err)
+        }
+      }
+
+      return { thumb, tiny }
     })
   )
+  // null, not a row of empty strings, for a derivative that was never attempted
+  // — commitThumbs writes only what is actually here. An attempted-but-empty
+  // entry still writes '', which is what marks a document as considered so the
+  // next scan stops selecting it.
+  return {
+    thumbs: wantThumbs ? results.map((r) => r.thumb) : null,
+    thumbsTiny: wantTiny ? results.map((r) => r.tiny) : null,
+  }
 }
 
 /**
@@ -114,7 +155,12 @@ async function buildThumbs(images, encryptionKey) {
  *
  * @returns {Promise<boolean>} whether the write went through
  */
-export async function commitThumbs(collectionName, docId, expectedImages, thumbs) {
+export async function commitThumbs(collectionName, docId, expectedImages, derivatives) {
+  // Back-compat: earlier callers passed the thumbs array directly.
+  const { thumbs, thumbsTiny } = Array.isArray(derivatives)
+    ? { thumbs: derivatives, thumbsTiny: null }
+    : derivatives
+
   let written = false
   await runTransaction(db, async (tx) => {
     written = false
@@ -126,10 +172,17 @@ export async function commitThumbs(collectionName, docId, expectedImages, thumbs
     const images = Array.isArray(current.images) ? current.images : []
     if (images.length !== expectedImages.length) return
     if (images.some((url, i) => url !== expectedImages[i])) return
-    // Someone already filled this in.
-    if (Array.isArray(current.thumbs) && current.thumbs.length === images.length) return
 
-    tx.update(ref, { thumbs })
+    // Write only the fields still missing. Each is checked on its own, so a
+    // document that already has one derivative still gets the other.
+    const update = {}
+    const hasThumbs = Array.isArray(current.thumbs) && current.thumbs.length === images.length
+    const hasTiny = Array.isArray(current.thumbsTiny) && current.thumbsTiny.length === images.length
+    if (thumbs && !hasThumbs) update.thumbs = thumbs
+    if (thumbsTiny && !hasTiny) update.thumbsTiny = thumbsTiny
+    if (Object.keys(update).length === 0) return
+
+    tx.update(ref, update)
     written = true
   })
   return written
@@ -142,8 +195,13 @@ export async function commitThumbs(collectionName, docId, expectedImages, thumbs
  * empty strings marks it as considered, so needsThumbs() stops selecting it.
  */
 export async function migrateDocument(item, encryptionKey) {
-  const thumbs = await buildThumbs(item.images, encryptionKey)
-  return commitThumbs(item.collectionName, item.id, item.images, thumbs)
+  // Older callers had no flags; treat that as "both", which is what a document
+  // selected by the previous scan always needed.
+  const derivatives = await buildDerivatives(item.images, encryptionKey, {
+    wantThumbs: item.wantThumbs ?? true,
+    wantTiny: item.wantTiny ?? true,
+  })
+  return commitThumbs(item.collectionName, item.id, item.images, derivatives)
 }
 
 /**

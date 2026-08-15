@@ -5,7 +5,7 @@ import { useState, useRef } from 'react'
 import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
-import { thumbAt } from '../../utils/mediaThumbs'
+import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
 const SPROCKET_COUNT = 14
 
@@ -95,6 +95,7 @@ export default function MemoryCardClassic({ memory, onEdit, onDelete }) {
               <EncryptedPhotoFrame
                 src={allImages[imgIndex]}
                 thumbSrc={thumbAt(memory, imgIndex)}
+                tinyPreview={tinyPreviewAt(memory, imgIndex)}
                 alt={memory.title}
               />
 

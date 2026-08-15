@@ -149,7 +149,7 @@
   },
   "optimizePhotos": {
     "label": "Fotos optimieren",
-    "description": "Fotos, die vor dieser Funktion hochgeladen wurden, werden überall noch in voller Auflösung geladen. Hier wird von jedem eine kleine Vorschau erzeugt. Die Originale bleiben unverändert.",
+    "description": "Fotos, die vor dieser Funktion hochgeladen wurden, werden überall noch in voller Auflösung geladen und zeigen beim Laden ein graues Feld. Hier wird von jedem eine kleine Vorschau erzeugt — dazu eine winzige, unscharfe Version, die beim Foto liegt und sofort erscheint. Die Originale bleiben unverändert.",
     "scanning": "Fotos werden geprüft …",
     "allDone": "Alle {{count}} Beiträge mit Fotos sind optimiert.",
     "remaining": "Noch {{pending}} von {{total}} Beiträgen.",
