@@ -199,6 +199,10 @@ function Layout() {
 
 // Helper to wrap a protected page element. Keeps the route table compact.
 const protect = (element) => <ProtectedRoute>{element}</ProtectedRoute>
+// For pages backed by collections firestore.rules gates on isFamilyAdmin. A
+// viewer reaching one by URL would otherwise mount a listener the rules deny
+// and be left looking at nothing.
+const protectAdmin = (element) => <ProtectedRoute adminOnly>{element}</ProtectedRoute>
 
 // Route table consumed by ViteReactSSG (src/main.jsx). Only the index route ("/")
 // is pre-rendered to static HTML; all other routes stay client-side (see the
@@ -226,32 +230,32 @@ export const routes = [
       { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
       { path: 'moments', element: protect(<MomentsAllPage />) },
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
-      { path: 'settings', element: protect(<SettingsPage />) },
-      { path: 'settings/login-designer', element: protect(<LoginDesignerPage />) },
-      { path: 'journal', element: protect(<KidsJournalPage />) },
-      { path: 'journal/:childId', element: protect(<JournalArchivePage />) },
-      { path: 'journal/:childId/new', element: protect(<JournalEntryPage />) },
-      { path: 'journal/:childId/edit/:entryId', element: protect(<JournalEntryPage />) },
-      { path: 'journal/:childId/view/:entryId', element: protect(<JournalDetailPage />) },
-      { path: 'blackbox', element: protect(<BlackBoxPage />) },
-      { path: 'blackbox/new', element: protect(<CreateBlackBoxPage />) },
-      { path: 'recipes', element: protect(<RecipesPage />) },
-      { path: 'recipes/new', element: protect(<CreateRecipePage />) },
-      { path: 'recipes/:id', element: protect(<RecipeJourneyPage />) },
-      { path: 'recipes/:id/fork', element: protect(<CreateRecipePage />) },
-      { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
-      { path: 'scrapbook', element: protect(<ScrapbooksPage />) },
-      { path: 'scrapbook/:id', element: protect(<ScrapbookEditorPage />) },
+      { path: 'settings', element: protectAdmin(<SettingsPage />) },
+      { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },
+      { path: 'journal', element: protectAdmin(<KidsJournalPage />) },
+      { path: 'journal/:childId', element: protectAdmin(<JournalArchivePage />) },
+      { path: 'journal/:childId/new', element: protectAdmin(<JournalEntryPage />) },
+      { path: 'journal/:childId/edit/:entryId', element: protectAdmin(<JournalEntryPage />) },
+      { path: 'journal/:childId/view/:entryId', element: protectAdmin(<JournalDetailPage />) },
+      { path: 'blackbox', element: protectAdmin(<BlackBoxPage />) },
+      { path: 'blackbox/new', element: protectAdmin(<CreateBlackBoxPage />) },
+      { path: 'recipes', element: protectAdmin(<RecipesPage />) },
+      { path: 'recipes/new', element: protectAdmin(<CreateRecipePage />) },
+      { path: 'recipes/:id', element: protectAdmin(<RecipeJourneyPage />) },
+      { path: 'recipes/:id/fork', element: protectAdmin(<CreateRecipePage />) },
+      { path: 'recipes/:rootId/version/:versionId', element: protectAdmin(<RecipeVersionDetailPage />) },
+      { path: 'scrapbook', element: protectAdmin(<ScrapbooksPage />) },
+      { path: 'scrapbook/:id', element: protectAdmin(<ScrapbookEditorPage />) },
       // Collages and highlight videos — a gallery and an editor each.
-      { path: 'collages', element: protect(<CollagesPage />) },
-      { path: 'collage/:id', element: protect(<CollageEditorPage />) },
-      { path: 'highlights', element: protect(<HighlightsPage />) },
-      { path: 'highlight/:id', element: protect(<HighlightEditorPage />) },
+      { path: 'collages', element: protectAdmin(<CollagesPage />) },
+      { path: 'collage/:id', element: protectAdmin(<CollageEditorPage />) },
+      { path: 'highlights', element: protectAdmin(<HighlightsPage />) },
+      { path: 'highlight/:id', element: protectAdmin(<HighlightEditorPage />) },
       // "Our Year" — the couple's recurring review. Private to two people;
       // the pages and the security rules both enforce that.
-      { path: 'our-year', element: protect(<OurYearPage />) },
-      { path: 'our-year/setup', element: protect(<OurYearSetupPage />) },
-      { path: 'our-year/:chapterId', element: protect(<OurYearChapterPage />) },
+      { path: 'our-year', element: protectAdmin(<OurYearPage />) },
+      { path: 'our-year/setup', element: protectAdmin(<OurYearSetupPage />) },
+      { path: 'our-year/:chapterId', element: protectAdmin(<OurYearChapterPage />) },
     ],
   },
 ]
