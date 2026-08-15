@@ -7,7 +7,9 @@ import { runNasExport } from '../../utils/nasExport'
 import { HardDrive, X } from 'lucide-react'
 
 export default function NasExportButton() {
-  const { familyId, encryptionKey } = useAuth()
+  // `user.uid` is only needed for Our Year, whose documents belong to two people
+  // rather than to the family — everything else is scoped by familyId.
+  const { familyId, encryptionKey, user } = useAuth()
   const { t } = useTranslation('settings')
   const [familyName, setFamilyName] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -41,6 +43,7 @@ export default function NasExportButton() {
       await runNasExport({
         familyId,
         familyName,
+        uid: user?.uid,
         encryptionKey,
         onProgress: setProgress,
         signal: controller.signal,
