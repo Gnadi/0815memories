@@ -13,7 +13,7 @@ export default function BlackBoxPage() {
   const { t } = useTranslation('blackbox')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { boxes, loading, deleteBox } = useBlackBox(familyId, encryptionKey)
+  const { boxes, loading, deleteBox, fetchContent, checkIn } = useBlackBox(familyId, encryptionKey)
   const { kids } = useKids(familyId, encryptionKey)
 
   useEffect(() => {
@@ -86,6 +86,8 @@ export default function BlackBoxPage() {
                   deleteBox(box.id)
                 }
               }}
+              onFetchContent={fetchContent}
+              onCheckIn={checkIn}
             />
           ))}
         </div>

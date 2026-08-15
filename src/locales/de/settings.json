@@ -161,7 +161,7 @@
   },
   "secureCapsules": {
     "label": "Zeitkapseln absichern",
-    "description": "Durch einen Fehler in einer früheren Version wurden Black-Box-Kapseln unverschlüsselt gespeichert. Hier werden sie mit demselben Schlüssel verschlüsselt wie alle anderen Daten eurer Familie. Die Kapseln selbst bleiben unverändert — nur ihre Speicherung.",
+    "description": "Eine frühere Version speicherte Black-Box-Kapseln unverschlüsselt und legte ihren Inhalt im selben Datensatz wie die Beschriftung ab — eine versiegelte Kapsel war so schon vor ihrem Datum lesbar. Hier werden sie verschlüsselt und jeder Brief hinter sein Siegel verschoben. Die Kapseln selbst bleiben unverändert.",
     "scanning": "Kapseln werden geprüft …",
     "allDone": "Eure Kapseln sind verschlüsselt.",
     "remaining": "{{pending}} Kapsel(n) noch unverschlüsselt gespeichert.",

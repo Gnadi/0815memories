@@ -161,7 +161,7 @@
   },
   "secureCapsules": {
     "label": "Secure your time capsules",
-    "description": "A fault in an earlier version meant Black Box capsules were saved without encryption. This encrypts them, using the same key as the rest of your family's data. The capsules themselves are unchanged — only how they are stored.",
+    "description": "An earlier version stored Black Box capsules without encryption, and kept their contents on the same record as the label — so a sealed capsule could be read before its date. This encrypts them and moves each letter behind its seal. The capsules themselves are unchanged.",
     "scanning": "Checking your capsules…",
     "allDone": "Your capsules are encrypted.",
     "remaining": "{{pending}} capsule(s) still saved without encryption.",

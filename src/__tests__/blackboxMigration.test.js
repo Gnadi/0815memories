@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const runTransaction = vi.fn()
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn((_db, name) => ({ name })),
+  deleteField: vi.fn(() => '__DELETE__'),
   doc: vi.fn((_db, name, id) => ({ name, id })),
   getDocs: vi.fn(),
   limit: vi.fn((n) => ({ limit: n })),
@@ -56,8 +57,9 @@ describe('scanBlackboxEncryption', () => {
   it('selects capsules whose fields are still plaintext', async () => {
     getDocs.mockResolvedValueOnce(
       snapshot([
-        { id: 'plain', title: 'For Emma', message: 'When you turn 18…' },
-        { id: 'done', title: 'enc:For Ben', message: 'enc:Hello' },
+        { id: 'plain', familyId: 'fam1', title: 'For Emma', message: 'When you turn 18…' },
+        // Encrypted *and* already split — no inline payload left to move.
+        { id: 'done', familyId: 'fam1', title: 'enc:For Ben' },
       ]),
     )
 
@@ -72,7 +74,7 @@ describe('scanBlackboxEncryption', () => {
 
   it('selects a half-encrypted capsule, and only its plaintext field', async () => {
     getDocs.mockResolvedValueOnce(
-      snapshot([{ id: 'half', title: 'enc:For Emma', message: 'still plain' }]),
+      snapshot([{ id: 'half', familyId: 'fam1', title: 'enc:For Emma', message: 'still plain' }]),
     )
 
     const { pending } = await scanBlackboxEncryption('fam1', KEY)
@@ -81,8 +83,48 @@ describe('scanBlackboxEncryption', () => {
     expect(pending[0].plain).toEqual({ message: 'still plain' })
   })
 
+  it('carries the inline payload forward, decrypted, ready to re-encrypt', async () => {
+    getDocs.mockResolvedValueOnce(
+      snapshot([
+        {
+          id: 'split-me',
+          familyId: 'fam1',
+          title: 'enc:T',
+          message: 'enc:Hi',
+          photos: ['u1'],
+        },
+      ]),
+    )
+
+    const { pending } = await scanBlackboxEncryption('fam1', KEY)
+
+    expect(pending).toHaveLength(1)
+    // Nothing to encrypt — it is already ciphertext — but it still needs moving.
+    expect(pending[0].plain).toEqual({})
+    expect(pending[0].payload).toEqual({
+      message: 'Hi',
+      photos: ['u1'],
+      videos: [],
+      voiceNote: null,
+    })
+  })
+
+  it('selects a capsule whose only inline payload is media', async () => {
+    getDocs.mockResolvedValueOnce(
+      snapshot([{ id: 'photos-only', familyId: 'fam1', title: 'enc:T', photos: ['u1'] }]),
+    )
+
+    const { pending } = await scanBlackboxEncryption('fam1', KEY)
+
+    expect(pending).toHaveLength(1)
+    expect(pending[0].payload.photos).toEqual(['u1'])
+    expect(pending[0].payload.message).toBe('')
+  })
+
   it('ignores absent and empty fields rather than trying to encrypt them', async () => {
-    getDocs.mockResolvedValueOnce(snapshot([{ id: 'sparse', title: '', message: null }]))
+    getDocs.mockResolvedValueOnce(
+      snapshot([{ id: 'sparse', familyId: 'fam1', title: '', message: null }]),
+    )
 
     const { total, pending } = await scanBlackboxEncryption('fam1', KEY)
 
@@ -118,10 +160,16 @@ describe('migrateBlackboxDocument', () => {
         update: vi.fn((ref, data) => {
           txWith.lastWrite = { ref, data }
         }),
+        set: vi.fn((ref, data) => {
+          txWith.lastSet = { ref, data }
+        }),
       })
   }
 
-  beforeEach(() => { txWith.lastWrite = undefined })
+  beforeEach(() => {
+    txWith.lastWrite = undefined
+    txWith.lastSet = undefined
+  })
 
   it('writes ciphertext for exactly the fields it is repairing', async () => {
     runTransaction.mockImplementation(txWith({ title: 'For Emma', message: 'Hi', childId: 'k1' }))
@@ -166,6 +214,95 @@ describe('migrateBlackboxDocument', () => {
     expect(
       await migrateBlackboxDocument({ id: 'gone', plain: { message: 'Hi' } }, KEY),
     ).toBe(false)
+  })
+
+  it('moves an inline payload to the content document and clears the original', async () => {
+    runTransaction.mockImplementation(
+      txWith({ familyId: 'fam1', title: 'enc:T', message: 'enc:Hi', photos: ['u1'] }),
+    )
+
+    const written = await migrateBlackboxDocument(
+      {
+        id: 'b1',
+        familyId: 'fam1',
+        plain: {},
+        payload: { message: 'Hi', photos: ['u1'], videos: [], voiceNote: null },
+      },
+      KEY,
+    )
+
+    expect(written).toBe(true)
+    // The letter lands on the sealed document, encrypted, carrying the familyId
+    // its read rule needs.
+    expect(txWith.lastSet.ref).toEqual({ name: 'blackboxContent', id: 'b1' })
+    expect(txWith.lastSet.data).toEqual({
+      message: 'enc:Hi',
+      photos: ['u1'],
+      videos: [],
+      voiceNote: null,
+      familyId: 'fam1',
+    })
+    // And every inline copy is removed, or the seal would be bypassable.
+    expect(txWith.lastWrite.data).toEqual({
+      message: '__DELETE__',
+      photos: '__DELETE__',
+      videos: '__DELETE__',
+      voiceNote: '__DELETE__',
+    })
+  })
+
+  it('encrypts and splits in a single write when a capsule needs both', async () => {
+    runTransaction.mockImplementation(
+      txWith({ familyId: 'fam1', title: 'For Emma', message: 'Hi' }),
+    )
+
+    const written = await migrateBlackboxDocument(
+      {
+        id: 'b1',
+        familyId: 'fam1',
+        plain: { title: 'For Emma', message: 'Hi' },
+        payload: { message: 'Hi', photos: [], videos: [], voiceNote: null },
+      },
+      KEY,
+    )
+
+    expect(written).toBe(true)
+    expect(txWith.lastSet.data.message).toBe('enc:Hi')
+    // title is encrypted in place; the payload fields are cleared.
+    expect(txWith.lastWrite.data.title).toBe('enc:For Emma')
+    expect(txWith.lastWrite.data.message).toBe('__DELETE__')
+  })
+
+  it('stands down when another tab already split the capsule', async () => {
+    // Payload gone from the metadata document: the content document is now
+    // authoritative and must not be overwritten from a stale scan.
+    runTransaction.mockImplementation(txWith({ familyId: 'fam1', title: 'enc:T' }))
+
+    const written = await migrateBlackboxDocument(
+      {
+        id: 'b1',
+        familyId: 'fam1',
+        plain: {},
+        payload: { message: 'Hi', photos: [], videos: [], voiceNote: null },
+      },
+      KEY,
+    )
+
+    expect(written).toBe(false)
+    expect(txWith.lastSet).toBeUndefined()
+  })
+
+  it('leaves an already-split capsule alone', async () => {
+    runTransaction.mockImplementation(txWith({ familyId: 'fam1', title: 'For Emma' }))
+
+    const written = await migrateBlackboxDocument(
+      { id: 'b1', familyId: 'fam1', plain: { title: 'For Emma' }, payload: null },
+      KEY,
+    )
+
+    expect(written).toBe(true)
+    expect(txWith.lastSet).toBeUndefined()
+    expect(txWith.lastWrite.data).toEqual({ title: 'enc:For Emma' })
   })
 })
 

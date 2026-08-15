@@ -63,14 +63,14 @@
     "milestoneNeedsBirthday": "Bitte wähle ein Kind mit Geburtstag, um einen Meilenstein-Auslöser zu nutzen.",
     "incompleteDate": "Bitte gib das vollständige Freischalt-Datum an (Monat, Tag und Jahr).",
     "noUnlockDate": "Bitte lege ein Freischalt-Datum fest.",
-    "sealFailed": "Versiegeln fehlgeschlagen. Bitte versuche es erneut."
+    "sealFailed": "Versiegeln fehlgeschlagen. Bitte versuche es erneut.",
+    "unlockDateInPast": "Dieses Datum liegt bereits in der Vergangenheit — die Kapsel würde sich sofort öffnen. Wähle ein Datum in der Zukunft."
   },
   "defaultTitle": "Für {{name}}",
   "defaultTitleFallback": "die Zukunft",
   "card": {
     "untitled": "Ohne Titel",
     "for": "Für {{name}}",
-    "uponLegacyTrigger": "Bei Vermächtnis-Auslöser",
     "unknownDate": "Unbekanntes Datum",
     "legacyDescription": "Vermächtnis-Auslöser — Nach meinem Ableben freigeben",
     "milestoneDescription": "Meilenstein im Leben — {{milestone}}",
@@ -79,6 +79,12 @@
     "sealedUntilSuffix": ". Dein Vermächtnis ist bei uns sicher.",
     "unlocked": "Freigeschaltet",
     "viewContents": "Inhalt ansehen ↓",
-    "hideContents": "Inhalt verbergen ↑"
-  }
+    "hideContents": "Inhalt verbergen ↑",
+    "loadingContents": "Wird geöffnet …",
+    "contentsUnavailable": "Der Inhalt dieser Kapsel konnte nicht geöffnet werden. Vielleicht ist sie noch versiegelt.",
+    "checkInExplainer": "Diese Kapsel öffnet sich am oben genannten Datum — es sei denn, du meldest dich vorher. Eine Meldung verschiebt das Datum nach hinten.",
+    "checkInDue": "Öffnet sich in {{days}} Tag(en), wenn du dich nicht meldest.",
+    "checkInAction": "Ich bin noch da — um {{months}} Monate verschieben"
+  },
+  "confirmSeal": "Diese Kapsel bis {{date}} versiegeln?\n\nDas Datum kann später weiter nach hinten verschoben werden, aber niemals nach vorne — auch nicht von dir."
 }

@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDocs,
   limit,
@@ -14,28 +15,40 @@ import { decryptText, encryptText } from './encryption'
 import { devError } from './devLog'
 
 /**
- * Encrypt Black Box capsules that were sealed while the field list was wrong.
+ * Bring old Black Box capsules up to the shape the current code expects. Two
+ * repairs, both derived from the data rather than tracked:
  *
- * `useBlackBox` declared its encrypted fields as ['content'], but the create
- * page writes 'message' — and encryptFields skips a field that is not present.
- * So every capsule sealed before that fix holds its title and message as
- * plaintext in Firestore, in the one collection where that matters most.
+ * 1. **Encrypt them.** `useBlackBox` declared its encrypted fields as
+ *    ['content'], but the create page writes 'message' — and encryptFields skips
+ *    a field that is not present. So every capsule sealed before that fix holds
+ *    its title and message as plaintext, in the one collection where that
+ *    matters most.
  *
- * This has to run from a signed-in admin's browser: the family key lives only
- * in that session (AuthContext), so there is no server-side path. And it has to
- * run *before* the read rules are tightened around sealed capsules — a capsule
- * nobody can read is a capsule nobody can encrypt.
+ * 2. **Move the letter out of reach.** A capsule is now two documents: metadata
+ *    an admin may always read, and a `blackboxContent` document Firestore
+ *    withholds until the unlock date. Pre-split capsules keep their payload
+ *    inline on the metadata document, where the seal cannot reach it.
+ *
+ * Both have to run from a signed-in admin's browser: the family key lives only
+ * in that session (AuthContext), so there is no server-side path. And both have
+ * to run while the metadata document is still readable — a capsule nobody can
+ * read is a capsule nobody can repair. That is why the metadata read rule keeps
+ * no time condition.
  *
  * Modelled on utils/thumbnailMigration.js, including the property that makes
- * that one resumable: nothing records how far a run got. A rescan re-derives
- * the remaining work from the data, because a field that decrypts is a field
- * already done.
+ * that one resumable: nothing records how far a run got. A rescan re-derives the
+ * remaining work, because a field that decrypts is a field already done, and a
+ * capsule with no inline payload is a capsule already split.
  */
 
-// The fields ENCRYPTED_FIELDS now names. Kept here rather than imported so the
-// migration describes the shape it is repairing, not the shape today's code
-// happens to write.
-const FIELDS = ['title', 'message']
+// The metadata fields that should be ciphertext. Kept here rather than imported
+// so the migration describes the shape it is repairing, not the shape today's
+// code happens to write.
+const ENCRYPTABLE_FIELDS = ['title', 'message']
+
+// The payload that belongs on the content document. `message` appears in both
+// lists: on a pre-split capsule it must be encrypted *and* moved.
+const PAYLOAD_FIELDS = ['message', 'photos', 'videos', 'voiceNote']
 
 const SCAN_PAGE_SIZE = 100
 
@@ -53,12 +66,23 @@ async function isPlaintext(encryptionKey, value) {
   return (await decryptText(encryptionKey, value)) === value
 }
 
+/** Does this capsule still carry its payload on the metadata document? */
+function hasInlinePayload(data) {
+  return PAYLOAD_FIELDS.some((field) => data[field] != null)
+}
+
 /**
- * Find every capsule still holding plaintext.
+ * Find every capsule needing either repair.
  *
- * @returns {Promise<{ total: number, pending: Array<{ id: string, plain: Record<string,string> }> }>}
- *          `plain` maps each affected field to the exact plaintext read, which
- *          the commit below uses to detect a concurrent edit.
+ * @returns {Promise<{ total: number, pending: Array<{
+ *            id: string,
+ *            familyId: string,
+ *            plain: Record<string,string>,
+ *            payload: Record<string,unknown>|null,
+ *          }> }>}
+ *          `plain` maps each plaintext field to the exact value read, which the
+ *          commit uses to detect a concurrent edit. `payload` is the inline
+ *          content to move across, or null when the capsule is already split.
  */
 export async function scanBlackboxEncryption(familyId, encryptionKey) {
   if (!familyId || !encryptionKey || !db) return { total: 0, pending: [] }
@@ -84,10 +108,28 @@ export async function scanBlackboxEncryption(familyId, encryptionKey) {
       total++
 
       const plain = {}
-      for (const field of FIELDS) {
+      for (const field of ENCRYPTABLE_FIELDS) {
         if (await isPlaintext(encryptionKey, data[field])) plain[field] = data[field]
       }
-      if (Object.keys(plain).length > 0) pending.push({ id: docSnap.id, plain })
+
+      const inline = hasInlinePayload(data)
+      if (Object.keys(plain).length === 0 && !inline) continue
+
+      // The payload is captured as it will be written to the content document:
+      // decrypted here, re-encrypted at commit, so a half-encrypted pre-split
+      // capsule ends up consistent either way.
+      let payload = null
+      if (inline) {
+        const decrypted = await decryptText(encryptionKey, data.message ?? '')
+        payload = {
+          message: decrypted,
+          photos: data.photos ?? [],
+          videos: data.videos ?? [],
+          voiceNote: data.voiceNote ?? null,
+        }
+      }
+
+      pending.push({ id: docSnap.id, familyId: data.familyId, plain, payload })
     }
 
     if (snapshot.size < SCAN_PAGE_SIZE) break
@@ -98,11 +140,16 @@ export async function scanBlackboxEncryption(familyId, encryptionKey) {
 }
 
 /**
- * Encrypt one capsule's plaintext fields.
+ * Repair one capsule: encrypt what is plaintext, move the letter to its own
+ * document, and clear the inline copy.
  *
- * Writes only the fields it is repairing, and only while they still hold the
- * exact plaintext the scan read. An admin editing the same capsule elsewhere
- * wins — including the case where another tab already ran this migration.
+ * All of it in one transaction, because the intermediate states are the
+ * dangerous ones. Writing the content document first and failing before the
+ * delete leaves the letter readable in two places, one of them unsealed;
+ * clearing first and failing leaves no letter at all.
+ *
+ * The write is discarded if any field moved under us — including the case where
+ * another tab ran this migration first.
  *
  * @returns {Promise<boolean>} whether the write went through
  */
@@ -111,6 +158,14 @@ export async function migrateBlackboxDocument(item, encryptionKey) {
   for (const [field, value] of Object.entries(item.plain)) {
     ciphertext[field] = await encryptText(encryptionKey, value)
   }
+
+  const content = item.payload
+    ? {
+        ...item.payload,
+        message: await encryptText(encryptionKey, item.payload.message ?? ''),
+        familyId: item.familyId,
+      }
+    : null
 
   let written = false
   await runTransaction(db, async (tx) => {
@@ -126,7 +181,17 @@ export async function migrateBlackboxDocument(item, encryptionKey) {
       if (current[field] !== value) return
     }
 
-    tx.update(ref, ciphertext)
+    const metadataUpdate = { ...ciphertext }
+
+    if (content) {
+      // Only move a payload that is still there. If it is gone, another tab
+      // already split this capsule and its content document is authoritative.
+      if (!hasInlinePayload(current)) return
+      tx.set(doc(db, 'blackboxContent', item.id), content)
+      for (const field of PAYLOAD_FIELDS) metadataUpdate[field] = deleteField()
+    }
+
+    tx.update(ref, metadataUpdate)
     written = true
   })
   return written
