@@ -1,18 +1,20 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
+import {
+  onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  updateProfile, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
+} from 'firebase/auth'
 import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
+import { readStored, writeStored, clearStoredSession, setSessionOnly } from '../utils/authStorage'
 
 const AuthContext = createContext(null)
 
 const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
 const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
-
-const readStored = (key) => (typeof window !== 'undefined' ? localStorage.getItem(key) : null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user (admin)
@@ -67,13 +69,13 @@ export function AuthProvider({ children }) {
       }
     }
     setFamilyId(id)
-    localStorage.setItem('fh_familyId', id)
+    writeStored('fh_familyId', id)
     return id
   }, [])
 
   useEffect(() => {
-    // Check localStorage for viewer session
-    const viewerSession = localStorage.getItem('fh_viewer')
+    // A viewer has no Firebase account, so their session lives only in storage.
+    const viewerSession = readStored('fh_viewer')
     if (viewerSession === 'true') {
       setIsViewer(true)
     }
@@ -87,7 +89,7 @@ export function AuthProvider({ children }) {
       setUser(firebaseUser)
       // If a Firebase session is restored but fh_familyId was cleared (e.g. logged out
       // on another tab), resolve it now so the key-loading effect can run.
-      if (firebaseUser && !localStorage.getItem('fh_familyId')) {
+      if (firebaseUser && !readStored('fh_familyId')) {
         await resolveFamilyId(firebaseUser.uid)
       }
       setLoading(false)
@@ -126,7 +128,7 @@ export function AuthProvider({ children }) {
 
         const style = normalizeCardStyle(data.memoryCardStyle)
         setMemoryCardStyle(style)
-        if (typeof window !== 'undefined') localStorage.setItem('fh_cardStyle', style)
+        writeStored('fh_cardStyle', style)
 
         // Import once per family. importEncryptionKey() mints a new CryptoKey on
         // every call, and that identity sits in the dependency array of every
@@ -170,10 +172,12 @@ export function AuthProvider({ children }) {
   const setActiveFamilyId = useCallback((id) => {
     if (!id) return
     setFamilyId(id)
-    localStorage.setItem('fh_familyId', id)
+    writeStored('fh_familyId', id)
   }, [])
 
-  const loginAsViewer = useCallback(async (password, viewerFamilyId) => {
+  // `remember` is the "Stay logged in" box, on by default. It decides how long
+  // the session outlives the window — see utils/authStorage.
+  const loginAsViewer = useCallback(async (password, viewerFamilyId, { remember = true } = {}) => {
     if (!db) throw new Error('Firebase not configured — add env vars and reload')
     if (!viewerFamilyId) throw new Error('No family link provided')
 
@@ -196,14 +200,28 @@ export function AuthProvider({ children }) {
       throw new Error('Invalid password')
     }
 
+    // Chosen before the first write, so both values land in the same store.
+    setSessionOnly(!remember)
     setIsViewer(true)
     setFamilyId(viewerFamilyId)
-    localStorage.setItem('fh_viewer', 'true')
-    localStorage.setItem('fh_familyId', viewerFamilyId)
+    writeStored('fh_viewer', 'true')
+    writeStored('fh_familyId', viewerFamilyId)
   }, [])
 
-  const loginAsAdmin = useCallback(async (email, password) => {
+  const loginAsAdmin = useCallback(async (email, password, { remember = true } = {}) => {
     if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    // Must precede the sign-in: setPersistence decides where the SDK writes the
+    // refresh token, and it only applies to sessions opened after it resolves.
+    // Local persistence (the default we now state explicitly) survives a browser
+    // restart; session persistence dies with the window, matching the storage
+    // side below. A browser that denies IndexedDB rejects here — the sign-in is
+    // still worth attempting, it just falls back to the SDK's in-memory default.
+    setSessionOnly(!remember)
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('Could not set auth persistence:', err)
+    }
     const result = await signInWithEmailAndPassword(auth, email, password)
     const resolved = await resolveFamilyId(result.user.uid)
     if (!resolved) {
@@ -224,6 +242,15 @@ export function AuthProvider({ children }) {
 
     const available = await isSlugAvailable(slug)
     if (!available) throw new Error('This family name is already taken — please choose another')
+
+    // A brand-new family is always remembered; clears any session-only marker
+    // left in this window by an earlier login.
+    setSessionOnly(false)
+    try {
+      await setPersistence(auth, browserLocalPersistence)
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('Could not set auth persistence:', err)
+    }
 
     const result = await createUserWithEmailAndPassword(auth, email, password)
     if (displayName) {
@@ -247,7 +274,7 @@ export function AuthProvider({ children }) {
     // fetch and re-import it, which would hand every consumer a fresh identity.
     keyLoadedForRef.current = familyRef.id
     setFamilyId(familyRef.id)
-    localStorage.setItem('fh_familyId', familyRef.id)
+    writeStored('fh_familyId', familyRef.id)
   }, [])
 
   const logout = useCallback(async () => {
@@ -266,9 +293,7 @@ export function AuthProvider({ children }) {
     clearDecryptedTextCache()
     // The workers hold the family key; tearing them down drops it with the session.
     terminateDecryptPool()
-    localStorage.removeItem('fh_viewer')
-    localStorage.removeItem('fh_familyId')
-    localStorage.removeItem('fh_cardStyle')
+    clearStoredSession()
   }, [user])
 
   const isAuthenticated = !!user || isViewer

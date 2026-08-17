@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -58,7 +58,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [stayLoggedIn, setStayLoggedIn] = useState(false)
+  // On by default: a family album is a place you come back to, not a bank. The
+  // box now genuinely decides how long the session lives (see AuthContext) —
+  // before, it wrote a sessionStorage flag nothing ever read, so every login
+  // was remembered forever regardless of what the box said.
+  const [stayLoggedIn, setStayLoggedIn] = useState(true)
   const [showAdminLogin, setShowAdminLogin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -146,9 +150,10 @@ export default function LoginPage() {
   // The effective familyId: resolved slug takes priority, then query param fallback
   const effectiveFamilyId = resolvedFamilyId || urlFamilyId
 
+  // Already signed in — nothing to log into. Rendered as <Navigate> rather than
+  // a navigate() call in the render body, which updates router state mid-render.
   if (isAuthenticated) {
-    navigate('/home', { replace: true })
-    return null
+    return <Navigate to="/home" replace />
   }
 
   // While looking up a family with nothing cached to show, render a neutral
@@ -170,17 +175,14 @@ export default function LoginPage() {
 
     try {
       if (showAdminLogin && email) {
-        await loginAsAdmin(email, password)
+        await loginAsAdmin(email, password, { remember: stayLoggedIn })
       } else {
         if (!effectiveFamilyId) {
           setError(t('login.errors.needFamilyLink'))
           setLoading(false)
           return
         }
-        await loginAsViewer(password, effectiveFamilyId)
-      }
-      if (!stayLoggedIn) {
-        sessionStorage.setItem('fh_session', 'true')
+        await loginAsViewer(password, effectiveFamilyId, { remember: stayLoggedIn })
       }
       navigate('/home')
     } catch (err) {
