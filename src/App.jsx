@@ -75,7 +75,10 @@ const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 //
 // Everything runs in an effect (post-mount) so the server pre-render and the
 // client's first render both produce <LandingPage /> — avoiding a hydration
-// mismatch on the static "/" output, which is built for the apex.
+// mismatch on the static "/" output, which is built for the apex. The static
+// HTML *is* the landing page, so it would still paint for the moment before
+// hydration; index.html covers it with a cream shell for exactly that window
+// (the .kaydo-restoring class, cleared below once this route has decided).
 export function RootRoute() {
   const navigate = useNavigate()
   const { isAuthenticated, loading } = useAuth()
@@ -86,10 +89,10 @@ export function RootRoute() {
   //
   // Whether a session exists is readable from storage on the first frame, long
   // before Firebase Auth has rehydrated its token, and holding the landing page
-  // back for that moment is what stops the marketing page flashing past on
-  // every launch. Storage cannot be read during the hydration render, hence the
-  // state: both effects below are gated on it, so nothing redirects before the
-  // read has happened.
+  // back for that moment is what keeps a returning member off the marketing
+  // page. Storage cannot be read during the hydration render, hence the state:
+  // both effects below are gated on it, so nothing redirects before the read
+  // has happened.
   const [status, setStatus] = useState('unknown')
 
   useEffect(() => {
@@ -117,6 +120,24 @@ export function RootRoute() {
     setStatus('public')
     if (getSubdomainSlug()) navigate('/login', { replace: true })
   }, [status, isAuthenticated, loading, navigate])
+
+  // Safety valve, mirroring LoginPage's: if auth never settles (blocked
+  // IndexedDB, a stalled SDK init) the shell would otherwise be a permanently
+  // blank page where the landing page used to be. Giving up shows the public
+  // page; a late-arriving session still redirects via the effect above.
+  useEffect(() => {
+    if (status !== 'restoring') return
+    const id = setTimeout(() => setStatus('public'), 5000)
+    return () => clearTimeout(id)
+  }, [status])
+
+  // Uncover the page once this route knows what it is showing. Runs after the
+  // commit that rendered the shell or the landing page, so the markup being
+  // revealed is already the right one.
+  useEffect(() => {
+    if (status === 'unknown' || typeof document === 'undefined') return
+    document.documentElement.classList.remove('kaydo-restoring')
+  }, [status])
 
   if (status === 'restoring') return <PageLoader />
   return <LandingPage />

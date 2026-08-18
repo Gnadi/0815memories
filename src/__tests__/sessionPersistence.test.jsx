@@ -10,7 +10,7 @@
 
    These tests pin the root route's decision and the storage the box selects. */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { act, render, screen, cleanup, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 
 vi.mock('../config/firebase', () => ({ db: null, auth: null, getMessagingInstance: () => Promise.resolve(null) }))
@@ -42,6 +42,7 @@ function renderRoot() {
 }
 
 beforeEach(() => {
+  document.documentElement.classList.remove('kaydo-restoring')
   localStorage.clear()
   sessionStorage.clear()
   Object.assign(auth, { isAuthenticated: false, loading: true })
@@ -62,20 +63,39 @@ describe('what "/" shows a returning visitor', () => {
   it('holds the landing page back while the stored session is still rehydrating', async () => {
     // Firebase Auth has not answered yet: isAuthenticated is false but only
     // because the token is still being read back. Showing the marketing page
-    // here is the flash that made the app look logged out on every launch.
+    // here is what made the app look logged out on every launch.
     localStorage.setItem('fh_familyId', 'fam1')
     Object.assign(auth, { isAuthenticated: false, loading: true })
 
     renderRoot()
 
     await waitFor(() => {
-      expect(document.body.textContent).not.toMatch(/Keep every family memory|Explore the demo family/i)
+      expect(screen.queryByText('Frequently asked questions')).not.toBeInTheDocument()
     })
+    // Held, not redirected — the session has not been confirmed yet.
+    expect(screen.queryByText('the app')).not.toBeInTheDocument()
+  })
 
-    // …and once the token lands, straight into the app.
-    Object.assign(auth, { isAuthenticated: true, loading: false })
-    renderRoot()
-    expect(await screen.findByText('the app')).toBeInTheDocument()
+  it('gives up on a session that never finishes restoring', async () => {
+    // Auth that never settles used to mean a permanently blank "/" — worse than
+    // the landing page it replaced. The valve falls through to the public page.
+    vi.useFakeTimers()
+    try {
+      localStorage.setItem('fh_familyId', 'fam1')
+      Object.assign(auth, { isAuthenticated: false, loading: true })
+
+      renderRoot()
+      // Settle the mount effect first: the valve is only armed once the route
+      // has read storage and moved to 'restoring'. Advancing before that would
+      // consume the wait while no timer was pending yet.
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+      expect(screen.queryByText('Frequently asked questions')).not.toBeInTheDocument()
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(5001) })
+      expect(screen.getByText('Frequently asked questions')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('falls through to the landing page when the stored family outlived its session', async () => {
@@ -86,6 +106,19 @@ describe('what "/" shows a returning visitor', () => {
     renderRoot()
 
     expect(await screen.findByText('Frequently asked questions')).toBeInTheDocument()
+  })
+
+  it('uncovers the pre-hydration shell once it has decided', async () => {
+    // index.html hides #root when a session is stored. If this route never
+    // cleared the class, the whole app would stay invisible behind it.
+    document.documentElement.classList.add('kaydo-restoring')
+    Object.assign(auth, { isAuthenticated: false, loading: false })
+
+    renderRoot()
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('kaydo-restoring')).toBe(false)
+    })
   })
 
   it('still shows the landing page to a visitor with no session', async () => {

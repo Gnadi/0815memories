@@ -280,6 +280,17 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     if (user && auth) {
       await signOut(auth)
+      // The SDK's persistence mode is sticky for the life of the page, and the
+      // storage side is about to be reset to "remembered" by clearStoredSession.
+      // Without this, a session-only login followed by a logout and then any
+      // sign-in that does not go through loginAsAdmin — invite redemption calls
+      // createUserWithEmailAndPassword directly — would leave the token dying
+      // with the window while the family binding sat in localStorage.
+      try {
+        await setPersistence(auth, browserLocalPersistence)
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('Could not reset auth persistence:', err)
+      }
     }
     keyLoadedForRef.current = null
     setIsViewer(false)
