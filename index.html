@@ -34,6 +34,29 @@
 
     <!-- The Anton display font is self-hosted via @font-face in src/index.css,
          so there is no render-blocking external font stylesheet here. -->
+
+    <!-- "/" is pre-rendered to the marketing landing page and is also the SPA
+         fallback and the PWA's start_url, so a returning member's app launch
+         paints that page for the moment before hydration — the app looking
+         logged out, every time. When a session is stored, hide it behind the
+         same cream the loading shell uses; src/App.jsx (RootRoute) uncovers the
+         page as soon as it has decided between the app and the landing page.
+         The timeout is the failsafe for a bundle that never runs: without it a
+         broken deploy would leave a returning visitor on a blank page. -->
+    <style>
+      html.kaydo-restoring body { background: #FDF6EC; }
+      html.kaydo-restoring #root { visibility: hidden; }
+    </style>
+    <script>
+      try {
+        if (location.pathname === '/' && localStorage.getItem('fh_familyId')) {
+          document.documentElement.classList.add('kaydo-restoring')
+          setTimeout(function () {
+            document.documentElement.classList.remove('kaydo-restoring')
+          }, 4000)
+        }
+      } catch (e) { /* storage blocked — show the page as normal */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>

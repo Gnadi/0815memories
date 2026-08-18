@@ -18,6 +18,7 @@ import AnniversaryReminder from './components/AnniversaryReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 
 import { getSubdomainSlug } from './utils/familySlug'
+import { hasStoredSession } from './utils/authStorage'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -63,18 +64,82 @@ const OurYearPage = lazyPage(() => import('./pages/OurYearPage'))
 const OurYearSetupPage = lazyPage(() => import('./pages/OurYearSetupPage'))
 const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 
-// On a family subdomain (e.g. the-millers.kaydo.app) send visitors to /login;
-// on the apex domain show the marketing landing page. The redirect runs in an
-// effect (post-mount) so the server pre-render and the client's first render
-// both produce <LandingPage /> — avoiding a hydration mismatch on the static
-// "/" output, which is built for the apex.
-function SubdomainRedirect() {
+// What "/" resolves to, in priority order:
+//
+//   1. A signed-in visitor goes straight to /home. "/" is where every return
+//      visit starts — a bookmark, a tapped app icon, the PWA's start_url — and
+//      showing the marketing page to someone who is already in their family
+//      reads as having been logged out, even though the session is intact.
+//   2. On a family subdomain (e.g. the-millers.kaydo.app), /login.
+//   3. Otherwise the marketing landing page.
+//
+// Everything runs in an effect (post-mount) so the server pre-render and the
+// client's first render both produce <LandingPage /> — avoiding a hydration
+// mismatch on the static "/" output, which is built for the apex. The static
+// HTML *is* the landing page, so it would still paint for the moment before
+// hydration; index.html covers it with a cream shell for exactly that window
+// (the .kaydo-restoring class, cleared below once this route has decided).
+export function RootRoute() {
   const navigate = useNavigate()
+  const { isAuthenticated, loading } = useAuth()
+  // 'unknown'   — pre-hydration, storage not read yet (renders the landing page,
+  //               matching the pre-rendered HTML byte for byte)
+  // 'restoring' — a session is stored; hold a blank shell until auth confirms it
+  // 'public'    — no session, or the stored one is stale: show the public page
+  //
+  // Whether a session exists is readable from storage on the first frame, long
+  // before Firebase Auth has rehydrated its token, and holding the landing page
+  // back for that moment is what keeps a returning member off the marketing
+  // page. Storage cannot be read during the hydration render, hence the state:
+  // both effects below are gated on it, so nothing redirects before the read
+  // has happened.
+  const [status, setStatus] = useState('unknown')
+
   useEffect(() => {
-    if (getSubdomainSlug()) {
-      navigate('/login', { replace: true })
-    }
+    const session = hasStoredSession()
+    // Reading client-only storage after hydration is what this effect is for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus(session ? 'restoring' : 'public')
+    // Nothing to wait for — send subdomain visitors on immediately, as before.
+    if (!session && getSubdomainSlug()) navigate('/login', { replace: true })
   }, [navigate])
+
+  useEffect(() => {
+    if (status === 'unknown') return
+    if (isAuthenticated) {
+      navigate('/home', { replace: true })
+      return
+    }
+    // Still rehydrating the auth token: keep holding.
+    if (loading) return
+    // Resolved as signed out — the stored family id outlived its session (signed
+    // out in another tab, credentials revoked). Fall through to the public page.
+    // The auth SDK is the external system this synchronizes with, and it has no
+    // render-time read to derive from.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus('public')
+    if (getSubdomainSlug()) navigate('/login', { replace: true })
+  }, [status, isAuthenticated, loading, navigate])
+
+  // Safety valve, mirroring LoginPage's: if auth never settles (blocked
+  // IndexedDB, a stalled SDK init) the shell would otherwise be a permanently
+  // blank page where the landing page used to be. Giving up shows the public
+  // page; a late-arriving session still redirects via the effect above.
+  useEffect(() => {
+    if (status !== 'restoring') return
+    const id = setTimeout(() => setStatus('public'), 5000)
+    return () => clearTimeout(id)
+  }, [status])
+
+  // Uncover the page once this route knows what it is showing. Runs after the
+  // commit that rendered the shell or the landing page, so the markup being
+  // revealed is already the right one.
+  useEffect(() => {
+    if (status === 'unknown' || typeof document === 'undefined') return
+    document.documentElement.classList.remove('kaydo-restoring')
+  }, [status])
+
+  if (status === 'restoring') return <PageLoader />
   return <LandingPage />
 }
 
@@ -215,7 +280,7 @@ export const routes = [
     // routing/render error into a branded screen instead of a raw stack trace.
     errorElement: <RouteErrorScreen />,
     children: [
-      { index: true, element: <SubdomainRedirect /> },
+      { index: true, element: <RootRoute /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'family/:slug', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
