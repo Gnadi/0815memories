@@ -54,6 +54,7 @@ export function PhoneFrame({ src, alt, width, height, className = '' }) {
           width={width}
           height={height}
           loading="lazy"
+          decoding="async"
           className="block w-full h-auto"
         />
       </div>

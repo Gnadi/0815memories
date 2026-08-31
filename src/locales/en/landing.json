@@ -23,10 +23,12 @@
     ]
   },
   "nav": {
+    "howItWorks": "How it works",
     "features": "Features",
     "privacy": "Privacy",
     "security": "Security",
-    "login": "Login"
+    "login": "Login",
+    "skipToContent": "Skip to main content"
   },
   "hero": {
     "badge": "Your Private Digital Home",
@@ -36,7 +38,30 @@
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
     "subtitleSuffix": "is still available and make it yours in seconds.",
-    "demoCta": "Explore the demo family"
+    "demoCta": "Explore the demo family",
+    "assurances": {
+      "free": "Free, no credit card",
+      "noAds": "No ads, no tracking",
+      "openSource": "Open source (MIT)"
+    }
+  },
+  "howItWorks": {
+    "sectionTitle": "Three steps to your family's address",
+    "sectionSubtitle": "No setup weekend, no admin panel to learn. Most families are posting their first memory within a few minutes.",
+    "steps": [
+      {
+        "title": "Claim your name",
+        "desc": "Pick the name your family already calls itself. It becomes your private address — yourname.kaydo.app — and nobody else can take it."
+      },
+      {
+        "title": "Invite the people in it",
+        "desc": "Share one link. Grandparents open it in a browser and are in; there is no app store detour and no account to talk anyone through."
+      },
+      {
+        "title": "Start filling it",
+        "desc": "Post a photo, record a voice memo, write a letter your kids read later. What you add stays yours, and you can export all of it at any time."
+      }
+    ]
   },
   "screens": {
     "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",
