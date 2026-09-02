@@ -18,6 +18,11 @@ public/seed-media/
 # Firebase emulator runtime artifacts
 .firebase/
 
+# Service-account keys. Full-access credentials — a committed one is a breach,
+# and scripts/migrate-access-control.mjs needs one to run.
+service-account*.json
+*-firebase-adminsdk-*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

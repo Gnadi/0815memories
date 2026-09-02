@@ -17,9 +17,9 @@
  *     node scripts/migrate-access-control.mjs --dry-run
  *   ... then again without --dry-run
  *
- * The service-account key is a full-access credential. Keep it out of the repo
- * (.gitignore already covers *.json at the root only if you name it so — check),
- * and delete it once the migration is done.
+ * The service-account key is a full-access credential. .gitignore covers
+ * `service-account*.json` and `*-firebase-adminsdk-*.json`; if you name it
+ * something else, add it there first. Delete it once the migration is done.
  */
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
