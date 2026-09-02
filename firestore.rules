@@ -3,15 +3,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // True if the caller is an admin of the given family. Supports both the
-    // legacy single-admin shape (`adminUid`) and the multi-admin shape
-    // (`adminUids` array). The fallback `[fam.adminUid]` makes families that
-    // haven't been lazily migrated yet still behave correctly.
-    function isFamilyAdmin(familyId) {
+    // ── Who is asking ───────────────────────────────────────────────────
+    //
+    // Both roles are stated by the ID token, not by the client: `viewer` is
+    // minted by the viewerLogin Cloud Function after it checks the shared
+    // password, `admin` by the syncAdminClaims trigger whenever `adminUids`
+    // changes. Neither can be produced by editing localStorage, which is what
+    // the old viewer session amounted to.
+
+    function tokenFamily() {
+      return request.auth != null ? request.auth.token.get('familyId', '') : '';
+    }
+
+    function tokenRole() {
+      return request.auth != null ? request.auth.token.get('role', '') : '';
+    }
+
+    // Reads the family document. Kept as the fallback while claims are being
+    // rolled out — an admin who signed up before the migration, or in the
+    // seconds before the claim trigger fires, has no claim yet but is in
+    // `adminUids`. Retire this branch once every admin carries a claim; it is
+    // the only thing here that costs a document read.
+    function isAdminByDocument(familyId) {
       let fam = get(/databases/$(database)/documents/families/$(familyId)).data;
       return request.auth != null
         && (request.auth.uid in fam.get('adminUids', [fam.adminUid])
             || request.auth.uid == fam.adminUid);
+    }
+
+    function isFamilyAdmin(familyId) {
+      return request.auth != null
+        && ((tokenFamily() == familyId && tokenRole() == 'admin')
+            || isAdminByDocument(familyId));
+    }
+
+    // A viewer reads, and only within their own family. Nothing grants a viewer
+    // write access anywhere — every write rule below asks for isFamilyAdmin.
+    function isFamilyViewer(familyId) {
+      return tokenFamily() == familyId && tokenRole() == 'viewer';
+    }
+
+    // Viewer first, deliberately: the check is pure token arithmetic, so a
+    // viewer never falls through to the get() inside isAdminByDocument. On a
+    // feed listing dozens of documents that is the difference between no
+    // document reads and one per evaluation.
+    function isFamilyMember(familyId) {
+      return isFamilyViewer(familyId) || isFamilyAdmin(familyId);
     }
 
     // Has this capsule's unlock date arrived?
@@ -58,13 +95,18 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
-    // Families — anyone can read (needed for viewer password check).
+    // Families — readable by the family only. The password check that used to
+    // need a public read now happens in the viewerLogin Cloud Function.
     // Updates fall into one of four explicit paths; everything else is denied.
     // Admin-list mutations only happen via these gated paths — there is no
     // server endpoint with elevated privileges in this app.
     match /families/{familyId} {
-      allow read: if true;
+      // Was `if true`, which handed the encryption key and the password hash to
+      // anyone who knew the family id — and the login page handed the id out.
+      // What the login page actually needs now lives in familyPublic below.
+      allow read: if isFamilyMember(familyId);
       allow create: if request.auth != null
+                    && tokenRole() != 'viewer'
                     && request.resource.data.adminUid == request.auth.uid
                     && (!('adminUids' in request.resource.data)
                         || request.resource.data.adminUids == [request.auth.uid])
@@ -108,6 +150,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Secrets — the shared-password hash. No client reads or writes this, ever.
+    // The Cloud Functions that do go through the Admin SDK, which bypasses rules.
+    match /families/{familyId}/secrets/{docId} {
+      allow read, write: if false;
+    }
+
+    // The public face of a family: what the login page needs before anyone has
+    // authenticated, and nothing else. Written only by the mirrorFamilyPublic
+    // trigger from a fixed allowlist, so a field added to `families` later
+    // cannot surface here by accident.
+    match /familyPublic/{familyId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Admins subcollection — display metadata for the Manage Admins UI AND
     // the on-chain proof of redemption for invite flow (via `viaInvite`).
     match /families/{familyId}/admins/{uid} {
@@ -115,6 +172,7 @@ service cloud.firestore {
       // Self-create requires a valid, just-redeemed invite. The invite must be
       // marked used by THIS caller and not yet expired.
       allow create: if request.auth != null
+                    && tokenRole() != 'viewer'
                     && request.auth.uid == uid
                     && request.resource.data.viaInvite is string
                     && exists(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite))
@@ -129,8 +187,12 @@ service cloud.firestore {
     // Invites subcollection — one-time tokens that grant family-admin status
     // when redeemed. Possessing the slotId (doc ID) is the credential.
     match /families/{familyId}/invites/{slotId} {
-      // Anyone holding the link can read to validate the invite.
-      allow read: if true;
+      // Holding the link is the credential, so a direct read by slot id stays
+      // open. Listing does not: the collection is keyed by the very token that
+      // grants admin status, so an enumerable list is a list of usable
+      // credentials. Only an admin of the family may enumerate them.
+      allow get: if true;
+      allow list: if isFamilyAdmin(familyId);
       // Only existing admins may mint invites for their family.
       allow create: if request.auth != null
                     && isFamilyAdmin(familyId)
@@ -141,6 +203,7 @@ service cloud.firestore {
       // Authenticated user marks an invite as used (redemption step 1).
       // Strict false → true transition; immutable createdBy / expiresAt.
       allow update: if request.auth != null
+                    && tokenRole() != 'viewer'
                     && resource.data.used == false
                     && resource.data.expiresAt > request.time
                     && request.resource.data.used == true
@@ -151,8 +214,8 @@ service cloud.firestore {
       allow delete: if isFamilyAdmin(familyId);
     }
 
-    // Memories — anyone can read (viewers are unauthenticated),
-    // only an admin of the memory's family can write.
+    // Memories — readable by the family (admins and viewers alike),
+    // writable only by an admin of the memory's family.
     //
     // `contentRich` is the rich description document. Memory docs are
     // world-readable, so confidentiality rests entirely on the client
@@ -177,7 +240,9 @@ service cloud.firestore {
     }
 
     match /memories/{memoryId} {
-      allow read: if true;
+      // Was `if true`. The documents carry the Cloudinary URLs in clear text,
+      // so a public list was a public index of every family's media.
+      allow read: if isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -194,7 +259,9 @@ service cloud.firestore {
 
     // Moments — same rules as memories
     match /moments/{momentId} {
-      allow read: if true;
+      // Same as memories: listed by familyId, so the filter the client already
+      // sends is what makes the query pass.
+      allow read: if isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -206,7 +273,9 @@ service cloud.firestore {
 
     // Albums — same rules as memories
     match /albums/{albumId} {
-      allow read: if true;
+      // Not referenced anywhere in the client. Gated rather than removed —
+      // deleting a collection that might still hold data is a separate call.
+      allow read: if isFamilyMember(resource.data.familyId);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -513,10 +582,22 @@ service cloud.firestore {
       allow read: if false;
     }
 
+    // Login throttle counters, written by the viewerLogin function through the
+    // Admin SDK. No client has any business reading how close someone is to
+    // being blocked.
+    match /rateLimits/{docId} {
+      allow read, write: if false;
+    }
+
     // Notification queue — admin writes a doc here to trigger the Cloud Function.
     // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
     match /notificationsQueue/{docId} {
-      allow create: if request.auth != null;
+      // Was `request.auth != null`, which was equivalent to "is an admin" only
+      // while viewers had no session. It has to name the family now, or a
+      // viewer could push a notification to everyone in it.
+      allow create: if request.auth != null
+                    && request.resource.data.familyId is string
+                    && isFamilyAdmin(request.resource.data.familyId);
       allow read, update, delete: if false;
     }
   }

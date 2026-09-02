@@ -1,15 +1,20 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 
 // Dev-only: route Auth + Firestore to the local Firebase Emulator Suite.
 // Strictly gated so production never connects to an emulator.
 const USE_EMULATOR =
   import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true'
 
+// Must match setGlobalOptions() in functions/index.js.
+const FUNCTIONS_REGION = 'europe-west3'
+
 let app = null
 let auth = null
 let db = null
+let functions = null
 
 try {
   const firebaseConfig = {
@@ -25,12 +30,16 @@ try {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
     db = getFirestore(app)
+    // Pinned to the region the callables are deployed to. Without the region
+    // the SDK calls us-central1 and every viewer login 404s.
+    functions = getFunctions(app, FUNCTIONS_REGION)
 
     if (USE_EMULATOR) {
       // Point the SDK at the local emulators (started via `firebase emulators:start`).
       connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
       connectFirestoreEmulator(db, '127.0.0.1', 8080)
-      console.info('🔧 Firebase running against local emulators (Auth:9099, Firestore:8080)')
+      connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+      console.info('🔧 Firebase running against local emulators (Auth:9099, Firestore:8080, Functions:5001)')
     }
 
   } else if (import.meta.env.DEV) {
@@ -63,5 +72,5 @@ export function getMessagingInstance() {
   return messagingPromise
 }
 
-export { auth, db }
+export { auth, db, functions }
 export default app

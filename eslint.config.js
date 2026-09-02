@@ -34,4 +34,12 @@ export default defineConfig([
       globals: globals.serviceworker,
     },
   },
+  {
+    // Cloud Functions and the migration scripts run in Node, where `process`
+    // and friends exist and `window` does not.
+    files: ['functions/**/*.js', 'scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

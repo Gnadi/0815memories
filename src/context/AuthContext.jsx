@@ -2,14 +2,17 @@ import { createContext, useContext, useState, useEffect, useRef, useMemo, useCal
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   updateProfile, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
+  signInWithCustomToken,
 } from 'firebase/auth'
-import { doc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
-import { auth, db } from '../config/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
+import { auth, db, functions } from '../config/firebase'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import { readStored, writeStored, clearStoredSession, setSessionOnly } from '../utils/authStorage'
+import { devWarn } from '../utils/devLog'
 
 const AuthContext = createContext(null)
 
@@ -17,8 +20,18 @@ const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
 const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null) // Firebase user (admin)
-  const [isViewer, setIsViewer] = useState(false)
+  const [user, setUser] = useState(null) // Firebase user — admin *or* viewer
+  // The role comes from the ID token, never from the client.
+  //
+  // This used to be `isAdmin = !!user`, which was correct only while viewers
+  // had no Firebase session at all. They have one now, so that test would make
+  // every viewer an administrator and wave them straight through
+  // ProtectedRoute's adminOnly gate.
+  //
+  // 'viewer' is only ever minted by the viewerLogin function, so anything else
+  // holding a session is an admin — including an admin whose claim the sync
+  // trigger has not written yet.
+  const [role, setRole] = useState(null)
   const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
   const [encryptionKey, setEncryptionKey] = useState(null)
   // Start "loading" whenever a family is already known from localStorage. The
@@ -73,13 +86,51 @@ export function AuthProvider({ children }) {
     return id
   }, [])
 
-  useEffect(() => {
-    // A viewer has no Firebase account, so their session lives only in storage.
-    const viewerSession = readStored('fh_viewer')
-    if (viewerSession === 'true') {
-      setIsViewer(true)
+  // Read role and family straight off the ID token. Both are set by the server
+  // — the viewerLogin function for viewers, the syncAdminClaims trigger for
+  // admins — so neither can be forged by editing localStorage.
+  const applyClaims = useCallback(async (firebaseUser, { force = false } = {}) => {
+    if (!firebaseUser) {
+      setRole(null)
+      return null
     }
+    let claims = null
+    try {
+      claims = (await firebaseUser.getIdTokenResult(force)).claims ?? {}
+    } catch (err) {
+      devWarn('Could not read auth claims:', err)
+    }
+    if (!claims) {
+      // Fail closed. An unreadable token means the role is unknown, and unknown
+      // must not resolve to 'admin' — that is the direction that hands a viewer
+      // the admin UI. They stay signed in with no privileges until the next
+      // auth event, which a reload provides.
+      setRole(null)
+      return null
+    }
+    setRole(claims.role === 'viewer' ? 'viewer' : 'admin')
 
+    const claimFamily = typeof claims.familyId === 'string' ? claims.familyId : null
+    if (claimFamily) {
+      setFamilyId(claimFamily)
+      writeStored('fh_familyId', claimFamily)
+    }
+    return claimFamily
+  }, [])
+
+  // The claim is written by a Firestore trigger, so it lands a moment after the
+  // family document does. Nothing blocks on it — firestore.rules still accepts
+  // the adminUids path — but picking it up promptly keeps the two in step, and
+  // is what the rules will rely on once that fallback is retired.
+  const pollForFamilyClaim = useCallback(async (firebaseUser) => {
+    for (const delay of [1200, 2500, 5000]) {
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      const claimFamily = await applyClaims(firebaseUser, { force: true })
+      if (claimFamily) return
+    }
+  }, [applyClaims])
+
+  useEffect(() => {
     if (!auth) {
       setLoading(false)
       return
@@ -87,16 +138,17 @@ export function AuthProvider({ children }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
-      // If a Firebase session is restored but fh_familyId was cleared (e.g. logged out
-      // on another tab), resolve it now so the key-loading effect can run.
-      if (firebaseUser && !readStored('fh_familyId')) {
+      const claimFamily = await applyClaims(firebaseUser)
+      // Admins from before the claim migration have no familyId in their token.
+      // The adminUids lookup stays as the fallback for exactly them.
+      if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
         await resolveFamilyId(firebaseUser.uid)
       }
       setLoading(false)
     })
 
     return unsubscribe
-  }, [resolveFamilyId])
+  }, [resolveFamilyId, applyClaims])
 
   // One live subscription to the family document, serving both the encryption
   // key and the card style.
@@ -177,34 +229,47 @@ export function AuthProvider({ children }) {
 
   // `remember` is the "Stay logged in" box, on by default. It decides how long
   // the session outlives the window — see utils/authStorage.
+  //
+  // The password is no longer checked here. It is checked by the viewerLogin
+  // Cloud Function, which holds the only readable copy of the hash and answers
+  // with a custom token carrying a `familyId` claim. That claim is what
+  // firestore.rules reads — which is the whole reason a viewer can now be told
+  // apart from a stranger.
   const loginAsViewer = useCallback(async (password, viewerFamilyId, { remember = true } = {}) => {
-    if (!db) throw new Error('Firebase not configured — add env vars and reload')
+    if (!auth || !functions) throw new Error('Firebase not configured — add env vars and reload')
     if (!viewerFamilyId) throw new Error('No family link provided')
 
-    const familyDoc = await getDoc(doc(db, 'families', viewerFamilyId))
-    if (!familyDoc.exists()) {
-      throw new Error('Family not found')
+    // Chosen before the sign-in: setPersistence only applies to sessions opened
+    // after it resolves, and it decides where the refresh token is written.
+    setSessionOnly(!remember)
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    } catch (err) {
+      devWarn('Could not set auth persistence:', err)
     }
 
-    const { sharedPassword } = familyDoc.data()
-    if (!sharedPassword) {
-      throw new Error('This family has not set a shared password yet')
-    }
-
-    // Loaded on demand: AuthContext is imported by App, so a static import puts
-    // bcrypt in the startup bundle for every visitor, including the many who
-    // never see a password field.
-    const { default: bcrypt } = await import('bcryptjs')
-    const isMatch = await bcrypt.compare(password, sharedPassword)
-    if (!isMatch) {
+    let token
+    try {
+      const result = await httpsCallable(functions, 'viewerLogin')({
+        familyId: viewerFamilyId,
+        password,
+      })
+      token = result?.data?.token
+    } catch (err) {
+      // The function answers every failure identically on purpose, so that this
+      // endpoint cannot be used to find out which families exist. The one case
+      // worth naming is the throttle, which is about the caller, not the family.
+      if (err?.code === 'functions/resource-exhausted') {
+        throw new Error('Too many attempts — please wait a moment and try again')
+      }
       throw new Error('Invalid password')
     }
+    if (!token) throw new Error('Invalid password')
 
-    // Chosen before the first write, so both values land in the same store.
-    setSessionOnly(!remember)
-    setIsViewer(true)
+    await signInWithCustomToken(auth, token)
+    // onAuthStateChanged reads the claim and sets the family; this write just
+    // gets it into storage before the first render.
     setFamilyId(viewerFamilyId)
-    writeStored('fh_viewer', 'true')
     writeStored('fh_familyId', viewerFamilyId)
   }, [])
 
@@ -275,7 +340,10 @@ export function AuthProvider({ children }) {
     keyLoadedForRef.current = familyRef.id
     setFamilyId(familyRef.id)
     writeStored('fh_familyId', familyRef.id)
-  }, [])
+    // Not awaited: the app is usable immediately via the adminUids rule path,
+    // and the claim only has to arrive before that path is retired.
+    pollForFamilyClaim(result.user)
+  }, [pollForFamilyClaim])
 
   const logout = useCallback(async () => {
     if (user && auth) {
@@ -293,7 +361,7 @@ export function AuthProvider({ children }) {
       }
     }
     keyLoadedForRef.current = null
-    setIsViewer(false)
+    setRole(null)
     setFamilyId(null)
     setEncryptionKey(null)
     setKeyLoading(false)
@@ -307,8 +375,11 @@ export function AuthProvider({ children }) {
     clearStoredSession()
   }, [user])
 
-  const isAuthenticated = !!user || isViewer
-  const isAdmin = !!user
+  // A viewer holds a Firebase session too now, so presence of `user` no longer
+  // says anything about privilege — only the role claim does.
+  const isAuthenticated = !!user
+  const isViewer = role === 'viewer'
+  const isAdmin = !!user && role === 'admin'
 
   // A fresh object literal here re-renders every consumer in the app on any
   // state change, and hands each of them new function identities to depend on.

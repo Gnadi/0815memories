@@ -10,9 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js src/__tests__/blackboxRules.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js src/__tests__/blackboxRules.test.js src/__tests__/authRules.test.js\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-kaydo",
-    "seed:emulator": "node scripts/seed-emulator.mjs"
+    "seed:emulator": "node scripts/seed-emulator.mjs",
+    "migrate:access": "node scripts/migrate-access-control.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -23,7 +24,6 @@
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "@vercel/analytics": "^2.0.1",
-    "bcryptjs": "^3.0.3",
     "dompurify": "^3.4.11",
     "file-saver": "^2.0.5",
     "firebase": "^12.11.0",

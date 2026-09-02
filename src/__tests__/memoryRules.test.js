@@ -11,7 +11,7 @@
  * Run with:  npm run test:rules
  * (Skipped by default — `npm test` stays emulator-free.)
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -160,11 +160,15 @@ describe.skipIf(!EMULATOR)('Memory contentRich security rules', () => {
       await assertFails(updateDoc(doc(outsider, 'memories', MEMORY), { contentRich: CIPHERTEXT }))
     })
 
-    it('still allows unauthenticated reads', async () => {
+    it('no longer allows unauthenticated reads', async () => {
+      // This assertion used to run the other way, and it was right to at the
+      // time: viewers had no Firebase session, so a public read was the only
+      // way they could see the feed at all. They sign in with a token now, so
+      // the collection is gated on family membership — see authRules.test.js.
       const anon = testEnv.unauthenticatedContext().firestore()
-      await expect(
+      await assertFails(
         import('firebase/firestore').then(({ getDoc }) => getDoc(doc(anon, 'memories', MEMORY)))
-      ).resolves.toBeTruthy()
+      )
     })
   })
 })

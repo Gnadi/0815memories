@@ -13,6 +13,10 @@
  */
 
 // Everything that makes up a session. Cleared together on logout.
+//
+// 'fh_viewer' is no longer written: a viewer now holds a real Firebase session
+// and their role comes from the ID token. It stays on this list so the flag is
+// cleared out of browsers that still carry one from an older version.
 const SESSION_KEYS = ['fh_familyId', 'fh_viewer', 'fh_cardStyle']
 
 // Marker for "this login was session-only". Lives in sessionStorage itself, so
