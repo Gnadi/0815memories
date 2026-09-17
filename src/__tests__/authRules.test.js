@@ -69,7 +69,7 @@ const asStranger = () => testEnv.unauthenticatedContext().firestore()
 describe.skipIf(!EMULATOR)('access control rules', () => {
   beforeAll(async () => {
     testEnv = await initializeTestEnvironment({
-      projectId: 'demo-kaydo',
+      projectId: 'demo-kaydo-auth-rules',
       firestore: { rules: readFileSync('firestore.rules', 'utf8') },
     })
   })

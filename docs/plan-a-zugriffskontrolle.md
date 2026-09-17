@@ -174,6 +174,13 @@ in place. Reversed, the app locks itself out.
    (`ERR_REQUIRE_ESM`). npm puts `node_modules/.bin` first on PATH, so the
    local CLI wins even if a standalone one is installed. Run `npm install`
    after pulling.
+
+   Each rules suite also needs its own emulator `projectId`. They all call
+   `clearFirestore()` in `beforeEach`, which wipes a whole project, and vitest
+   runs the files in parallel against one emulator — so two suites sharing an
+   id delete each other's seed data mid-test. It shows up as intermittent
+   failures, and only ever on assertions that expect access to be *granted*.
+   `rulesTestIsolation.test.js` guards this in the ordinary `npm test`.
 2. `firebase deploy --only functions` — triggers and callables first, so the
    claim and mirror machinery is running before anything depends on it.
 3. `node scripts/migrate-access-control.mjs --dry-run`, read it, then again
