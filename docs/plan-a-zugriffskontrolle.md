@@ -191,10 +191,11 @@ in place. Reversed, the app locks itself out.
    `rulesTestIsolation.test.js` guards this in the ordinary `npm test`.
 2. `firebase deploy --only functions` — triggers and callables first, so the
    claim and mirror machinery is running before anything depends on it.
-3. `node scripts/migrate-access-control.mjs --dry-run`, read it, then again
+3. Deploy the client. It already uses tokens, and the old rules still permit
+   that, so this is safe to do before the data moves.
+4. `node scripts/migrate-access-control.mjs --dry-run`, read it, then again
    without the flag. Creates the mirrors, moves the password hashes, sets admin
    claims. Idempotent.
-4. Deploy the client. It already uses tokens; the old rules still permit that.
 5. `firebase deploy --only firestore:rules` — **the cut**. Public reading stops
    here.
 6. Verify. Without a token, expect `403 PERMISSION_DENIED`:
@@ -207,6 +208,14 @@ in place. Reversed, the app locks itself out.
 Steps 2–4 are additive and do not break the old app. Step 5 is the only one that
 does, and the only one that reverts in seconds — keep the previous
 `firestore.rules` and redeploy it if something is wrong.
+
+The client goes before the migration, not after, because the migration *moves*
+the password hash rather than copying it: the old client reads
+`families/{id}.sharedPassword` directly, so between the move and the client
+deploy every viewer login in production would fail. `viewerLogin` also falls
+back to the old location when `secrets/auth` is empty, which makes the two
+steps safe in either order — belt as well as braces, since a half-finished
+rollout is exactly when someone tries to log in.
 
 ### It is not a seamless cutover
 
