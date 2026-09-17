@@ -21,7 +21,10 @@
  *   firebase deploy --only functions
  */
 
-import { firestore } from 'firebase-functions'
+// v1, explicitly. Since firebase-functions v5 the package root serves the v2
+// API, where the trigger below would be onDocumentCreated — so a bare
+// 'firebase-functions' import hands back a namespace with no .document().
+import { firestore } from 'firebase-functions/v1'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { setGlobalOptions } from 'firebase-functions/v2'
