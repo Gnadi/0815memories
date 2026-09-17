@@ -256,13 +256,20 @@ export function AuthProvider({ children }) {
       })
       token = result?.data?.token
     } catch (err) {
-      // The function answers every failure identically on purpose, so that this
-      // endpoint cannot be used to find out which families exist. The one case
-      // worth naming is the throttle, which is about the caller, not the family.
+      // The function answers every *authentication* failure identically, so the
+      // endpoint cannot be used to find out which families exist. But not every
+      // failure is an authentication failure, and collapsing all of them into
+      // "Invalid password" hid a 403 from the callable behind a message that
+      // sent people looking for a typo. Only permission-denied — the one the
+      // function raises deliberately — is reported as a wrong password.
+      devWarn('Viewer login failed:', err?.code, err?.message)
       if (err?.code === 'functions/resource-exhausted') {
         throw new Error('Too many attempts — please wait a moment and try again')
       }
-      throw new Error('Invalid password')
+      if (err?.code === 'functions/permission-denied') {
+        throw new Error('Invalid password')
+      }
+      throw new Error('Could not reach the login service — please try again')
     }
     if (!token) throw new Error('Invalid password')
 
