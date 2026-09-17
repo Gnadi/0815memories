@@ -273,18 +273,12 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
   await assertNotBlocked(familyKey)
   await assertNotBlocked(ipKey)
 
-  // secrets/auth is where the hash lives after the migration. The fallback to
-  // the family document is what makes the rollout orderless: the old client
-  // reads that field directly, so moving it first would break viewer login in
-  // production until the new client ships, and shipping the new client first
-  // would break it until the migration runs. Reading both closes the window in
-  // either direction. Remove it once the migration has run everywhere.
+  // The only place a hash lives. It briefly also read families/{id}.sharedPassword
+  // so the client deploy and the migration could happen in either order; the
+  // migration has since moved every hash and deleted the field, so that branch
+  // was reading somewhere nothing can be.
   const secretSnap = await getFirestore().doc(`families/${familyId}/secrets/auth`).get()
-  let hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
-  if (!hash) {
-    const familySnap = await getFirestore().doc(`families/${familyId}`).get()
-    hash = familySnap.exists ? familySnap.data().sharedPassword : null
-  }
+  const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
 
   if (!hash || !(await bcrypt.compare(password, hash))) {
     await Promise.all([recordFailure(familyKey), recordFailure(ipKey)])
