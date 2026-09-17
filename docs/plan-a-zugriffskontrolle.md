@@ -166,6 +166,14 @@ Order matters. The rules go last, because they assume everything else is already
 in place. Reversed, the app locks itself out.
 
 1. `npm run test:rules` — green locally, nothing deployed.
+
+   The emulator runs through the `firebase-tools` **dev dependency**, not a
+   globally installed CLI. That is deliberate: the standalone binary from
+   `firebase.tools` is pkg-packaged and runs the test command in its own
+   bundled CommonJS Node, which cannot `require()` vitest's ESM entry point
+   (`ERR_REQUIRE_ESM`). npm puts `node_modules/.bin` first on PATH, so the
+   local CLI wins even if a standalone one is installed. Run `npm install`
+   after pulling.
 2. `firebase deploy --only functions` — triggers and callables first, so the
    claim and mirror machinery is running before anything depends on it.
 3. `node scripts/migrate-access-control.mjs --dry-run`, read it, then again
