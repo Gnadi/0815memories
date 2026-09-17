@@ -63,7 +63,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       // Deliberately NOT 'demo-kaydo': these tests wipe the project between
       // cases, and that is the project `npm run seed:emulator` fills with the
       // demo family used for the landing-page screenshots.
-      projectId: 'demo-kaydo-rules',
+      projectId: 'demo-kaydo-ouryear-rules',
       firestore: { rules: readFileSync('firestore.rules', 'utf8'), host, port: Number(port) },
     })
   })

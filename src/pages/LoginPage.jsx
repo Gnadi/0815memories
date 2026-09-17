@@ -135,7 +135,7 @@ export default function LoginPage() {
       setResolving(false)
       return
     }
-    getDoc(doc(db, 'families', urlFamilyId))
+    getDoc(doc(db, 'familyPublic', urlFamilyId))
       .then((snap) => {
         if (snap.exists()) {
           const resolved = toResolvedFamily(snap.data())

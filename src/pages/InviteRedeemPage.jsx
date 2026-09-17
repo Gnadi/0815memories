@@ -52,7 +52,9 @@ export default function InviteRedeemPage() {
     let cancelled = false
     async function validate() {
       try {
-        const familySnap = await getDoc(doc(db, 'families', familyId))
+        // familyPublic, not families: the invitee has no account yet, so this
+        // read happens without a token.
+        const familySnap = await getDoc(doc(db, 'familyPublic', familyId))
         if (cancelled) return
         if (!familySnap.exists()) {
           setValidationError(t('invite.errors.familyNotFound'))

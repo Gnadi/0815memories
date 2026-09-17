@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
@@ -66,13 +67,13 @@ export default function SettingsPanel() {
 
     setSaving(true)
     try {
-      const { default: bcrypt } = await import('bcryptjs')
-      const hashed = await bcrypt.hash(newPassword, 10)
-      await setDoc(
-        doc(db, 'families', familyId),
-        { sharedPassword: hashed },
-        { merge: true }
-      )
+      // Hashed and stored server-side. The hash lands in a subcollection no
+      // client can read, and the call revokes every viewer session signed in
+      // with the old password.
+      await httpsCallable(functions, 'setSharedPassword')({
+        familyId,
+        password: newPassword,
+      })
       setNewPassword('')
       setMessage(t('password.updated'))
       setTimeout(() => setMessage(''), 3000)
