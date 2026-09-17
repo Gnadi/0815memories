@@ -129,10 +129,17 @@ the `get()` inside `isAdminByDocument`. On a feed listing fifty documents that i
 the difference between no document reads and one per evaluation, and it keeps
 clear of the rules engine's per-request access limit.
 
-`isAdminByDocument` is the transitional half of `isFamilyAdmin`: an admin who
-signed up before the migration, or in the seconds before the claim trigger
-fires, is in `adminUids` with no claim yet. Retire that branch once every admin
-carries a claim — it is the only thing left that costs a read.
+`isAdminByDocument` is the other half of `isFamilyAdmin`, and it stays. It is
+tempting to read it as migration debt; it is not.
+
+The claim is written by the `syncAdminClaims` trigger, so it always arrives
+*after* the write that makes someone an admin. An invited admin takes their
+encryption key from the family document, and `AuthContext` subscribes to it once
+— nothing re-subscribes when a claim lands later. Without this branch they would
+sit with no key until they reloaded the page.
+
+It costs nothing where it does not apply: `isFamilyAdmin` checks the claim first
+and `||` short-circuits, so an admin who has one never triggers the read.
 
 ## Two things found along the way
 
@@ -267,12 +274,17 @@ worker cache and will fail quietly against the new rules. Ship the client (step
 
 ## Still open
 
-**App Check is written but not enforced.** `viewerLogin` and `setSharedPassword`
-read `ENFORCE_APP_CHECK`, defaulting to off, because enforcing it needs a
-reCAPTCHA key wired into the client first. To finish: register a reCAPTCHA v3
-site key, initialise App Check in `src/config/firebase.js`, then set
-`ENFORCE_APP_CHECK=true` on the functions. The rate limiter does not depend on
-it.
+**App Check is not set up.** `viewerLogin` and `setSharedPassword` already read
+an `ENFORCE_APP_CHECK` env var, defaulting to off, so the server half is ready
+whenever the client half is built. What is missing is the client: a reCAPTCHA
+key (Enterprise for a new integration, or a classic v3 key) registered under
+Firebase Console → App Check, and `initializeAppCheck` in
+`src/config/firebase.js`.
+
+When that happens, the order matters — key and client first, then give installed
+PWAs time to pick up the new bundle, and only then set `ENFORCE_APP_CHECK=true`
+on the functions. Enforcing while clients still send no token locks everyone out
+of the login. The rate limiter does not depend on any of this.
 
 **Cloudinary still serves media publicly.** After this change the ciphertext is
 useless without the key, so this is the next layer rather than a hole: it would
@@ -284,9 +296,8 @@ ID token and signs a short-lived URL, resolve through it in
 that), and migrate existing assets with Cloudinary's `rename`. It touches the
 media hot path, so it belongs after the above is live and stable.
 
-**The `isAdminByDocument` fallback** in `firestore.rules`, and the
-`resolveFamilyId` fallback in `AuthContext`, can both go once every admin has a
-claim.
+**The `resolveFamilyId` fallback** in `AuthContext` can go once every admin has
+a claim. `isAdminByDocument` in `firestore.rules` stays — see above.
 
 **`albums` is gated but unreferenced** — no client code touches the collection.
 Worth checking whether it still holds data, and deleting it if not.

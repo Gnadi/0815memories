@@ -19,11 +19,17 @@ service cloud.firestore {
       return request.auth != null ? request.auth.token.get('role', '') : '';
     }
 
-    // Reads the family document. Kept as the fallback while claims are being
-    // rolled out — an admin who signed up before the migration, or in the
-    // seconds before the claim trigger fires, has no claim yet but is in
-    // `adminUids`. Retire this branch once every admin carries a claim; it is
-    // the only thing here that costs a document read.
+    // Reads the family document, for an admin who is in `adminUids` but whose
+    // claim has not landed yet.
+    //
+    // This is not migration debt to be cleaned up later. The claim is written by
+    // the syncAdminClaims trigger, so it always arrives *after* the write that
+    // makes someone an admin — and an invited admin takes their encryption key
+    // from this very document. Without this branch they would hold no key until
+    // the claim arrived and something re-subscribed, which nothing does.
+    //
+    // It is free in the common case: isFamilyAdmin checks the claim first and
+    // `||` short-circuits, so this runs only for a caller who has none.
     function isAdminByDocument(familyId) {
       let fam = get(/databases/$(database)/documents/families/$(familyId)).data;
       return request.auth != null
