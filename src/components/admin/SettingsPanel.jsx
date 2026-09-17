@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
+import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
@@ -78,7 +79,16 @@ export default function SettingsPanel() {
       setMessage(t('password.updated'))
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
-      setMessage(t('password.updateFailed'))
+      // The code matters here. A callable that is not reachable at all shows up
+      // in the browser as a CORS error and as 'internal' here, which is a very
+      // different problem from being refused — and "Failed to update password"
+      // for both sends you looking in the wrong place.
+      devError('setSharedPassword failed:', err?.code, err?.message)
+      setMessage(
+        err?.code === 'functions/permission-denied'
+          ? t('password.notAdmin')
+          : `${t('password.updateFailed')} (${err?.code || 'unknown'})`,
+      )
     } finally {
       setSaving(false)
     }

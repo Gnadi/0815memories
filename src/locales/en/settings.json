@@ -111,7 +111,8 @@
     "tooShort": "Password must be at least 4 characters",
     "noFamily": "No family found",
     "updated": "Shared password updated!",
-    "updateFailed": "Failed to update password"
+    "updateFailed": "Failed to update password",
+    "notAdmin": "You are not an admin of this family"
   },
   "familyName": {
     "label": "Family Name",
