@@ -16,6 +16,22 @@ import { devWarn } from '../utils/devLog'
 
 const AuthContext = createContext(null)
 
+/**
+ * An error whose message is meant for the person reading the screen.
+ *
+ * The viewer-login messages are written to be safe to display: an
+ * authentication failure always reads the same, so the endpoint cannot be used
+ * to find out which families exist, and only the throttle and "service
+ * unreachable" say anything more. LoginPage replaces every other error with a
+ * generic line — which is right for Firebase Auth errors, whose raw text would
+ * leak whether an account exists — so these have to be marked.
+ */
+function userFacingError(message) {
+  const err = new Error(message)
+  err.userFacing = true
+  return err
+}
+
 const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
 const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
 
@@ -236,8 +252,8 @@ export function AuthProvider({ children }) {
   // firestore.rules reads — which is the whole reason a viewer can now be told
   // apart from a stranger.
   const loginAsViewer = useCallback(async (password, viewerFamilyId, { remember = true } = {}) => {
-    if (!auth || !functions) throw new Error('Firebase not configured — add env vars and reload')
-    if (!viewerFamilyId) throw new Error('No family link provided')
+    if (!auth || !functions) throw userFacingError('Firebase not configured — add env vars and reload')
+    if (!viewerFamilyId) throw userFacingError('No family link provided')
 
     // Chosen before the sign-in: setPersistence only applies to sessions opened
     // after it resolves, and it decides where the refresh token is written.
@@ -256,15 +272,22 @@ export function AuthProvider({ children }) {
       })
       token = result?.data?.token
     } catch (err) {
-      // The function answers every failure identically on purpose, so that this
-      // endpoint cannot be used to find out which families exist. The one case
-      // worth naming is the throttle, which is about the caller, not the family.
+      // The function answers every *authentication* failure identically, so the
+      // endpoint cannot be used to find out which families exist. But not every
+      // failure is an authentication failure, and collapsing all of them into
+      // "Invalid password" hid a 403 from the callable behind a message that
+      // sent people looking for a typo. Only permission-denied — the one the
+      // function raises deliberately — is reported as a wrong password.
+      devWarn('Viewer login failed:', err?.code, err?.message)
       if (err?.code === 'functions/resource-exhausted') {
-        throw new Error('Too many attempts — please wait a moment and try again')
+        throw userFacingError('Too many attempts — please wait a moment and try again')
       }
-      throw new Error('Invalid password')
+      if (err?.code === 'functions/permission-denied') {
+        throw userFacingError('Invalid password')
+      }
+      throw userFacingError('Could not reach the login service — please try again')
     }
-    if (!token) throw new Error('Invalid password')
+    if (!token) throw userFacingError('Invalid password')
 
     await signInWithCustomToken(auth, token)
     // onAuthStateChanged reads the claim and sets the family; this write just

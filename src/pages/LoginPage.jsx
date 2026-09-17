@@ -186,10 +186,15 @@ export default function LoginPage() {
       }
       navigate('/home')
     } catch (err) {
+      // `userFacing` marks the viewer-login messages, which are written to be
+      // safe to display. Everything else keeps the generic line: a raw Firebase
+      // Auth error would tell a stranger whether an account exists.
       setError(
-        err.code === 'auth/invalid-credential'
-          ? t('login.errors.invalidCredential')
-          : t('login.errors.generic')
+        err.userFacing
+          ? err.message
+          : err.code === 'auth/invalid-credential'
+            ? t('login.errors.invalidCredential')
+            : t('login.errors.generic')
       )
     } finally {
       setLoading(false)

@@ -189,7 +189,45 @@ in place. Reversed, the app locks itself out.
    id delete each other's seed data mid-test. It shows up as intermittent
    failures, and only ever on assertions that expect access to be *granted*.
    `rulesTestIsolation.test.js` guards this in the ordinary `npm test`.
-2. `firebase deploy --only functions` — triggers and callables first, so the
+2. `firebase deploy --only functions`
+
+   Then grant the runtime service account permission to sign custom tokens.
+   The Admin SDK does not sign them locally — it calls the IAM API — and the
+   default runtime service account of a 2nd gen function
+   (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`) cannot do that
+   out of the box. Without this, `viewerLogin` reaches the function and then
+   fails with `iam.serviceAccounts.signBlob denied`, which the browser shows as
+   a failed login. No deploy ever grants it:
+
+   ```
+   PROJECT=<project-id>
+   NUM=$(gcloud projects describe $PROJECT --format='value(projectNumber)')
+   SA="$NUM-compute@developer.gserviceaccount.com"
+
+   gcloud iam service-accounts add-iam-policy-binding "$SA" \
+     --member="serviceAccount:$SA" \
+     --role="roles/iam.serviceAccountTokenCreator" \
+     --project="$PROJECT"
+   ```
+
+   Scoped to the service account itself, so it may sign as itself and nothing
+   else. IAM takes about a minute to propagate.
+
+   If a callable answers with a CORS error in the browser's network tab, it is
+   not reachable at all: Cloud Run rejected the request with a 403 before the
+   function ran, and a 403 page carries no CORS headers. That means the
+   `allUsers` invoker binding is missing — a deploy that failed partway through
+   can leave a function without it:
+
+   ```
+   gcloud run services add-iam-policy-binding <functionName> \
+     --region=europe-west3 --project="$PROJECT" \
+     --member=allUsers --role=roles/run.invoker
+   ```
+
+   This opens the HTTP endpoint only. The password check, the rate limit and
+   the admin check inside the function are untouched, and a login endpoint has
+   to be reachable by people who are not signed in yet. — triggers and callables first, so the
    claim and mirror machinery is running before anything depends on it.
 3. Deploy the client. It already uses tokens, and the old rules still permit
    that, so this is safe to do before the data moves.

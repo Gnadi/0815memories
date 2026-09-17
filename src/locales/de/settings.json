@@ -111,7 +111,8 @@
     "tooShort": "Das Passwort muss mindestens 4 Zeichen lang sein",
     "noFamily": "Keine Familie gefunden",
     "updated": "Geteiltes Passwort aktualisiert!",
-    "updateFailed": "Passwort konnte nicht aktualisiert werden"
+    "updateFailed": "Passwort konnte nicht aktualisiert werden",
+    "notAdmin": "Du bist kein Admin dieser Familie"
   },
   "familyName": {
     "label": "Familienname",
