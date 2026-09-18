@@ -18,6 +18,7 @@ import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
+import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
 
 // ─── Editor state reducer ─────────────────────────────────────────────────────
 
@@ -265,7 +266,9 @@ export default function ScrapbookEditorPage() {
         try {
           pageCanvas = await html2canvas(el, {
             useCORS: true,
-            scale: 2,
+            // Photos and text are drawn onto <canvas> elements at this same
+            // ratio, so their pixels land in the capture one for one.
+            scale: EXPORT_PIXEL_RATIO,
             width: 800,
             height: 600,
             backgroundColor: null,
