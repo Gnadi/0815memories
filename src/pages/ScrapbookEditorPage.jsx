@@ -19,6 +19,8 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
 import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
+import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
+import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
 
 // ─── Editor state reducer ─────────────────────────────────────────────────────
 
@@ -239,6 +241,18 @@ export default function ScrapbookEditorPage() {
     setExporting(true)
     try {
       await document.fonts.ready
+      // Warm every page's photos before the first capture. The editor only
+      // mounts the page it is showing, so otherwise each page would start
+      // fetching and decrypting its images at the moment it is captured.
+      // Capped, so one photo that never arrives cannot hold the export here.
+      await Promise.race([
+        Promise.all(
+          pages.flatMap((page) => (page.elements || [])
+            .filter((el) => el.type === 'photo' && el.url)
+            .map((el) => prefetchDecryptedMedia(el.url, encryptionKey, 'image/*')))
+        ),
+        new Promise((resolve) => setTimeout(resolve, EXPORT_PENDING_TIMEOUT_MS)),
+      ])
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
       for (let i = 0; i < totalPages; i++) {
@@ -248,8 +262,11 @@ export default function ScrapbookEditorPage() {
           dispatch({ type: 'SWITCH_PAGE', index: i })
         })
         // Wait 3 frames: one for the React commit to paint, one for passive
-        // effects (canvas draw useEffect) to flush, one spare for img.onload.
+        // effects (canvas draw useEffect) to flush, one spare.
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))
+        // Frames alone are a guess; photos land on their canvas whenever their
+        // decode finishes. Hold the capture until they actually have.
+        await waitForExportCanvases(canvasRef.current)
 
         // The canvas element has a viewport-fit transform (e.g. scale(0.4) on
         // mobile). html2canvas uses getBoundingClientRect() to size its output,

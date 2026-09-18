@@ -11,6 +11,8 @@ import { drawImageCovered } from '../../utils/collageRenderer'
 // Same reasoning for glyphs: html2canvas places them with font metrics of its
 // own and gets the display face wrong, so the export paints the text itself.
 import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
+// Marks a canvas the capture still has to wait for.
+import { EXPORT_PENDING_ATTR } from './exportReady'
 
 const HANDLE_SIZE = 10
 
@@ -56,20 +58,38 @@ export default function CanvasElement({
 
   // When exporting, draw the correctly-cropped image onto the canvas element.
   // html2canvas reads <canvas> pixel data directly, so no overflow/clip tricks needed.
+  //
+  // Decrypting the photo and decoding it are both asynchronous, and the editor
+  // only mounts the page it is showing, so the canvas is empty for a while
+  // after the export switches to a page. It carries EXPORT_PENDING_ATTR until
+  // the photo is on it and the export waits for that: a capture that raced it
+  // came out with photos missing.
   useEffect(() => {
-    if (!exporting || type !== 'photo' || !exportCanvasRef.current || !decryptedUrl) return
+    if (!exporting || type !== 'photo' || !exportCanvasRef.current) return
     const canvas = exportCanvasRef.current
+    canvas.setAttribute(EXPORT_PENDING_ATTR, '')
+    if (!decryptedUrl) return undefined
     const cw = canvas.offsetWidth || width
     const ch = canvas.offsetHeight || height
-    if (!cw || !ch) return
+    if (!cw || !ch) return undefined
     const imageScale = element.imageScale || 1
     const flipped = !!element.flipped
     // A backing store at the capture's own scale — at CSS resolution the PDF
     // would be upscaling every photo by two.
     const ctx = prepareExportCanvas(canvas, cw, ch)
     const img = new Image()
-    img.onload = () => drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
+    let cancelled = false
+    img.onload = () => {
+      if (cancelled) return
+      drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
+      canvas.removeAttribute(EXPORT_PENDING_ATTR)
+    }
+    // A photo that cannot be loaded must not hold the whole export hostage.
+    img.onerror = () => {
+      if (!cancelled) canvas.removeAttribute(EXPORT_PENDING_ATTR)
+    }
     img.src = decryptedUrl
+    return () => { cancelled = true }
   }, [exporting, type, decryptedUrl, element.imageScale, element.flipped, width, height])
 
   // Text styling, shared by the editor's DOM and the export's canvas so both
