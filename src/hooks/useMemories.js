@@ -12,7 +12,7 @@ import {
   where,
   limit,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { auth, db } from '../config/firebase'
 import { encryptFields, decryptFields, decryptStringArray } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 
@@ -95,19 +95,17 @@ const DEFAULT_MOMENTS_LIMIT = 10
 export function useMemoryWriter(familyId, encryptionKey) {
   const addMemory = async (memory) => {
     const encrypted = await encryptMemoryData(encryptionKey, memory)
-    const ref = await addDoc(collection(db, 'memories'), {
+    await addDoc(collection(db, 'memories'), {
       ...encrypted,
       familyId,
+      // Plaintext on purpose, and the only new field here: notifyOnMemory uses
+      // it to leave the author's own device alone. The push itself is composed
+      // server-side now — the title above is ciphertext by this point, and
+      // sending it would have undone the encryption for anyone reading the
+      // lock screen.
+      createdByUid: auth?.currentUser?.uid || null,
       createdAt: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New memory added',
-      body: memory.title ? `"${memory.title}" was just shared.` : 'The family shared a new memory.',
-      url: `/memory/${ref.id}`,
-      createdAt: serverTimestamp(),
-    }).catch(() => {})
   }
 
   const updateMemory = async (id, updates) => {
@@ -208,16 +206,9 @@ export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
     await addDoc(collection(db, 'moments'), {
       ...moment,
       familyId,
+      createdByUid: auth?.currentUser?.uid || null,
       date: serverTimestamp(),
     })
-    // Fire-and-forget: write to notificationsQueue → Cloud Function sends the push
-    addDoc(collection(db, 'notificationsQueue'), {
-      familyId,
-      title: 'New moment shared',
-      body: moment.caption || 'A new moment was added to the feed.',
-      url: '/',
-      createdAt: serverTimestamp(),
-    }).catch(() => {})
   }
 
   const updateMoment = async (id, updates) => {

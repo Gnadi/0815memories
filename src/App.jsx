@@ -14,8 +14,8 @@ import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 import NotificationPrompt from './components/NotificationPrompt'
-import AnniversaryReminder from './components/AnniversaryReminder'
 import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
+import { devError } from './utils/devLog'
 
 import { getSubdomainSlug } from './utils/familySlug'
 import { hasStoredSession } from './utils/authStorage'
@@ -191,19 +191,20 @@ function AppNotifications() {
 
   // Silently refresh the FCM token on each app load when the user already
   // granted notification permission (covers return visits where the prompt
-  // won't show again because permission is no longer 'default').
+  // won't show again because permission is no longer 'default'). It also keeps
+  // the token document's `lang` and `uid` current — the server reads both when
+  // it composes a notification.
   useEffect(() => {
     if (!isAuthenticated || !familyId) return
     if (typeof window === 'undefined' || !('Notification' in window)) return
     if (Notification.permission === 'granted') {
-      requestAndSaveFCMToken(familyId).catch(() => {})
+      requestAndSaveFCMToken(familyId).catch((err) => devError('FCM token refresh failed:', err))
     }
   }, [isAuthenticated, familyId])
 
   return (
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
-      {isAuthenticated && <AnniversaryReminder />}
 
       {/* In-app toast for foreground push messages */}
       {toast && (

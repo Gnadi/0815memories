@@ -6,6 +6,10 @@ jemand eine Push-Nachricht von Kaydo bekommen. Dieses Dokument sagt, woran das
 liegt — jeder Punkt zeigt auf eine Datei — und wie der Stack mit Blaze aussehen
 soll.
 
+> **Stand:** umgesetzt. Der Code steht; was noch von Hand passieren muss, steht
+> unter [Deploy](#deploy) — und zwar in dieser Reihenfolge, weil die alte
+> Function in `us-central1` sonst weiterläuft und doppelt zustellt.
+
 ## Ist-Zustand
 
 | Teil | Wo | Zustand |
@@ -154,9 +158,8 @@ const tokenId = [...new Uint8Array(idBuf)].map((b) => b.toString(16).padStart(2,
 await setDoc(doc(db, 'fcmTokens', tokenId), {
   familyId,
   token,
-  uid: auth.currentUser?.uid ?? null,
-  lang: i18n.resolvedLanguage ?? 'de',
-  platform: navigator.userAgent.slice(0, 200),
+  uid: auth?.currentUser?.uid || null,
+  lang: i18n.resolvedLanguage || 'de',
   updatedAt: serverTimestamp(),
 }, { merge: true })
 ```
@@ -176,7 +179,8 @@ die Regel darf also anonyme Schreibzugriffe verbieten):
 
 ```
 match /fcmTokens/{tokenId} {
-  allow create, update: if isFamilyMember(request.resource.data.familyId)
+  allow create, update: if request.resource.data.familyId is string
+                        && isFamilyMember(request.resource.data.familyId)
                         && request.resource.data.token is string
                         && request.resource.data.token.size() > 0
                         && request.resource.data.token.size() < 4096;
@@ -331,16 +335,63 @@ hat drei Jobs frei, die Trigger-Aufrufe liegen weit unter dem Free-Tier der
 Blaze-Abrechnung. `maxInstances: 10` aus `setGlobalOptions` deckelt Ausreißer
 ohnehin; `minInstances` bleibt bei 0, damit nichts im Leerlauf kostet.
 
+## Deploy
+
+Der Code ist auf dem Branch, die folgenden Schritte sind Handarbeit und
+reihenfolgeabhängig:
+
+1. **VAPID-Key setzen**, falls noch nicht geschehen: Firebase Console → Cloud
+   Messaging → Web Push certificates → `VITE_FIREBASE_VAPID_KEY` in Vercel
+   (Production, Preview, Development).
+2. **Rules und Client zuerst**:
+   `firebase deploy --only firestore:rules`, dann das Frontend deployen.
+   Danach sammeln sich Token-Dokumente an — ohne die lässt sich der Versand
+   nicht prüfen.
+3. **Alte Function löschen**, bevor die neuen hochgehen:
+   `firebase functions:delete dispatchPushNotifications --region us-central1`.
+   Eine Function kann ihre Region nicht wechseln; ohne diesen Schritt laufen
+   beide.
+4. **Functions deployen**: `firebase deploy --only functions`. Beim ersten Mal
+   legt Firebase für `dailyAnniversaryCheck` einen Cloud-Scheduler-Job an und
+   fragt ggf. nach der Aktivierung der Scheduler-API.
+5. **Prüfen**: `firebase functions:list` (alles `europe-west3`), dann in den
+   Einstellungen „Testbenachrichtigung senden" — einmal mit geschlossener App,
+   einmal mit offener. `firebase functions:log --only sendTestNotification`
+   zeigt die `[push] family=… sent=… failed=…`-Zeile.
+
 ## Checkliste
 
+- [x] `fcmTokens`-Schreibpfad ohne Query, mit Hash-ID; Fehler wird nicht mehr verschluckt
+- [x] Rules für `fcmTokens` verschärft (Session nötig, Löschen erlaubt) + Emulator-Tests
+- [x] iOS-Prompt nur in der installierten PWA (`isPushSupported`)
+- [x] Token wird beim Logout abgemeldet (`removeFCMToken`)
+- [x] `sendToFamily` mit Batch-Versand und präziser Token-Bereinigung
+- [x] `notifyOnMemory` / `notifyOnMoment` in `europe-west3`, Texte serverseitig, Autor ausgenommen
+- [x] `notificationsQueue` samt Client-Schreibern entfernt, Rule auf `false`
+- [x] `dailyAnniversaryCheck` per Scheduler, Client-Lock und `lastAnniversaryCheckDate` entfernt
+- [x] `sendTestNotification` + Knopf in den Einstellungen
+- [x] `.env.example`/README: der Satz „gen 1 works on Spark" korrigiert
 - [ ] Firestore-Location bestätigt, VAPID-Key in Vercel gesetzt
-- [ ] `fcmTokens`-Schreibpfad ohne Query, mit Hash-ID; Fehler wird nicht mehr verschluckt
-- [ ] Rules für `fcmTokens` verschärft + Test
-- [ ] iOS-Prompt nur in der installierten PWA
 - [ ] alte `dispatchPushNotifications` in `us-central1` gelöscht
-- [ ] `sendToFamily` mit Batch-Versand und präziser Token-Bereinigung
-- [ ] `notifyOnMemory` / `notifyOnMoment` in `europe-west3`, Texte serverseitig
-- [ ] `notificationsQueue` samt Client-Schreibern und Rules entfernt
-- [ ] `dailyAnniversaryCheck` per Scheduler, Client-Lock entfernt
-- [ ] `sendTestNotification` + Admin-Knopf
-- [ ] `.env.example`/README: der Satz „gen 1 works on Spark" korrigiert
+- [ ] Functions deployed, Scheduler-Job angelegt, Testbenachrichtigung angekommen
+
+## Wo es gelandet ist
+
+| Teil | Datei |
+| --- | --- |
+| Token registrieren, abmelden, iOS-Check | `src/utils/notifications.js` |
+| Prompt inkl. Fehlermeldung | `src/components/NotificationPrompt.jsx` |
+| Autor-UID an Erinnerung/Moment | `src/hooks/useMemories.js` |
+| Abmelden beim Logout | `src/context/AuthContext.jsx` |
+| Test-Knopf | `src/components/admin/TestNotificationPanel.jsx` |
+| Versand, Trigger, Scheduler, Test-Callable | `functions/index.js` |
+| Sprachwahl, Texte, Token-Bereinigung | `functions/push.js` |
+| Zeitfenster „vor 3 Jahren" | `functions/anniversary.js` |
+| Rules | `firestore.rules` (`fcmTokens`, `notificationsQueue`) |
+| Tests | `src/__tests__/fcmToken.test.js`, `pushNotifications.test.js`, `anniversaryWindow.test.js`, `authRules.test.js` |
+
+Eine Abweichung vom Entwurf oben: die reine Logik des Versands — Sprachgruppen,
+Texte, die Entscheidung „totes Token oder nur ein schlechter Moment" — liegt in
+`functions/push.js` statt in `index.js`. Sie importiert kein firebase-admin und
+läuft damit direkt in der Test-Suite der App mit, was bei genau den beiden
+Regeln, an denen der alte Dispatcher gescheitert ist, den Unterschied macht.

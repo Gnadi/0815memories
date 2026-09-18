@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bell, X } from 'lucide-react'
-import { requestAndSaveFCMToken } from '../utils/notifications'
+import { requestAndSaveFCMToken, isPushSupported } from '../utils/notifications'
+import { devError } from '../utils/devLog'
 
 const DISMISSED_KEY = 'kaydo_notif_dismissed'
 const DISMISSED_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -16,12 +17,15 @@ export default function NotificationPrompt({ familyId }) {
   const { t } = useTranslation('common')
   const [visible, setVisible] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    // Show only if: browser supports notifications, permission not yet decided, and not dismissed
+    // Show only if: this browser can actually deliver push (on iOS that means
+    // an installed PWA, see isPushSupported), permission not yet decided, and
+    // not dismissed.
     if (
       !familyId ||
-      !('Notification' in window) ||
+      !isPushSupported() ||
       !import.meta.env.VITE_FIREBASE_VAPID_KEY ||
       Notification.permission !== 'default' ||
       isDismissed()
@@ -36,11 +40,18 @@ export default function NotificationPrompt({ familyId }) {
 
   const handleEnable = async () => {
     setLoading(true)
+    setFailed(false)
     try {
       await requestAndSaveFCMToken(familyId)
+      setVisible(false)
+    } catch (err) {
+      // The old version swallowed this: the token write was rejected by the
+      // rules and the card closed as if it had worked, which is why nobody
+      // noticed push had never been live.
+      devError('enabling notifications failed:', err?.code, err?.message)
+      setFailed(true)
     } finally {
       setLoading(false)
-      setVisible(false)
     }
   }
 
@@ -58,7 +69,7 @@ export default function NotificationPrompt({ familyId }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-bark">{t('notifications.title')}</p>
           <p className="text-xs text-bark-muted mt-0.5 leading-relaxed">
-            {t('notifications.body')}
+            {failed ? t('notifications.failed') : t('notifications.body')}
           </p>
           <div className="flex gap-2 mt-3">
             <button
@@ -66,7 +77,11 @@ export default function NotificationPrompt({ familyId }) {
               disabled={loading}
               className="flex-1 rounded-xl bg-kaydo text-white text-xs font-semibold py-2 hover:bg-kaydo/90 transition-colors disabled:opacity-60"
             >
-              {loading ? t('notifications.enabling') : t('notifications.enable')}
+              {loading
+                ? t('notifications.enabling')
+                : failed
+                  ? t('notifications.retry')
+                  : t('notifications.enable')}
             </button>
             <button
               onClick={handleDismiss}

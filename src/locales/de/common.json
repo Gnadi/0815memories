@@ -81,7 +81,9 @@
     "body": "Werde benachrichtigt, wenn eine neue Erinnerung oder ein Moment geteilt wird.",
     "enable": "Aktivieren",
     "enabling": "Wird aktiviert…",
-    "notNow": "Nicht jetzt"
+    "notNow": "Nicht jetzt",
+    "failed": "Das hat nicht geklappt. Bitte prüfe die Mitteilungs-Einstellungen deines Browsers.",
+    "retry": "Erneut versuchen"
   },
   "upload": {
     "failed": "Upload fehlgeschlagen. Bitte versuche es erneut.",
