@@ -14,6 +14,16 @@ import {
 import { db } from '../config/firebase'
 import { encryptText, decryptText, encryptJSON, decryptJSON } from '../utils/encryption'
 
+/**
+ * `pages` goes to Firestore as one encrypted blob, so nothing that skips
+ * decryption can count the pages in it — the overview would be left measuring
+ * the ciphertext. Keep the count next to the blob as a plain number.
+ */
+function withPageCount(data) {
+  if (!Array.isArray(data.pages)) return data
+  return { ...data, pageCount: data.pages.length }
+}
+
 async function encryptScrapbook(key, data) {
   if (!key) return data
   const result = { ...data }
@@ -41,7 +51,7 @@ async function decryptScrapbook(key, data, { withPages = true } = {}) {
  */
 export function useScrapbookWriter(familyId, encryptionKey) {
   const addScrapbook = async (data) => {
-    const encrypted = await encryptScrapbook(encryptionKey, data)
+    const encrypted = await encryptScrapbook(encryptionKey, withPageCount(data))
     const ref = await addDoc(collection(db, 'scrapbooks'), {
       ...encrypted,
       familyId,
@@ -52,7 +62,7 @@ export function useScrapbookWriter(familyId, encryptionKey) {
   }
 
   const updateScrapbook = async (id, data) => {
-    const encrypted = await encryptScrapbook(encryptionKey, data)
+    const encrypted = await encryptScrapbook(encryptionKey, withPageCount(data))
     await updateDoc(doc(db, 'scrapbooks', id), {
       ...encrypted,
       updatedAt: serverTimestamp(),

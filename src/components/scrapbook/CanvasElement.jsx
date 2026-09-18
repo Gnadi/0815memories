@@ -8,8 +8,30 @@ import useDecryptedMedia from '../media/useDecryptedMedia'
 // editors crop a photo the same way. Drawing onto a <canvas> is what bypasses
 // html2canvas's broken overflow:hidden handling.
 import { drawImageCovered } from '../../utils/collageRenderer'
+// Same reasoning for glyphs: html2canvas places them with font metrics of its
+// own and gets the display face wrong, so the export paints the text itself.
+import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
+// Marks a canvas the capture still has to wait for.
+import { EXPORT_PENDING_ATTR } from './exportReady'
 
 const HANDLE_SIZE = 10
+
+const FONT_STACKS = {
+  serif: "Georgia, 'Times New Roman', serif",
+  sans: 'system-ui, -apple-system, sans-serif',
+  mono: 'ui-monospace, monospace',
+  display: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
+}
+
+// Display type (Anton) is tracked out slightly and gets more line spacing than
+// the text faces, in the editor and in the export alike.
+const DISPLAY_LETTER_SPACING_EM = 0.02
+const DISPLAY_LINE_HEIGHT = 1.35
+const TEXT_LINE_HEIGHT = 1.25
+
+// The export canvas reaches this far past the element box on every side, so
+// tall glyphs keep the overflow the editor's `overflow: visible` gives them.
+const TEXT_OVERFLOW_PAD = 0.75
 
 export default function CanvasElement({
   element,
@@ -36,21 +58,100 @@ export default function CanvasElement({
 
   // When exporting, draw the correctly-cropped image onto the canvas element.
   // html2canvas reads <canvas> pixel data directly, so no overflow/clip tricks needed.
+  //
+  // Decrypting the photo and decoding it are both asynchronous, and the editor
+  // only mounts the page it is showing, so the canvas is empty for a while
+  // after the export switches to a page. It carries EXPORT_PENDING_ATTR until
+  // the photo is on it and the export waits for that: a capture that raced it
+  // came out with photos missing.
   useEffect(() => {
-    if (!exporting || type !== 'photo' || !exportCanvasRef.current || !decryptedUrl) return
+    if (!exporting || type !== 'photo' || !exportCanvasRef.current) return
     const canvas = exportCanvasRef.current
+    canvas.setAttribute(EXPORT_PENDING_ATTR, '')
+    if (!decryptedUrl) return undefined
     const cw = canvas.offsetWidth || width
     const ch = canvas.offsetHeight || height
-    if (!cw || !ch) return
-    canvas.width = cw
-    canvas.height = ch
+    if (!cw || !ch) return undefined
     const imageScale = element.imageScale || 1
     const flipped = !!element.flipped
-    const ctx = canvas.getContext('2d')
+    // A backing store at the capture's own scale — at CSS resolution the PDF
+    // would be upscaling every photo by two.
+    const ctx = prepareExportCanvas(canvas, cw, ch)
     const img = new Image()
-    img.onload = () => drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
+    let cancelled = false
+    img.onload = () => {
+      if (cancelled) return
+      drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
+      canvas.removeAttribute(EXPORT_PENDING_ATTR)
+    }
+    // A photo that cannot be loaded must not hold the whole export hostage.
+    img.onerror = () => {
+      if (!cancelled) canvas.removeAttribute(EXPORT_PENDING_ATTR)
+    }
     img.src = decryptedUrl
+    return () => { cancelled = true }
   }, [exporting, type, decryptedUrl, element.imageScale, element.flipped, width, height])
+
+  // Text styling, shared by the editor's DOM and the export's canvas so both
+  // read from one source.
+  const isDisplay = element.fontFamily === 'display'
+  const fontSize = element.fontSize || 20
+  const stickerSize = element.stickerSize || 48
+  const fontFamily = FONT_STACKS[element.fontFamily] || FONT_STACKS.display
+  const fontWeight = element.fontWeight || 'normal'
+  const textColor = element.color || '#2D1B0E'
+  const textAlign = element.textAlign || 'center'
+  const lineHeight = isDisplay ? DISPLAY_LINE_HEIGHT : TEXT_LINE_HEIGHT
+  const overflowPad = Math.ceil((type === 'sticker' ? stickerSize : fontSize) * TEXT_OVERFLOW_PAD)
+
+  // Glyphs take the same route as photos during export, and for the same kind
+  // of reason: html2canvas lays text out itself from font metrics it measures
+  // with a probe element, and when the probe is wrong about the display face
+  // every line lands too low. Painting the text here means html2canvas only
+  // copies pixels.
+  useEffect(() => {
+    if (!exporting || (type !== 'text' && type !== 'sticker') || !exportCanvasRef.current) return
+    const canvas = exportCanvasRef.current
+    const boxW = width + overflowPad * 2
+    const boxH = height + overflowPad * 2
+    if (!boxW || !boxH) return
+    const ctx = prepareExportCanvas(canvas, boxW, boxH)
+    ctx.clearRect(0, 0, boxW, boxH)
+    drawTextBlock(ctx, {
+      text: type === 'sticker' ? element.emoji || '' : element.text || '',
+      width,
+      height,
+      offsetX: overflowPad,
+      offsetY: overflowPad,
+      // Stickers are emoji in whatever face the page inherits.
+      fontSize: type === 'sticker' ? stickerSize : fontSize,
+      fontFamily: type === 'sticker' ? getComputedStyle(canvas).fontFamily : fontFamily,
+      fontWeight: type === 'sticker' ? 'normal' : fontWeight,
+      color: textColor,
+      textAlign: type === 'sticker' ? 'center' : textAlign,
+      lineHeight,
+      letterSpacing: type === 'text' && isDisplay ? fontSize * DISPLAY_LETTER_SPACING_EM : 0,
+    })
+  }, [
+    exporting, type, width, height, overflowPad, element.text, element.emoji,
+    stickerSize, fontSize, fontFamily, fontWeight, textColor, textAlign, lineHeight, isDisplay,
+  ])
+
+  // Sized past the element box on every side so tall glyphs are not cut off,
+  // exactly as `overflow: visible` lets them spill in the editor.
+  const exportCanvas = (
+    <canvas
+      ref={exportCanvasRef}
+      style={{
+        position: 'absolute',
+        left: -overflowPad,
+        top: -overflowPad,
+        width: width + overflowPad * 2,
+        height: height + overflowPad * 2,
+        display: 'block',
+      }}
+    />
+  )
 
   // Photos are "slots" when they have no url yet. Slots are always selectable
   // (so users can fill them via the PhotoBar) but are never draggable/resizable
@@ -226,25 +327,20 @@ export default function CanvasElement({
     }
 
     if (type === 'text') {
-      const fontMap = {
-        serif: "Georgia, 'Times New Roman', serif",
-        sans: 'system-ui, -apple-system, sans-serif',
-        mono: 'ui-monospace, monospace',
-        display: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
-      }
-      const isDisplay = element.fontFamily === 'display'
       const style = {
-        fontSize: element.fontSize || 20,
-        color: element.color || '#2D1B0E',
-        fontFamily: fontMap[element.fontFamily] || fontMap.display,
-        fontWeight: element.fontWeight || 'normal',
-        textAlign: element.textAlign || 'center',
+        fontSize,
+        color: textColor,
+        fontFamily,
+        fontWeight,
+        textAlign,
         // Display fonts (Anton) render with tall caps and extended ascenders
-        // that html2canvas clips with a tight line-height, so we give them
-        // more vertical breathing room.
-        lineHeight: isDisplay ? 1.35 : 1.25,
-        letterSpacing: isDisplay ? '0.02em' : 'normal',
+        // that a tight line-height crowds, so we give them more vertical
+        // breathing room.
+        lineHeight,
+        letterSpacing: isDisplay ? `${DISPLAY_LETTER_SPACING_EM}em` : 'normal',
       }
+
+      if (exporting) return exportCanvas
 
       if (isEditing) {
         return (
@@ -276,6 +372,7 @@ export default function CanvasElement({
     }
 
     if (type === 'sticker') {
+      if (exporting) return exportCanvas
       return (
         <div className="w-full h-full flex items-center justify-center select-none" style={{ fontSize: element.stickerSize || 48 }}>
           {element.emoji}

@@ -18,6 +18,10 @@ import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
+import { exportFileName } from '../utils/helpers'
+import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
+import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
+import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
 
 // ─── Editor state reducer ─────────────────────────────────────────────────────
 
@@ -189,6 +193,12 @@ export default function ScrapbookEditorPage() {
           : { ...p, customizable: true }
       ))
       dispatch({ type: 'LOAD', pages: nextPages, title: nextTitle })
+      // Backfill for books last saved before the page count was stored next to
+      // the encrypted pages. The overview can't derive it without decrypting
+      // the whole book; here the pages are decrypted anyway.
+      if (raw.pageCount !== nextPages.length) {
+        updateScrapbook(id, { pageCount: nextPages.length }).catch(() => {})
+      }
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)
@@ -232,6 +242,18 @@ export default function ScrapbookEditorPage() {
     setExporting(true)
     try {
       await document.fonts.ready
+      // Warm every page's photos before the first capture. The editor only
+      // mounts the page it is showing, so otherwise each page would start
+      // fetching and decrypting its images at the moment it is captured.
+      // Capped, so one photo that never arrives cannot hold the export here.
+      await Promise.race([
+        Promise.all(
+          pages.flatMap((page) => (page.elements || [])
+            .filter((el) => el.type === 'photo' && el.url)
+            .map((el) => prefetchDecryptedMedia(el.url, encryptionKey, 'image/*')))
+        ),
+        new Promise((resolve) => setTimeout(resolve, EXPORT_PENDING_TIMEOUT_MS)),
+      ])
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
       for (let i = 0; i < totalPages; i++) {
@@ -241,8 +263,11 @@ export default function ScrapbookEditorPage() {
           dispatch({ type: 'SWITCH_PAGE', index: i })
         })
         // Wait 3 frames: one for the React commit to paint, one for passive
-        // effects (canvas draw useEffect) to flush, one spare for img.onload.
+        // effects (canvas draw useEffect) to flush, one spare.
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))
+        // Frames alone are a guess; photos land on their canvas whenever their
+        // decode finishes. Hold the capture until they actually have.
+        await waitForExportCanvases(canvasRef.current)
 
         // The canvas element has a viewport-fit transform (e.g. scale(0.4) on
         // mobile). html2canvas uses getBoundingClientRect() to size its output,
@@ -259,7 +284,9 @@ export default function ScrapbookEditorPage() {
         try {
           pageCanvas = await html2canvas(el, {
             useCORS: true,
-            scale: 2,
+            // Photos and text are drawn onto <canvas> elements at this same
+            // ratio, so their pixels land in the capture one for one.
+            scale: EXPORT_PIXEL_RATIO,
             width: 800,
             height: 600,
             backgroundColor: null,
@@ -279,7 +306,10 @@ export default function ScrapbookEditorPage() {
         dispatch({ type: 'SWITCH_PAGE', index: originalPageIndex })
       })
 
-      pdf.save(`${title}.pdf`)
+      // Titled and stamped: every book starts life under the same default
+      // title, so naming the file after the title alone would have each export
+      // land on top of the last one.
+      pdf.save(exportFileName(title, 'pdf', { fallback: 'Scrapbook' }))
     } catch (err) {
       devError('PDF export failed', err)
       alert(t('errors.pdfExportFailed'))
