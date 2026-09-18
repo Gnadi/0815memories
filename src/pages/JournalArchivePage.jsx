@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
 import JournalEntryCard from '../components/journal/JournalEntryCard'
+import EncryptedImage from '../components/media/EncryptedImage'
 import Sidebar from '../components/layout/Sidebar'
 
 export default function JournalArchivePage() {
@@ -40,17 +41,17 @@ export default function JournalArchivePage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {kid?.profilePhoto ? (
-              <img
-                src={kid.profilePhoto}
-                alt={kid?.name}
-                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-cream-dark flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-full overflow-hidden bg-cream-dark flex-shrink-0 flex items-center justify-center">
+              {kid?.profilePhoto ? (
+                <EncryptedImage
+                  src={kid.profilePhoto}
+                  alt={kid?.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
                 <User className="w-5 h-5 text-bark-muted" />
-              </div>
-            )}
+              )}
+            </div>
             <div className="min-w-0">
               <h1 className="font-bold text-bark truncate">{kid?.name || t('archive.fallbackTitle')}</h1>
               {age !== null && (
