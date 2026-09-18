@@ -6,7 +6,15 @@ import EncryptedImage from '../media/EncryptedImage'
 export default function ScrapbookCard({ scrapbook, onDelete }) {
   const { t } = useTranslation('scrapbook')
   const navigate = useNavigate()
-  const pageCount = scrapbook.pages?.length || 0
+  // The overview leaves `pages` encrypted, so its `.length` is a ciphertext
+  // length, not a page count — read the stored count instead and fall back to
+  // the array only when a caller did decrypt the book. Books last saved before
+  // the count was stored have neither, and show no count rather than a wrong one.
+  const pageCount = typeof scrapbook.pageCount === 'number'
+    ? scrapbook.pageCount
+    : Array.isArray(scrapbook.pages)
+      ? scrapbook.pages.length
+      : null
   const coverUrl = scrapbook.coverImageUrl || null
 
   const handleDelete = (e) => {
@@ -48,9 +56,11 @@ export default function ScrapbookCard({ scrapbook, onDelete }) {
       <div className="p-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="font-semibold text-bark text-sm truncate">{scrapbook.title}</h3>
-          <p className="text-xs text-bark-muted mt-0.5">
-            {t('card.page', { count: pageCount })}
-          </p>
+          {pageCount !== null && (
+            <p className="text-xs text-bark-muted mt-0.5">
+              {t('card.page', { count: pageCount })}
+            </p>
+          )}
         </div>
         <button
           onClick={handleDelete}

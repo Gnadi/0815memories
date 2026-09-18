@@ -189,6 +189,12 @@ export default function ScrapbookEditorPage() {
           : { ...p, customizable: true }
       ))
       dispatch({ type: 'LOAD', pages: nextPages, title: nextTitle })
+      // Backfill for books last saved before the page count was stored next to
+      // the encrypted pages. The overview can't derive it without decrypting
+      // the whole book; here the pages are decrypted anyway.
+      if (raw.pageCount !== nextPages.length) {
+        updateScrapbook(id, { pageCount: nextPages.length }).catch(() => {})
+      }
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)
