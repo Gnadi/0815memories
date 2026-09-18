@@ -18,6 +18,7 @@ import PageNavBar from '../components/scrapbook/PageNavBar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
+import { exportFileName } from '../utils/helpers'
 import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
 import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
 import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
@@ -305,7 +306,10 @@ export default function ScrapbookEditorPage() {
         dispatch({ type: 'SWITCH_PAGE', index: originalPageIndex })
       })
 
-      pdf.save(`${title}.pdf`)
+      // Titled and stamped: every book starts life under the same default
+      // title, so naming the file after the title alone would have each export
+      // land on top of the last one.
+      pdf.save(exportFileName(title, 'pdf', { fallback: 'Scrapbook' }))
     } catch (err) {
       devError('PDF export failed', err)
       alert(t('errors.pdfExportFailed'))

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isOnThisDay } from '../utils/helpers'
+import { isOnThisDay, exportFileName } from '../utils/helpers'
 
 // Fixed reference: April 16 (month index 3, day 16)
 const REF = new Date(2026, 3, 16)
@@ -43,5 +43,35 @@ describe('isOnThisDay', () => {
   it('uses current date as default reference (smoke test)', () => {
     // Just ensure it doesn't throw
     expect(() => isOnThisDay(new Date())).not.toThrow()
+  })
+})
+
+describe('exportFileName', () => {
+  const AT = new Date(2026, 8, 18, 14, 7) // 18 September 2026, 14:07
+
+  // Scrapbooks all share a default title, so exporting by title alone gave
+  // every book the same filename and each download replaced the last.
+  it('stamps the name with the moment of export', () => {
+    expect(exportFileName('My Scrapbook', 'pdf', { at: AT })).toBe('My Scrapbook-2026-09-18-1407.pdf')
+  })
+
+  it('separates two exports of the same book', () => {
+    const later = new Date(2026, 8, 18, 14, 8)
+    expect(exportFileName('Zell am See', 'pdf', { at: AT }))
+      .not.toBe(exportFileName('Zell am See', 'pdf', { at: later }))
+  })
+
+  it('drops characters a filesystem will not take', () => {
+    expect(exportFileName('Summer 2026: Italy / France', 'pdf', { at: AT }))
+      .toBe('Summer 2026 Italy France-2026-09-18-1407.pdf')
+  })
+
+  it('falls back when the title is empty or only punctuation', () => {
+    expect(exportFileName('', 'pdf', { at: AT, fallback: 'Scrapbook' })).toBe('Scrapbook-2026-09-18-1407.pdf')
+    expect(exportFileName('...', 'pdf', { at: AT, fallback: 'Scrapbook' })).toBe('Scrapbook-2026-09-18-1407.pdf')
+  })
+
+  it('keeps a long title to a sane length', () => {
+    expect(exportFileName('A'.repeat(200), 'pdf', { at: AT })).toBe(`${'A'.repeat(60)}-2026-09-18-1407.pdf`)
   })
 })
