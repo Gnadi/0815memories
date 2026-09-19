@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Undo2, FileDown, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Undo2, FileDown, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2, Printer } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function EditorToolbar({
@@ -15,6 +15,7 @@ export default function EditorToolbar({
   onDeletePage,
   onSwitchPage,
   onExportPDF,
+  onOpenPrint,
   exporting,
 }) {
   const { t } = useTranslation('scrapbook')
@@ -128,6 +129,19 @@ export default function EditorToolbar({
       >
         {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
         <span className="hidden sm:inline">{t('editor.pdf')}</span>
+      </button>
+
+      {/* Print file — a separate action from the PDF download on purpose: this
+          one renders at 300 DPI for a press, takes minutes, and is checked
+          against what a printer will accept. */}
+      <button
+        onClick={onOpenPrint}
+        disabled={exporting}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cream hover:bg-cream-dark text-bark text-xs font-medium transition-colors flex-shrink-0 disabled:opacity-50"
+        title={t('editor.printFile')}
+      >
+        <Printer className="w-4 h-4" />
+        <span className="hidden sm:inline">{t('editor.print')}</span>
       </button>
 
       {/* Share */}

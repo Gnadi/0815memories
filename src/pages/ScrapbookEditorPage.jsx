@@ -15,6 +15,7 @@ import PhotoBar from '../components/scrapbook/PhotoBar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
 import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
+import PrintDialog from '../components/scrapbook/PrintDialog'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
@@ -160,6 +161,7 @@ export default function ScrapbookEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [exporting, setExporting] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
   // Photo bar interaction mode: 'idle' | 'fill' | 'replace' | 'swap'
   const [photoMode, setPhotoMode] = useState('idle')
 
@@ -468,8 +470,13 @@ export default function ScrapbookEditorPage() {
         onDeletePage={handleDeletePage}
         onSwitchPage={handleSwitchPage}
         onExportPDF={handleExportPDF}
+        onOpenPrint={() => setPrintOpen(true)}
         exporting={exporting}
       />
+
+      {printOpen && (
+        <PrintDialog pages={pages} title={title} scrapbookId={id} onClose={() => setPrintOpen(false)} />
+      )}
 
       {/* Canvas area — fits available space, no scroll */}
       <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-3 lg:p-6">

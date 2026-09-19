@@ -27,12 +27,14 @@
 import { firestore } from 'firebase-functions/v1'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { getStorage } from 'firebase-admin/storage'
 
 // No credentials arg — Firebase injects them automatically in the Cloud Functions runtime
 initializeApp()
@@ -331,3 +333,100 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
 
   return { ok: true }
 })
+
+// ---------------------------------------------------------------------------
+// Cloud Function: release print files the press is finished with
+// ---------------------------------------------------------------------------
+//
+// The print PDF is the only plaintext family content Kaydo stores. The app
+// deletes it as soon as it sees an order reach a state where the press no
+// longer needs the file — but that only happens while somebody has the app
+// open, and the orders most in need of cleanup are exactly the ones nobody
+// looks at again. This is the pass that does not depend on anyone being there.
+//
+// The release rule is duplicated from src/utils/printOrderStatus.js, which is
+// its source of truth. functions/ deploys as its own npm package with no build
+// step reaching into src/, so the choice is between this small copy and a
+// bundler; if the rule changes, it has to change in both. The copy is kept
+// deliberately literal for that reason.
+const PRINT_FILE_DONE_STATUSES = ['shipped', 'delivered', 'failed', 'cancelled']
+const PRINT_FILE_MAX_AGE_DAYS = 30
+
+export const releasePrintFiles = onSchedule(
+  { schedule: 'every day 03:30', timeZone: 'Europe/Berlin', retryCount: 2 },
+  async () => {
+    const db = getFirestore()
+    // Named explicitly rather than taken from the Admin SDK's default. The
+    // default is derived from the runtime's own config and does not always
+    // match the bucket the browser uploaded to — Firebase projects created
+    // after late 2024 get <project>.firebasestorage.app while the SDK default
+    // is still <project>.appspot.com. Sweeping the wrong bucket would find
+    // nothing, and with ignoreNotFound every miss would be recorded as a
+    // successful delete, stranding every real file permanently.
+    const bucketName = process.env.PRINT_STORAGE_BUCKET
+      || process.env.FIREBASE_STORAGE_BUCKET
+      || getStorage().bucket().name
+    const bucket = getStorage().bucket(bucketName)
+    const cutoff = Date.now() - PRINT_FILE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000
+
+    // Equality on a single field, so no composite index is needed. The age and
+    // status rules are applied in code: expressing "done OR old" as a query
+    // would take two of them and a merge.
+    const snapshot = await db.collection('printOrders')
+      .where('printFileDeletedAt', '==', null)
+      .limit(500)
+      .get()
+
+    let released = 0
+    let skipped = 0
+    let deleted = 0
+    let missing = 0
+
+    for (const docSnap of snapshot.docs) {
+      const order = docSnap.data()
+      if (!order.printFilePath) { skipped += 1; continue }
+
+      const createdAtMs = order.createdAt?.toMillis?.() ?? null
+      const done = PRINT_FILE_DONE_STATUSES.includes(order.status)
+      const expired = createdAtMs !== null && createdAtMs < cutoff
+      if (!done && !expired) { skipped += 1; continue }
+
+      try {
+        const file = bucket.file(order.printFilePath)
+        // Asked rather than assumed. `delete({ ignoreNotFound: true })` alone
+        // cannot tell "the app already deleted it" from "we are looking in the
+        // wrong bucket", and both would be written down as done.
+        const [exists] = await file.exists()
+        if (exists) {
+          await file.delete()
+          deleted += 1
+        } else {
+          missing += 1
+        }
+        await docSnap.ref.update({ printFileDeletedAt: new Date(), updatedAt: new Date() })
+        released += 1
+        if (expired && !done) {
+          // Worth saying out loud: an order that aged out never reached a final
+          // state, which means status tracking lost it somewhere.
+          console.warn(`[print] released expired file for order ${docSnap.id} (status=${order.status})`)
+        }
+      } catch (err) {
+        console.error(`[print] could not release file for order ${docSnap.id}:`, err.message)
+      }
+    }
+
+    // The bucket is named in the log on purpose: if it is the wrong one, every
+    // sweep reports the same telltale shape — files expected, none actually
+    // there — and that is only legible if you can see where it looked.
+    console.log(
+      `[print] print-file sweep on ${bucketName}: released=${released} `
+      + `(deleted=${deleted} already-gone=${missing}) skipped=${skipped}`
+    )
+    if (released > 0 && deleted === 0) {
+      console.warn(
+        `[print] every file this sweep released was already missing from ${bucketName}. `
+        + 'If that keeps happening, check PRINT_STORAGE_BUCKET against the bucket the app uploads to.'
+      )
+    }
+  }
+)

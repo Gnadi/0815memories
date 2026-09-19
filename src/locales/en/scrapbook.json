@@ -32,7 +32,9 @@
     "exportPdf": "Export as PDF",
     "pdf": "PDF",
     "copyShareLink": "Copy share link",
-    "linkCopied": "Link copied to clipboard!"
+    "linkCopied": "Link copied to clipboard!",
+    "printFile": "Create print-ready file (300 dpi)",
+    "print": "Print"
   },
   "pageNav": {
     "previousPage": "Previous page",
@@ -126,6 +128,123 @@
     "sample": {
       "quote": "\"Your beautiful memory goes here\"",
       "title": "YOUR TITLE"
+    }
+  },
+  "print": {
+    "title": "Create print file",
+    "formatLabel": "Book format",
+    "formatHint": "Both formats share your pages’ 4:3 aspect ratio, so nothing in your layout gets cropped.",
+    "formats": {
+      "landscape28x21": "28 × 21 cm",
+      "landscape20x15": "20 × 15 cm"
+    },
+    "progress": {
+      "analyzing": "Checking pages…",
+      "photos": "Decrypting photos… {{done}} of {{total}}",
+      "pages": "Drawing page {{done}} of {{total}}…",
+      "rendering": "Building the print file…",
+      "upload": "Uploading the print file… {{done}} of {{total}}",
+      "placing": "Placing the order…"
+    },
+    "allClear": "Everything is ready for print.",
+    "issues": {
+      "onPage": "page {{page}}",
+      "veryLowResolution": "This photo prints at only {{dpi}} dpi and will look clearly blurry.",
+      "lowResolution": "This photo prints at {{dpi}} dpi — slightly soft in the book. 300 dpi is recommended.",
+      "outsideSafeArea": "This content sits closer than {{marginMm}} mm to the page edge and may be trimmed off.",
+      "emptySlot": "An empty photo slot will stay empty in the printed book.",
+      "missingPhoto": "A photo could not be loaded and would be missing from the book.",
+      "tooFewPages": "The book has {{current}} pages; binding starts at {{minPages}}.",
+      "tooManyPages": "The book has {{current}} pages; at most {{maxPages}} can be printed.",
+      "oddPageCount": "A bound book needs an even page count — this one has {{current}}.",
+      "photoBoxCollapsed": "This polaroid is too small for its own frame — the photo will not print. Drag it larger."
+    },
+    "paddingQuestion": "To make the book bindable, {{add}} blank pages will be added (giving {{target}} pages).",
+    "keepEditing": "Keep editing",
+    "padAndBuild": "Add {{add}} pages & build",
+    "build": "Create print file",
+    "close": "Close",
+    "done": "Print file ready.",
+    "doneDetail": "{{pages}} pages · {{width}} × {{height}} cm · {{size}}",
+    "failed": "The print file could not be created. Please try again.",
+    "blocked": "Please fix the items marked in red first.",
+    "blockedTooManyPages": "The book is too long to print. Please remove pages.",
+    "steps": {
+      "check": "Check print file",
+      "details": "Book & delivery",
+      "review": "Review order",
+      "done": "Ordered"
+    },
+    "back": "Back",
+    "continue": "Continue",
+    "downloadOnly": "Download only",
+    "orderIt": "Order it",
+    "placeOrder": "Place binding order",
+    "placeOrderNote": "The printer receives your print file and your delivery address.",
+    "productLabel": "Product",
+    "chooseProduct": "Please choose…",
+    "quantityLabel": "Quantity",
+    "catalogLoading": "Loading products…",
+    "catalogUnreadable": "The printer’s response could not be read. Please run /api/print/selftest.",
+    "catalogEmpty": "The printer currently offers no product in this format.",
+    "quoteLoading": "Calculating the price…",
+    "review": {
+      "book": "Book",
+      "format": "Format",
+      "pages": "Pages",
+      "quantity": "Quantity",
+      "shipTo": "Ship to"
+    },
+    "placed": {
+      "heading": "Your order is on its way.",
+      "body": "The printer confirms by email. Once the book is printed we delete the print file again.",
+      "reference": "Order reference"
+    },
+    "address": {
+      "heading": "Delivery address",
+      "name": "Name",
+      "line1": "Street and number",
+      "line2": "Address line 2",
+      "postalCode": "Postcode",
+      "city": "City",
+      "countryCode": "Country (2 letters)",
+      "phone": "Phone",
+      "email": "Email",
+      "privacyNote": "Your address is stored encrypted and passed to the printer only for shipping.",
+      "errors": {
+        "required": "Required",
+        "country": "Two letters, e.g. DE",
+        "email": "Not a valid email address"
+      }
+    },
+    "errors": {
+      "notSignedIn": "You are not signed in. Please reload the page.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "adminOnly": "Only family admins can order books.",
+      "incompleteAddress": "The delivery address is incomplete.",
+      "invalidCountry": "The country code is not valid.",
+      "invalidEmail": "The email address is not valid.",
+      "fileNotOurs": "That print file does not belong to your family.",
+      "fileMissing": "No print file was supplied.",
+      "providerSlow": "The printer is not answering in time. Please try again in a moment.",
+      "providerDown": "The printer cannot be reached. Please try again later.",
+      "providerRejected": "The printer rejected the request.",
+      "misconfigured": "The print integration is not fully configured yet.",
+      "generic": "That did not work. Please try again."
+    },
+    "history": {
+      "heading": "Past orders",
+      "refresh": "Ask the printer for the status",
+      "note": "Refreshing also deletes the print file once the printer is finished with it.",
+      "status": {
+        "placing": "Submitting…",
+        "placed": "Ordered",
+        "inProduction": "Printing",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      }
     }
   }
 }

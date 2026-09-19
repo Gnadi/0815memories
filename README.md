@@ -18,7 +18,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 ### Create & evolve
 - **Recipe tree** — family recipes with version history, forks and photo logs across generations
-- **Digital scrapbook** — freeform drag-and-drop canvas with polaroid frames, stickers and text; export finished books as PDF
+- **Digital scrapbook** — freeform drag-and-drop canvas with polaroid frames, stickers and text; export finished books as PDF, or build a **print-ready file** for a professional press. The print path does not photograph the editor the way the screen export does: it redraws every page from the stored element model straight onto a 300 DPI page, so photos are sampled from their originals rather than upscaled from screen pixels. Before it renders, a preflight names what a printer would object to — a photo that will print soft, at the DPI it will actually print at; content inside the 10 mm trim zone; and the blank pages a binding needs, which are only ever added after the user says so
 - **Collages** — pick a template from the gallery, drop family photos into its shaped slots, restyle the frame and background, then download the image or post it to the feed. Preview, thumbnail and export all come from one Canvas 2D renderer, so what you see is what you get
 - **Highlight videos** — turn a year, a season or a run of memories into a short reel with a title card, Ken Burns moves and crossfades. It plays in the app anywhere; where the browser supports `MediaRecorder` it also downloads as a video file. Posting a reel to the feed is bounded by the same encrypted-upload cap as any other video (10 MB on the free Cloudinary plan) — the app says so with real numbers instead of failing the upload, and downloading works at any size
 - **Login page designer** — give your family's address its own front door, from starter templates to a custom photo welcome page
@@ -72,6 +72,7 @@ A private, encrypted family memory platform — your family's own corner of the 
    - Enable Email/Password authentication
    - Create a Firestore database and deploy `firestore.rules`
    - Optional: deploy the push-notification Cloud Function with `firebase deploy --only functions` (needs the Blaze plan — everything else works without it)
+   - Optional: to hand print files to a print network, enable Cloud Storage (also Blaze) and deploy `storage.rules`. Without it the scrapbook print file still builds and downloads locally; only the upload path is unavailable
 
 4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`).
 

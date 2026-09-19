@@ -57,6 +57,34 @@ try {
 // emulator, so it stays off in emulator mode. Returns null when unavailable.
 let messagingPromise = null
 
+// Storage is loaded the same way, for the same reason and one more: it is only
+// ever touched when somebody orders a printed book, and it is the one service
+// here that requires the Blaze plan. A static import would put the SDK in every
+// visitor's bundle to support a feature most sessions never reach — and would
+// do it on a project where the bucket may not be provisioned at all.
+//
+// Returns null when Firebase itself is unconfigured; a bucket that exists but
+// is not enabled surfaces later, as an error on the upload, where it can be
+// reported with something more useful than a blank screen.
+let storagePromise = null
+
+export function getStorageInstance() {
+  if (!app) return Promise.resolve(null)
+  if (!storagePromise) {
+    storagePromise = import('firebase/storage')
+      .then(({ getStorage, connectStorageEmulator }) => {
+        const storage = getStorage(app)
+        if (USE_EMULATOR) connectStorageEmulator(storage, '127.0.0.1', 9199)
+        return storage
+      })
+      .catch((e) => {
+        if (import.meta.env.DEV) console.warn('Firebase Storage unavailable:', e.message)
+        return null
+      })
+  }
+  return storagePromise
+}
+
 export function getMessagingInstance() {
   if (!app || USE_EMULATOR) return Promise.resolve(null)
   if (typeof window === 'undefined' || !('Notification' in window)) return Promise.resolve(null)
