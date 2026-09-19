@@ -35,9 +35,10 @@ export default defineConfig([
     },
   },
   {
-    // Cloud Functions and the migration scripts run in Node, where `process`
-    // and friends exist and `window` does not.
-    files: ['functions/**/*.js', 'scripts/**/*.{js,mjs}'],
+    // Cloud Functions, the Vercel serverless functions under api/, and the
+    // migration scripts all run in Node, where `process` and friends exist and
+    // `window` does not.
+    files: ['functions/**/*.js', 'api/**/*.js', 'scripts/**/*.{js,mjs}'],
     languageOptions: {
       globals: globals.node,
     },
