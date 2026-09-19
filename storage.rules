@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Cloud Storage holds exactly one kind of object in Kaydo: the print-ready PDF
+// of a scrapbook, on its way to a print network. Everything else the app stores
+// is client-side encrypted and lives in Cloudinary as ciphertext; a press
+// cannot print ciphertext, so this bucket is the one place plaintext family
+// content comes to rest — briefly, and under the narrowest rules that still let
+// a printer fetch it.
+//
+// Note on how a printer reads the file: it does not authenticate. It is handed
+// the tokenised download URL that getDownloadURL() mints, and those URLs bypass
+// these rules by design. The rules below therefore guard who may *create* a
+// print file and who may enumerate or read one from inside the app — the
+// secrecy of the file itself rests on the unguessable token, and on deleting
+// the object once the order no longer needs it.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Storage rules cannot read Firestore, so the admins-subcollection fallback
+    // that firestore.rules uses is not available here. Only the claims minted at
+    // sign-in count, which is the stricter of the two and fine for this path.
+    function isFamilyAdmin(familyId) {
+      return request.auth != null
+        && request.auth.token.get('familyId', '') == familyId
+        && request.auth.token.get('role', '') == 'admin';
+    }
+
+    match /printFiles/{familyId}/{scrapbookId}/{fileName} {
+      // Scrapbooks themselves are admin-only (see firestore.rules), and ordering
+      // a book spends money, so reading and writing its print file is too.
+      allow read: if isFamilyAdmin(familyId);
+
+      allow create: if isFamilyAdmin(familyId)
+                    && request.resource.contentType == 'application/pdf'
+                    // A 300 DPI photo book is genuinely large — a 100-page
+                    // hardcover lands in the hundreds of megabytes — but the cap
+                    // keeps a bug from filling the bucket.
+                    && request.resource.size < 300 * 1024 * 1024;
+
+      // Print files are replaced by uploading a new one under a fresh random
+      // name, never edited in place.
+      allow update: if false;
+
+      // Cleanup after fulfilment, and after a cancelled order.
+      allow delete: if isFamilyAdmin(familyId);
+    }
+
+    // Nothing else belongs in this bucket.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

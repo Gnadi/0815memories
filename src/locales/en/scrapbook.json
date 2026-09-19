@@ -32,7 +32,9 @@
     "exportPdf": "Export as PDF",
     "pdf": "PDF",
     "copyShareLink": "Copy share link",
-    "linkCopied": "Link copied to clipboard!"
+    "linkCopied": "Link copied to clipboard!",
+    "printFile": "Create print-ready file (300 dpi)",
+    "print": "Print"
   },
   "pageNav": {
     "previousPage": "Previous page",
@@ -127,5 +129,42 @@
       "quote": "\"Your beautiful memory goes here\"",
       "title": "YOUR TITLE"
     }
+  },
+  "print": {
+    "title": "Create print file",
+    "formatLabel": "Book format",
+    "formatHint": "Both formats share your pages’ 4:3 aspect ratio, so nothing in your layout gets cropped.",
+    "formats": {
+      "landscape28x21": "28 × 21 cm",
+      "landscape20x15": "20 × 15 cm"
+    },
+    "progress": {
+      "analyzing": "Checking pages…",
+      "photos": "Decrypting photos… {{done}} of {{total}}",
+      "pages": "Drawing page {{done}} of {{total}}…",
+      "rendering": "Building the print file…"
+    },
+    "allClear": "Everything is ready for print.",
+    "issues": {
+      "onPage": "page {{page}}",
+      "veryLowResolution": "This photo prints at only {{dpi}} dpi and will look clearly blurry.",
+      "lowResolution": "This photo prints at {{dpi}} dpi — slightly soft in the book. 300 dpi is recommended.",
+      "outsideSafeArea": "This content sits closer than {{marginMm}} mm to the page edge and may be trimmed off.",
+      "emptySlot": "An empty photo slot will stay empty in the printed book.",
+      "missingPhoto": "A photo could not be loaded and would be missing from the book.",
+      "tooFewPages": "The book has {{current}} pages; binding starts at {{minPages}}.",
+      "tooManyPages": "The book has {{current}} pages; at most {{maxPages}} can be printed.",
+      "oddPageCount": "A bound book needs an even page count — this one has {{current}}."
+    },
+    "paddingQuestion": "To make the book bindable, {{add}} blank pages will be added (giving {{target}} pages).",
+    "keepEditing": "Keep editing",
+    "padAndBuild": "Add {{add}} pages & build",
+    "build": "Create print file",
+    "close": "Close",
+    "done": "Print file ready.",
+    "doneDetail": "{{pages}} pages · {{width}} × {{height}} cm · {{size}}",
+    "failed": "The print file could not be created. Please try again.",
+    "blocked": "Please fix the items marked in red first.",
+    "blockedTooManyPages": "The book is too long to print. Please remove pages."
   }
 }

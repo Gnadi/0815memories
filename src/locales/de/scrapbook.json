@@ -32,7 +32,9 @@
     "exportPdf": "Als PDF exportieren",
     "pdf": "PDF",
     "copyShareLink": "Link zum Teilen kopieren",
-    "linkCopied": "Link in die Zwischenablage kopiert!"
+    "linkCopied": "Link in die Zwischenablage kopiert!",
+    "printFile": "Druckfertige Datei erstellen (300 dpi)",
+    "print": "Druck"
   },
   "pageNav": {
     "previousPage": "Vorherige Seite",
@@ -127,5 +129,42 @@
       "quote": "„Deine schöne Erinnerung kommt hierher“",
       "title": "DEIN TITEL"
     }
+  },
+  "print": {
+    "title": "Druckdatei erstellen",
+    "formatLabel": "Buchformat",
+    "formatHint": "Beide Formate haben das 4:3-Seitenverhältnis deiner Seiten – dein Layout wird also nicht beschnitten.",
+    "formats": {
+      "landscape28x21": "28 × 21 cm",
+      "landscape20x15": "20 × 15 cm"
+    },
+    "progress": {
+      "analyzing": "Seiten werden geprüft…",
+      "photos": "Fotos werden entschlüsselt… {{done}} von {{total}}",
+      "pages": "Seite {{done}} von {{total}} wird gezeichnet…",
+      "rendering": "Druckdatei wird erstellt…"
+    },
+    "allClear": "Alles bereit für den Druck.",
+    "issues": {
+      "onPage": "Seite {{page}}",
+      "veryLowResolution": "Dieses Foto wird mit nur {{dpi}} dpi gedruckt und sieht deutlich unscharf aus.",
+      "lowResolution": "Dieses Foto wird mit {{dpi}} dpi gedruckt – im Buch leicht weich. Empfohlen sind 300 dpi.",
+      "outsideSafeArea": "Dieser Inhalt liegt näher als {{marginMm}} mm am Seitenrand und kann beim Beschnitt abgeschnitten werden.",
+      "emptySlot": "Ein leerer Fotoplatz bleibt im gedruckten Buch leer.",
+      "missingPhoto": "Ein Foto konnte nicht geladen werden und würde im Buch fehlen.",
+      "tooFewPages": "Das Buch hat {{current}} Seiten, gebunden werden erst {{minPages}}.",
+      "tooManyPages": "Das Buch hat {{current}} Seiten, gedruckt werden höchstens {{maxPages}}.",
+      "oddPageCount": "Ein gebundenes Buch braucht eine gerade Seitenzahl – aktuell sind es {{current}}."
+    },
+    "paddingQuestion": "Damit das Buch gebunden werden kann, werden {{add}} leere Seiten angehängt (dann {{target}} Seiten).",
+    "keepEditing": "Weitergestalten",
+    "padAndBuild": "{{add}} Seiten anhängen & erstellen",
+    "build": "Druckdatei erstellen",
+    "close": "Schließen",
+    "done": "Druckdatei fertig.",
+    "doneDetail": "{{pages}} Seiten · {{width}} × {{height}} cm · {{size}}",
+    "failed": "Die Druckdatei konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "blocked": "Bitte behebe zuerst die rot markierten Punkte.",
+    "blockedTooManyPages": "Das Buch ist zu lang zum Drucken. Bitte entferne Seiten."
   }
 }
