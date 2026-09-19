@@ -28,17 +28,27 @@ service firebase.storage {
     match /printFiles/{familyId}/{scrapbookId}/{fileName} {
       // Scrapbooks themselves are admin-only (see firestore.rules), and ordering
       // a book spends money, so reading and writing its print file is too.
-      allow read: if isFamilyAdmin(familyId);
+      //
+      // `get`, not `read`: read would also grant `list`, and the app never
+      // enumerates. Denying it keeps the unguessable filename doing its whole
+      // job — nothing can walk a family's folder to collect print-file names.
+      allow get: if isFamilyAdmin(familyId);
+      allow list: if false;
 
+      // `resource == null` makes this create-only. Storage counts overwriting
+      // an object as a create (its `update` covers metadata alone), so without
+      // this an existing print file could be replaced in place — swapping the
+      // content under a URL a printer has already been handed. A replacement
+      // has to arrive under a fresh random name instead.
       allow create: if isFamilyAdmin(familyId)
+                    && resource == null
                     && request.resource.contentType == 'application/pdf'
                     // A 300 DPI photo book is genuinely large — a 100-page
                     // hardcover lands in the hundreds of megabytes — but the cap
                     // keeps a bug from filling the bucket.
                     && request.resource.size < 300 * 1024 * 1024;
 
-      // Print files are replaced by uploading a new one under a fresh random
-      // name, never edited in place.
+      // Metadata is set once, at upload.
       allow update: if false;
 
       // Cleanup after fulfilment, and after a cancelled order.

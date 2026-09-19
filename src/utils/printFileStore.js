@@ -45,6 +45,22 @@ export function printFilePath(familyId, scrapbookId, token = crypto.randomUUID()
   return `printFiles/${familyId}/${scrapbookId}/${token}.pdf`
 }
 
+/**
+ * Make a filename safe to sit inside a Content-Disposition header.
+ *
+ * `exportFileName` already strips control characters and quotes, so today's
+ * caller is safe — but this value goes into a header, and a header built from a
+ * caller's promise is a header waiting for a caller that forgets. A CR or LF
+ * here would split the response; a quote would end the filename parameter early.
+ */
+function headerSafeFileName(name) {
+  const cleaned = Array.from(String(name ?? ''), (char) => (char < ' ' || char === '"' || char === '\\' || char === '\u007f' ? '' : char))
+    .join('')
+    .slice(0, 120)
+    .trim()
+  return cleaned || 'scrapbook.pdf'
+}
+
 async function requireStorage() {
   const storage = await getStorageInstance()
   if (!storage) {
@@ -74,7 +90,7 @@ export async function uploadPrintFile(blob, { familyId, scrapbookId, fileName = 
 
   const task = uploadBytesResumable(fileRef, blob, {
     contentType: 'application/pdf',
-    contentDisposition: `attachment; filename="${fileName.replace(/"/g, '')}"`,
+    contentDisposition: `attachment; filename="${headerSafeFileName(fileName)}"`,
     // Who this belongs to, readable from the console when an order needs
     // tracing back to a book without decrypting anything.
     customMetadata: { familyId, scrapbookId },
