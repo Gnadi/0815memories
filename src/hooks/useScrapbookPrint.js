@@ -1,9 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { saveAs } from 'file-saver'
 import { useAuth } from '../context/AuthContext'
-import { loadPrintImages, renderScrapbookToPrintPdf } from '../utils/printRenderer'
+import { loadImageSizes, renderScrapbookToPrintPdf } from '../utils/printRenderer'
 import { assemblePrintPages, runPreflight } from '../utils/printPreflight'
-import { uploadPrintFile } from '../utils/printFileStore'
 import { getFormat, getProduct } from '../utils/printFormats'
 import { exportFileName } from '../utils/helpers'
 import { devError } from '../utils/devLog'
@@ -11,14 +10,17 @@ import { devError } from '../utils/devLog'
 /**
  * The ordering pipeline, minus the ordering.
  *
- * Producing a book is three long steps — decrypt every photo, check the result,
- * then draw it at print size — and the expensive one is the first. Keeping the
- * loaded images in a ref means the preflight and the render share one decrypt
- * pass, so re-rendering after the user answers a question about page count
- * costs seconds rather than minutes.
+ * The preflight and the render both need every photo, but they need different
+ * things from them. The preflight asks how many of an original's pixels land on
+ * the page — arithmetic over two numbers — so it keeps only the sizes. The
+ * render needs the pixels themselves, and streams them a page at a time.
+ *
+ * Holding every decoded photo across both would be the single largest thing in
+ * memory: a hundred-page book of 12 MP originals is gigabytes of bitmap, which
+ * is how a phone loses the tab halfway through.
  */
 export function useScrapbookPrint(pages, { formatId, productId } = {}) {
-  const { familyId, encryptionKey } = useAuth()
+  const { encryptionKey } = useAuth()
 
   const [status, setStatus] = useState('idle')
   const [progress, setProgress] = useState(null)
@@ -41,7 +43,7 @@ export function useScrapbookPrint(pages, { formatId, productId } = {}) {
     setError(null)
     setProgress(null)
     try {
-      const { images } = await loadPrintImages(pages, encryptionKey, { onProgress: setProgress })
+      const { images } = await loadImageSizes(pages, encryptionKey, { onProgress: setProgress })
       imagesRef.current = images
       const result = runPreflight(pages, images, { formatId, productId })
       setPreflight(result)
@@ -69,17 +71,12 @@ export function useScrapbookPrint(pages, { formatId, productId } = {}) {
       const product = getProduct(productId)
       const sequence = padPages ? assemblePrintPages(pages, product).pages : pages
 
-      let images = imagesRef.current
-      if (!images) {
-        const loaded = await loadPrintImages(sequence, encryptionKey, { onProgress: setProgress })
-        images = loaded.images
-        imagesRef.current = images
-      }
-
+      // No `images` passed: the renderer streams them through its own bounded
+      // cache. What `analyze` left in the ref is sizes, not bitmaps, and would
+      // draw nothing.
       const result = await renderScrapbookToPrintPdf(sequence, {
         encryptionKey,
         formatId,
-        images,
         onProgress: setProgress,
       })
       setStatus('ready')
@@ -101,32 +98,6 @@ export function useScrapbookPrint(pages, { formatId, productId } = {}) {
     return result
   }, [createPrintFile, formatId])
 
-  /**
-   * Hand the print file to the store a print network can fetch it from.
-   *
-   * Unused until the provider is wired up in the next phase; it is here so the
-   * one piece that punctures the encryption model is written, reviewed and
-   * bounded now rather than in the rush of an integration.
-   */
-  const uploadForPrinter = useCallback(async ({ scrapbookId, title, blob }) => {
-    setStatus('uploading')
-    try {
-      const result = await uploadPrintFile(blob, {
-        familyId,
-        scrapbookId,
-        fileName: exportFileName(title, 'pdf', { fallback: 'Scrapbook' }),
-        onProgress: setProgress,
-      })
-      setStatus('ready')
-      return result
-    } catch (err) {
-      devError('Print upload failed', err)
-      setError(err)
-      setStatus('error')
-      return null
-    }
-  }, [familyId])
-
   return {
     status,
     progress,
@@ -135,7 +106,6 @@ export function useScrapbookPrint(pages, { formatId, productId } = {}) {
     analyze,
     createPrintFile,
     downloadPrintFile,
-    uploadForPrinter,
     reset,
     busy: status === 'analyzing' || status === 'rendering' || status === 'uploading',
   }

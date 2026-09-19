@@ -356,7 +356,17 @@ export const releasePrintFiles = onSchedule(
   { schedule: 'every day 03:30', timeZone: 'Europe/Berlin', retryCount: 2 },
   async () => {
     const db = getFirestore()
-    const bucket = getStorage().bucket()
+    // Named explicitly rather than taken from the Admin SDK's default. The
+    // default is derived from the runtime's own config and does not always
+    // match the bucket the browser uploaded to — Firebase projects created
+    // after late 2024 get <project>.firebasestorage.app while the SDK default
+    // is still <project>.appspot.com. Sweeping the wrong bucket would find
+    // nothing, and with ignoreNotFound every miss would be recorded as a
+    // successful delete, stranding every real file permanently.
+    const bucketName = process.env.PRINT_STORAGE_BUCKET
+      || process.env.FIREBASE_STORAGE_BUCKET
+      || getStorage().bucket().name
+    const bucket = getStorage().bucket(bucketName)
     const cutoff = Date.now() - PRINT_FILE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000
 
     // Equality on a single field, so no composite index is needed. The age and
@@ -369,6 +379,8 @@ export const releasePrintFiles = onSchedule(
 
     let released = 0
     let skipped = 0
+    let deleted = 0
+    let missing = 0
 
     for (const docSnap of snapshot.docs) {
       const order = docSnap.data()
@@ -380,9 +392,17 @@ export const releasePrintFiles = onSchedule(
       if (!done && !expired) { skipped += 1; continue }
 
       try {
-        // ignoreNotFound: the app may have deleted it already. That is the
-        // outcome we wanted, not an error worth retrying the whole pass over.
-        await bucket.file(order.printFilePath).delete({ ignoreNotFound: true })
+        const file = bucket.file(order.printFilePath)
+        // Asked rather than assumed. `delete({ ignoreNotFound: true })` alone
+        // cannot tell "the app already deleted it" from "we are looking in the
+        // wrong bucket", and both would be written down as done.
+        const [exists] = await file.exists()
+        if (exists) {
+          await file.delete()
+          deleted += 1
+        } else {
+          missing += 1
+        }
         await docSnap.ref.update({ printFileDeletedAt: new Date(), updatedAt: new Date() })
         released += 1
         if (expired && !done) {
@@ -395,6 +415,18 @@ export const releasePrintFiles = onSchedule(
       }
     }
 
-    console.log(`[print] print-file sweep: released=${released} skipped=${skipped}`)
+    // The bucket is named in the log on purpose: if it is the wrong one, every
+    // sweep reports the same telltale shape — files expected, none actually
+    // there — and that is only legible if you can see where it looked.
+    console.log(
+      `[print] print-file sweep on ${bucketName}: released=${released} `
+      + `(deleted=${deleted} already-gone=${missing}) skipped=${skipped}`
+    )
+    if (released > 0 && deleted === 0) {
+      console.warn(
+        `[print] every file this sweep released was already missing from ${bucketName}. `
+        + 'If that keeps happening, check PRINT_STORAGE_BUCKET against the bucket the app uploads to.'
+      )
+    }
   }
 )

@@ -156,7 +156,8 @@
       "missingPhoto": "Ein Foto konnte nicht geladen werden und würde im Buch fehlen.",
       "tooFewPages": "Das Buch hat {{current}} Seiten, gebunden werden erst {{minPages}}.",
       "tooManyPages": "Das Buch hat {{current}} Seiten, gedruckt werden höchstens {{maxPages}}.",
-      "oddPageCount": "Ein gebundenes Buch braucht eine gerade Seitenzahl – aktuell sind es {{current}}."
+      "oddPageCount": "Ein gebundenes Buch braucht eine gerade Seitenzahl – aktuell sind es {{current}}.",
+      "photoBoxCollapsed": "Dieses Polaroid ist zu klein für sein eigenes Rähmchen – das Foto wird nicht gedruckt. Zieh es größer."
     },
     "paddingQuestion": "Damit das Buch gebunden werden kann, werden {{add}} leere Seiten angehängt (dann {{target}} Seiten).",
     "keepEditing": "Weitergestalten",
@@ -230,6 +231,20 @@
       "providerRejected": "Die Druckerei hat die Anfrage abgelehnt.",
       "misconfigured": "Die Druckanbindung ist noch nicht vollständig konfiguriert.",
       "generic": "Das hat nicht geklappt. Bitte versuche es erneut."
+    },
+    "history": {
+      "heading": "Bisherige Bestellungen",
+      "refresh": "Status bei der Druckerei abfragen",
+      "note": "Beim Abfragen löschen wir die Druckdatei, sobald die Druckerei fertig ist.",
+      "status": {
+        "placing": "Wird übermittelt…",
+        "placed": "Bestellt",
+        "inProduction": "Im Druck",
+        "shipped": "Versandt",
+        "delivered": "Geliefert",
+        "failed": "Fehlgeschlagen",
+        "cancelled": "Storniert"
+      }
     }
   }
 }

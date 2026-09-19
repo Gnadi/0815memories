@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Loader2, AlertTriangle, AlertCircle, Info, CheckCircle2, Printer, Download, ArrowLeft } from 'lucide-react'
+import { X, Loader2, AlertTriangle, AlertCircle, Info, CheckCircle2, Printer, Download, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useScrapbookPrint } from '../../hooks/useScrapbookPrint'
 import { usePrintOrders } from '../../hooks/usePrintOrders'
@@ -66,11 +66,12 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
   const [placed, setPlaced] = useState(null)
   const [downloaded, setDownloaded] = useState(null)
   const [placing, setPlacing] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(null)
 
   const {
-    status, progress, preflight, error, analyze, createPrintFile, downloadPrintFile, uploadForPrinter, reset, busy,
+    status, progress, preflight, error, analyze, createPrintFile, downloadPrintFile, reset, busy,
   } = useScrapbookPrint(pages, { formatId, productId: DEFAULT_PRODUCT_ID })
-  const { createOrder } = usePrintOrders(scrapbookId)
+  const { orders, createOrder, refreshStatus } = usePrintOrders(scrapbookId)
 
   const format = getFormat(formatId)
   const product = getProduct(DEFAULT_PRODUCT_ID)
@@ -83,6 +84,12 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
   // that passes at 20 × 15 can fail at 28 × 21. Re-check on every change.
   useEffect(() => {
     setDownloaded(null)
+    // An offering is a product of one physical size. Keeping the old selection
+    // across a format change would post that offering alongside the new
+    // format's dimensions and PDF — a 20 × 15 product printed from a 28 × 21
+    // file, which the press would either reject or, worse, not.
+    setOfferingId(null)
+    setCatalog((c) => ({ ...c, offerings: [], unreadable: false, error: null }))
     reset()
     analyze()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,6 +127,11 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
   }, [available, offeringId])
 
   const progressLabel = () => {
+    if (uploadProgress?.phase === 'upload') {
+      return t('print.progress.upload', {
+        done: formatBytes(uploadProgress.done), total: formatBytes(uploadProgress.total),
+      })
+    }
     if (!progress) return null
     if (progress.phase === 'images') return t('print.progress.photos', { done: progress.done, total: progress.total })
     if (progress.phase === 'pages') return t('print.progress.pages', { done: progress.done, total: progress.total })
@@ -155,23 +167,27 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
   }
 
   /**
-   * Render, upload, record, order — in that order, and stopping at the first
-   * failure. The upload happens here rather than earlier so that a plaintext
-   * PDF only ever reaches storage when somebody has actually decided to buy.
+   * Render here, then hand the blob to `createOrder`, which records the order
+   * before it uploads anything.
+   *
+   * The render stays on this side because it is the slow, cancellable part and
+   * it must not happen until somebody has decided to buy — a plaintext PDF
+   * should not exist, in memory or in the bucket, a moment earlier than needed.
    */
   const handlePlaceOrder = async () => {
     setPlacing(true)
     setOrderError(null)
+    setUploadProgress(null)
     try {
       const rendered = await createPrintFile({ padPages: needsPadding })
-      if (!rendered) throw new Error('render failed')
-
-      const uploaded = await uploadForPrinter({ scrapbookId, title, blob: rendered.blob })
-      if (!uploaded) throw new Error('upload failed')
+      // createPrintFile reports its own failure through `error`; surfacing that
+      // one rather than a placeholder is what tells the user whether a photo
+      // would not decrypt or the browser ran out of memory.
+      if (!rendered) throw error || new Error('render failed')
 
       const order = await createOrder({
-        fileUrl: uploaded.url,
-        printFilePath: uploaded.path,
+        blob: rendered.blob,
+        title,
         offeringId,
         formatId,
         productId: DEFAULT_PRODUCT_ID,
@@ -180,6 +196,7 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
         widthMm: format.widthMm,
         heightMm: format.heightMm,
         address,
+        onProgress: setUploadProgress,
       })
 
       setPlaced(order)
@@ -189,6 +206,7 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
       setOrderError(err)
     } finally {
       setPlacing(false)
+      setUploadProgress(null)
     }
   }
 
@@ -286,6 +304,37 @@ export default function PrintDialog({ pages, title, scrapbookId, onClose }) {
               )}
 
               {error && <p className="text-xs text-red-600">{t('print.failed')}</p>}
+
+              {orders.length > 0 && (
+                <div className="border-t border-cream-dark pt-4">
+                  <p className="text-xs font-semibold text-bark-muted mb-2">{t('print.history.heading')}</p>
+                  <ul className="space-y-2">
+                    {orders.map((order) => (
+                      <li key={order.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-bark truncate">
+                          {t(`print.history.status.${order.status}`, t('print.history.status.placed'))}
+                          <span className="text-bark-muted">
+                            {' · '}{order.quantity}× · {order.pageCount} {t('print.review.pages')}
+                          </span>
+                        </span>
+                        <button
+                          onClick={() => refreshStatus(order)}
+                          disabled={working}
+                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-cream hover:bg-cream-dark text-bark-muted hover:text-bark flex-shrink-0 disabled:opacity-40"
+                          title={t('print.history.refresh')}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* Refreshing is not only informational: a status that has
+                      reached the press's end of the job is what releases the
+                      plaintext print file, months before the nightly sweep
+                      would get to it. */}
+                  <p className="text-[11px] text-bark-muted mt-2">{t('print.history.note')}</p>
+                </div>
+              )}
             </>
           )}
 

@@ -89,12 +89,22 @@ things delete it, and they all ask the same function —
 1. **A failed order**, immediately. A file nobody will ever fetch is exposure
    with no purpose.
 2. **A status refresh** that finds the order shipped, delivered, cancelled or
-   failed. This is the normal path, and it only runs while somebody has the app
-   open.
+   failed. The print dialog lists past orders with a refresh button for exactly
+   this reason — the button is not only informational. It only runs while
+   somebody has the app open.
 3. **A nightly Cloud Function** (`releasePrintFiles`), which is the backstop for
    the orders most in need of it: the ones nobody looks at again. It also
    deletes any print file older than 30 days whatever its status says, and logs
    a warning when it has to — an order that ages out is one status tracking lost.
+
+   The sweep names its bucket explicitly (`PRINT_STORAGE_BUCKET`, falling back to
+   `FIREBASE_STORAGE_BUCKET` and then the Admin SDK default) and checks each
+   object exists before deleting it. The Admin default is not always the bucket
+   the browser uploaded to — projects created after late 2024 get
+   `<project>.firebasestorage.app` while the SDK default is still
+   `<project>.appspot.com` — and sweeping the wrong one would record every miss
+   as a successful delete, stranding every real file. The log says which bucket
+   it swept and warns if everything it released was already missing.
 
 An unrecognised provider status never advances an order, because a wrong
 "shipped" would delete a print file while the press was still reading it.
@@ -105,6 +115,9 @@ An unrecognised provider status never advances an order, because a wrong
   against that family's own `printOrders` rows now that they exist.
 - Download URLs never expire. Deleting the object is the only revocation, which
   is why the sweep above matters more than it looks.
+- The order record is written before the file is uploaded, so a failure between
+  the two leaves a row pointing at a path rather than an unreferenced file. The
+  reverse order would leave a plaintext PDF nothing could find.
 - **Who collects the money is unconfirmed.** Peecho's hosted checkout collects
   from the customer and makes them merchant of record, which is what the
   provider analysis recommended them for. Whether the *Print API* path does the

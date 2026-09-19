@@ -30,6 +30,7 @@ export const ISSUE = {
   OUTSIDE_SAFE_AREA: 'outsideSafeArea',
   EMPTY_SLOT: 'emptySlot',
   MISSING_PHOTO: 'missingPhoto',
+  PHOTO_BOX_COLLAPSED: 'photoBoxCollapsed',
   TOO_FEW_PAGES: 'tooFewPages',
   TOO_MANY_PAGES: 'tooManyPages',
   ODD_PAGE_COUNT: 'oddPageCount',
@@ -86,7 +87,11 @@ export function photoDpi(element, image, format) {
   const box = photoImageBox(element)
   const iw = image.naturalWidth ?? image.width
   const ih = image.naturalHeight ?? image.height
-  if (!iw || !ih || !(box.width > 0)) return null
+  // A box with no area shows no photo, so it has no resolution to report.
+  // Returning 0 here instead of null read as "0 dpi" and raised a blocking
+  // low-resolution error for an element whose real problem is its size —
+  // which disabled the whole dialog, download included.
+  if (!iw || !ih || !(box.width > 0) || !(box.height > 0)) return null
 
   const { sw } = computeCoverRect(iw, ih, box.width, box.height, element.imageScale || 1)
   return effectiveDpi(sw, box.width, format)
@@ -126,7 +131,14 @@ export function checkPage(page, images, format, pageIndex, { marginMm = SAFETY_M
 
     if (element.type === 'photo') {
       const image = images?.get(element.url)
-      if (!image) {
+      const box = photoImageBox(element)
+      // A polaroid dragged smaller than its own frame — 8 px of padding, 24 at
+      // the foot, and a caption line — has nothing left for the photo. It is
+      // still drawn, as a white card with no picture in it, so say so rather
+      // than letting a blank rectangle reach paper.
+      if (!(box.width > 0) || !(box.height > 0)) {
+        issues.push({ ...base, code: ISSUE.PHOTO_BOX_COLLAPSED, level: LEVEL.WARNING })
+      } else if (!image) {
         issues.push({ ...base, code: ISSUE.MISSING_PHOTO, level: LEVEL.ERROR })
       } else {
         const dpi = photoDpi(element, image, format)

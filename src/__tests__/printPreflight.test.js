@@ -206,3 +206,41 @@ describe('runPreflight', () => {
     expect(big.warnings.length).toBeGreaterThan(small.warnings.length)
   })
 })
+
+describe('a photo box with no room left in it', () => {
+  // A polaroid can be dragged down to the editor's 60 × 40 minimum, which is
+  // smaller than its own frame: 8 px of padding, 24 at the foot, and 20 more
+  // for a caption line. What is left for the photo is nothing.
+  const tiny = photo({ polaroid: true, caption: 'Ostern', width: 60, height: 40 })
+  const images = new Map([['enc://a', image(3000, 2000)]])
+
+  it('has a collapsed image box', () => {
+    expect(photoImageBox(tiny).height).toBe(0)
+  })
+
+  it('reports no dpi rather than zero dpi', () => {
+    // Zero read as a resolution, and a resolution below 100 is a blocking
+    // error — so this used to disable the whole dialog, download included, for
+    // an element whose real problem is its size.
+    expect(photoDpi(tiny, image(3000, 2000), format)).toBeNull()
+  })
+
+  it('names the real problem, and only warns', () => {
+    const issues = checkPage({ elements: [tiny] }, images, format, 0)
+    expect(issues.map((i) => i.code)).toContain(ISSUE.PHOTO_BOX_COLLAPSED)
+    expect(issues.every((i) => i.level !== LEVEL.ERROR)).toBe(true)
+  })
+
+  it('does not block the order', () => {
+    const result = runPreflight([{ id: 'p', elements: [tiny] }], images, {})
+    expect(result.ok).toBe(true)
+  })
+
+  it('leaves a polaroid with room to spare alone', () => {
+    // Placed inside the safe area: a captioned polaroid in the page corner is
+    // genuinely in the trim zone, and that warning is a different check doing
+    // its job.
+    const fine = photo({ polaroid: true, caption: 'Ostern', x: 100, y: 100, width: 300, height: 260 })
+    expect(checkPage({ elements: [fine] }, images, format, 0)).toEqual([])
+  })
+})

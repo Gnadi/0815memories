@@ -156,7 +156,8 @@
       "missingPhoto": "A photo could not be loaded and would be missing from the book.",
       "tooFewPages": "The book has {{current}} pages; binding starts at {{minPages}}.",
       "tooManyPages": "The book has {{current}} pages; at most {{maxPages}} can be printed.",
-      "oddPageCount": "A bound book needs an even page count — this one has {{current}}."
+      "oddPageCount": "A bound book needs an even page count — this one has {{current}}.",
+      "photoBoxCollapsed": "This polaroid is too small for its own frame — the photo will not print. Drag it larger."
     },
     "paddingQuestion": "To make the book bindable, {{add}} blank pages will be added (giving {{target}} pages).",
     "keepEditing": "Keep editing",
@@ -230,6 +231,20 @@
       "providerRejected": "The printer rejected the request.",
       "misconfigured": "The print integration is not fully configured yet.",
       "generic": "That did not work. Please try again."
+    },
+    "history": {
+      "heading": "Past orders",
+      "refresh": "Ask the printer for the status",
+      "note": "Refreshing also deletes the print file once the printer is finished with it.",
+      "status": {
+        "placing": "Submitting…",
+        "placed": "Ordered",
+        "inProduction": "Printing",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      }
     }
   }
 }

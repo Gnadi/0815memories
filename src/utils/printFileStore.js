@@ -78,14 +78,18 @@ async function requireStorage() {
  * `contentDisposition` gives the file a human name in the printer's system —
  * their support staff see a filename, not a UUID, when something needs chasing.
  */
-export async function uploadPrintFile(blob, { familyId, scrapbookId, fileName = 'scrapbook.pdf', onProgress } = {}) {
+export async function uploadPrintFile(blob, { familyId, scrapbookId, fileName = 'scrapbook.pdf', path: targetPath, onProgress } = {}) {
   if (!familyId || !scrapbookId) throw new PrintStorageError('INVALID_TARGET', 'familyId and scrapbookId are required')
   if (!blob) throw new PrintStorageError('INVALID_FILE', 'No file to upload')
 
   const storage = await requireStorage()
   const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage')
 
-  const path = printFilePath(familyId, scrapbookId)
+  // The caller may name the path, so it can be written into the order record
+  // *before* the upload happens. Without that, an upload that succeeded and a
+  // database write that then failed would leave a plaintext PDF in the bucket
+  // that nothing — not the app, not the nightly sweep — could ever find again.
+  const path = targetPath || printFilePath(familyId, scrapbookId)
   const fileRef = ref(storage, path)
 
   const task = uploadBytesResumable(fileRef, blob, {

@@ -310,31 +310,115 @@ function withTimeout(promise, ms) {
   ])
 }
 
-/**
- * Decrypt and decode every distinct photo a book uses, once.
- *
- * Originals, not thumbnails: the whole point of this renderer is that a photo
- * reaches the page at whatever resolution it was uploaded with. Pages share
- * photos often enough that deduplicating by URL is worth the Map.
- */
-export async function loadPrintImages(pages, encryptionKey, { onProgress } = {}) {
-  const urls = [...new Set(
+/** Every distinct photo URL a set of pages refers to. */
+function photoUrls(pages) {
+  return [...new Set(
     (pages || []).flatMap((page) => (page.elements || [])
       .filter((el) => el.type === 'photo' && el.url)
       .map((el) => el.url))
   )]
+}
 
+async function decodeOne(url, encryptionKey) {
+  const resolved = (await withTimeout(
+    prefetchDecryptedMedia(url, encryptionKey, 'image/*'),
+    IMAGE_TIMEOUT_MS
+  )) || url
+  return withTimeout(loadImage(resolved), IMAGE_TIMEOUT_MS)
+}
+
+/**
+ * The natural size of every photo a book uses, without keeping any of them.
+ *
+ * This is what the preflight needs: it asks how many of an original's pixels
+ * land on the page, which is arithmetic over two numbers. Holding the decoded
+ * bitmaps to answer that would cost a gigabyte on a large book and buy nothing —
+ * each image is released as soon as it has been measured.
+ */
+export async function loadImageSizes(pages, encryptionKey, { onProgress } = {}) {
+  const urls = photoUrls(pages)
+  const sizes = new Map()
+  const failed = []
+  let done = 0
+
+  for (const url of urls) {
+    try {
+      const img = await decodeOne(url, encryptionKey)
+      if (img) sizes.set(url, { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight })
+      else failed.push(url)
+    } catch {
+      failed.push(url)
+    }
+    done += 1
+    onProgress?.({ phase: 'images', done, total: urls.length })
+  }
+
+  return { images: sizes, failed }
+}
+
+/**
+ * How many decoded photos the renderer keeps alive at once.
+ *
+ * A page holds a handful; keeping a few more than that means the pages either
+ * side of a repeated photo still hit rather than decoding it again. Every entry
+ * is a full-resolution bitmap — a 12 MP photo is ~48 MB decoded — so this is the
+ * number that decides whether a hundred-page book renders or the tab dies.
+ */
+const IMAGE_CACHE_SIZE = 10
+
+/**
+ * A bounded, least-recently-used store of decoded photos.
+ *
+ * The renderer used to take a Map of every photo in the book, which defeated
+ * the point of reusing one page canvas: the canvas stayed at eight megapixels
+ * while the images beside it grew without limit.
+ */
+export function createPrintImageCache(encryptionKey, { maxEntries = IMAGE_CACHE_SIZE } = {}) {
+  const cache = new Map()
+
+  return {
+    async get(url) {
+      if (cache.has(url)) {
+        // Re-insert so insertion order stays usage order.
+        const hit = cache.get(url)
+        cache.delete(url)
+        cache.set(url, hit)
+        return hit
+      }
+      let img = null
+      try {
+        img = await decodeOne(url, encryptionKey)
+      } catch {
+        img = null
+      }
+      // Cached even when null: a photo that will not decrypt should be given up
+      // on once per book, not once per page it appears on.
+      cache.set(url, img)
+      while (cache.size > maxEntries) cache.delete(cache.keys().next().value)
+      return img
+    },
+    clear() {
+      cache.clear()
+    },
+  }
+}
+
+/**
+ * Decrypt and decode every distinct photo a book uses, once.
+ *
+ * Kept for callers that genuinely want them all in hand at the same time —
+ * tests, and rendering a book small enough that it does not matter. The print
+ * path streams through `createPrintImageCache` instead.
+ */
+export async function loadPrintImages(pages, encryptionKey, { onProgress } = {}) {
+  const urls = photoUrls(pages)
   const images = new Map()
   const failed = []
   let done = 0
 
   for (const url of urls) {
     try {
-      const resolved = (await withTimeout(
-        prefetchDecryptedMedia(url, encryptionKey, 'image/*'),
-        IMAGE_TIMEOUT_MS
-      )) || url
-      const img = await withTimeout(loadImage(resolved), IMAGE_TIMEOUT_MS)
+      const img = await decodeOne(url, encryptionKey)
       if (img) images.set(url, img)
       else failed.push(url)
     } catch {
@@ -384,13 +468,10 @@ export async function renderScrapbookToPrintPdf(pages, {
 
   await warmPrintFonts()
 
-  let images = providedImages
-  let failed = []
-  if (!images) {
-    const loaded = await loadPrintImages(pages, encryptionKey, { onProgress })
-    images = loaded.images
-    failed = loaded.failed
-  }
+  // Given a map, use it as-is; otherwise stream, keeping only the photos of the
+  // page being drawn plus a small tail of recently used ones.
+  const cache = providedImages ? null : createPrintImageCache(encryptionKey)
+  const failed = []
 
   const pdf = new jsPDF({
     orientation: format.widthMm >= format.heightMm ? 'landscape' : 'portrait',
@@ -402,16 +483,28 @@ export async function renderScrapbookToPrintPdf(pages, {
   const canvas = document.createElement('canvas')
 
   for (let i = 0; i < total; i++) {
-    renderPageToCanvas(canvas, pages[i], images, format, dpi)
+    let pageImages = providedImages
+    if (!pageImages) {
+      pageImages = new Map()
+      for (const url of photoUrls([pages[i]])) {
+        const img = await cache.get(url)
+        if (img) pageImages.set(url, img)
+        else if (!failed.includes(url)) failed.push(url)
+      }
+    }
+
+    renderPageToCanvas(canvas, pages[i], pageImages, format, dpi)
     const data = await canvasToJpegBytes(canvas, quality)
     if (i > 0) pdf.addPage([format.widthMm, format.heightMm], format.widthMm >= format.heightMm ? 'landscape' : 'portrait')
     pdf.addImage(data, 'JPEG', 0, 0, format.widthMm, format.heightMm)
     onProgress?.({ phase: 'pages', done: i + 1, total })
   }
 
-  // Let the page bitmap go before the PDF blob doubles peak memory.
+  // Let the page bitmap and the decoded photos go before the PDF blob doubles
+  // peak memory.
   canvas.width = 0
   canvas.height = 0
+  cache?.clear()
 
   return { blob: pdf.output('blob'), format, pageCount: total, failedImages: failed }
 }

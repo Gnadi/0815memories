@@ -5,8 +5,9 @@ import {
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { encryptJSON, decryptJSON } from '../utils/encryption'
-import { deletePrintFile } from '../utils/printFileStore'
+import { deletePrintFile, printFilePath, uploadPrintFile } from '../utils/printFileStore'
 import { fetchOrderStatus, placeOrder } from '../utils/printApi'
+import { exportFileName } from '../utils/helpers'
 import { STATUS, mapProviderStatus, printFileRelease } from '../utils/printOrderStatus'
 import { devError } from '../utils/devLog'
 
@@ -84,21 +85,26 @@ export function usePrintOrders(scrapbookId) {
   }, [])
 
   /**
-   * Record an order and hand it to the print network.
+   * Record an order, upload its print file, and hand it to the print network.
    *
-   * The record is written first, deliberately. If the network call then fails,
-   * there is still a row saying what was attempted and which print file it was
-   * attempted with — which is what makes the file recoverable rather than
-   * orphaned. The other order would leave an uploaded plaintext PDF in the
-   * bucket with nothing in the database pointing at it.
+   * The order of those three is the whole point. The object path is chosen
+   * first and written into the record *before* anything is uploaded, so there
+   * is no window in which a plaintext PDF exists in the bucket with nothing in
+   * the database pointing at it. An orphan like that is invisible to the app
+   * and to the nightly sweep alike — it would simply live there.
+   *
+   * Every failure after the record exists therefore has something to clean up
+   * with, and does: the file is released immediately rather than waiting the
+   * full thirty days for the backstop.
    */
   const createOrder = useCallback(async ({
-    fileUrl, printFilePath, offeringId, formatId, productId,
-    quantity, pageCount, widthMm, heightMm, address, currency = 'EUR',
+    blob, offeringId, formatId, productId, title,
+    quantity, pageCount, widthMm, heightMm, address, currency = 'EUR', onProgress,
   }) => {
     if (!familyId || !scrapbookId) throw new Error('Missing family or scrapbook')
 
     const orderReference = `kaydo-${crypto.randomUUID().replace(/-/g, '')}`.slice(0, 40)
+    const targetPath = printFilePath(familyId, scrapbookId)
 
     const ref = await addDoc(collection(db, 'printOrders'), {
       familyId,
@@ -112,17 +118,48 @@ export function usePrintOrders(scrapbookId) {
       quantity,
       pageCount,
       currency,
-      printFilePath,
+      printFilePath: targetPath,
       printFileDeletedAt: null,
       address: encryptionKey ? await encryptJSON(encryptionKey, address) : address,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
 
+    const fail = async (err, code) => {
+      await updateDoc(ref, {
+        status: STATUS.FAILED,
+        failureCode: code || err?.code || 'unknown',
+        updatedAt: serverTimestamp(),
+      }).catch(() => {})
+      await releasePrintFile({ id: ref.id, printFilePath: targetPath, status: STATUS.FAILED })
+      throw err
+    }
+
+    let uploaded
+    try {
+      uploaded = await uploadPrintFile(blob, {
+        familyId,
+        scrapbookId,
+        path: targetPath,
+        fileName: exportFileName(title, 'pdf', { fallback: 'Scrapbook' }),
+        onProgress,
+      })
+    } catch (err) {
+      // Nothing was uploaded, so there is nothing to release — but the record
+      // still has to stop saying "placing", or it would sit there forever.
+      await updateDoc(ref, {
+        status: STATUS.FAILED,
+        failureCode: err?.code || 'upload_failed',
+        printFilePath: null,
+        updatedAt: serverTimestamp(),
+      }).catch(() => {})
+      throw err
+    }
+
     try {
       const result = await placeOrder(user, {
         orderReference, offeringId, quantity, pageCount,
-        widthMm, heightMm, currency, fileUrl, address,
+        widthMm, heightMm, currency, fileUrl: uploaded.url, address,
       })
       await updateDoc(ref, {
         status: STATUS.PLACED,
@@ -133,13 +170,7 @@ export function usePrintOrders(scrapbookId) {
     } catch (err) {
       // A failed order's file will never be fetched, so it is exposure with no
       // purpose. Released straight away rather than waiting for the backstop.
-      await updateDoc(ref, {
-        status: STATUS.FAILED,
-        failureCode: err?.code || 'unknown',
-        updatedAt: serverTimestamp(),
-      }).catch(() => {})
-      await releasePrintFile({ id: ref.id, printFilePath, status: STATUS.FAILED })
-      throw err
+      return fail(err)
     }
   }, [familyId, scrapbookId, encryptionKey, user, releasePrintFile])
 
