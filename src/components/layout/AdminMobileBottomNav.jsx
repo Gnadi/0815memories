@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, BookHeart, Plus, Lock, ChefHat, Camera, BookMarked, CalendarHeart, LayoutGrid, Film, X } from 'lucide-react'
+import { Home, BookHeart, Plus, Lock, Camera, BookMarked, CalendarHeart, LayoutGrid, Film, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useMemoryWriter } from '../../hooks/useMemories'
 import { useScrapbookWriter } from '../../hooks/useScrapbooks'
@@ -62,7 +62,7 @@ export default function AdminMobileBottomNav() {
 
   const rightItems = [
     { label: t('mobileNav.blackBox'), icon: Lock, path: '/blackbox' },
-    { label: t('mobileNav.recipes'), icon: ChefHat, path: '/recipes' },
+    { label: t('mobileNav.scrapbooks'), icon: BookMarked, path: '/scrapbook' },
   ]
 
   const handleCreateScrapbook = async () => {
