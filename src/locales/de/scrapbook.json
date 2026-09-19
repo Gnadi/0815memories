@@ -142,7 +142,9 @@
       "analyzing": "Seiten werden geprüft…",
       "photos": "Fotos werden entschlüsselt… {{done}} von {{total}}",
       "pages": "Seite {{done}} von {{total}} wird gezeichnet…",
-      "rendering": "Druckdatei wird erstellt…"
+      "rendering": "Druckdatei wird erstellt…",
+      "upload": "Druckdatei wird übertragen… {{done}} von {{total}}",
+      "placing": "Bestellung wird übermittelt…"
     },
     "allClear": "Alles bereit für den Druck.",
     "issues": {
@@ -165,6 +167,69 @@
     "doneDetail": "{{pages}} Seiten · {{width}} × {{height}} cm · {{size}}",
     "failed": "Die Druckdatei konnte nicht erstellt werden. Bitte versuche es erneut.",
     "blocked": "Bitte behebe zuerst die rot markierten Punkte.",
-    "blockedTooManyPages": "Das Buch ist zu lang zum Drucken. Bitte entferne Seiten."
+    "blockedTooManyPages": "Das Buch ist zu lang zum Drucken. Bitte entferne Seiten.",
+    "steps": {
+      "check": "Druckdatei prüfen",
+      "details": "Buch & Lieferung",
+      "review": "Bestellung prüfen",
+      "done": "Bestellt"
+    },
+    "back": "Zurück",
+    "continue": "Weiter",
+    "downloadOnly": "Nur herunterladen",
+    "orderIt": "Bestellen",
+    "placeOrder": "Kostenpflichtig bestellen",
+    "placeOrderNote": "Die Druckerei erhält deine Druckdatei und deine Lieferadresse.",
+    "productLabel": "Produkt",
+    "chooseProduct": "Bitte wählen…",
+    "quantityLabel": "Anzahl",
+    "catalogLoading": "Produkte werden geladen…",
+    "catalogUnreadable": "Die Antwort der Druckerei ließ sich nicht lesen. Bitte /api/print/selftest ausführen.",
+    "catalogEmpty": "Für dieses Format bietet die Druckerei derzeit kein Produkt an.",
+    "quoteLoading": "Preis wird berechnet…",
+    "review": {
+      "book": "Buch",
+      "format": "Format",
+      "pages": "Seiten",
+      "quantity": "Anzahl",
+      "shipTo": "Lieferung an"
+    },
+    "placed": {
+      "heading": "Deine Bestellung ist raus.",
+      "body": "Die Druckerei bestätigt per E-Mail. Sobald das Buch gedruckt ist, löschen wir die Druckdatei wieder.",
+      "reference": "Bestellnummer"
+    },
+    "address": {
+      "heading": "Lieferadresse",
+      "name": "Name",
+      "line1": "Straße und Hausnummer",
+      "line2": "Adresszusatz",
+      "postalCode": "PLZ",
+      "city": "Ort",
+      "countryCode": "Land (2 Buchstaben)",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "privacyNote": "Deine Adresse wird verschlüsselt gespeichert und nur zum Versand an die Druckerei übermittelt.",
+      "errors": {
+        "required": "Pflichtfeld",
+        "country": "Zwei Buchstaben, z. B. DE",
+        "email": "Keine gültige E-Mail-Adresse"
+      }
+    },
+    "errors": {
+      "notSignedIn": "Du bist nicht angemeldet. Bitte lade die Seite neu.",
+      "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+      "adminOnly": "Nur Familien-Admins können Bücher bestellen.",
+      "incompleteAddress": "Die Lieferadresse ist unvollständig.",
+      "invalidCountry": "Das Länderkürzel ist ungültig.",
+      "invalidEmail": "Die E-Mail-Adresse ist ungültig.",
+      "fileNotOurs": "Diese Druckdatei gehört nicht zu deiner Familie.",
+      "fileMissing": "Es wurde keine Druckdatei übergeben.",
+      "providerSlow": "Die Druckerei antwortet gerade nicht rechtzeitig. Bitte versuche es gleich noch einmal.",
+      "providerDown": "Die Druckerei ist nicht erreichbar. Bitte versuche es später erneut.",
+      "providerRejected": "Die Druckerei hat die Anfrage abgelehnt.",
+      "misconfigured": "Die Druckanbindung ist noch nicht vollständig konfiguriert.",
+      "generic": "Das hat nicht geklappt. Bitte versuche es erneut."
+    }
   }
 }

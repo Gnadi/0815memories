@@ -17,8 +17,12 @@ Editor (browser)
   └─ hands Peecho the tokenised download URL, with the merchant key from the environment
 
 Peecho
-  ├─ collects payment, charges VAT, routes to the nearest press
-  └─ prints, ships, and handles support
+  ├─ routes to the nearest press
+  └─ prints and ships
+
+printOrders/{id} (Firestore)
+  ├─ records what was ordered, with the delivery address encrypted
+  └─ holds the print file's object path, so the file can be released later
 ```
 
 The print PDF is the **only** plaintext family content that comes to rest outside
@@ -76,12 +80,35 @@ really imposes. Until that has been read, `src/utils/printFormats.js` holds
 conservative stand-ins that are stricter than any press, never looser — so the
 preflight may refuse a book Peecho would have accepted, but never the reverse.
 
+## Releasing the print file
+
+The print PDF exists for as long as a press needs it, and no longer. Three
+things delete it, and they all ask the same function —
+`printFileRelease` in `src/utils/printOrderStatus.js`:
+
+1. **A failed order**, immediately. A file nobody will ever fetch is exposure
+   with no purpose.
+2. **A status refresh** that finds the order shipped, delivered, cancelled or
+   failed. This is the normal path, and it only runs while somebody has the app
+   open.
+3. **A nightly Cloud Function** (`releasePrintFiles`), which is the backstop for
+   the orders most in need of it: the ones nobody looks at again. It also
+   deletes any print file older than 30 days whatever its status says, and logs
+   a warning when it has to — an order that ages out is one status tracking lost.
+
+An unrecognised provider status never advances an order, because a wrong
+"shipped" would delete a print file while the press was still reading it.
+
 ## Still open
 
-- **Nothing deletes a print file yet.** `deletePrintFile` exists and the order
-  response hands back the object path, but no caller wires them together. Until
-  fulfilment does, an uploaded print file stays in the bucket indefinitely. This
-  is the most important loose end.
-- `status` trusts the order reference it is given. Once orders are recorded in
-  Firestore it should check the reference against that family's own rows.
-- Download URLs never expire. Deleting the object is the only revocation.
+- `status` trusts the order reference it is given. It should check the reference
+  against that family's own `printOrders` rows now that they exist.
+- Download URLs never expire. Deleting the object is the only revocation, which
+  is why the sweep above matters more than it looks.
+- **Who collects the money is unconfirmed.** Peecho's hosted checkout collects
+  from the customer and makes them merchant of record, which is what the
+  provider analysis recommended them for. Whether the *Print API* path does the
+  same, or bills the merchant account directly, is part of the documentation
+  that was not reachable. The selftest and the Peecho dashboard will say. If it
+  bills the merchant account, collecting from families becomes the operator's
+  problem again and the payment question from the analysis reopens.

@@ -475,7 +475,7 @@ export default function ScrapbookEditorPage() {
       />
 
       {printOpen && (
-        <PrintDialog pages={pages} title={title} onClose={() => setPrintOpen(false)} />
+        <PrintDialog pages={pages} title={title} scrapbookId={id} onClose={() => setPrintOpen(false)} />
       )}
 
       {/* Canvas area — fits available space, no scroll */}
