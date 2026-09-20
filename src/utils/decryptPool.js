@@ -20,6 +20,9 @@ let workers = null
 let nextWorker = 0
 let nextJobId = 1
 let keyedWith = null
+// Set once the pool has proved it cannot be used on this browser, so the
+// fallback is taken straight away instead of being rediscovered per photo.
+let poolUnusable = false
 
 function createWorkers() {
   const count = Math.max(
@@ -54,6 +57,7 @@ function createWorkers() {
 
 function ensureWorkers() {
   if (workers) return workers
+  if (poolUnusable) return null
   if (typeof Worker === 'undefined') return null
   try {
     workers = createWorkers()
@@ -74,7 +78,21 @@ export async function decryptBlobOffThread(key, encryptedBuffer, mimeType) {
 
   // Hand the key over once per key, not once per job.
   if (keyedWith !== key) {
-    for (const { worker } of pool) worker.postMessage({ type: 'key', key })
+    try {
+      for (const { worker } of pool) worker.postMessage({ type: 'key', key })
+    } catch (err) {
+      // A CryptoKey is structured-cloneable by spec, but the spec is not every
+      // engine, and a DataCloneError here used to travel all the way up to
+      // useDecryptedMedia as a failed photo — once per photo, forever, with the
+      // main-thread path this module advertises never taken.
+      //
+      // This is also the last moment at which falling back is free: the buffer
+      // has not been transferred yet, so it is still readable.
+      devWarn('Decrypt workers cannot hold the key, falling back to the main thread:', err)
+      terminateDecryptPool()
+      poolUnusable = true
+      return decryptBlob(key, encryptedBuffer, mimeType)
+    }
     keyedWith = key
   }
 
