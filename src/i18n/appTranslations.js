@@ -20,6 +20,7 @@ import enOurYear from '../locales/en/ourYear.json'
 import enSettings from '../locales/en/settings.json'
 import enEmotions from '../locales/en/emotions.json'
 import enLegal from '../locales/en/legal.json'
+import enFeedback from '../locales/en/feedback.json'
 
 import deHome from '../locales/de/home.json'
 import deMemory from '../locales/de/memory.json'
@@ -33,6 +34,7 @@ import deOurYear from '../locales/de/ourYear.json'
 import deSettings from '../locales/de/settings.json'
 import deEmotions from '../locales/de/emotions.json'
 import deLegal from '../locales/de/legal.json'
+import deFeedback from '../locales/de/feedback.json'
 
 export default {
   en: {
@@ -48,6 +50,7 @@ export default {
     settings: enSettings,
     emotions: enEmotions,
     legal: enLegal,
+    feedback: enFeedback,
   },
   de: {
     home: deHome,
@@ -62,5 +65,6 @@ export default {
     settings: deSettings,
     emotions: deEmotions,
     legal: deLegal,
+    feedback: deFeedback,
   },
 }

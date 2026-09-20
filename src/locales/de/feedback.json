@@ -1,0 +1,48 @@
+{
+  "launcher": {
+    "label": "Feedback geben"
+  },
+  "modal": {
+    "title": "Sag uns, wie Kaydo läuft",
+    "subtitle": "Etwas kaputt, etwas fehlt, etwas gefällt dir besonders — alles hilft. Das geht an die Menschen, die Kaydo bauen, nicht an deine Familie.",
+    "close": "Feedback-Formular schließen"
+  },
+  "rating": {
+    "label": "Wie gefällt dir die App?",
+    "hint": "Optional — tippe denselben Stern noch einmal an, um die Bewertung zurückzunehmen.",
+    "star": "{{count}} von 5 Sternen"
+  },
+  "category": {
+    "label": "Worum geht es?",
+    "bug": "Etwas funktioniert nicht",
+    "idea": "Eine Idee",
+    "praise": "Ein Lob",
+    "other": "Etwas anderes"
+  },
+  "message": {
+    "label": "Dein Feedback",
+    "placeholder": "Was passiert ist, was du erwartet hast oder was die App können sollte…",
+    "counter": "{{count}} / {{max}}"
+  },
+  "contact": {
+    "label": "E-Mail für eine Antwort",
+    "placeholder": "du@beispiel.de",
+    "hint": "Optional. Wird nur genutzt, um dir zu antworten — lass das Feld leer, um anonym zu bleiben."
+  },
+  "privacyNote": "Anders als deine Erinnerungen wird Feedback nicht verschlüsselt — es muss lesbar sein, damit jemand etwas daraus machen kann. Deine Sprache, die Seite, auf der du warst, und deine Browser-Version werden mitgeschickt. Bitte lass private Familiendetails weg.",
+  "actions": {
+    "send": "Feedback senden",
+    "sending": "Wird gesendet…"
+  },
+  "sent": {
+    "title": "Danke dir",
+    "body": "Dein Feedback ist angekommen. Jede Nachricht wird von einem Menschen gelesen.",
+    "done": "Schließen"
+  },
+  "errors": {
+    "messageRequired": "Bitte schreib ein paar Worte, bevor du absendest.",
+    "messageTooLong": "Das ist länger, als das Formular aufnehmen kann — bitte kürze es etwas.",
+    "contactTooLong": "Diese E-Mail-Adresse ist zu lang.",
+    "sendFailed": "Dein Feedback konnte nicht gesendet werden. Bitte prüfe deine Verbindung und versuch es noch einmal."
+  }
+}

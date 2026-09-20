@@ -1,6 +1,7 @@
 import { LogOut, Settings, ChefHat } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
+import FeedbackLauncher from '../FeedbackLauncher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -30,6 +31,7 @@ export default function MobileHeader() {
             <ChefHat className="w-5 h-5" />
           </button>
         )}
+        <FeedbackLauncher variant="icon" />
         <button
           onClick={() => navigate('/settings')}
           className="p-2 text-bark-light hover:text-kaydo transition-colors"
