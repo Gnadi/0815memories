@@ -595,6 +595,55 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Feedback about the app itself — write-only, for every family member.
+    //
+    // Three things make this collection different from the rest of the app:
+    //
+    //   1. A *viewer* may write here. Everywhere else a viewer only reads, but
+    //      most of the people living in a family's space are viewers, and they
+    //      are the ones with the most to say about how the app behaves.
+    //   2. Nobody may read it back. Feedback is addressed to whoever runs
+    //      Kaydo, and a client-readable collection would hand every family's
+    //      notes to every other family. It is read server-side (Admin SDK and
+    //      the console, both of which bypass these rules).
+    //   3. It is not encrypted, deliberately — see src/hooks/useFeedback.js.
+    //      Which is exactly why the shape is pinned down here: an unencrypted
+    //      collection any signed-in client can append to is worth being strict
+    //      about. Limits mirror src/constants/feedback.js.
+    //
+    // Immutable once written: no update and no delete, so a document cannot be
+    // rewritten after the fact by the account that sent it.
+    function feedbackShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['familyId', 'uid', 'role', 'message', 'category',
+                               'rating', 'contact', 'path', 'language',
+                               'userAgent', 'status', 'createdAt'])
+        && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
+        && d.category in ['bug', 'idea', 'praise', 'other']
+        && (d.rating == null || (d.rating is int && d.rating >= 1 && d.rating <= 5))
+        && d.contact is string && d.contact.size() <= 200
+        && d.path is string && d.path.size() <= 200
+        && d.language is string && d.language.size() <= 16
+        && d.userAgent is string && d.userAgent.size() <= 300
+        // Triage state belongs to whoever reads the collection, so the client
+        // may only ever open one at the start of that process.
+        && d.status == 'new'
+        && d.createdAt == request.time
+        && d.uid == request.auth.uid
+        && d.role in ['admin', 'viewer']
+        // A viewer cannot sign their feedback as an admin. The reverse is not
+        // checked: an admin whose claim has not landed yet reads as neither.
+        && (tokenRole() != 'viewer' || d.role == 'viewer');
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null
+                    && request.resource.data.familyId is string
+                    && isFamilyMember(request.resource.data.familyId)
+                    && feedbackShapeOk();
+      allow read, update, delete: if false;
+    }
+
     // Notification queue — admin writes a doc here to trigger the Cloud Function.
     // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
     match /notificationsQueue/{docId} {

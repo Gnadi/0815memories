@@ -1,0 +1,48 @@
+{
+  "launcher": {
+    "label": "Give feedback"
+  },
+  "modal": {
+    "title": "Tell us how Kaydo is doing",
+    "subtitle": "Something broken, something missing, something you love — it all helps.",
+    "close": "Close feedback form"
+  },
+  "rating": {
+    "label": "How is the app treating you?",
+    "hint": "Optional — tap a star again to take it back.",
+    "star": "{{count}} out of 5 stars"
+  },
+  "category": {
+    "label": "What is this about?",
+    "bug": "Something is broken",
+    "idea": "An idea",
+    "praise": "A compliment",
+    "other": "Something else"
+  },
+  "message": {
+    "label": "Your feedback",
+    "placeholder": "What happened, what you expected, or what you wish the app could do…",
+    "counter": "{{count}} / {{max}}"
+  },
+  "contact": {
+    "label": "Email for a reply",
+    "placeholder": "you@example.com",
+    "hint": "Optional. Only used to answer you — leave it empty to stay anonymous."
+  },
+  "privacyNote": "Only the Kaydo team reads this — it never reaches your family and is never published anywhere. It is not encrypted the way your memories are, because someone has to be able to read it, so please keep family details out. Your language, the page you were on and your browser come along to help us track things down.",
+  "actions": {
+    "send": "Send feedback",
+    "sending": "Sending…"
+  },
+  "sent": {
+    "title": "Thank you",
+    "body": "Your feedback has arrived. Every note is read by a person.",
+    "done": "Close"
+  },
+  "errors": {
+    "messageRequired": "Please write a few words before sending.",
+    "messageTooLong": "That is longer than the form can take — please shorten it a little.",
+    "contactTooLong": "That email address is too long.",
+    "sendFailed": "Your feedback could not be sent. Please check your connection and try again."
+  }
+}
