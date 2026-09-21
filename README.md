@@ -128,6 +128,28 @@ index that exists in Firebase and is missing from `firestore.indexes.json` is
 only reported in the job log, never deleted. Removing an index stays a manual
 step in the Firebase console.
 
+## Dependency audit
+
+`.github/workflows/npm-audit.yml` runs `npm audit` on every pull request, on
+every push to `main`, and once a week on Mondays — the weekly run is what
+catches advisories published after the last merge. It fails as soon as an
+advisory of severity **high** or **critical** is open for a dependency in
+`package-lock.json` or `functions/package-lock.json`. The run's job summary
+lists the packages behind it: severity, whether the package ships to users or is only installed
+for development, and whether a fix has been published.
+
+To clear a failing run:
+
+```bash
+npm audit               # the full list, lower severities included
+npm audit fix           # everything a compatible release fixes
+npm audit fix --force   # the rest, with breaking upgrades — test the app afterwards
+```
+
+The threshold is `AUDIT_LEVEL` in the workflow; lower it to `moderate` or
+`low` once everything above that is cleared. A one-off run at a different
+level can be started under Actions → npm audit → Run workflow.
+
 ## Access model
 
 - **Viewers** (family & friends): enter the shared family password — read-only, no account, no app install
