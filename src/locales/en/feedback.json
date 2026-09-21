@@ -4,7 +4,7 @@
   },
   "modal": {
     "title": "Tell us how Kaydo is doing",
-    "subtitle": "Something broken, something missing, something you love — it all helps. This goes to the people who build Kaydo, not to your family.",
+    "subtitle": "Something broken, something missing, something you love — it all helps.",
     "close": "Close feedback form"
   },
   "rating": {
@@ -29,7 +29,7 @@
     "placeholder": "you@example.com",
     "hint": "Optional. Only used to answer you — leave it empty to stay anonymous."
   },
-  "privacyNote": "Unlike your memories, feedback is not encrypted — it has to be readable for anyone to act on it. Your language, the page you were on and your browser version are sent along. Please leave private family details out.",
+  "privacyNote": "Only the Kaydo team reads this — it never reaches your family and is never published anywhere. It is not encrypted the way your memories are, because someone has to be able to read it, so please keep family details out. Your language, the page you were on and your browser come along to help us track things down.",
   "actions": {
     "send": "Send feedback",
     "sending": "Sending…"

@@ -189,6 +189,31 @@ describe('FeedbackModal', () => {
     expect(mockSubmit).toHaveBeenCalledTimes(1)
   })
 
+  // The launcher lives in the mobile header, which is `sticky ... z-30` — a
+  // stacking context. A dialog rendered in place is trapped inside it and the
+  // bottom nav (z-40) paints over its send button, whatever z-index the dialog
+  // asks for. Only rendering outside that subtree fixes it.
+  it('renders outside the subtree it was opened from', () => {
+    const { container } = render(<FeedbackModal onClose={() => {}} />)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    expect(container).not.toContainElement(dialog)
+    expect(document.body).toContainElement(dialog)
+  })
+
+  // The complaint that started this: the send button was the last thing in one
+  // long scrolling column. It belongs in the pinned footer, outside the region
+  // that scrolls, so it is on screen the moment the sheet opens.
+  it('keeps the send button out of the scrolling region', () => {
+    render(<FeedbackModal onClose={() => {}} />)
+    const scrollRegion = screen.getByRole('dialog').querySelector('.overflow-y-auto')
+    expect(scrollRegion).not.toBeNull()
+    // The fields scroll…
+    expect(scrollRegion).toContainElement(screen.getByLabelText('Your feedback'))
+    // …the button does not.
+    expect(scrollRegion).not.toContainElement(screen.getByRole('button', { name: 'Send feedback' }))
+  })
+
   it('prefills an admin’s account email so a reply can reach them', () => {
     render(<FeedbackModal onClose={() => {}} />)
     expect(screen.getByLabelText('Email for a reply')).toHaveValue('me@example.com')
