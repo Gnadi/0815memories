@@ -15,13 +15,23 @@ import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
+import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
-// Build a unified media list from a moment's images and videos
+// Build a unified media list from a moment's images and videos.
+//
+// Images carry their derivatives with them: `thumbUrl` is the 1024px copy the
+// story circle already decrypted, `tinyPreview` the ~20px blur-up that rides on
+// the document. Videos have neither — there is one asset and it is the clip.
 function buildMediaItems(moment) {
   const images = moment?.images ?? []
   const videos = moment?.videos ?? []
   return [
-    ...images.map((url) => ({ type: 'image', url })),
+    ...images.map((url, i) => ({
+      type: 'image',
+      url,
+      thumbUrl: thumbAt(moment, i),
+      tinyPreview: tinyPreviewAt(moment, i),
+    })),
     ...videos.map((v) => ({ type: 'video', url: v.url })),
   ]
 }
@@ -43,6 +53,42 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const mediaItems = useMemo(() => buildMediaItems(moment), [moment])
   const currentItem = mediaItems[currentMediaIndex]
   const isVideo = currentItem?.type === 'video'
+
+  // Thumb first, original second.
+  //
+  // Tapping a story circle used to start a cold download of the full original —
+  // up to the 10 MB upload cap — while a perfectly good 1024px copy of the same
+  // photo sat decrypted in the media cache, put there by the circle itself. So
+  // paint that copy now and warm the original alongside it; when it lands,
+  // dropping thumbSrc points the <img> at a blob that is already decrypted,
+  // which resolveImmediate answers during render. One cache, one pipeline, and
+  // no flash back to a placeholder. MemoryHero made the same trade for its hero
+  // and kept the original for its lightbox; here the story *is* the lightbox,
+  // so the original still has to arrive — just not first.
+  //
+  // Keyed on the URLs, not on currentItem: a Firestore re-emit rebuilds
+  // mediaItems, and re-running this on a new object identity would drop back to
+  // the thumbnail for a frame.
+  const currentUrl = currentItem?.url ?? ''
+  const currentThumb = currentItem?.type === 'image' ? currentItem.thumbUrl : ''
+  const currentTiny = currentItem?.type === 'image' ? currentItem.tinyPreview : ''
+
+  // Which original is decrypted and waiting, rather than a boolean the slide
+  // change has to reset: comparing it to the URL on screen answers the same
+  // question and leaves the effect with nothing to do but subscribe.
+  const [readyOriginal, setReadyOriginal] = useState('')
+  const showThumb = !!currentThumb && readyOriginal !== currentUrl
+
+  useEffect(() => {
+    // No thumbnail means EncryptedImage is already showing the original, and
+    // there is nothing to upgrade to.
+    if (!encryptionKey || !currentUrl || !currentThumb) return
+    let cancelled = false
+    prefetchDecryptedMedia(currentUrl, encryptionKey, 'image/*').then((url) => {
+      if (!cancelled && url) setReadyOriginal(currentUrl)
+    })
+    return () => { cancelled = true }
+  }, [currentUrl, currentThumb, encryptionKey])
 
   const isFirstMedia = currentMediaIndex === 0
   const isLastMedia = currentMediaIndex === mediaItems.length - 1
@@ -161,9 +207,14 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       if (prevItems.length) targets.push(prevItems[prevItems.length - 1])
     }
     targets.forEach((item) => {
-      if (item?.url) {
-        prefetchDecryptedMedia(item.url, encryptionKey, item.type === 'video' ? 'video/*' : 'image/*')
+      if (!item?.url) return
+      if (item.type === 'video') {
+        prefetchDecryptedMedia(item.url, encryptionKey, 'video/*')
+        return
       }
+      // The thumbnail, not the original: it is what the next slide paints
+      // first, and the slide warms its own original once it is on screen.
+      prefetchDecryptedMedia(item.thumbUrl || item.url, encryptionKey, 'image/*')
     })
   }, [currentMomentIndex, currentMediaIndex, encryptionKey, mediaItems, moments])
 
@@ -324,6 +375,8 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
         ) : currentItem?.url ? (
           <EncryptedImage
             src={currentItem.url}
+            thumbSrc={showThumb ? currentThumb : ''}
+            tinyPreview={currentTiny}
             alt={moment.caption}
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -548,6 +601,8 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             ) : currentItem?.url ? (
               <EncryptedImage
                 src={currentItem.url}
+                thumbSrc={showThumb ? currentThumb : ''}
+                tinyPreview={currentTiny}
                 alt={moment.caption}
                 className="w-full aspect-[4/5] object-cover pointer-events-none"
                 draggable={false}
