@@ -119,11 +119,23 @@ Actions):
 | `FIREBASE_SERVICE_ACCOUNT` | Secret | The complete JSON key of a Google Cloud service account for the Firebase project |
 | `FIREBASE_PROJECT_ID` | Variable | The Firebase project id to deploy to |
 
-The service account needs the **Firebase Rules Admin**
-(`roles/firebaserules.admin`) and **Cloud Datastore Index Admin**
-(`roles/datastore.indexAdmin`) roles; **Firebase Admin** covers both. Create
-the key in the Google Cloud console under IAM & Admin → Service Accounts →
-Keys → Add key → JSON, and paste the file's entire contents into the secret.
+The service account needs three roles:
+
+| Role | Needed for |
+| --- | --- |
+| Firebase Rules Admin (`roles/firebaserules.admin`) | Publishing `firestore.rules` |
+| Cloud Datastore Index Admin (`roles/datastore.indexAdmin`) | Creating and updating the indexes |
+| Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`) | The CLI checks that `firestore.googleapis.com` is enabled before it deploys anything |
+
+The last one is easy to miss: without it the deploy stops at `ensuring
+required API firestore.googleapis.com is enabled` with `HTTP Error: 403,
+Permission denied to get service`, before rules or indexes are touched. The
+key generated in the Firebase console (Project settings → Service accounts)
+does not carry it by default — add it under IAM & Admin → IAM in the Google
+Cloud console.
+
+Create the key under IAM & Admin → Service Accounts → Keys → Add key → JSON,
+and paste the file's entire contents into the secret.
 
 The deploy runs without `--force`: indexes are created and updated, but an
 index that exists in Firebase and is missing from `firestore.indexes.json` is
