@@ -1,0 +1,46 @@
+name: npm audit
+
+# Every pull request and every push to main is checked for known
+# vulnerabilities in the dependency tree; the weekly run catches advisories
+# that are published after a change was merged, when nothing is pushed at all.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays, 06:17 UTC — off the hour, where the runner queue is shorter.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      audit-level:
+        description: 'Lowest severity that fails the run'
+        type: choice
+        default: high
+        options: [low, moderate, high, critical]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Known vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No `npm ci`: npm audit resolves the tree from package-lock.json and
+      # asks the registry about it, so nothing from the dependencies runs here.
+      - name: Audit the dependencies
+        env:
+          # Lower this to `moderate` or `low` to fail on the smaller findings
+          # as well, once those are cleared.
+          AUDIT_LEVEL: ${{ inputs.audit-level || 'high' }}
+        run: node .github/scripts/npm-audit.mjs . functions

@@ -33,6 +33,7 @@ A private, encrypted family memory platform — your family's own corner of the 
   Closed chapters become a shared timeline of the relationship. Nothing here assumes marriage, children, or twelve-month cycles, and it is visible to those two accounts only — not even other family admins can see it
 
 ### Everyday
+- **Feedback** — anyone in the family, viewer or admin, can send a note about the app itself from the sidebar or the mobile header: a rating, a category and a few words. It lands in the `feedback` collection, which the client may only append to — never read back, edit or delete
 - **Two access levels** — viewers enter with one shared family password (no account needed); admins sign in via Firebase Auth. Invite co-admins with secure invite links
 - **PWA** — installable on any phone or desktop, instant loads via service-worker precache, push notifications for new memories, anniversary reminders
 - **Bilingual** — full English and German UI (i18next)
@@ -46,6 +47,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - **Our Year** goes further than the rest of the app: instead of trusting the UI, `firestore.rules` decides who may read what. A partner's answers are unreadable until both have handed in, a sealed letter is unreadable until its open date (`request.time`), and a closed chapter can no longer be edited. Those guarantees are covered by emulator tests — `npm run test:rules`
 - **Nothing is readable without an identity.** A viewer signs in against a Cloud Function that checks the shared password server-side and issues a token carrying their family; `firestore.rules` gates every collection on that token. Until recently viewers had no Firebase session at all, which forced the family document — encryption key included — to be world-readable. See `docs/plan-a-zugriffskontrolle.md`
 - The login page's design is served from `familyPublic/{familyId}`, a mirror written by a Cloud Function from a fixed allowlist, so the public surface of a family cannot grow by accident
+- App feedback is the one collection written *unencrypted* on purpose: it is addressed to whoever runs Kaydo, and ciphertext would make every bug report unreadable to the person who has to act on it. The form says so on screen, `firestore.rules` pins the document to the shape in `src/constants/feedback.js`, and nothing in the app can read the collection back
 - **Honest limitation:** the per-family encryption key is stored in the family's Firestore document. It is no longer public — only the family can read it — but it is still readable server-side, so Kaydo is *not* zero-knowledge. Deriving the key from the shared password is the path to that, and the price is that a forgotten password means the data is gone
 
 ## Tech stack
@@ -102,6 +104,66 @@ VITE_USE_EMULATOR=true npm run dev
 | `npm run lint` | ESLint |
 | `npm run emulators` | Firebase Auth + Firestore emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |
+
+## Firestore rules & indexes
+
+`firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
+(`.github/workflows/firebase-firestore.yml`) as soon as a change to either one
+lands on `main` — i.e. on merge. Pull requests that touch them run the
+validation job only, so broken rules are caught before the merge.
+
+Two repository settings are required (Settings → Secrets and variables →
+Actions):
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `FIREBASE_SERVICE_ACCOUNT` | Secret | The complete JSON key of a Google Cloud service account for the Firebase project |
+| `FIREBASE_PROJECT_ID` | Variable | The Firebase project id to deploy to |
+
+The service account needs three roles:
+
+| Role | Needed for |
+| --- | --- |
+| Firebase Rules Admin (`roles/firebaserules.admin`) | Publishing `firestore.rules` |
+| Cloud Datastore Index Admin (`roles/datastore.indexAdmin`) | Creating and updating the indexes |
+| Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`) | The CLI checks that `firestore.googleapis.com` is enabled before it deploys anything |
+
+The last one is easy to miss: without it the deploy stops at `ensuring
+required API firestore.googleapis.com is enabled` with `HTTP Error: 403,
+Permission denied to get service`, before rules or indexes are touched. The
+key generated in the Firebase console (Project settings → Service accounts)
+does not carry it by default — add it under IAM & Admin → IAM in the Google
+Cloud console.
+
+Create the key under IAM & Admin → Service Accounts → Keys → Add key → JSON,
+and paste the file's entire contents into the secret.
+
+The deploy runs without `--force`: indexes are created and updated, but an
+index that exists in Firebase and is missing from `firestore.indexes.json` is
+only reported in the job log, never deleted. Removing an index stays a manual
+step in the Firebase console.
+
+## Dependency audit
+
+`.github/workflows/npm-audit.yml` runs `npm audit` on every pull request, on
+every push to `main`, and once a week on Mondays — the weekly run is what
+catches advisories published after the last merge. It fails as soon as an
+advisory of severity **high** or **critical** is open for a dependency in
+`package-lock.json` or `functions/package-lock.json`. The run's job summary
+lists the packages behind it: severity, whether the package ships to users or is only installed
+for development, and whether a fix has been published.
+
+To clear a failing run:
+
+```bash
+npm audit               # the full list, lower severities included
+npm audit fix           # everything a compatible release fixes
+npm audit fix --force   # the rest, with breaking upgrades — test the app afterwards
+```
+
+The threshold is `AUDIT_LEVEL` in the workflow; lower it to `moderate` or
+`low` once everything above that is cleared. A one-off run at a different
+level can be started under Actions → npm audit → Run workflow.
 
 ## Access model
 

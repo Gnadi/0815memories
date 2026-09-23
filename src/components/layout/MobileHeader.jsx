@@ -1,6 +1,7 @@
-import { LogOut, Settings, BookMarked } from 'lucide-react'
+import { LogOut, Settings, ChefHat } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
+import FeedbackLauncher from '../FeedbackLauncher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -23,13 +24,14 @@ export default function MobileHeader() {
       <div className="flex items-center gap-1">
         {isAdmin && (
           <button
-            onClick={() => navigate('/scrapbook')}
+            onClick={() => navigate('/recipes')}
             className="p-2 text-bark-light hover:text-kaydo transition-colors"
-            aria-label={t('nav.scrapbooks')}
+            aria-label={t('nav.recipes')}
           >
-            <BookMarked className="w-5 h-5" />
+            <ChefHat className="w-5 h-5" />
           </button>
         )}
+        <FeedbackLauncher variant="icon" />
         <button
           onClick={() => navigate('/settings')}
           className="p-2 text-bark-light hover:text-kaydo transition-colors"

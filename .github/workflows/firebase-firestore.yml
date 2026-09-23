@@ -1,0 +1,115 @@
+name: Firestore Rules & Indexes
+
+# Pull requests only validate the rules; merging to main deploys the
+# Firestore rules and indexes to Firebase.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'src/__tests__/*Rules.test.js'
+      - '.github/workflows/firebase-firestore.yml'
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'src/__tests__/*Rules.test.js'
+      - '.github/workflows/firebase-firestore.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two merges in quick succession deploy one after the other, never in parallel.
+concurrency:
+  group: firestore-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Rules tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # The Firestore emulator the rules tests run against needs Java.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: firestore.indexes.json is valid JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('firestore.indexes.json','utf8'))"
+
+      # Loads firestore.rules into the emulator, so rules that do not compile —
+      # or no longer do what the tests expect — never reach the project.
+      - name: Test the rules against the emulator
+        run: npm run test:rules
+
+  deploy:
+    name: Deploy to Firebase
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check the deploy configuration
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          missing=0
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT is not set (Settings → Secrets and variables → Actions)."
+            missing=1
+          fi
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "::error::Variable FIREBASE_PROJECT_ID is not set (Settings → Secrets and variables → Actions → Variables)."
+            missing=1
+          fi
+          exit "$missing"
+
+      # firebase-tools is a devDependency, so the deploy uses the pinned version.
+      - run: npm ci
+
+      - name: Write the service-account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          umask 077
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          node -e "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/firebase-service-account.json','utf8'))" \
+            || { echo "::error::FIREBASE_SERVICE_ACCOUNT is not valid JSON."; exit 1; }
+
+      # --project overrides the demo project from .firebaserc (demo-kaydo).
+      # No --force: indexes that exist in Firebase but are missing from
+      # firestore.indexes.json are only reported, never deleted.
+      - name: Deploy rules and indexes
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          npx firebase-tools deploy \
+            --only firestore:rules,firestore:indexes \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"

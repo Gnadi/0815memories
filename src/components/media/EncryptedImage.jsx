@@ -19,11 +19,14 @@ import { BLANK_IMAGE, PLACEHOLDER_CLASSES } from './placeholder'
  * invariant is what stops the browser re-decoding on every mount.
  */
 function EncryptedImage({ src, thumbSrc, tinyPreview, alt = '', className = '', style, onClick, ...rest }) {
-  const { decryptedUrl, loading, ref } = useDecryptedMedia(thumbSrc || src, 'image/*', { lazy: true })
+  const { decryptedUrl, loading, error, ref } = useDecryptedMedia(thumbSrc || src, 'image/*', { lazy: true })
 
   if (!src && !thumbSrc) return null
 
-  const showPreview = loading && !!tinyPreview
+  // On failure the hook no longer falls back to the ciphertext URL, so there is
+  // nothing to paint. The blurred preview is the better of the two remaining
+  // answers: the photo's own colours rather than an empty frame.
+  const showPreview = (loading || !!error) && !!tinyPreview
 
   const image = (
     <img
