@@ -52,6 +52,20 @@ describe('the thumbsTiny companion array', () => {
     expect(buildTinyPreviews([{}, {}])).toBeNull()
   })
 
+  it('refuses a preview that is still ciphertext', () => {
+    // What moments shipped: thumbsTiny encrypted on write, never decrypted on
+    // read, so ~1 KB of base64 reached an <img src> — where the browser
+    // resolves it as a relative URL and fetches it.
+    const CIPHERTEXT = 'kZ8fQ2t+Xy9abCDEF/ghIJKLmnop=='
+    const doc = { images: ['a'], thumbsTiny: [CIPHERTEXT] }
+
+    expect(tinyPreviewAt(doc, 0)).toBe('')
+    // The stored array itself is left alone: the backfill decides what still
+    // needs doing from the shape, and this document's preview exists.
+    expect(tinyPreviewsFor(doc)).toEqual([CIPHERTEXT])
+    expect(needsTinyPreviews(doc)).toBe(false)
+  })
+
   it('does not read or write the images array', () => {
     const images = ['a', 'b']
     tinyPreviewsFor({ images, thumbsTiny: [DATA_URL, DATA_URL] })
@@ -109,6 +123,35 @@ describe('EncryptedImage while the photo is still arriving', () => {
   it('renders nothing without a source, preview or not', () => {
     render(<EncryptedImage tinyPreview={DATA_URL} />)
     expect(imgs()).toHaveLength(0)
+  })
+
+  it('puts the preview beside the photo rather than inside a wrapper', () => {
+    const { container } = render(
+      <EncryptedImage src="https://cdn/a.enc" tinyPreview={DATA_URL} className="absolute inset-0" />,
+    )
+
+    const rendered = imgs()
+    expect(rendered).toHaveLength(2)
+    // A wrapper element has nothing in flow to give it height when the caller's
+    // className is `absolute` — the story viewer and the moments grid — so it
+    // collapsed to zero and took both layers with it.
+    for (const el of rendered) expect(el.parentElement).toBe(container)
+  })
+
+  it('keeps the same photo element when the preview goes away', () => {
+    const { rerender } = render(
+      <EncryptedImage src="https://cdn/a.enc" tinyPreview={DATA_URL} alt="Emma" />,
+    )
+    const photo = imgs().find((el) => el.getAttribute('src') !== DATA_URL)
+
+    Object.assign(media, { decryptedUrl: 'blob:real', loading: false })
+    rerender(<EncryptedImage src="https://cdn/a.enc" tinyPreview={DATA_URL} alt="Emma smiling" />)
+
+    // Changing the element type on arrival made React tear the <img> down and
+    // mount a new one — the re-decode the single-element invariant exists to
+    // prevent, paid on exactly the photos that showed a preview.
+    expect(imgs()).toHaveLength(1)
+    expect(imgs()[0]).toBe(photo)
   })
 })
 

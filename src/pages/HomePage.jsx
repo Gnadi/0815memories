@@ -24,7 +24,7 @@ export default function HomePage() {
   const [editingMoment, setEditingMoment] = useState(null)
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId, encryptionKey)
-  const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId)
+  const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId, encryptionKey)
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 

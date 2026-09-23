@@ -17,6 +17,15 @@ import { BLANK_IMAGE, PLACEHOLDER_CLASSES } from './placeholder'
  * The preview is a separate element underneath rather than a swapped `src`,
  * because a single <img> whose src changes re-decodes, and the one-element
  * invariant is what stops the browser re-decoding on every mount.
+ *
+ * Both elements are siblings with stable keys, and no wrapper. A wrapper was
+ * two bugs at once: swapping `<img>` for `<span><img/><img/></span>` when the
+ * photo landed is a change of element type, so React tore the photo down and
+ * remounted it — the re-decode the invariant above exists to prevent. And a
+ * caller whose className is `absolute` (the story viewer, the moments grid)
+ * left the wrapper with nothing in flow to give it height, so it collapsed to
+ * zero and took both layers with it. Siblings position against the caller's own
+ * container, which is what every call site already establishes.
  */
 function EncryptedImage({ src, thumbSrc, tinyPreview, alt = '', className = '', style, onClick, ...rest }) {
   const { decryptedUrl, loading, error, ref } = useDecryptedMedia(thumbSrc || src, 'image/*', { lazy: true })
@@ -28,36 +37,34 @@ function EncryptedImage({ src, thumbSrc, tinyPreview, alt = '', className = '', 
   // answers: the photo's own colours rather than an empty frame.
   const showPreview = (loading || !!error) && !!tinyPreview
 
-  const image = (
-    <img
-      ref={ref}
-      src={decryptedUrl || BLANK_IMAGE}
-      alt={loading ? '' : alt}
-      // With a preview underneath, the grey shimmer would sit on top of it.
-      className={loading && !showPreview ? `${className} ${PLACEHOLDER_CLASSES}` : className}
-      style={showPreview ? { ...style, opacity: 0 } : style}
-      onClick={onClick}
-      decoding="async"
-      {...rest}
-    />
-  )
-
-  if (!showPreview) return image
-
   return (
-    <span className="relative block isolate">
+    <>
+      {showPreview && (
+        <img
+          key="preview"
+          src={tinyPreview}
+          alt=""
+          aria-hidden="true"
+          className={`${className} absolute inset-0`}
+          // scale hides the blur's soft edges, which would otherwise show as a
+          // pale border around the frame.
+          style={{ ...style, filter: 'blur(12px)', transform: 'scale(1.08)' }}
+          decoding="async"
+        />
+      )}
       <img
-        src={tinyPreview}
-        alt=""
-        aria-hidden="true"
-        className={`${className} absolute inset-0`}
-        // scale hides the blur's soft edges, which would otherwise show as a
-        // pale border around the frame.
-        style={{ ...style, filter: 'blur(12px)', transform: 'scale(1.08)' }}
+        key="photo"
+        ref={ref}
+        src={decryptedUrl || BLANK_IMAGE}
+        alt={loading ? '' : alt}
+        // With a preview underneath, the grey shimmer would sit on top of it.
+        className={loading && !showPreview ? `${className} ${PLACEHOLDER_CLASSES}` : className}
+        style={showPreview ? { ...style, opacity: 0 } : style}
+        onClick={onClick}
         decoding="async"
+        {...rest}
       />
-      {image}
-    </span>
+    </>
   )
 }
 

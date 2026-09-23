@@ -167,7 +167,30 @@ export function useMemories(familyId, encryptionKey, pageSize = DEFAULT_MEMORIES
   return { memories, featuredMemory, loading, error, ...writer }
 }
 
-export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
+/**
+ * Moments keep their text in clear: caption, category, location and label are
+ * not encrypted, and utils/nasExport.js says so in a line of its own.
+ *
+ * `thumbsTiny` is the exception, and it went unnoticed because it is not
+ * written here. The shared upload path (utils/encryptedUpload.js) and the
+ * shared thumbnail backfill (utils/thumbnailMigration.js) both encrypt it for
+ * moments exactly as they do for memories. Nothing decrypted it again, so every
+ * moment card handed ~1 KB of ciphertext to an `<img src>`: no blur-up, and a
+ * relative-URL request per card.
+ *
+ * The same field, the same call, the same reasoning as decryptMemory above —
+ * ~700 bytes each, and it replaces a spinner with the photo's own colours.
+ */
+async function decryptMoment(key, data) {
+  if (!key || !Array.isArray(data.thumbsTiny)) return data
+  return { ...data, thumbsTiny: await decryptStringArray(key, data.thumbsTiny) }
+}
+
+/**
+ * The moments subscription, shared by the home row and the full grid — they
+ * differ only in how many documents they ask for.
+ */
+function useMomentsSubscription(familyId, encryptionKey, pageSize) {
   const [moments, setMoments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -184,14 +207,24 @@ export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
       orderBy('date', 'desc'),
       limit(pageSize)
     )
+
+    // Snapshots resolve asynchronously now, so a later one can finish before an
+    // earlier one — a re-emit whose previews are all memoised beats a cold first
+    // load every time. Only the newest answer is allowed to land.
+    let cancelled = false
+    let latest = 0
+
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
+      async (snapshot) => {
+        const seq = ++latest
+        const docs = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }))
-        setMoments(data)
+        const decrypted = await Promise.all(docs.map((d) => decryptMoment(encryptionKey, d)))
+        if (cancelled || seq !== latest) return
+        setMoments(decrypted)
         setError(null)
         setLoading(false)
       },
@@ -201,8 +234,17 @@ export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
       }
     )
 
-    return unsubscribe
-  }, [familyId, pageSize])
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [familyId, encryptionKey, pageSize])
+
+  return { moments, loading, error }
+}
+
+export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_LIMIT) {
+  const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
 
   const addMoment = async (moment) => {
     await addDoc(collection(db, 'moments'), {
@@ -233,42 +275,8 @@ export function useMoments(familyId, pageSize = DEFAULT_MOMENTS_LIMIT) {
 
 const DEFAULT_ALL_MOMENTS_LIMIT = 200
 
-export function useAllMoments(familyId, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
-  const [moments, setMoments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (!familyId || !db) {
-      setLoading(false)
-      return
-    }
-
-    const q = query(
-      collection(db, 'moments'),
-      where('familyId', '==', familyId),
-      orderBy('date', 'desc'),
-      limit(pageSize)
-    )
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        setMoments(data)
-        setError(null)
-        setLoading(false)
-      },
-      (err) => {
-        setError(err)
-        setLoading(false)
-      }
-    )
-
-    return unsubscribe
-  }, [familyId, pageSize])
+export function useAllMoments(familyId, encryptionKey, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
+  const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
 
   const updateMoment = async (id, updates) => {
     await updateDoc(doc(db, 'moments', id), updates)
