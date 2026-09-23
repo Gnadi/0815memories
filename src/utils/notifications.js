@@ -1,26 +1,60 @@
-import {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore'
-import { getMessagingInstance, db } from '../config/firebase'
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import i18n from '../i18n'
+import { devWarn } from './devLog'
+import { getMessagingInstance, auth, db } from '../config/firebase'
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 
+/** Where this device's token document lives. */
+const TOKEN_ID_KEY = 'kaydo_fcm_token_id'
+
 /**
- * Requests notification permission, obtains the FCM push token,
- * and saves/updates it in the Firestore `fcmTokens` collection.
+ * The document id for a token: its SHA-256, hex-encoded.
+ *
+ * Deliberately derived rather than looked up. The previous version queried
+ * `fcmTokens` for an existing document, which `firestore.rules` denies outright
+ * (`allow read: if false`) — the query threw, nothing was ever written, and
+ * every push since had an empty token list to send to. A deterministic id needs
+ * no read: the same device writing twice lands on the same document.
+ */
+async function tokenDocId(token) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * iOS delivers Web Push only from an installed PWA — in a Safari tab the
+ * permission prompt appears and the subscription then fails. Checking first
+ * means we can say "add to home screen" instead of silently failing.
+ */
+export function isPushSupported() {
+  if (typeof window === 'undefined') return false
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return false
+  }
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  if (!isIOS) return true
+  return (
+    window.navigator.standalone === true ||
+    window.matchMedia?.('(display-mode: standalone)').matches === true
+  )
+}
+
+/**
+ * Requests notification permission, obtains the FCM push token and stores it in
+ * the Firestore `fcmTokens` collection.
+ *
+ * Throws on a real failure — a denied write, an unreachable FCM — so the caller
+ * can say so. Returns null when there is simply nothing to do (push
+ * unsupported, permission refused, messaging unavailable).
  *
  * @param {string} familyId - The family this device should receive notifications for.
- * @returns {string|null} The FCM token, or null if permission was denied or unavailable.
+ * @returns {Promise<string|null>} The FCM token, or null.
  */
 export async function requestAndSaveFCMToken(familyId) {
   if (!db || !familyId || !VAPID_KEY) return null
-  if (!('Notification' in window)) return null
+  if (!isPushSupported()) return null
   if (Notification.permission === 'denied') return null
 
   const permission = await Notification.requestPermission()
@@ -39,21 +73,57 @@ export async function requestAndSaveFCMToken(familyId) {
   const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
   if (!token) return null
 
-  // Upsert: one token document per physical device
-  const q = query(collection(db, 'fcmTokens'), where('token', '==', token))
-  const existing = await getDocs(q)
-  if (existing.empty) {
-    await addDoc(collection(db, 'fcmTokens'), {
+  const id = await tokenDocId(token)
+  await setDoc(
+    doc(db, 'fcmTokens', id),
+    {
       familyId,
       token,
-      createdAt: serverTimestamp(),
-    })
-  } else {
-    // Keep familyId in sync in case the device logs into a different family
-    await updateDoc(existing.docs[0].ref, { familyId, updatedAt: serverTimestamp() })
+      // The server composes the notification text, so it has to know which
+      // language this device reads.
+      lang: i18n.resolvedLanguage || i18n.language || 'de',
+      // Whoever is signed in here. The triggers use it to skip the device that
+      // created the memory in the first place.
+      uid: auth?.currentUser?.uid || null,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
+
+  try {
+    localStorage.setItem(TOKEN_ID_KEY, id)
+  } catch {
+    // Private mode, or storage full. Only costs us the tidy logout below.
   }
 
   return token
+}
+
+/**
+ * Drops this device's registration. Called on logout so a shared device stops
+ * receiving a family's notifications the moment someone signs out of it.
+ */
+export async function removeFCMToken() {
+  let id = null
+  try {
+    id = localStorage.getItem(TOKEN_ID_KEY)
+    localStorage.removeItem(TOKEN_ID_KEY)
+  } catch {
+    id = null
+  }
+
+  try {
+    const messaging = await getMessagingInstance()
+    if (messaging) {
+      const { deleteToken } = await import('firebase/messaging')
+      await deleteToken(messaging)
+    }
+  } catch (err) {
+    devWarn('deleteToken failed:', err)
+  }
+
+  if (!id || !db) return
+  await deleteDoc(doc(db, 'fcmTokens', id)).catch((err) => devWarn('token cleanup failed:', err))
 }
 
 /**

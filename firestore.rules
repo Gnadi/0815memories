@@ -572,19 +572,25 @@ service cloud.firestore {
                     && request.auth.uid in resource.data.get('participantUids', []);
     }
 
-    // FCM push tokens — any client (admin or viewer) can write their own token.
-    // Viewers are not Firebase-authenticated, so we allow unauthenticated writes,
-    // but we still require a well-formed shape so the collection can't be abused
-    // as anonymous scratch storage. Tokens are only read server-side via Firebase
-    // Admin SDK (bypasses these rules).
+    // FCM push tokens — one document per device, its id the SHA-256 of the token.
+    //
+    // The id is derived rather than looked up because of the read rule below:
+    // the client used to query this collection for an existing token before
+    // writing, the query was denied, and nothing was ever stored. Tokens are
+    // read server-side only, through the Admin SDK, which bypasses these rules.
+    //
+    // Writes now require a session. That was not possible while viewers had no
+    // identity — it is since viewerLogin started minting them, so this is no
+    // longer an anonymously writable collection.
     match /fcmTokens/{tokenId} {
       allow create, update: if request.resource.data.familyId is string
-                            && request.resource.data.familyId.size() > 0
-                            && request.resource.data.familyId.size() < 128
+                            && isFamilyMember(request.resource.data.familyId)
                             && request.resource.data.token is string
                             && request.resource.data.token.size() > 0
                             && request.resource.data.token.size() < 4096;
-      allow delete: if false;
+      // A device unsubscribing on logout. Scoped to the family, so no one can
+      // silence another family's devices.
+      allow delete: if isFamilyMember(resource.data.familyId);
       allow read: if false;
     }
 
@@ -644,16 +650,14 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // Notification queue — admin writes a doc here to trigger the Cloud Function.
-    // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
+    // The `notificationsQueue` collection that used to live here is gone. The
+    // client no longer composes push notifications: it wrote the plaintext
+    // title of an otherwise encrypted memory into a Firestore document, and it
+    // let any admin broadcast arbitrary text to every device in the family.
+    // notifyOnMemory / notifyOnMoment now trigger on the content itself and
+    // write the text server-side.
     match /notificationsQueue/{docId} {
-      // Was `request.auth != null`, which was equivalent to "is an admin" only
-      // while viewers had no session. It has to name the family now, or a
-      // viewer could push a notification to everyone in it.
-      allow create: if request.auth != null
-                    && request.resource.data.familyId is string
-                    && isFamilyAdmin(request.resource.data.familyId);
-      allow read, update, delete: if false;
+      allow read, write: if false;
     }
   }
 }

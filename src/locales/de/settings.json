@@ -204,5 +204,14 @@
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
     "signatureFailed": "Upload-Signatur konnte nicht abgerufen werden",
     "uploadFailed": "Upload fehlgeschlagen"
+  },
+  "testNotification": {
+    "label": "Mitteilungen testen",
+    "description": "Schickt eine Testbenachrichtigung an alle Geräte dieser Familie, die Mitteilungen aktiviert haben.",
+    "send": "Testbenachrichtigung senden",
+    "sending": "Wird gesendet…",
+    "sent": "Gesendet an {{devices}} Gerät(e). Wenn nichts ankommt, prüfe die Mitteilungs-Einstellungen des Geräts.",
+    "noDevices": "Noch kein Gerät hat Mitteilungen aktiviert.",
+    "failed": "Senden fehlgeschlagen"
   }
 }

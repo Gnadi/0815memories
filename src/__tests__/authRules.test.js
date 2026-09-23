@@ -18,7 +18,8 @@
  *   2. A viewer reads their own family and only their own family.
  *   3. A viewer never writes, and never crosses into admin-only collections.
  *   4. The login page still works without a token, via familyPublic.
- *   5. Pending invites cannot be enumerated, because the id *is* the credential.
+ *   5. A push token belongs to a family, and no client ever reads one back.
+ *   6. Pending invites cannot be enumerated, because the id *is* the credential.
  *
  * Run with:  npm run test:rules
  * (Skipped by default — `npm test` stays emulator-free.)
@@ -36,6 +37,7 @@ import {
   getDocs,
   query,
   setDoc,
+  deleteDoc,
   updateDoc,
   where,
   Timestamp,
@@ -221,10 +223,21 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
 
     it('cannot queue a push notification to the family', async () => {
+      // The collection is retired — the client no longer composes push text —
+      // but the rule has to keep saying no to anything still writing to it.
       await assertFails(
         setDoc(doc(asViewer(VIEWER, FAMILY), 'notificationsQueue', 'q-1'), {
           familyId: FAMILY,
           title: 'Anything',
+        }),
+      )
+    })
+
+    it('may register their own device for push', async () => {
+      await assertSucceeds(
+        setDoc(doc(asViewer(VIEWER, FAMILY), 'fcmTokens', 'token-hash-viewer'), {
+          familyId: FAMILY,
+          token: 'fcm-token-viewer',
         }),
       )
     })
@@ -280,8 +293,11 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'families', OTHER_FAMILY)))
     })
 
-    it('may queue a push notification for their own family', async () => {
-      await assertSucceeds(
+    it('can no longer queue a push notification', async () => {
+      // notificationsQueue was how a client asked for a push, carrying the
+      // plaintext title of an encrypted memory. The triggers compose the text
+      // server-side now, and nothing may write here.
+      await assertFails(
         setDoc(doc(asAdmin(ADMIN, FAMILY), 'notificationsQueue', 'q-1'), {
           familyId: FAMILY,
           title: 'New memory added',
@@ -290,7 +306,61 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
   })
 
-  // ── 5. Invites ────────────────────────────────────────────────────────────
+  // ── 5. Push tokens ────────────────────────────────────────────────────────
+
+  describe('push tokens', () => {
+    it('are written by an admin of the family', async () => {
+      await assertSucceeds(
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin'), {
+          familyId: FAMILY,
+          token: 'fcm-token-admin',
+        }),
+      )
+    })
+
+    it('are not written by a stranger', async () => {
+      // They used to be: the rule asked only for a well-formed shape, because
+      // viewers had no identity to check. They have one now.
+      await assertFails(
+        setDoc(doc(asStranger(), 'fcmTokens', 'token-hash-stranger'), {
+          familyId: FAMILY,
+          token: 'fcm-token-stranger',
+        }),
+      )
+    })
+
+    it('cannot be registered for someone else\'s family', async () => {
+      await assertFails(
+        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-x'), {
+          familyId: FAMILY,
+          token: 'fcm-token-x',
+        }),
+      )
+    })
+
+    it('are never readable by a client', async () => {
+      // The whole reason the document id is derived from the token: the client
+      // cannot look one up, so it must be able to compute where to write.
+      await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin')))
+    })
+
+    it('are deleted by their own family on logout', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'fcmTokens', 'token-hash-bye'), {
+          familyId: FAMILY,
+          token: 'fcm-token-bye',
+        })
+      })
+      await assertFails(
+        deleteDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-bye')),
+      )
+      await assertSucceeds(
+        deleteDoc(doc(asViewer(VIEWER, FAMILY), 'fcmTokens', 'token-hash-bye')),
+      )
+    })
+  })
+
+  // ── 6. Invites ────────────────────────────────────────────────────────────
 
   describe('pending invites', () => {
     it('can be read by anyone holding the exact link', async () => {

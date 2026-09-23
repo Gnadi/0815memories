@@ -13,6 +13,7 @@ import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import { readStored, writeStored, clearStoredSession, setSessionOnly } from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
+import { removeFCMToken } from '../utils/notifications'
 
 const AuthContext = createContext(null)
 
@@ -445,6 +446,10 @@ export function AuthProvider({ children }) {
   }, [pollForFamilyClaim])
 
   const logout = useCallback(async () => {
+    // Before signing out, while the rules still accept the write: a shared
+    // device should stop receiving this family's notifications.
+    await removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err))
+
     if (user && auth) {
       await signOut(auth)
       // The SDK's persistence mode is sticky for the life of the page, and the
