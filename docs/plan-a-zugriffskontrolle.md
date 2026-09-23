@@ -153,9 +153,11 @@ admin status. Now: `allow get: if true` (holding the link still works),
 `allow list: if isFamilyAdmin(familyId)`.
 
 **`notificationsQueue` said `request.auth != null`.** That meant "is an admin"
-only while viewers were unauthenticated. It now names the family:
+only while viewers were unauthenticated. It was changed to name the family:
 `isFamilyAdmin(request.resource.data.familyId)`. Otherwise giving viewers a
 session would have let them push a notification to everyone in the family.
+(The collection has since been retired altogether — the notification text is
+composed server-side now. See `docs/plan-notifications.md`.)
 
 The same reasoning applies to the other standalone `request.auth != null`
 checks — family creation, `admins/{uid}` creation, invite redemption — which now

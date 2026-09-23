@@ -49,8 +49,8 @@ const MomentCard = memo(function MomentCard({ moment, onOpen }) {
 export default function MomentsAllPage() {
   const navigate = useNavigate()
   const { t } = useTranslation('home')
-  const { familyId, isAdmin } = useAuth()
-  const { moments, loading, updateMoment, deleteMoment } = useAllMoments(familyId)
+  const { familyId, isAdmin, encryptionKey } = useAuth()
+  const { moments, loading, updateMoment, deleteMoment } = useAllMoments(familyId, encryptionKey)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
   const [editingMoment, setEditingMoment] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)

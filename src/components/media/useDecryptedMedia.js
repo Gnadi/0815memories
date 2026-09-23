@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { decryptBlobOffThread } from '../../utils/decryptPool'
+import { decryptBlob } from '../../utils/encryption'
 import { devError } from '../../utils/devLog'
 
 // ── Session cache ───────────────────────────────────────────────────
@@ -140,13 +141,38 @@ function sniffMimeType(header) {
   return null
 }
 
-async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
-  const response = await fetch(encryptedUrl)
+// Fetch the ciphertext. `revalidate` forces a trip past every cache between
+// here and Cloudinary.
+//
+// That escape hatch exists because the caches in front of this fetch can hold
+// an entry this code cannot use. An <img> pointed at one of these URLs issues a
+// no-cors request, and iOS Safari will serve the resulting response back to a
+// later CORS fetch for the same URL — which then fails the CORS check, for as
+// long as the entry lives. One stray <img> would otherwise take a photo out for
+// the rest of the session.
+async function fetchCiphertext(encryptedUrl, { revalidate = false } = {}) {
+  const response = await fetch(encryptedUrl, revalidate ? { cache: 'reload' } : undefined)
   if (!response.ok) throw new Error(`Fetch failed (${response.status})`)
-  const encryptedBuffer = await response.arrayBuffer()
-  // Runs in a worker when one is available; falls back to the main thread
-  // otherwise. The buffer is transferred, so it must not be touched after this.
-  const decrypted = await decryptBlobOffThread(encryptionKey, encryptedBuffer, mimeType)
+  return response.arrayBuffer()
+}
+
+async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
+  let decrypted
+  try {
+    const encryptedBuffer = await fetchCiphertext(encryptedUrl)
+    // Runs in a worker when one is available; falls back to the main thread
+    // otherwise. The buffer is transferred, so it must not be touched after this.
+    decrypted = await decryptBlobOffThread(encryptionKey, encryptedBuffer, mimeType)
+  } catch (err) {
+    // One retry, and it re-fetches rather than reusing the bytes: the buffer was
+    // transferred to a worker and is detached, and a poisoned cache entry is one
+    // of the two things that land here. The retry answers both — fresh bytes,
+    // decrypted on the main thread, which is the fallback utils/decryptPool
+    // promises but cannot perform itself once the buffer is gone.
+    devError('Decrypt failed, retrying past the cache:', err)
+    const retryBuffer = await fetchCiphertext(encryptedUrl, { revalidate: true })
+    decrypted = await decryptBlob(encryptionKey, retryBuffer, mimeType)
+  }
 
   // Blob.slice() is by reference, so re-typing the blob costs no extra copy.
   const header = new Uint8Array(await decrypted.slice(0, 16).arrayBuffer())
@@ -208,6 +234,33 @@ function isDirectUrl(url) {
 }
 
 /**
+ * Is this URL known to hold ciphertext?
+ *
+ * Every media blob this app uploads goes to Cloudinary as a *raw* resource, and
+ * utils/encryptedUpload.js has no path that puts a plaintext file under
+ * `/raw/upload/`. Everything else on Cloudinary — `/image/upload/`, the login
+ * header art, uploads from before encryption existed — is plaintext. sw.js
+ * already splits its caching rules on exactly this line.
+ *
+ * Telling the two apart matters because letting ciphertext reach an <img> is
+ * worse than a broken picture. The element issues a no-cors request for the
+ * same URL the decrypt path fetches with CORS, and iOS Safari serves that
+ * cached no-cors response back to the later fetch, which then fails the CORS
+ * check. One stray <img> takes the photo out for the rest of the session —
+ * which is what "photos stopped decrypting after the first login" was.
+ *
+ * So a URL on this list is never handed to an element as-is. When there is no
+ * key, the answer is "not yet", never the raw bytes.
+ */
+export function isCiphertextUrl(url) {
+  return (
+    typeof url === 'string' &&
+    /^https:\/\/res\.cloudinary\.com\//i.test(url) &&
+    url.includes('/raw/upload/')
+  )
+}
+
+/**
  * Resolve what can be shown *during render*, with no effect and no repaint.
  *
  * This is what keeps cached media from flashing a skeleton: the lookup used to
@@ -222,10 +275,12 @@ function resolveImmediate(encryptedUrl, encryptionKey, keyLoading) {
   if (isDirectUrl(encryptedUrl)) return encryptedUrl
   const hit = cache.get(encryptedUrl)
   if (hit) return hit.objectUrl
-  // No key and none on the way means the asset predates encryption. While the
-  // key is still loading we must NOT fall back to the raw URL — the browser
-  // would try to decode ciphertext and paint a broken image.
-  if (!encryptionKey && !keyLoading) return encryptedUrl
+  // No key and none on the way used to mean "the asset predates encryption".
+  // That reading is only safe for a URL that could actually be plaintext: a
+  // /raw/upload/ URL never is, and a session can sit keyless for reasons that
+  // have nothing to do with the asset's age — a family document whose read was
+  // denied while the auth token caught up, most of all.
+  if (!encryptionKey && !keyLoading) return isCiphertextUrl(encryptedUrl) ? null : encryptedUrl
   return null
 }
 
@@ -354,8 +409,11 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
       .catch((err) => {
         if (cancelled) return
         devError('Media decryption failed:', err)
-        // Fallback: use the URL as-is (might be unencrypted)
-        setDecryptedUrl(encryptedUrl)
+        // Fallback to the URL as-is only where it might be unencrypted. For a
+        // known ciphertext URL that fallback paints noise *and* leaves a no-cors
+        // response in the cache that breaks every later attempt at the same
+        // photo — see isCiphertextUrl. Better to keep the placeholder.
+        setDecryptedUrl(isCiphertextUrl(encryptedUrl) ? null : encryptedUrl)
         setError(err)
       })
 
@@ -364,5 +422,7 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
     }
   }, [encryptedUrl, encryptionKey, mimeType, visible])
 
-  return { decryptedUrl, loading: !!encryptedUrl && !decryptedUrl, error, ref }
+  // `error` ends the wait. Without it a failed ciphertext decrypt — which no
+  // longer falls back to the raw URL — would shimmer forever.
+  return { decryptedUrl, loading: !!encryptedUrl && !decryptedUrl && !error, error, ref }
 }

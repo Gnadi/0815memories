@@ -81,7 +81,9 @@
     "body": "Get notified when a new memory or moment is shared.",
     "enable": "Enable",
     "enabling": "Enabling…",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "failed": "That didn't work. Please check your browser's notification settings.",
+    "retry": "Try again"
   },
   "upload": {
     "failed": "Upload failed. Please try again.",

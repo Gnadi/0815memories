@@ -610,19 +610,25 @@ service cloud.firestore {
                     && request.auth.uid in resource.data.get('participantUids', []);
     }
 
-    // FCM push tokens — any client (admin or viewer) can write their own token.
-    // Viewers are not Firebase-authenticated, so we allow unauthenticated writes,
-    // but we still require a well-formed shape so the collection can't be abused
-    // as anonymous scratch storage. Tokens are only read server-side via Firebase
-    // Admin SDK (bypasses these rules).
+    // FCM push tokens — one document per device, its id the SHA-256 of the token.
+    //
+    // The id is derived rather than looked up because of the read rule below:
+    // the client used to query this collection for an existing token before
+    // writing, the query was denied, and nothing was ever stored. Tokens are
+    // read server-side only, through the Admin SDK, which bypasses these rules.
+    //
+    // Writes now require a session. That was not possible while viewers had no
+    // identity — it is since viewerLogin started minting them, so this is no
+    // longer an anonymously writable collection.
     match /fcmTokens/{tokenId} {
       allow create, update: if request.resource.data.familyId is string
-                            && request.resource.data.familyId.size() > 0
-                            && request.resource.data.familyId.size() < 128
+                            && isFamilyMember(request.resource.data.familyId)
                             && request.resource.data.token is string
                             && request.resource.data.token.size() > 0
                             && request.resource.data.token.size() < 4096;
-      allow delete: if false;
+      // A device unsubscribing on logout. Scoped to the family, so no one can
+      // silence another family's devices.
+      allow delete: if isFamilyMember(resource.data.familyId);
       allow read: if false;
     }
 
@@ -633,16 +639,63 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Notification queue — admin writes a doc here to trigger the Cloud Function.
-    // The Cloud Function deletes the doc after processing (Admin SDK bypasses rules).
-    match /notificationsQueue/{docId} {
-      // Was `request.auth != null`, which was equivalent to "is an admin" only
-      // while viewers had no session. It has to name the family now, or a
-      // viewer could push a notification to everyone in it.
+    // Feedback about the app itself — write-only, for every family member.
+    //
+    // Three things make this collection different from the rest of the app:
+    //
+    //   1. A *viewer* may write here. Everywhere else a viewer only reads, but
+    //      most of the people living in a family's space are viewers, and they
+    //      are the ones with the most to say about how the app behaves.
+    //   2. Nobody may read it back. Feedback is addressed to whoever runs
+    //      Kaydo, and a client-readable collection would hand every family's
+    //      notes to every other family. It is read server-side (Admin SDK and
+    //      the console, both of which bypass these rules).
+    //   3. It is not encrypted, deliberately — see src/hooks/useFeedback.js.
+    //      Which is exactly why the shape is pinned down here: an unencrypted
+    //      collection any signed-in client can append to is worth being strict
+    //      about. Limits mirror src/constants/feedback.js.
+    //
+    // Immutable once written: no update and no delete, so a document cannot be
+    // rewritten after the fact by the account that sent it.
+    function feedbackShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['familyId', 'uid', 'role', 'message', 'category',
+                               'rating', 'contact', 'path', 'language',
+                               'userAgent', 'status', 'createdAt'])
+        && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
+        && d.category in ['bug', 'idea', 'praise', 'other']
+        && (d.rating == null || (d.rating is int && d.rating >= 1 && d.rating <= 5))
+        && d.contact is string && d.contact.size() <= 200
+        && d.path is string && d.path.size() <= 200
+        && d.language is string && d.language.size() <= 16
+        && d.userAgent is string && d.userAgent.size() <= 300
+        // Triage state belongs to whoever reads the collection, so the client
+        // may only ever open one at the start of that process.
+        && d.status == 'new'
+        && d.createdAt == request.time
+        && d.uid == request.auth.uid
+        && d.role in ['admin', 'viewer']
+        // A viewer cannot sign their feedback as an admin. The reverse is not
+        // checked: an admin whose claim has not landed yet reads as neither.
+        && (tokenRole() != 'viewer' || d.role == 'viewer');
+    }
+
+    match /feedback/{feedbackId} {
       allow create: if request.auth != null
                     && request.resource.data.familyId is string
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyMember(request.resource.data.familyId)
+                    && feedbackShapeOk();
       allow read, update, delete: if false;
+    }
+
+    // The `notificationsQueue` collection that used to live here is gone. The
+    // client no longer composes push notifications: it wrote the plaintext
+    // title of an otherwise encrypted memory into a Firestore document, and it
+    // let any admin broadcast arbitrary text to every device in the family.
+    // notifyOnMemory / notifyOnMoment now trigger on the content itself and
+    // write the text server-side.
+    match /notificationsQueue/{docId} {
+      allow read, write: if false;
     }
   }
 }

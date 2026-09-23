@@ -1,14 +1,9 @@
 /**
- * Firebase Cloud Functions — FCM Push Dispatcher
+ * Firebase Cloud Functions — Kaydo
  *
- * dispatchPushNotifications:
- *   Triggered when a document is created in the `notificationsQueue` collection.
- *   Reads FCM tokens for the family, sends push messages, then deletes the queue doc.
- *
- * The daily anniversary reminder is enqueued client-side by
- * useAnniversaryReminder when an admin opens the app — no scheduler, no
- * service-account JSON. This function still consumes the queue and fans out
- * to FCM tokens.
+ * Push notifications (this file's first half) and access control (the second).
+ * Everything runs in europe-west3, set once at the top: setGlobalOptions only
+ * reaches v2 functions, and only those defined after the call.
  *
  * No credentials needed — Firebase injects the service account automatically
  * when running inside Cloud Functions.
@@ -21,81 +16,186 @@
  *   firebase deploy --only functions
  */
 
-// v1, explicitly. Since firebase-functions v5 the package root serves the v2
-// API, where the trigger below would be onDocumentCreated — so a bare
-// 'firebase-functions' import hands back a namespace with no .document().
-import { firestore } from 'firebase-functions/v1'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
+import { anniversaryWindow } from './anniversary.js'
+import {
+  COPY,
+  MULTICAST_CHUNK,
+  anniversaryCopy,
+  chunk,
+  groupTokensByLang,
+  isDeadToken,
+} from './push.js'
+
+// Before every function definition below — a v2 function keeps whatever region
+// was in force when it was defined, so a call further down would silently
+// leave the ones above it in us-central1.
+setGlobalOptions({ region: 'europe-west3', maxInstances: 10 })
 
 // No credentials arg — Firebase injects them automatically in the Cloud Functions runtime
 initializeApp()
 
 // ---------------------------------------------------------------------------
-// Cloud Function 1: dispatch FCM when a notificationsQueue doc is created
+// Shared by both halves of this file
 // ---------------------------------------------------------------------------
 
-export const dispatchPushNotifications = firestore
-  .document('notificationsQueue/{docId}')
-  .onCreate(async (snapshot) => {
-    const data = snapshot.data()
+// App Check keeps anonymous scripts off the callable endpoints. It needs a
+// reCAPTCHA key wired into the client first, so it is opt-in via env until
+// that is configured — see the follow-up section of the plan. The rate limiter
+// further down does not depend on it.
+const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 
-    // Always clean up the queue doc, even on early return
-    const cleanup = () => snapshot.ref.delete().catch(() => {})
+/** The admins of a family document, across both the legacy and current shape. */
+function adminUidsOf(data) {
+  if (!data) return []
+  const list = Array.isArray(data.adminUids) ? data.adminUids : []
+  if (list.length > 0) return list
+  return data.adminUid ? [data.adminUid] : []
+}
 
-    if (!data) return cleanup()
+// ---------------------------------------------------------------------------
+// Push notifications
+//
+// The text is composed here rather than by the client. Two reasons: memory
+// titles and moment captions are encrypted, so putting one in a push payload
+// would hand Google the plaintext the rest of the app goes to some length to
+// withhold; and a client-supplied payload is a broadcast channel whose content
+// nothing validates.
+//
+// The trade is that the server has to know the language. Each device records
+// its own in its fcmTokens document, and the tokens are grouped by it below.
+// ---------------------------------------------------------------------------
 
-    const { familyId, title, body, url } = data
+const ANNIVERSARY_TIMEZONE = 'Europe/Berlin'
 
-    if (!familyId || !title) return cleanup()
+/**
+ * Send one notification to every device registered for a family.
+ *
+ * @param {string} familyId
+ * @param {(lang: 'de'|'en') => {title: string, body: string, url: string}} build
+ * @param {{ excludeUid?: string|null }} [options]
+ * @returns {Promise<{ devices: number, sent: number, failed: number }>}
+ */
+async function sendToFamily(familyId, build, { excludeUid = null } = {}) {
+  const stats = { devices: 0, sent: 0, failed: 0 }
+  if (!familyId) return stats
 
-    const db = getFirestore()
-    const messaging = getMessaging()
+  const snapshot = await getFirestore()
+    .collection('fcmTokens')
+    .where('familyId', '==', familyId)
+    .get()
 
-    // Fetch all FCM tokens registered for this family
-    const tokenSnapshot = await db
-      .collection('fcmTokens')
-      .where('familyId', '==', familyId)
-      .get()
+  const byLang = groupTokensByLang(snapshot.docs, { excludeUid })
+  if (byLang.size === 0) return stats
 
-    const tokenDocs = tokenSnapshot.docs
-    const tokens = tokenDocs.map((d) => d.data().token).filter(Boolean)
+  const messaging = getMessaging()
 
-    if (tokens.length === 0) return cleanup()
+  for (const [lang, group] of byLang) {
+    const { title, body, url } = build(lang)
+    stats.devices += group.length
 
-    // Send data-only messages — the service worker push handler displays them,
-    // giving full control over the notification appearance.
-    const results = await Promise.allSettled(
-      tokens.map((token) =>
-        messaging.send({
-          token,
-          data: {
-            title,
-            body: body || '',
-            url: url || '/',
-          },
-        })
+    for (const batch of chunk(group, MULTICAST_CHUNK)) {
+      // Data-only: src/sw.js owns the notification's appearance, and a
+      // `notification` block would have the browser draw its own on top.
+      const response = await messaging.sendEachForMulticast({
+        tokens: batch.map((d) => d.data().token),
+        data: { title, body: body || '', url: url || '/' },
+        webpush: { headers: { TTL: '86400', Urgency: 'normal' } },
+      })
+
+      stats.sent += response.successCount
+      stats.failed += response.failureCount
+
+      await Promise.allSettled(
+        response.responses.map((r, i) =>
+          r.success || !isDeadToken(r.error?.code) ? null : batch[i].ref.delete(),
+        ),
       )
-    )
+    }
+  }
 
-    // Remove stale tokens that FCM rejected (e.g. unregistered devices)
-    const staleTokenDocs = tokenDocs.filter((_, i) => results[i].status === 'rejected')
-    await Promise.allSettled(staleTokenDocs.map((d) => d.ref.delete()))
+  console.log(
+    `[push] family=${familyId} sent=${stats.sent} failed=${stats.failed} devices=${stats.devices}`,
+  )
+  return stats
+}
 
-    const sent = results.filter((r) => r.status === 'fulfilled').length
-    console.log(`[push] sent=${sent} failed=${results.length - sent} family=${familyId}`)
+// ── New memory / new moment ─────────────────────────────────────────────────
 
-    return cleanup()
+export const notifyOnMemory = onDocumentCreated('memories/{memoryId}', (event) => {
+  const data = event.data?.data()
+  if (!data?.familyId) return
+  return sendToFamily(
+    data.familyId,
+    (lang) => ({ ...COPY.memory[lang], url: `/memory/${event.params.memoryId}` }),
+    { excludeUid: data.createdByUid },
+  )
+})
+
+export const notifyOnMoment = onDocumentCreated('moments/{momentId}', (event) => {
+  const data = event.data?.data()
+  if (!data?.familyId) return
+  return sendToFamily(data.familyId, (lang) => ({ ...COPY.moment[lang], url: '/' }), {
+    excludeUid: data.createdByUid,
   })
+})
 
+// ── "Three years ago today" ─────────────────────────────────────────────────
+
+/**
+ * Counts a family's memories dated on the same calendar day three years ago.
+ *
+ * Works server-side despite the encryption because `familyId` and `date` are
+ * the two fields that cannot be encrypted — the queries need them.
+ */
+async function countAnniversaryMemories(familyId, window) {
+  const snapshot = await getFirestore()
+    .collection('memories')
+    .where('familyId', '==', familyId)
+    .where('date', '>=', Timestamp.fromDate(window.start))
+    .where('date', '<=', Timestamp.fromDate(window.end))
+    .select()
+    .get()
+  return snapshot.size
+}
+
+/**
+ * Replaces the client-side daily check, which only ran when an admin happened
+ * to open the app and needed a lock on the family document to keep two devices
+ * from sending it twice.
+ */
+export const dailyAnniversaryCheck = onSchedule(
+  // One pass over every family, one small query each — but it is a loop over a
+  // collection that grows, and the default 60s would be a silent cut-off.
+  { schedule: '0 8 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
+  async () => {
+    const window = anniversaryWindow(new Date(), ANNIVERSARY_TIMEZONE)
+    // select() with no fields: ids only, no document bodies over the wire.
+    const families = await getFirestore().collection('families').select().get()
+
+    let notified = 0
+    for (const family of families.docs) {
+      const count = await countAnniversaryMemories(family.id, window)
+      if (count === 0) continue
+      await sendToFamily(family.id, (lang) => ({
+        ...anniversaryCopy(lang, count, window.year),
+        url: '/timeline?filter=onthisday',
+      }))
+      notified += 1
+    }
+
+    console.log(`[anniversary] year=${window.year} families=${families.size} notified=${notified}`)
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Access control — see docs/plan-a-zugriffskontrolle.md
@@ -108,17 +208,6 @@ export const dispatchPushNotifications = firestore
 // These functions issue an identity instead: a custom token carrying a
 // `familyId` claim, which firestore.rules can verify.
 // ---------------------------------------------------------------------------
-
-// v2 only — the v1 trigger above keeps whatever region it was deployed to.
-// Changing a deployed function's region requires delete-and-recreate, and
-// dispatchPushNotifications has no reason to move.
-setGlobalOptions({ region: 'europe-west3', maxInstances: 10 })
-
-// App Check keeps anonymous scripts off the login endpoint. It needs a
-// reCAPTCHA key wired into the client first, so it is opt-in via env until
-// that is configured — see the follow-up section of the plan. The rate limiter
-// below does not depend on it.
-const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 
 // The fields the login page is allowed to see before anyone authenticates.
 // This list is the entire public surface of a family, and it lives here — on
@@ -133,14 +222,6 @@ const PUBLIC_FAMILY_FIELDS = [
   'loginCustomCss',
   'loginCard',
 ]
-
-/** The admins of a family document, across both the legacy and current shape. */
-function adminUidsOf(data) {
-  if (!data) return []
-  const list = Array.isArray(data.adminUids) ? data.adminUids : []
-  if (list.length > 0) return list
-  return data.adminUid ? [data.adminUid] : []
-}
 
 // ── 1. Public mirror ────────────────────────────────────────────────────────
 

@@ -60,9 +60,23 @@ export function tinyPreviewsFor(doc) {
   return tiny
 }
 
-/** Preview for images[index], or '' when there is none to trust. */
+/**
+ * Preview for images[index], or '' when there is none to trust.
+ *
+ * Only a `data:` URL comes back. An entry that is still ciphertext is not a
+ * preview — it is a read path that forgot to decrypt `thumbsTiny`, or a
+ * snapshot that arrived before the family key did. Handing that to an `<img
+ * src>` does not fail quietly: the browser resolves it as a *relative* URL and
+ * fetches it, which on this SPA means ~1 KB of base64 turned into a request the
+ * catch-all rewrite answers with index.html. That is what moments did on every
+ * card until useMoments learned to decrypt the field.
+ *
+ * Checked here rather than at each call site because the call sites cannot tell
+ * the difference, and the failure is invisible in the rendered output.
+ */
 export function tinyPreviewAt(doc, index = 0) {
-  return tinyPreviewsFor(doc)[index] || ''
+  const preview = tinyPreviewsFor(doc)[index] || ''
+  return preview.startsWith('data:') ? preview : ''
 }
 
 /** True when the document has images but no usable previews — needs backfill. */

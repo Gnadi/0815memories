@@ -24,6 +24,10 @@ import useDecryptedMedia, {
 import EncryptedImage from '../components/media/EncryptedImage'
 
 const ENCRYPTED_URL = 'https://res.cloudinary.com/demo/raw/upload/kaydo/encrypted/a.dat'
+// Not under /raw/upload/, so it is one of the plaintext assets that predate
+// encryption — the login header art, a legacy upload. The distinction is the
+// whole of isCiphertextUrl; see useDecryptedMedia for why it has to exist.
+const PLAINTEXT_URL = 'https://res.cloudinary.com/demo/image/upload/kaydo/legacy/a.jpg'
 const FAKE_KEY = { fake: 'key' }
 
 let objectUrlCounter = 0
@@ -81,10 +85,57 @@ describe('useDecryptedMedia', () => {
 
   it('passes an unencrypted URL straight through once the key is known to be absent', () => {
     authState = { encryptionKey: null, keyLoading: false }
+    const { result } = renderHook(() => useDecryptedMedia(PLAINTEXT_URL, 'image/*'))
+
+    expect(result.current.decryptedUrl).toBe(PLAINTEXT_URL)
+    expect(result.current.loading).toBe(false)
+  })
+
+  // The first-login bug. A session can hold no key for reasons that say nothing
+  // about the asset's age — chiefly a family-document read denied while the
+  // auth token caught up — and treating that as "this photo predates
+  // encryption" put the ciphertext URL into an <img>. That request is no-cors,
+  // and iOS Safari hands the response back to the CORS fetch the decrypt path
+  // makes for the same URL, which then fails. One frame of it breaks the photo
+  // for the rest of the session.
+  it('never passes a ciphertext URL through, even with no key and nothing loading', () => {
+    authState = { encryptionKey: null, keyLoading: false }
     const { result } = renderHook(() => useDecryptedMedia(ENCRYPTED_URL, 'image/*'))
 
-    expect(result.current.decryptedUrl).toBe(ENCRYPTED_URL)
+    expect(result.current.decryptedUrl).toBeNull()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it('keeps the placeholder rather than the ciphertext URL when decryption fails', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('Load failed')
+    })
+
+    const { result } = renderHook(() => useDecryptedMedia(ENCRYPTED_URL, 'image/*'))
+
+    await waitFor(() => expect(result.current.error).toBeTruthy())
+    expect(result.current.decryptedUrl).toBeNull()
+    // And the wait ends, so nothing shimmers forever.
     expect(result.current.loading).toBe(false)
+  })
+
+  it('retries past the cache once before giving up on a photo', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    let call = 0
+    globalThis.fetch = vi.fn(async () => {
+      // The poisoned-cache signature: the first CORS fetch is rejected outright.
+      if (++call === 1) throw new TypeError('Load failed')
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(32) }
+    })
+
+    const { result } = renderHook(() => useDecryptedMedia(ENCRYPTED_URL, 'image/*'))
+
+    await waitFor(() => expect(result.current.decryptedUrl).toBe('blob:decrypted-1'))
+    expect(result.current.error).toBeNull()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    // The retry has to bypass whatever answered the first time.
+    expect(globalThis.fetch.mock.calls[1][1]).toEqual({ cache: 'reload' })
   })
 
   it('fetches and decrypts once, then serves later mounts from cache on the first render', async () => {
