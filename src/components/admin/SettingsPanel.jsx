@@ -13,7 +13,6 @@ import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
 import SecureCapsulesPanel from './SecureCapsulesPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
-import TestNotificationPanel from './TestNotificationPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
@@ -394,9 +393,6 @@ export default function SettingsPanel() {
         </p>
         <NasExportButton />
       </div>
-
-      {/* End-to-end check for the push chain */}
-      <TestNotificationPanel />
 
       {/* One-off thumbnail migration for photos predating thumbnails */}
       <OptimizePhotosPanel />

@@ -21,16 +21,6 @@ export const COPY = {
     de: { title: '✨ Neuer Moment', body: 'Es wurde gerade ein neuer Moment geteilt.' },
     en: { title: '✨ New moment', body: 'Someone just shared a new moment.' },
   },
-  test: {
-    de: {
-      title: '🔔 Testbenachrichtigung',
-      body: 'Wenn du das siehst, funktionieren Mitteilungen auf diesem Gerät.',
-    },
-    en: {
-      title: '🔔 Test notification',
-      body: 'If you can see this, notifications work on this device.',
-    },
-  },
 }
 
 /** The anniversary text needs the counts, so it is built rather than looked up. */

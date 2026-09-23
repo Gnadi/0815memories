@@ -204,14 +204,5 @@
     "clickToUpload": "Click to upload a photo",
     "signatureFailed": "Failed to get upload signature",
     "uploadFailed": "Upload failed"
-  },
-  "testNotification": {
-    "label": "Test notifications",
-    "description": "Sends a test notification to every device in this family that has notifications enabled.",
-    "send": "Send test notification",
-    "sending": "Sending…",
-    "sent": "Sent to {{devices}} device(s). If nothing arrives, check the device's notification settings.",
-    "noDevices": "No device has enabled notifications yet.",
-    "failed": "Sending failed"
   }
 }
