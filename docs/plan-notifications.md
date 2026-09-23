@@ -6,9 +6,9 @@ jemand eine Push-Nachricht von Kaydo bekommen. Dieses Dokument sagt, woran das
 liegt — jeder Punkt zeigt auf eine Datei — und wie der Stack mit Blaze aussehen
 soll.
 
-> **Stand:** umgesetzt. Der Code steht; was noch von Hand passieren muss, steht
-> unter [Deploy](#deploy) — und zwar in dieser Reihenfolge, weil die alte
-> Function in `us-central1` sonst weiterläuft und doppelt zustellt.
+> **Stand:** live. Rules, Client und Functions sind deployt, eine Testbenachrichtigung
+> ist auf einem echten Gerät angekommen. Der Test-Knopf, der das geprüft hat, ist
+> danach wieder entfernt worden — siehe [Nach dem Rollout](#nach-dem-rollout).
 
 ## Ist-Zustand
 
@@ -301,12 +301,14 @@ sie kommt einmal, nicht einmal pro Gerät-Race.
   `isFamilyAdmin` wie `setSharedPassword`) schickt einen festen Text an die
   eigene Familie. Damit ist die Kette Token → FCM → Service Worker in zehn
   Sekunden prüfbar, ohne eine Erinnerung anzulegen. Im Admin-Bereich als Knopf
-  „Testbenachrichtigung senden".
+  „Testbenachrichtigung senden". *(Hat seinen Zweck erfüllt und ist nach dem
+  Rollout wieder entfernt worden.)*
 - **Manueller Durchlauf** je Gerät: Android/Chrome, Desktop/Chrome,
   iOS ≥ 16.4 als installierte PWA. Jeweils App geschlossen, App im Hintergrund,
   App im Vordergrund.
 - **Logs**: `firebase functions:log --only notifyOnMemory` — die
-  `[push] family=… ok=… fail=…`-Zeile ist der schnellste Gesundheitscheck.
+  `[push] family=… sent=… failed=…`-Zeile ist der schnellste Gesundheitscheck,
+  und seit der Test-Knopf weg ist der einzige.
 - **Rules-Tests** laufen über `npm run test:rules` mit; der neue `fcmTokens`-Fall
   gehört in `authRules.test.js`.
 
@@ -337,27 +339,38 @@ ohnehin; `minInstances` bleibt bei 0, damit nichts im Leerlauf kostet.
 
 ## Deploy
 
-Der Code ist auf dem Branch, die folgenden Schritte sind Handarbeit und
-reihenfolgeabhängig:
+Durchgeführt, in dieser Reihenfolge — sie ist nicht beliebig, Schritt 3 muss vor
+Schritt 4 kommen:
 
-1. **VAPID-Key setzen**, falls noch nicht geschehen: Firebase Console → Cloud
-   Messaging → Web Push certificates → `VITE_FIREBASE_VAPID_KEY` in Vercel
-   (Production, Preview, Development).
-2. **Rules und Client zuerst**:
-   `firebase deploy --only firestore:rules`, dann das Frontend deployen.
-   Danach sammeln sich Token-Dokumente an — ohne die lässt sich der Versand
-   nicht prüfen.
-3. **Alte Function löschen**, bevor die neuen hochgehen:
+1. **VAPID-Key** in Vercel (Firebase Console → Cloud Messaging → Web Push
+   certificates).
+2. **Rules und Client zuerst**, damit sich Token-Dokumente ansammeln — ohne die
+   lässt sich am Versand nichts prüfen. Die Rules deployt inzwischen die CI beim
+   Merge auf `main` (`.github/workflows/firebase-firestore.yml`).
+3. **Alte Function löschen**:
    `firebase functions:delete dispatchPushNotifications --region us-central1`.
    Eine Function kann ihre Region nicht wechseln; ohne diesen Schritt laufen
-   beide.
-4. **Functions deployen**: `firebase deploy --only functions`. Beim ersten Mal
-   legt Firebase für `dailyAnniversaryCheck` einen Cloud-Scheduler-Job an und
-   fragt ggf. nach der Aktivierung der Scheduler-API.
-5. **Prüfen**: `firebase functions:list` (alles `europe-west3`), dann in den
-   Einstellungen „Testbenachrichtigung senden" — einmal mit geschlossener App,
-   einmal mit offener. `firebase functions:log --only sendTestNotification`
-   zeigt die `[push] family=… sent=… failed=…`-Zeile.
+   beide und stellen doppelt zu.
+4. **Functions deployen**: `firebase deploy --only functions`. Legt beim ersten
+   Mal den Cloud-Scheduler-Job für `dailyAnniversaryCheck` an.
+5. **Geprüft**: Testbenachrichtigung auf einem echten Gerät angekommen.
+
+## Nach dem Rollout
+
+`sendTestNotification` und der Knopf „Testbenachrichtigung senden" sind wieder
+entfernt. Sie waren dafür da, die vier Glieder der Kette — Berechtigung,
+Token-Dokument, Function, Service Worker — einmal gemeinsam zum Klingeln zu
+bringen, als noch keines davon je funktioniert hatte. In Produktion trägt sie
+nichts mehr: jede neue Erinnerung löst denselben Weg aus, und ob er gehalten
+hat, steht in der Log-Zeile.
+
+Der nächste `firebase deploy --only functions` bietet an, die Function zu
+löschen — bestätigen, sonst bleibt sie als Waise im Projekt stehen.
+
+Wenn Mitteilungen später auf einem Gerät ausbleiben, in dieser Reihenfolge
+suchen: Berechtigung im Browser, dann `[push] … sent=0` im Log (Token weg oder
+nie geschrieben), dann `failed=` (FCM lehnt ab). Der Knopf ist einen Revert
+entfernt, falls er dafür doch wieder gebraucht wird.
 
 ## Checkliste
 
@@ -369,11 +382,12 @@ reihenfolgeabhängig:
 - [x] `notifyOnMemory` / `notifyOnMoment` in `europe-west3`, Texte serverseitig, Autor ausgenommen
 - [x] `notificationsQueue` samt Client-Schreibern entfernt, Rule auf `false`
 - [x] `dailyAnniversaryCheck` per Scheduler, Client-Lock und `lastAnniversaryCheckDate` entfernt
-- [x] `sendTestNotification` + Knopf in den Einstellungen
 - [x] `.env.example`/README: der Satz „gen 1 works on Spark" korrigiert
-- [ ] Firestore-Location bestätigt, VAPID-Key in Vercel gesetzt
-- [ ] alte `dispatchPushNotifications` in `us-central1` gelöscht
-- [ ] Functions deployed, Scheduler-Job angelegt, Testbenachrichtigung angekommen
+- [x] VAPID-Key gesetzt, Rules und Client deployt
+- [x] Functions deployt, Testbenachrichtigung auf einem echten Gerät angekommen
+- [x] `sendTestNotification` samt Knopf nach dem Rollout wieder entfernt
+- [ ] `firebase functions:list` gegenprüfen: keine `dispatchPushNotifications`
+      in `us-central1` und keine `sendTestNotification` mehr übrig
 
 ## Wo es gelandet ist
 
@@ -383,8 +397,7 @@ reihenfolgeabhängig:
 | Prompt inkl. Fehlermeldung | `src/components/NotificationPrompt.jsx` |
 | Autor-UID an Erinnerung/Moment | `src/hooks/useMemories.js` |
 | Abmelden beim Logout | `src/context/AuthContext.jsx` |
-| Test-Knopf | `src/components/admin/TestNotificationPanel.jsx` |
-| Versand, Trigger, Scheduler, Test-Callable | `functions/index.js` |
+| Versand, Trigger, Scheduler | `functions/index.js` |
 | Sprachwahl, Texte, Token-Bereinigung | `functions/push.js` |
 | Zeitfenster „vor 3 Jahren" | `functions/anniversary.js` |
 | Rules | `firestore.rules` (`fcmTokens`, `notificationsQueue`) |

@@ -196,38 +196,6 @@ export const dailyAnniversaryCheck = onSchedule(
   },
 )
 
-// ── Manual end-to-end check ─────────────────────────────────────────────────
-
-/**
- * Sends a fixed notification to the caller's own family. The chain
- * token → FCM → service worker has four places to break and no other way to
- * tell them apart from the outside; this exercises all of it without creating
- * a memory.
- */
-export const sendTestNotification = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
-  const uid = request.auth?.uid
-  if (!uid) throw new HttpsError('unauthenticated', 'Sign in first')
-
-  const familyId = String(request.data?.familyId || '')
-  if (!familyId) throw new HttpsError('invalid-argument', 'No family given')
-
-  const familySnap = await getFirestore().doc(`families/${familyId}`).get()
-  if (!familySnap.exists || !adminUidsOf(familySnap.data()).includes(uid)) {
-    throw new HttpsError('permission-denied', 'Not an admin of this family')
-  }
-
-  const { devices } = await sendToFamily(familyId, (lang) => ({ ...COPY.test[lang], url: '/' }))
-
-  if (devices === 0) {
-    // A distinct answer, because "nothing happened" here means "no device has
-    // ever registered", which is a different fix from "the push never arrived".
-    throw new HttpsError('failed-precondition', 'No device has enabled notifications yet')
-  }
-
-  return { ok: true, devices }
-})
-
-
 // ---------------------------------------------------------------------------
 // Access control — see docs/plan-a-zugriffskontrolle.md
 //
