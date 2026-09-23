@@ -394,6 +394,44 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // Print orders — admin only.
+    //
+    // Holds what was ordered and where it went. The delivery address is a real
+    // person's home address, so it is stored encrypted like the rest of the
+    // family's content; everything left in the clear here is either structural
+    // (which family, which book) or worthless on its own (a page count).
+    //
+    // Deliberately absent: the tokenised Storage download URL. That URL is a
+    // bearer capability — anyone holding it can fetch the plaintext print file
+    // without authenticating — and a capability does not belong in a document
+    // that is read far more often than it is written. Only the object path is
+    // kept, which grants nothing by itself and is what cleanup needs.
+    match /printOrders/{orderId} {
+      // familyId, the order reference and the creation time anchor an order to
+      // one family and one provider record. Letting an update move them would
+      // let a family adopt another's order, or point two orders at one
+      // reference.
+      function immutableFields() {
+        return request.resource.data.familyId == resource.data.familyId
+          && request.resource.data.orderReference == resource.data.orderReference
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+      allow create: if request.auth != null
+                    && request.resource.data.familyId != null
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId);
+      allow update: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && immutableFields();
+      // Orders are a record of money spent and goods shipped. They are kept.
+      allow delete: if false;
+    }
+
     // Collages — admin only (template-based photo collages)
     match /collages/{collageId} {
       allow read: if request.auth != null

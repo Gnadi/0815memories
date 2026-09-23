@@ -1,10 +1,14 @@
 import { useRef, useEffect, useState, forwardRef } from 'react'
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import CanvasElement from './CanvasElement'
+import { DESIGN_WIDTH, DESIGN_HEIGHT } from '../../utils/scrapbookStyles'
 
-const CANVAS_W = 800
-const CANVAS_H = 600
+const CANVAS_W = DESIGN_WIDTH
+const CANVAS_H = DESIGN_HEIGHT
 
+// The CSS form of the patterns. Their geometry is restated as tiles in
+// scrapbookStyles (BACKGROUND_PATTERNS) for the print renderer, which has no
+// background-image to hand — change one and change the other.
 const PATTERNS = {
   none: null,
   dots: 'radial-gradient(circle, #c8b9a8 1px, transparent 1px)',

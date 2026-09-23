@@ -11,23 +11,19 @@ import { drawImageCovered } from '../../utils/collageRenderer'
 // Same reasoning for glyphs: html2canvas places them with font metrics of its
 // own and gets the display face wrong, so the export paints the text itself.
 import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
+// Fonts, line heights and tracking live outside this component because the
+// print renderer draws the same text without ever mounting it. A value that
+// exists only here is a value the printed book disagrees with.
+import {
+  FONT_STACKS,
+  DISPLAY_LETTER_SPACING_EM,
+  DISPLAY_LINE_HEIGHT,
+  TEXT_LINE_HEIGHT,
+} from '../../utils/scrapbookStyles'
 // Marks a canvas the capture still has to wait for.
 import { EXPORT_PENDING_ATTR } from './exportReady'
 
 const HANDLE_SIZE = 10
-
-const FONT_STACKS = {
-  serif: "Georgia, 'Times New Roman', serif",
-  sans: 'system-ui, -apple-system, sans-serif',
-  mono: 'ui-monospace, monospace',
-  display: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
-}
-
-// Display type (Anton) is tracked out slightly and gets more line spacing than
-// the text faces, in the editor and in the export alike.
-const DISPLAY_LETTER_SPACING_EM = 0.02
-const DISPLAY_LINE_HEIGHT = 1.35
-const TEXT_LINE_HEIGHT = 1.25
 
 // The export canvas reaches this far past the element box on every side, so
 // tall glyphs keep the overflow the editor's `overflow: visible` gives them.
