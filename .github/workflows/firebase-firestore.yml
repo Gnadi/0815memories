@@ -13,6 +13,7 @@ on:
       - 'functions/slugs.js'
       - 'functions/viewerLogin.js'
       - 'src/hooks/useTimeline.js'
+      - 'functions/anniversary.js'
       - '.github/workflows/firebase-firestore.yml'
   pull_request:
     paths:
@@ -23,6 +24,7 @@ on:
       - 'functions/slugs.js'
       - 'functions/viewerLogin.js'
       - 'src/hooks/useTimeline.js'
+      - 'functions/anniversary.js'
       - '.github/workflows/firebase-firestore.yml'
   workflow_dispatch:
 

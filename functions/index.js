@@ -23,9 +23,9 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
-import { anniversaryWindow } from './anniversary.js'
+import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -156,52 +156,26 @@ export const notifyOnMoment = onDocumentCreated('moments/{momentId}', (event) =>
 // ── "Three years ago today" ─────────────────────────────────────────────────
 
 /**
- * Counts a family's memories dated on the same calendar day three years ago.
- *
- * Works server-side despite the encryption because `familyId` and `date` are
- * the two fields that cannot be encrypted — the queries need them.
- */
-async function countAnniversaryMemories(familyId, window) {
-  // The order is irrelevant to a count, but it makes the query the exact shape
-  // of the (familyId ASC, date DESC) index the feed already uses. Without it the
-  // range implies date ascending, which that index was never declared for.
-  const snapshot = await getFirestore()
-    .collection('memories')
-    .where('familyId', '==', familyId)
-    .where('date', '>=', Timestamp.fromDate(window.start))
-    .where('date', '<=', Timestamp.fromDate(window.end))
-    .orderBy('date', 'desc')
-    .select()
-    .get()
-  return snapshot.size
-}
-
-/**
  * Replaces the client-side daily check, which only ran when an admin happened
  * to open the app and needed a lock on the family document to keep two devices
  * from sending it twice.
  */
 export const dailyAnniversaryCheck = onSchedule(
-  // One pass over every family, one small query each — but it is a loop over a
-  // collection that grows, and the default 60s would be a silent cut-off.
+  // One query, then one send per family that has something to remember. The
+  // sends are the part that grows, so the default 60s stays too tight.
   { schedule: '0 8 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
   async () => {
     const window = anniversaryWindow(new Date(), ANNIVERSARY_TIMEZONE)
-    // select() with no fields: ids only, no document bodies over the wire.
-    const families = await getFirestore().collection('families').select().get()
+    const counts = await countAnniversaryMemories(getFirestore(), window)
 
-    let notified = 0
-    for (const family of families.docs) {
-      const count = await countAnniversaryMemories(family.id, window)
-      if (count === 0) continue
-      await sendToFamily(family.id, (lang) => ({
+    for (const [familyId, count] of counts) {
+      await sendToFamily(familyId, (lang) => ({
         ...anniversaryCopy(lang, count, window.year),
         url: '/timeline?filter=onthisday',
       }))
-      notified += 1
     }
 
-    console.log(`[anniversary] year=${window.year} families=${families.size} notified=${notified}`)
+    console.log(`[anniversary] year=${window.year} notified=${counts.size}`)
   },
 )
 
