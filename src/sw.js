@@ -89,8 +89,19 @@ registerRoute(
 // The backend sends data-only messages so we control the notification display here.
 // FCM wraps the payload under a 'data' key: { data: { title, body, url } }
 // Fall back to the flat structure in case the format changes.
+// Kaydo's own pushes are JSON. Anything else — DevTools' "Push" button sends
+// plain text — used to throw here, and a push that shows no notification makes
+// the browser show its own "this site has been updated in the background".
+function readPushPayload(event) {
+  try {
+    return event.data?.json() ?? {}
+  } catch {
+    return { body: event.data?.text() ?? '' }
+  }
+}
+
 self.addEventListener('push', (event) => {
-  const payload = event.data?.json() ?? {}
+  const payload = readPushPayload(event)
   const d = payload.data ?? payload
   const title = d.title || 'Kaydo'
   const options = {
