@@ -193,6 +193,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Who owns which family address (`<slug>.kaydo.app`). Kept by the same
+    // trigger through the Admin SDK — see functions/slugs.js. Clients only ever
+    // see the result, as familyPublic.familySlug.
+    match /familySlugs/{slug} {
+      allow read, write: if false;
+    }
+
     // Admins subcollection — display metadata for the Manage Admins UI AND
     // the proof of redemption for the invite flow (via `viaInvite`).
     //
