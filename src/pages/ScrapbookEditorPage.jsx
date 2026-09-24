@@ -15,8 +15,6 @@ import PhotoBar from '../components/scrapbook/PhotoBar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
 import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { devError } from '../utils/devLog'
 import { exportFileName } from '../utils/helpers'
 import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
@@ -240,6 +238,11 @@ export default function ScrapbookEditorPage() {
     const originalPageIndex = currentPageIndex
     const totalPages = pages.length
     setExporting(true)
+    // Loaded on demand, while fonts and photos warm up below: jsPDF and
+    // html2canvas are only ever needed here, and as static imports they were
+    // most of what opening the editor downloaded.
+    const libraries = Promise.all([import('jspdf'), import('html2canvas')])
+    libraries.catch(() => {}) // awaited below; an earlier failure must not orphan it
     try {
       await document.fonts.ready
       // Warm every page's photos before the first capture. The editor only
@@ -254,6 +257,7 @@ export default function ScrapbookEditorPage() {
         ),
         new Promise((resolve) => setTimeout(resolve, EXPORT_PENDING_TIMEOUT_MS)),
       ])
+      const [{ default: jsPDF }, { default: html2canvas }] = await libraries
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
       for (let i = 0; i < totalPages; i++) {
