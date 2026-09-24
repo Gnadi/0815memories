@@ -131,7 +131,6 @@ function SkeletonCard() {
 export default function SmartTimelinePage() {
   const { familyId, encryptionKey } = useAuth()
   const { memories, loading } = useMemories(familyId, encryptionKey)
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
   const availableYears = useMemo(() => {

@@ -98,8 +98,9 @@ service cloud.firestore {
       return request.resource.data.familyId == resource.data.familyId;
     }
 
-    // Shape limits for the login-page customization fields. The family doc is
-    // world-readable and served to every login-page visitor, so cap the sizes
+    // Shape limits for the login-page customization fields. They are mirrored
+    // to familyPublic, which is world-readable and served to every login-page
+    // visitor, so cap the sizes
     // (limits mirror src/utils/loginPageSanitizer.js) and constrain the mode
     // enum. `request.resource.data` is the post-merge document, so these hold
     // for setDoc(..., { merge: true }) writes too.
@@ -267,9 +268,10 @@ service cloud.firestore {
     // Memories — readable by the family (admins and viewers alike),
     // writable only by an admin of the memory's family.
     //
-    // `contentRich` is the rich description document. Memory docs are
-    // world-readable, so confidentiality rests entirely on the client
-    // encrypting before it writes — there is no privileged server path that
+    // `contentRich` is the rich description document. Memory docs are read by
+    // the whole family and stored as-is on the server, so confidentiality rests
+    // entirely on the client encrypting before it writes — there is no
+    // privileged server path that
     // could re-encrypt after the fact. This is the backstop for the one way
     // that can silently go wrong: encryptFields() skips any value that is not
     // a string, so a document object would land here readable. Requiring a

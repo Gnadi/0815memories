@@ -3,7 +3,7 @@
    original, and every arrow press paid a fresh full download from cold.
    MomentViewer had the ten lines for this already. */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, cleanup, fireEvent } from '@testing-library/react'
 
 const prefetchDecryptedMedia = vi.fn()
 vi.mock('../components/media/useDecryptedMedia', () => ({
@@ -35,7 +35,6 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const hero = () => screen.getAllByRole('presentation', { hidden: true })[0] ?? document.querySelector('img')
 const images = () => Array.from(document.querySelectorAll('img'))
 
 describe('the hero image', () => {

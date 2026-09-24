@@ -1,0 +1,47 @@
+name: CI
+
+# Lint, the unit tests and the production build, on every pull request and
+# every push to main. Before this, nothing ran them: lint had drifted to 43
+# errors without anyone noticing.
+#
+# The Firestore rules tests need the emulator and Java, and run in their own
+# workflow (firebase-firestore.yml) when the rules change. Here they skip
+# themselves — they look for FIRESTORE_EMULATOR_HOST, which is not set.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # Catches what the tests cannot: an import that only fails to resolve in
+      # the production bundle, or a page the static pre-render trips over. No
+      # VITE_ variables are set, which the app already tolerates.
+      - name: Build
+        run: npm run build

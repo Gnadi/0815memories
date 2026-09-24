@@ -23,7 +23,22 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Capitalised names are components, used only as JSX, which this rule
+      // does not count — for parameters (`{ icon: Icon }`) as much as for
+      // variables. A leading underscore marks a deliberate omission, as in
+      // `({ id: _id, ...rest }) => rest`.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // A provider and its hook belong in one file.
+      'react-refresh/only-export-components': [
+        'error',
+        { allowConstantExport: true, allowExportNames: ['useAuth'] },
+      ],
+      // Every instance is the same shape: a Firestore subscription hook that
+      // returns early with setLoading(false) (or clears a value) when it has no
+      // id to subscribe to. That costs one extra render, not a bug, and the fix
+      // is to derive `loading` in every data hook — a refactor of its own. A
+      // warning keeps it visible without failing CI on it.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
   {

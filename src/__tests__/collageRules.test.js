@@ -9,7 +9,7 @@
  * Run with:  npm run test:rules
  * (Skipped by default — `npm test` stays emulator-free.)
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
