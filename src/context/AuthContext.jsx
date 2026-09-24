@@ -173,13 +173,21 @@ export function AuthProvider({ children }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
-      const claimFamily = await applyClaims(firebaseUser)
-      // Admins from before the claim migration have no familyId in their token.
-      // The adminUids lookup stays as the fallback for exactly them.
-      if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
-        await resolveFamilyId(firebaseUser.uid)
+      try {
+        const claimFamily = await applyClaims(firebaseUser)
+        // Admins from before the claim migration have no familyId in their token.
+        // The adminUids lookup stays as the fallback for exactly them.
+        if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
+          await resolveFamilyId(firebaseUser.uid)
+        }
+      } catch (err) {
+        // Offline, or a query the rules refused. Either way the app has to
+        // leave the spinner: an unsettled `loading` held every protected page
+        // behind it until a reload happened to succeed.
+        devWarn('Could not resolve the family for this session:', err?.code, err?.message)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return unsubscribe

@@ -65,6 +65,7 @@ vi.mock('../components/media/useDecryptedMedia', () => ({ clearDecryptedMediaCac
 vi.mock('../utils/decryptPool', () => ({ terminateDecryptPool: vi.fn() }))
 
 const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { getDocs } = await import('firebase/firestore')
 
 /** A signed-in user whose ID token carries the given claims. */
 const userWithClaims = (claims) => ({
@@ -73,9 +74,10 @@ const userWithClaims = (claims) => ({
 })
 
 function Probe() {
-  const { isAdmin, isViewer, isAuthenticated, familyId } = useAuth()
+  const { isAdmin, isViewer, isAuthenticated, familyId, loading } = useAuth()
   return (
     <ul>
+      <li>loading:{String(loading)}</li>
       <li>isAdmin:{String(isAdmin)}</li>
       <li>isViewer:{String(isViewer)}</li>
       <li>isAuthenticated:{String(isAuthenticated)}</li>
@@ -147,6 +149,17 @@ describe('role derivation', () => {
 
     expect(await flag('isAdmin', 'false')).toBeInTheDocument()
     expect(await flag('isViewer', 'false')).toBeInTheDocument()
+  })
+
+  it('stops loading when the family lookup fails', async () => {
+    // A claimless admin with nothing in storage is looked up by adminUids. That
+    // query throwing — offline, or refused — used to leave `loading` true for
+    // good, and every protected page behind ProtectedRoute's spinner with it.
+    getDocs.mockImplementationOnce(() => Promise.reject(new Error('offline')))
+    renderWith(userWithClaims({}))
+
+    expect(await flag('loading', 'false')).toBeInTheDocument()
+    expect(getDocs).toHaveBeenCalled()
   })
 
   it('grants nothing without a session', async () => {
