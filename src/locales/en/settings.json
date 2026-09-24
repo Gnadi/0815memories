@@ -202,7 +202,6 @@
   "upload": {
     "previewAlt": "Preview",
     "clickToUpload": "Click to upload a photo",
-    "signatureFailed": "Failed to get upload signature",
     "uploadFailed": "Upload failed"
   }
 }

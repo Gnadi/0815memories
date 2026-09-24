@@ -26,6 +26,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { anniversaryWindow } from './anniversary.js'
+import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -226,11 +227,14 @@ const PUBLIC_FAMILY_FIELDS = [
 
 export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async (event) => {
   const { familyId } = event.params
+  const db = getFirestore()
+  const before = event.data?.before?.exists ? event.data.before.data() : null
   const after = event.data?.after
-  const publicRef = getFirestore().doc(`familyPublic/${familyId}`)
+  const publicRef = db.doc(`familyPublic/${familyId}`)
 
   if (!after?.exists) {
     await publicRef.delete().catch(() => {})
+    await releaseFamilySlug(db, familyId, before?.familySlug).catch(() => {})
     return
   }
 
@@ -239,6 +243,13 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
   for (const field of PUBLIC_FAMILY_FIELDS) {
     if (data[field] !== undefined) mirror[field] = data[field]
   }
+
+  // The address is the one public field that has to be unique, and the family
+  // document cannot promise that — any signed-in client can write any slug to
+  // it. So the mirror carries only a slug this family holds in the registry.
+  const slug = await publicSlugFor(db, familyId, data.familySlug, before?.familySlug)
+  if (slug) mirror.familySlug = slug
+  else delete mirror.familySlug
 
   // set() without merge, so a field cleared on the private document is cleared
   // here too rather than lingering in public forever.

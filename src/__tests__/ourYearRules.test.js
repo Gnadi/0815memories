@@ -206,21 +206,80 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       await assertFails(updateDoc(doc(as(B), entryPath(A)), { answers: 'tampered' }))
     })
 
-    it('lets the partner set nothing but `revealed`', async () => {
+    it('cannot be revealed by a partner who has not handed in', async () => {
+      // `revealed` is what the read rule checks, so setting it early was
+      // reading early: this write, then a getDoc, used to hand B the answers
+      // without B ever writing a word.
+      await assertFails(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
+      await assertFails(getDoc(doc(as(B), entryPath(A))))
+    })
+
+    it('does not count a draft as handed in', async () => {
+      await setDoc(doc(as(B), entryPath(B)), entry(B, { submitted: false }))
+      await assertFails(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
+    })
+
+    it('lets the partner set nothing but `revealed`, once both have handed in', async () => {
+      await setDoc(doc(as(B), entryPath(B)), entry(B))
       await assertFails(
         updateDoc(doc(as(B), entryPath(A)), { revealed: true, answers: 'tampered' }),
       )
       await assertSucceeds(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
     })
 
+    it('cannot reveal an answer that is still a draft', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(A)), entry(A, { submitted: false }))
+      })
+      await setDoc(doc(as(B), entryPath(B)), entry(B))
+      await assertFails(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
+    })
+
     it('opens the answers to both once revealed', async () => {
+      await setDoc(doc(as(B), entryPath(B)), entry(B))
       await updateDoc(doc(as(B), entryPath(A)), { revealed: true })
       await assertSucceeds(getDoc(doc(as(B), entryPath(A))))
       await assertFails(getDoc(doc(as(OUTSIDER), entryPath(A))))
     })
 
+    it('fixes an answer once it is handed in', async () => {
+      // Otherwise the look at the partner's answers would come with a chance
+      // to rewrite one's own.
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'rewritten' }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: false }))
+    })
+
+    it('cannot be deleted and rewritten while its chapter stands', async () => {
+      await assertFails(deleteDoc(doc(as(A), entryPath(A))))
+      await assertFails(deleteDoc(doc(as(B), entryPath(A))))
+    })
+
     it('lets either partner discard an answer when a chapter is thrown away', async () => {
+      // deleteChapter removes the chapter first, then the answers.
+      await assertSucceeds(deleteDoc(doc(as(B), `ourYearChapters/${CHAPTER}`)))
       await assertSucceeds(deleteDoc(doc(as(B), entryPath(A))))
+    })
+  })
+
+  describe('a draft', () => {
+    beforeEach(async () => {
+      await setDoc(doc(as(A), entryPath(A)), entry(A, { submitted: false }))
+    })
+
+    it('stays editable by its author until it is handed in', async () => {
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'second thoughts' }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'final', submitted: true }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'third thoughts' }))
+    })
+
+    it('cannot be re-homed or revealed by its author', async () => {
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { participantUids: [A, OUTSIDER] }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { familyId: 'family-2' }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { revealed: true }))
+    })
+
+    it('can be thrown away while the chapter stands', async () => {
+      await assertSucceeds(deleteDoc(doc(as(A), entryPath(A))))
     })
   })
 

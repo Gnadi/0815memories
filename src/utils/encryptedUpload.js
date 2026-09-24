@@ -2,6 +2,7 @@ import { encryptBlob, encryptText } from './encryption'
 import { createThumbnail, createTinyPreview } from './imageThumbnail'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
+import { fetchUploadSignature } from './uploadSignature'
 
 // Thrown before anything is encrypted or sent when the file cannot possibly fit
 // under Cloudinary's raw-resource cap. Callers match on `code` rather than
@@ -28,9 +29,7 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
   const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
 
   // 2. Get signed upload credentials for raw resource type
-  const signRes = await fetch('/api/cloudinary-sign?resource_type=raw')
-  if (!signRes.ok) throw new Error('Failed to get upload signature')
-  const { timestamp, signature, folder, apiKey } = await signRes.json()
+  const { timestamp, signature, folder, apiKey } = await fetchUploadSignature('?resource_type=raw')
 
   // 3. Upload encrypted blob to Cloudinary as raw
   const formData = new FormData()

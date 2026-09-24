@@ -152,7 +152,15 @@ export default function ManageAdminsPanel() {
     setNotice('')
     setRemovingUid(targetUid)
     try {
-      // Two client-side writes; the rules enforce ownership preservation
+      // Pending invites they minted first. The link is the credential, and
+      // they still hold it: left pending, any one of them lets them straight
+      // back in.
+      await Promise.all(
+        pendingInvites
+          .filter((invite) => invite.createdBy === targetUid)
+          .map((invite) => deleteDoc(doc(db, 'families', familyId, 'invites', invite.id))),
+      )
+      // Then two client-side writes; the rules enforce ownership preservation
       // (Path D: owner stays in the array; non-admins cannot mutate adminUids).
       await deleteDoc(doc(db, 'families', familyId, 'admins', targetUid))
       await updateDoc(doc(db, 'families', familyId), {

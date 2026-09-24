@@ -13,6 +13,12 @@ vi.mock('../utils/imageThumbnail', () => ({
 vi.mock('../config/cloudinary', () => ({
   CLOUDINARY_CLOUD_NAME: 'demo',
 }))
+// Signing is covered by uploadSignature.test.js; here every fetch is an upload.
+vi.mock('../utils/uploadSignature', () => ({
+  fetchUploadSignature: vi.fn(async () => ({
+    timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k',
+  })),
+}))
 
 import { createThumbnail } from '../utils/imageThumbnail'
 import { encryptBlob } from '../utils/encryption'
@@ -26,13 +32,7 @@ beforeEach(() => {
   createThumbnail.mockReset()
   encryptBlob.mockClear()
 
-  globalThis.fetch = vi.fn(async (url) => {
-    if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
-      return {
-        ok: true,
-        json: async () => ({ timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k' }),
-      }
-    }
+  globalThis.fetch = vi.fn(async () => {
     uploadCount++
     const n = uploadCount
     return {
@@ -73,13 +73,7 @@ describe('encryptAndUpload', () => {
   })
 
   it('tags a Cloudinary size rejection so callers can explain it', async () => {
-    globalThis.fetch = vi.fn(async (url) => {
-      if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
-        return {
-          ok: true,
-          json: async () => ({ timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k' }),
-        }
-      }
+    globalThis.fetch = vi.fn(async () => {
       return {
         ok: false,
         status: 400,
@@ -93,13 +87,7 @@ describe('encryptAndUpload', () => {
   })
 
   it('falls back to the X-Cld-Error header when the body carries no reason', async () => {
-    globalThis.fetch = vi.fn(async (url) => {
-      if (typeof url === 'string' && url.startsWith('/api/cloudinary-sign')) {
-        return {
-          ok: true,
-          json: async () => ({ timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k' }),
-        }
-      }
+    globalThis.fetch = vi.fn(async () => {
       return {
         ok: false,
         status: 400,

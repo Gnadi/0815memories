@@ -4,6 +4,7 @@ import { X, Image as ImageIcon } from 'lucide-react'
 import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
+import { fetchUploadSignature } from '../../utils/uploadSignature'
 import { devError } from '../../utils/devLog'
 
 /**
@@ -28,9 +29,7 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
     try {
       if (unencrypted) {
         // Plain Cloudinary upload (no encryption)
-        const signRes = await fetch('/api/cloudinary-sign')
-        if (!signRes.ok) throw new Error(t('upload.signatureFailed'))
-        const { timestamp, signature, folder, apiKey } = await signRes.json()
+        const { timestamp, signature, folder, apiKey } = await fetchUploadSignature()
 
         const formData = new FormData()
         formData.append('file', file)
