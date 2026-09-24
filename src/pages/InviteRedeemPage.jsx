@@ -106,10 +106,14 @@ export default function InviteRedeemPage() {
     }
 
     setLoading(true)
+    // The account created below, until the redemption that needs it has gone
+    // through. See the catch.
+    let createdUser = null
     try {
       // 1. Create the Firebase Auth user. Email uniqueness is enforced by
       //    Firebase, which is also our "one UID per family" guard.
       const credential = await createUserWithEmailAndPassword(auth, email, password)
+      createdUser = credential.user
       const newUid = credential.user.uid
       if (displayName) {
         try { await updateProfile(credential.user, { displayName }) } catch { /* non-fatal */ }
@@ -135,6 +139,7 @@ export default function InviteRedeemPage() {
         adminUids: arrayUnion(newUid),
       })
       await batch.commit()
+      createdUser = null
 
       // Bind the session to this family explicitly. The onAuthStateChanged
       // handler that fired on account creation ran before adminUids included us,
@@ -145,10 +150,21 @@ export default function InviteRedeemPage() {
       navigate('/home', { replace: true })
     } catch (err) {
       if (import.meta.env.DEV) console.error('Invite redemption failed', err)
+      // The account exists but the redemption did not go through. Left alone,
+      // that is a dead end: this page refuses anyone signed in, and the email
+      // is taken, so the person could neither retry here nor sign in to a
+      // family. Deleting the account (which also signs it out) puts them back
+      // where they started. Signing out is the fallback if even that fails.
+      if (createdUser) {
+        await createdUser.delete().catch(() => signOut(auth).catch(() => {}))
+      }
       const messages = {
         'auth/email-already-in-use': 'invite.errors.emailInUse',
         'auth/invalid-email': 'invite.errors.invalidEmail',
         'auth/weak-password': 'invite.errors.weakPassword',
+        // The rules refused the redemption batch: the invite was used, revoked
+        // or expired after this page checked it.
+        'permission-denied': 'invite.errors.invalidOrRevoked',
       }
       setError(t(messages[err.code] || 'invite.errors.generic'))
     } finally {
