@@ -162,11 +162,15 @@ export const notifyOnMoment = onDocumentCreated('moments/{momentId}', (event) =>
  * the two fields that cannot be encrypted — the queries need them.
  */
 async function countAnniversaryMemories(familyId, window) {
+  // The order is irrelevant to a count, but it makes the query the exact shape
+  // of the (familyId ASC, date DESC) index the feed already uses. Without it the
+  // range implies date ascending, which that index was never declared for.
   const snapshot = await getFirestore()
     .collection('memories')
     .where('familyId', '==', familyId)
     .where('date', '>=', Timestamp.fromDate(window.start))
     .where('date', '<=', Timestamp.fromDate(window.end))
+    .orderBy('date', 'desc')
     .select()
     .get()
   return snapshot.size
