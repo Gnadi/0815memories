@@ -31,13 +31,28 @@ import { devWarn } from '../utils/devLog'
  * what makes range queries possible at all.
  */
 
-// Years to count when the oldest memory cannot be looked up — only while the
-// (familyId, date ASC) index is still building after a deploy.
-const FALLBACK_YEARS = 30
+// Years counted in one parallel round, newest first. Older ones are found one
+// at a time instead (fetchTimelineYears), so a single memory with a mistyped
+// year — 0202 for 2020 — no longer costs a count for every year in between:
+// that was 1,824 queries, and a timeline that never finished loading.
+export const COUNTED_YEARS = 40
+
+/**
+ * A local date. `new Date(y, m, d)` reads a year below 100 as 1900 + y, and a
+ * mistyped year is exactly how a memory ends up that far back.
+ */
+function localDate(year, month, day) {
+  const date = new Date(2000, 0, 1)
+  // All three at once, so a day past the month's end rolls over within `year`
+  // (31 December + 1 is 1 January of the next year, 29 February of a common
+  // year is 1 March).
+  date.setFullYear(year, month, day)
+  return date
+}
 
 /** [start, end) of a calendar year, local time — what getFullYear() groups by. */
 export function yearRange(year) {
-  return [new Date(year, 0, 1), new Date(year + 1, 0, 1)]
+  return [localDate(year, 0, 1), localDate(year + 1, 0, 1)]
 }
 
 /**
@@ -49,7 +64,7 @@ export function onThisDayRanges(reference, years) {
   const month = reference.getMonth()
   const day = reference.getDate()
   return years
-    .map((year) => ({ year, start: new Date(year, month, day), end: new Date(year, month, day + 1) }))
+    .map((year) => ({ year, start: localDate(year, month, day), end: localDate(year, month, day + 1) }))
     .filter(({ start }) => start.getMonth() === month)
 }
 
@@ -77,21 +92,40 @@ export async function fetchTimelineYears(database, familyId) {
   if (newest.empty) return []
   const last = yearOf(newest)
 
-  let first
+  // The oldest memory keeps the counting to years that can have any. It is
+  // unknown only while the (familyId, date ASC) index is still building after a
+  // deploy; the walk below then finds the older years by itself.
+  let first = null
   try {
     const oldest = await getDocs(query(...familyMemories(database, familyId), orderBy('date', 'asc'), limit(1)))
     first = yearOf(oldest)
   } catch (err) {
-    devWarn('Oldest memory lookup failed; counting the last years only:', err?.code)
-    first = last - FALLBACK_YEARS + 1
+    devWarn('Oldest memory lookup failed; walking back year by year instead:', err?.code)
   }
 
-  const years = []
-  for (let year = last; year >= first; year--) years.push(year)
+  const floor = Math.max(first ?? -Infinity, last - COUNTED_YEARS + 1)
+  const counted = []
+  for (let year = last; year >= floor; year--) counted.push(year)
   const counts = await Promise.all(
-    years.map((year) => getCountFromServer(rangeQuery(database, familyId, ...yearRange(year)))),
+    counted.map((year) => getCountFromServer(rangeQuery(database, familyId, ...yearRange(year)))),
   )
-  return years.filter((_, i) => counts[i].data().count > 0)
+  const years = counted.filter((_, i) => counts[i].data().count > 0)
+
+  // Anything older, one year at a time: the newest memory before the oldest
+  // year looked at so far. One read per year that has memories, however far
+  // apart they are.
+  for (let before = floor; first === null || before > first; ) {
+    const older = await getDocs(query(
+      ...familyMemories(database, familyId),
+      where('date', '<', Timestamp.fromDate(yearRange(before)[0])),
+      orderBy('date', 'desc'),
+      limit(1),
+    ))
+    if (older.empty) break
+    before = yearOf(older)
+    years.push(before)
+  }
+  return years
 }
 
 /** The query for one year's memories, newest first. */
