@@ -27,6 +27,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { anniversaryWindow } from './anniversary.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
+import { checkViewerLogin } from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -53,6 +54,9 @@ initializeApp()
 // that is configured — see the follow-up section of the plan. The rate limiter
 // further down does not depend on it.
 const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
+
+// Mirrored by SettingsPanel, which says so before the round trip.
+const MIN_SHARED_PASSWORD_LENGTH = 8
 
 /** The admins of a family document, across both the legacy and current shape. */
 function adminUidsOf(data) {
@@ -294,103 +298,48 @@ export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (e
   )
 })
 
-// ── 3. Rate limiting ────────────────────────────────────────────────────────
-
-const MAX_FAILURES = 5
-const FAILURE_WINDOW_MS = 15 * 60 * 1000
-const BASE_BLOCK_MS = 30 * 1000
-const MAX_BLOCK_MS = 60 * 60 * 1000
+// ── 3. Viewer login ─────────────────────────────────────────────────────────
 
 /**
- * Throws when `key` is currently blocked. Call before doing any work — the
- * bcrypt comparison is deliberately expensive, so an attacker must not be able
- * to make us run it.
- */
-async function assertNotBlocked(key) {
-  const snap = await getFirestore().doc(`rateLimits/${key}`).get()
-  const blockedUntil = snap.exists ? snap.data().blockedUntil : null
-  if (blockedUntil && blockedUntil.toMillis() > Date.now()) {
-    throw new HttpsError(
-      'resource-exhausted',
-      'Too many attempts. Please wait a moment and try again.',
-    )
-  }
-}
-
-async function recordFailure(key) {
-  const ref = getFirestore().doc(`rateLimits/${key}`)
-  await getFirestore().runTransaction(async (tx) => {
-    const snap = await tx.get(ref)
-    const now = Date.now()
-    const data = snap.exists ? snap.data() : null
-    const windowStart = data?.firstFailureAt?.toMillis?.() ?? now
-    const withinWindow = now - windowStart < FAILURE_WINDOW_MS
-
-    const failures = (withinWindow ? data?.failures ?? 0 : 0) + 1
-    const over = failures - MAX_FAILURES
-    const blockMs = over >= 0 ? Math.min(BASE_BLOCK_MS * 2 ** over, MAX_BLOCK_MS) : 0
-
-    tx.set(ref, {
-      failures,
-      firstFailureAt: withinWindow && data?.firstFailureAt ? data.firstFailureAt : new Date(now),
-      blockedUntil: blockMs > 0 ? new Date(now + blockMs) : null,
-      updatedAt: new Date(now),
-    })
-  })
-}
-
-const clearFailures = (key) => getFirestore().doc(`rateLimits/${key}`).delete().catch(() => {})
-
-/** Rate-limit keys must be a single path segment, so the id is sanitised. */
-const safeKey = (prefix, value) => `${prefix}__${String(value).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 96)}`
-
-// ── 4. Viewer login ─────────────────────────────────────────────────────────
-
-/**
- * Check a family's shared password and mint a viewer token.
+ * Check a family's shared password and mint a viewer token. The checking and
+ * the throttling live in viewerLogin.js; this is the wiring.
  *
  * Every failure answers the same way. "No such family" and "wrong password"
  * must not be distinguishable, or this endpoint becomes a way to enumerate
  * which families exist.
+ *
+ * `rawRequest.ip` is only a hint: the functions framework trusts
+ * X-Forwarded-For, so the caller chooses it. The limits that hold are the
+ * family's (for devices that have never signed in) and the device's own.
  */
 export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
-  const familyId = String(request.data?.familyId || '')
-  const password = String(request.data?.password || '')
-  const generic = new HttpsError('permission-denied', 'Invalid password')
+  const result = await checkViewerLogin(
+    {
+      db: getFirestore(),
+      compare: (password, hash) => bcrypt.compare(password, hash),
+      // One viewer identity per family, because the password is per family
+      // too. The payoff is revocation: changing the password revokes every
+      // viewer in a single call. The cost is that a single device cannot be
+      // locked out alone.
+      mintToken: (familyId) =>
+        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer' }),
+    },
+    {
+      familyId: request.data?.familyId,
+      password: request.data?.password,
+      deviceToken: request.data?.deviceToken,
+      ip: request.rawRequest?.ip,
+    },
+  )
 
-  if (!familyId || !password) throw generic
-
-  const familyKey = safeKey('viewerLogin', familyId)
-  const ipKey = safeKey('viewerLoginIp', request.rawRequest?.ip || 'unknown')
-
-  await assertNotBlocked(familyKey)
-  await assertNotBlocked(ipKey)
-
-  // The only place a hash lives. It briefly also read families/{id}.sharedPassword
-  // so the client deploy and the migration could happen in either order; the
-  // migration has since moved every hash and deleted the field, so that branch
-  // was reading somewhere nothing can be.
-  const secretSnap = await getFirestore().doc(`families/${familyId}/secrets/auth`).get()
-  const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
-
-  if (!hash || !(await bcrypt.compare(password, hash))) {
-    await Promise.all([recordFailure(familyKey), recordFailure(ipKey)])
-    throw generic
+  if (result.outcome === 'blocked') {
+    throw new HttpsError('resource-exhausted', 'Too many attempts. Please wait a moment and try again.')
   }
-
-  await Promise.all([clearFailures(familyKey), clearFailures(ipKey)])
-
-  // One viewer identity per family, because the password is per family too.
-  // The payoff is revocation: changing the password revokes every viewer in a
-  // single call. The cost is that a single device cannot be locked out alone.
-  const token = await getAuth().createCustomToken(`viewer:${familyId}`, {
-    familyId,
-    role: 'viewer',
-  })
-  return { token }
+  if (result.outcome !== 'ok') throw new HttpsError('permission-denied', 'Invalid password')
+  return result.deviceToken ? { token: result.token, deviceToken: result.deviceToken } : { token: result.token }
 })
 
-// ── 5. Shared password ──────────────────────────────────────────────────────
+// ── 4. Shared password ──────────────────────────────────────────────────────
 
 /**
  * Set a family's shared password. Admin only, and the plaintext never lands in
@@ -403,7 +352,11 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   const familyId = String(request.data?.familyId || '')
   const password = String(request.data?.password || '')
   if (!familyId) throw new HttpsError('invalid-argument', 'No family given')
-  if (password.length < 4) throw new HttpsError('invalid-argument', 'Password is too short')
+  // It is what stands between a guesser and the family's encryption key, and
+  // guessing is throttled, not stopped. Existing passwords keep working.
+  if (password.length < MIN_SHARED_PASSWORD_LENGTH) {
+    throw new HttpsError('invalid-argument', 'Password is too short')
+  }
 
   const familySnap = await getFirestore().doc(`families/${familyId}`).get()
   // adminUids on the document, not the caller's claim: this is the source of

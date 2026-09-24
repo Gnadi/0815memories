@@ -11,6 +11,7 @@ on:
       - 'firebase.json'
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'
+      - 'functions/viewerLogin.js'
       - '.github/workflows/firebase-firestore.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - 'firebase.json'
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'
+      - 'functions/viewerLogin.js'
       - '.github/workflows/firebase-firestore.yml'
   workflow_dispatch:
 

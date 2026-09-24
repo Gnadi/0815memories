@@ -108,7 +108,7 @@
     "label": "Change Shared Password (Private Key)",
     "description": "This is the password family and friends use to access the site.",
     "placeholder": "New shared password",
-    "tooShort": "Password must be at least 4 characters",
+    "tooShort": "Password must be at least 8 characters",
     "noFamily": "No family found",
     "updated": "Shared password updated!",
     "updateFailed": "Failed to update password",

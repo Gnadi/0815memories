@@ -170,9 +170,23 @@ it a better target as well as a safer one. `viewerLogin` therefore throttles
 before it does any work — the bcrypt comparison is deliberately expensive, so an
 attacker must not be able to make us run it.
 
-Counters live in `rateLimits/{key}`, keyed by family **and** by caller IP:
-5 failures in 15 minutes, then a block doubling from 30s to a 1h cap. Written by
-the Admin SDK; `allow read, write: if false` for everyone else.
+Counters live in `rateLimits/{key}`: 5 failures in 15 minutes, then a block
+doubling from 30s to a 1h cap. Written by the Admin SDK; `allow read, write: if
+false` for everyone else.
+
+What the counter is keyed on depends on the device (`functions/viewerLogin.js`):
+
+- A device that has never signed in is counted by family **and** by claimed IP.
+  The family key is the one that holds: the functions framework trusts
+  `X-Forwarded-For`, so the IP is whatever the caller says it is.
+- A device that has signed in before sends the device token it was handed then,
+  and is counted on its own. The family-wide block does not apply to it.
+
+The split exists because a family-wide block used to refuse everyone, the right
+password included, and family ids are public — a few wrong guesses every quarter
+of an hour kept a family's viewers out. Now that only reaches devices that have
+never signed in, which is where a guesser is. A device token grants nothing by
+itself; only its hash is stored, in `viewerDevices/{hash}`, bound to one family.
 
 Every failure answers identically. "No such family" and "wrong password" must
 not be distinguishable, or the endpoint becomes a way to enumerate families.

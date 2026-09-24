@@ -91,3 +91,20 @@ export function clearStoredSession() {
 export function hasStoredSession() {
   return !!readStored('fh_familyId')
 }
+
+// ── Viewer device token ─────────────────────────────────────────────────────
+//
+// Handed out by the viewerLogin function on this device's first successful
+// login, and sent with every later one: it exempts the device from the
+// family-wide lockout that wrong guesses by strangers can trigger. It is not a
+// session and grants nothing on its own, so it lives in localStorage whatever
+// "Stay logged in" says, and survives logout.
+const viewerDeviceKey = (familyId) => `kaydo_viewer_device:${familyId}`
+
+export function readViewerDevice(familyId) {
+  return attempt(() => window.localStorage.getItem(viewerDeviceKey(familyId)))
+}
+
+export function writeViewerDevice(familyId, token) {
+  attempt(() => window.localStorage.setItem(viewerDeviceKey(familyId), token))
+}

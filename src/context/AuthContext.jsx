@@ -11,7 +11,9 @@ import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
-import { readStored, writeStored, clearStoredSession, setSessionOnly } from '../utils/authStorage'
+import {
+  readStored, writeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
+} from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
 import { removeFCMToken } from '../utils/notifications'
 
@@ -351,8 +353,12 @@ export function AuthProvider({ children }) {
       const result = await httpsCallable(functions, 'viewerLogin')({
         familyId: viewerFamilyId,
         password,
+        // A device that signed in before is not locked out by other people's
+        // wrong guesses — see functions/viewerLogin.js.
+        deviceToken: readViewerDevice(viewerFamilyId) || undefined,
       })
       token = result?.data?.token
+      if (result?.data?.deviceToken) writeViewerDevice(viewerFamilyId, result.data.deviceToken)
     } catch (err) {
       // The function answers every *authentication* failure identically, so the
       // endpoint cannot be used to find out which families exist. But not every
