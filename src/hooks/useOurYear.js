@@ -232,14 +232,18 @@ export function useOurYearChapters(ritualId, uid, encryptionKey) {
    * query on purpose: before the reveal, a query would include the partner's
    * document, which this person may not read — and Firestore fails the whole
    * query rather than filtering it out.
+   *
+   * The chapter goes first. firestore.rules only lets a handed-in answer be
+   * deleted once its chapter is gone — otherwise deleting and rewriting it
+   * would undo the hand-in after the partner's answers were visible.
    */
   const deleteChapter = useCallback(async (chapter) => {
     const ids = (chapter.participantUids ?? []).flatMap((participant) =>
       ['reflection', 'quiz'].map((kind) => entryId(chapter.id, kind, participant)),
     )
+    await deleteDoc(doc(db, CHAPTERS, chapter.id))
     await Promise.allSettled(ids.map((id) => deleteDoc(doc(db, ENTRIES, id))))
     await deleteDoc(doc(db, LETTERS, chapter.id)).catch(() => {})
-    await deleteDoc(doc(db, CHAPTERS, chapter.id))
   }, [])
 
   return { chapters, loading, addChapter, updateChapter, deleteChapter }

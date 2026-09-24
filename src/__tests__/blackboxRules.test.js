@@ -38,7 +38,9 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   where,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -212,6 +214,38 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       await assertFails(updateDoc(doc(db, 'blackbox', SEALED), { unlockDate: sooner }))
     })
 
+    it('cannot be cleared, since from no date any date used to be accepted', async () => {
+      // Clearing, then writing yesterday, opened a sealed capsule in two writes.
+      const db = as(ADMIN)
+      await assertFails(updateDoc(doc(db, 'blackbox', SEALED), { unlockDate: deleteField() }))
+      await assertFails(updateDoc(doc(db, 'blackbox', SEALED), { unlockDate: null }))
+    })
+
+    it('can be given to a capsule without one only in the future', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'blackbox', 'dateless'), {
+          familyId: FAMILY,
+          title: 'ciphertext',
+          isSealed: true,
+          createdAt: past(),
+        })
+      })
+      const db = as(ADMIN)
+      await assertFails(updateDoc(doc(db, 'blackbox', 'dateless'), { unlockDate: past() }))
+      await assertSucceeds(updateDoc(doc(db, 'blackbox', 'dateless'), { unlockDate: future() }))
+    })
+
+    it('cannot be replaced by deleting the capsule and recreating it', async () => {
+      // capsuleIsOpen() reads the metadata document, so a new one under the same
+      // id with yesterday's date would open the letter that is still there.
+      const db = as(ADMIN)
+      await assertSucceeds(deleteDoc(doc(db, 'blackbox', SEALED)))
+      await assertFails(
+        setDoc(doc(db, 'blackbox', SEALED), { familyId: FAMILY, unlockDate: past() }),
+      )
+      await assertFails(getDoc(doc(db, 'blackboxContent', SEALED)))
+    })
+
     it('cannot be moved into the past to open a capsule early', async () => {
       // The attack the client-side check could not stop.
       const db = as(ADMIN)
@@ -255,10 +289,44 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
     })
 
     it('can be created by a family admin, since sealing writes it', async () => {
+      // The way addBox writes it: both halves in one batch.
       const db = as(ADMIN)
-      await assertSucceeds(
-        setDoc(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: 'ciphertext' }),
+      const batch = writeBatch(db)
+      batch.set(doc(db, 'blackbox', 'new'), {
+        familyId: FAMILY,
+        title: 'ciphertext',
+        unlockDate: future(),
+        isSealed: true,
+      })
+      batch.set(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: 'ciphertext' })
+      await assertSucceeds(batch.commit())
+    })
+
+    it('cannot be planted under a capsule of another family', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore()
+        await setDoc(doc(db, 'families', 'family-2'), { adminUid: OUTSIDER, adminUids: [OUTSIDER] })
+        // A capsule from before the split: it has no content document yet.
+        await setDoc(doc(db, 'blackbox', 'legacy'), {
+          familyId: FAMILY,
+          unlockDate: future(),
+          message: 'ciphertext',
+        })
+      })
+      await assertFails(
+        setDoc(doc(as(OUTSIDER), 'blackboxContent', 'legacy'), { familyId: 'family-2', message: 'x' }),
       )
+    })
+
+    it('cannot be moved to another family', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'families', 'family-2'), {
+          adminUid: ADMIN,
+          adminUids: [ADMIN],
+        })
+      })
+      const db = as(ADMIN)
+      await assertFails(updateDoc(doc(db, 'blackboxContent', OPEN), { familyId: 'family-2' }))
     })
   })
 })

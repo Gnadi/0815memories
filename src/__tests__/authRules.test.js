@@ -40,6 +40,9 @@ import {
   deleteDoc,
   updateDoc,
   where,
+  writeBatch,
+  arrayUnion,
+  arrayRemove,
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -380,6 +383,113 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertSucceeds(
         getDocs(collection(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites')),
       )
+    })
+  })
+
+  // ── 7. Redeeming an invite ────────────────────────────────────────────────
+  //
+  // Redemption is one batch: consume the invite, create admins/{uid}, join
+  // adminUids. Each rule insists on the other two writes, which is what keeps
+  // a spent invite from being replayed.
+
+  describe('redeeming an invite', () => {
+    const NEWBIE = 'uid-newbie'
+    const TOKEN = 'invite-token-1'
+
+    /** What InviteRedeemPage writes, as one batch. */
+    const redeem = (db, { token = TOKEN, extra = {} } = {}) => {
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'families', FAMILY, 'invites', token), {
+        used: true,
+        redeemedBy: NEWBIE,
+      })
+      batch.set(doc(db, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: token })
+      batch.update(doc(db, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE), ...extra })
+      return batch.commit()
+    }
+
+    it('makes the redeemer an admin', async () => {
+      await assertSucceeds(redeem(asClaimlessAdmin(NEWBIE)))
+      await assertSucceeds(getDoc(doc(asClaimlessAdmin(NEWBIE), 'families', FAMILY)))
+    })
+
+    it('cannot be done in separate writes', async () => {
+      const db = asClaimlessAdmin(NEWBIE)
+      await assertFails(
+        updateDoc(doc(db, 'families', FAMILY, 'invites', TOKEN), { used: true, redeemedBy: NEWBIE }),
+      )
+      await assertFails(setDoc(doc(db, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN }))
+      await assertFails(updateDoc(doc(db, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
+    })
+
+    it('cannot change anything but adminUids on the way in', async () => {
+      await assertFails(redeem(asClaimlessAdmin(NEWBIE), { extra: { familyName: 'Mine now' } }))
+    })
+
+    it('cannot be replayed by an admin who was removed', async () => {
+      await assertSucceeds(redeem(asClaimlessAdmin(NEWBIE)))
+
+      // What ManageAdminsPanel.handleRemove does.
+      const owner = asAdmin(ADMIN, FAMILY)
+      await assertSucceeds(deleteDoc(doc(owner, 'families', FAMILY, 'admins', NEWBIE)))
+      await assertSucceeds(updateDoc(doc(owner, 'families', FAMILY), { adminUids: arrayRemove(NEWBIE) }))
+
+      // The spent invite still names them as its redeemer, and has not expired.
+      // syncAdminClaims has cleared their claim.
+      const removed = asClaimlessAdmin(NEWBIE)
+      await assertFails(setDoc(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN }))
+      await assertFails(updateDoc(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
+      const batch = writeBatch(removed)
+      batch.set(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN })
+      batch.update(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) })
+      await assertFails(batch.commit())
+    })
+
+    it('cannot be minted or listed on a claim the family document no longer backs', async () => {
+      // A removed admin keeps their claim in the ID token they hold for up to
+      // an hour. Minting or listing invites would turn that into a way back in.
+      const stale = asAdmin('uid-removed', FAMILY)
+      await assertFails(
+        setDoc(doc(stale, 'families', FAMILY, 'invites', 'fresh-token'), {
+          createdBy: 'uid-removed',
+          used: false,
+          redeemedBy: null,
+          expiresAt: Timestamp.fromDate(new Date(Date.now() + 86_400_000)),
+        }),
+      )
+      await assertFails(getDocs(collection(stale, 'families', FAMILY, 'invites')))
+    })
+
+    it('can still be minted by a current admin', async () => {
+      await assertSucceeds(
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', 'fresh-token'), {
+          createdBy: ADMIN,
+          used: false,
+          redeemedBy: null,
+          expiresAt: Timestamp.fromDate(new Date(Date.now() + 86_400_000)),
+        }),
+      )
+    })
+  })
+
+  // ── 8. Crossing families ──────────────────────────────────────────────────
+  //
+  // Anyone can become the admin of *a* family by signing up. An update that
+  // could change familyId would let them write into any other family's space.
+
+  describe('an admin of another family', () => {
+    const COLLECTIONS = [
+      'memories', 'moments', 'albums', 'children', 'journals',
+      'scrapbooks', 'collages', 'highlights',
+    ]
+
+    it.each(COLLECTIONS)('cannot move a %s document into this family', async (name) => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), name, 'theirs'), { familyId: OTHER_FAMILY, title: 'x' })
+      })
+      const db = asAdmin('uid-admin-2', OTHER_FAMILY)
+      await assertSucceeds(updateDoc(doc(db, name, 'theirs'), { title: 'still theirs' }))
+      await assertFails(updateDoc(doc(db, name, 'theirs'), { familyId: FAMILY, title: 'Injected' }))
     })
   })
 })

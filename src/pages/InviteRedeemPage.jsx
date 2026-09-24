@@ -5,8 +5,7 @@ import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase
 import {
   doc,
   getDoc,
-  setDoc,
-  updateDoc,
+  writeBatch,
   serverTimestamp,
   arrayUnion,
 } from 'firebase/firestore'
@@ -116,26 +115,26 @@ export default function InviteRedeemPage() {
         try { await updateProfile(credential.user, { displayName }) } catch { /* non-fatal */ }
       }
 
-      // 2. Mark the invite as used by this caller.
-      await updateDoc(doc(db, 'families', familyId, 'invites', token), {
+      // 2. One batch: consume the invite, self-create admins/{newUid} with the
+      //    invite as proof, and join the family's adminUids. The rules accept
+      //    each of these only together with the other two. As three separate
+      //    writes, the spent invite stayed behind as proof that a removed admin
+      //    could replay to let themselves back in.
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'families', familyId, 'invites', token), {
         used: true,
         redeemedBy: newUid,
         redeemedAt: serverTimestamp(),
       })
-
-      // 3. Self-create the admins/{newUid} doc, referencing the invite as
-      //    proof. The Firestore rule re-validates the invite is now used by us.
-      await setDoc(doc(db, 'families', familyId, 'admins', newUid), {
+      batch.set(doc(db, 'families', familyId, 'admins', newUid), {
         email: email.trim().toLowerCase(),
         viaInvite: token,
         addedAt: serverTimestamp(),
       })
-
-      // 4. Add ourselves to the family's adminUids. Rule (Path C) confirms
-      //    admins/{caller} exists.
-      await updateDoc(doc(db, 'families', familyId), {
+      batch.update(doc(db, 'families', familyId), {
         adminUids: arrayUnion(newUid),
       })
+      await batch.commit()
 
       // Bind the session to this family explicitly. The onAuthStateChanged
       // handler that fired on account creation ran before adminUids included us,
