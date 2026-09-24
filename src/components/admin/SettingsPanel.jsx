@@ -23,7 +23,6 @@ export default function SettingsPanel() {
   const [familyName, setFamilyName] = useState('')
   const [familySlug, setFamilySlug] = useState('')
   const [loginHeaderImage, setLoginHeaderImage] = useState('')
-  const [loginHeaderImagePublicId, setLoginHeaderImagePublicId] = useState('')
   const [memoryCardStyle, setMemoryCardStyle] = useState('modern')
   const [loginPageMode, setLoginPageMode] = useState('classic')
   const [saving, setSaving] = useState(false)
@@ -45,7 +44,6 @@ export default function SettingsPanel() {
         setFamilyName(data.familyName || '')
         setFamilySlug(data.familySlug || '')
         setLoginHeaderImage(data.loginHeaderImage || '')
-        setLoginHeaderImagePublicId(data.loginHeaderImagePublicId || '')
         const style = data.memoryCardStyle
         setMemoryCardStyle(style === 'classic' || style === 'polaroid' ? style : 'modern')
         const pageMode = data.loginPageMode
@@ -121,7 +119,7 @@ export default function SettingsPanel() {
       setFamilySlug(newSlug)
       setMessage(t('familyName.updated'))
       setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
+    } catch {
       setMessage(t('familyName.updateFailed'))
     } finally {
       setSaving(false)
@@ -183,7 +181,6 @@ export default function SettingsPanel() {
         { merge: true }
       )
       setLoginHeaderImage(url)
-      setLoginHeaderImagePublicId(publicId)
       setMessage(url ? t('loginImage.updated') : t('loginImage.removed'))
       setTimeout(() => setMessage(''), 3000)
     } catch {

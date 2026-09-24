@@ -16,24 +16,31 @@ const FONT_STACK = {
   mono: 'ui-monospace, monospace',
 }
 
+// Newest on top. Out here because it reads the clock: the React purity lint
+// cannot tell that a function in the component body only ever runs on a click.
+function textElement(preset, text) {
+  return {
+    type: 'text',
+    text,
+    x: 200,
+    y: 200,
+    width: preset.id === 'title' ? 400 : 300,
+    height: preset.id === 'title' ? 110 : 120,
+    rotation: 0,
+    ...preset,
+    zIndex: Date.now(),
+  }
+}
+
 export default function TextPanel({ onAddElement }) {
   const { t } = useTranslation('scrapbook')
   const addTextBox = (preset) => {
-    onAddElement({
-      type: 'text',
-      text: preset.id === 'quote'
-        ? t('text.sample.quote')
-        : preset.id === 'title'
-          ? t('text.sample.title')
-          : t(`text.presets.${preset.id}`),
-      x: 200,
-      y: 200,
-      width: preset.id === 'title' ? 400 : 300,
-      height: preset.id === 'title' ? 110 : 120,
-      rotation: 0,
-      ...preset,
-      zIndex: Date.now(),
-    })
+    const text = preset.id === 'quote'
+      ? t('text.sample.quote')
+      : preset.id === 'title'
+        ? t('text.sample.title')
+        : t(`text.presets.${preset.id}`)
+    onAddElement(textElement(preset, text))
   }
 
   return (

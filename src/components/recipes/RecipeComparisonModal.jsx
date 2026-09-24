@@ -62,7 +62,6 @@ export default function RecipeComparisonModal({ versionA, versionB, allVersions,
   const { enrichedA, enrichedB } = computeDiffTags(localA, localB)
 
   const addedCount = enrichedB.filter((i) => i.diffTag === 'ADDED').length
-  const removedCount = enrichedB.filter((i) => i.diffTag === 'REMOVED' || enrichedA.find(a => a.diffTag === 'REMOVED' && a.name.toLowerCase() === i.name.toLowerCase())).length
   const modifiedCount = enrichedB.filter((i) => i.diffTag === 'MODIFIED').length
   const actualRemovedCount = enrichedA.filter((i) => i.diffTag === 'REMOVED').length
 

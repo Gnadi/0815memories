@@ -252,7 +252,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       })
     }, 100)
     return () => clearInterval(id)
-  }, [paused, isVideo, currentMediaIndex, currentMomentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [paused, isVideo, currentMediaIndex, currentMomentIndex])
 
   // When image progress reaches 100, advance
   useEffect(() => {
@@ -262,7 +262,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     } else {
       goNextRef.current()
     }
-  }, [progress, isVideo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [progress, isVideo])
 
   // Keyboard navigation (registered once; delegates through refs to stay fresh)
   useEffect(() => {
@@ -311,8 +311,12 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   if (!moment) return null
 
-  // Progress bar segments — one per media item in the current moment
-  const ProgressBarMobile = () => (
+  // Progress bar segments — one per media item in the current moment.
+  //
+  // Elements, not components: a component defined in here is a new type on
+  // every render, so React remounted both bars on every progress tick and the
+  // width transition never had a previous width to animate from.
+  const progressBarMobile = (
     <div className="flex gap-1 w-full">
       {mediaItems.map((_, i) => (
         <div key={i} className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden">
@@ -331,7 +335,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     </div>
   )
 
-  const ProgressBarDesktop = () => (
+  const progressBarDesktop = (
     <div className="flex gap-1 w-full">
       {mediaItems.map((_, i) => (
         <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
@@ -389,7 +393,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2 z-20">
-          <ProgressBarMobile />
+          {progressBarMobile}
 
           {/* User row */}
           <div className="flex items-center justify-between mt-3">
@@ -526,7 +530,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
         <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
           {/* Progress bar */}
           <div className="px-4 pt-4">
-            <ProgressBarDesktop />
+            {progressBarDesktop}
           </div>
 
           {/* User info row */}

@@ -58,20 +58,8 @@ const ALL_MEMORIES = [april16_2023, april16_2021, jan01_2022, dec25_2020]
 // Helpers
 // ---------------------------------------------------------------------------
 
-function renderPage(initialRoute = '/timeline') {
-  return render(
-    <MemoryRouter initialEntries={[initialRoute]}>
-      {/* SmartTimelinePage uses useSearchParams which needs Router context */}
-      <SmartTimelinePageLoader />
-    </MemoryRouter>
-  )
-}
-
-// Lazy-import wrapper so mocks are already in place when the module loads
+// Imported in beforeAll, so the mocks are already in place when the module loads
 let SmartTimelinePage
-async function SmartTimelinePageLoader() {
-  return SmartTimelinePage ? <SmartTimelinePage /> : null
-}
 
 // ---------------------------------------------------------------------------
 // Tests
