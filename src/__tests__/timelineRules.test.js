@@ -25,7 +25,12 @@ const OTHER_FAMILY = 'family-2'
 let testEnv
 
 // Midday, local time: the queries group by the local calendar, as the page does.
-const at = (y, m, d) => Timestamp.fromDate(new Date(y, m - 1, d, 12))
+// setFullYear, because `new Date(50, …)` would be 1950.
+const at = (y, m, d) => {
+  const date = new Date(2000, 0, 1, 12)
+  date.setFullYear(y, m - 1, d)
+  return Timestamp.fromDate(date)
+}
 const ids = (list) => list.map((m) => m.id)
 
 describe.skipIf(!EMULATOR)('Smart Timeline queries', () => {
@@ -99,6 +104,37 @@ describe.skipIf(!EMULATOR)('Smart Timeline queries', () => {
     const years = await fetchTimelineYears(db, FAMILY)
     const found = await fetchOnThisDay(db, FAMILY, years, new Date(2028, 1, 29, 9))
     expect(ids(found)).toEqual(['feb29-2016'])
+  })
+
+  describe('with a mistyped year far behind the rest', () => {
+    // A date field accepts 0202 as readily as 2020. Counting every year from
+    // there up was 1,824 queries and a timeline that never finished loading.
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore()
+        await setDoc(doc(db, 'memories', 'typo-0202'), { familyId: FAMILY, date: at(202, 6, 1), title: 'typo' })
+        await setDoc(doc(db, 'memories', 'typo-0050'), { familyId: FAMILY, date: at(50, 3, 9), title: 'typo' })
+      })
+    })
+
+    it('still lists it, and the years in between do not appear', async () => {
+      expect(await fetchTimelineYears(asViewer(), FAMILY)).toEqual([2025, 2023, 2021, 2019, 2016, 2015, 202, 50])
+    })
+
+    it('opens a year below 100 as that year, not as 19xx', async () => {
+      const snap = await getDocs(yearQuery(asViewer(), FAMILY, 50))
+      expect(snap.docs.map((d) => d.id)).toEqual(['typo-0050'])
+    })
+  })
+
+  it('finds "On this day" on 31 December, whose day ends in the next year', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'memories', 'dec31-2021'), { familyId: FAMILY, date: at(2021, 12, 31), title: 'nye' })
+    })
+    const db = asViewer()
+    const years = await fetchTimelineYears(db, FAMILY)
+    const found = await fetchOnThisDay(db, FAMILY, years, new Date(2026, 11, 31, 9))
+    expect(ids(found)).toEqual(['dec31-2021'])
   })
 
   it('stays inside the rules: another family cannot run them', async () => {
