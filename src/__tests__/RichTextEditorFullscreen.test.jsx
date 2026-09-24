@@ -98,4 +98,26 @@ describe('RichTextEditor fullscreen', () => {
     unmount()
     expect(document.body.style.overflow).not.toBe('hidden')
   })
+
+  it('does not reach for the editor once it has gone', async () => {
+    // The toggle focuses the editor on the next frame. When the form closed
+    // first, the editor was destroyed by then and reaching for its commands
+    // threw — in CI, whenever a test's cleanup beat the frame.
+    const frames = []
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      frames.push(cb)
+      return frames.length
+    })
+    try {
+      const { user, unmount } = setup()
+      await user.click(screen.getByLabelText('Fullscreen'))
+      unmount()
+      // Tiptap destroys the editor a tick after unmount, not during it.
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(frames.length).toBeGreaterThan(0)
+      expect(() => frames.forEach((cb) => cb(0))).not.toThrow()
+    } finally {
+      raf.mockRestore()
+    }
+  })
 })

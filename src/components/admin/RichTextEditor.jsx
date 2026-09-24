@@ -102,8 +102,11 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   const toggleFullscreen = () => {
     setFullscreen((v) => !v)
     // Keep the caret where the writer left it rather than dropping focus on the
-    // way in or out.
-    requestAnimationFrame(() => editor?.commands.focus())
+    // way in or out. By the next frame the editor can be gone — the form closed
+    // in between — and a destroyed editor throws on `commands`.
+    requestAnimationFrame(() => {
+      if (editor && !editor.isDestroyed) editor.commands.focus()
+    })
   }
 
   /**
