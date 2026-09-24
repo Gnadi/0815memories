@@ -156,6 +156,22 @@ select {
   }
 }
 
+/* The story viewer's wait (components/media/CrossfadeImage.jsx): the same
+   spinner, over the previous photo dimmed rather than a cream tile — on a dark
+   story a light tile is itself a flash. Same delay, so a quick switch shows
+   none of it. Two classes, to outrank .media-decrypting on its own. */
+.media-decrypting.story-waiting {
+  background-color: rgb(0 0 0 / 0.35);
+  animation: kaydo-story-waiting 200ms ease-out 320ms both;
+}
+
+@keyframes kaydo-story-waiting {
+  from {
+    background-color: transparent;
+    background-size: 0 0;
+  }
+}
+
 /* Rich description editor (src/components/admin/RichTextEditor.jsx).
    Only the parts Tailwind classes cannot reach: ProseMirror's own generated
    markup, and the placeholder pseudo-element. The read-path renderer

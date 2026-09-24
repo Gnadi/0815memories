@@ -119,6 +119,11 @@ The neighbour warm-up moved to thumbnails for the same reason: warming an
 original no longer helps first paint, because the thumbnail is what the next
 slide paints. It is still unbounded — that is §3.
 
+*Later:* pointing the same `<img>` at the original was itself a flash — see §5.
+The upgrade now happens in `CrossfadeImage`, as a second layer that fades in
+over the thumbnail, and only once the slide has been on screen for 300 ms, so
+tapping through a story no longer starts a multi-megabyte download per slide.
+
 ## 3. The prefetch is unbounded, and it competes with the photo on screen
 
 `MomentViewer.jsx:190-219` warms **every remaining media item in the current
@@ -145,6 +150,11 @@ Reserving at least one slot for the foreground lane in `pump()` is the more
 general version of the same fix — proposal 6 in `media-performance.md` covers
 it.
 
+**Fixed (the cap):** the viewer warms what the next gesture reaches, in order of
+likelihood — the next two taps, the tap back, and the first photo of the next
+and previous moments for a swipe — all as thumbnails. The foreground slot in
+`pump()` is still open.
+
 ## 4. The story advances whether or not the photo arrived
 
 The auto-advance timer starts on mount and on every index change
@@ -158,6 +168,38 @@ That is what turns "slow" into "it skipped my photo".
 **Fix:** hold the timer until the current item has resolved. `useDecryptedMedia`
 already returns `loading`; the viewer needs it lifted out of `EncryptedImage`,
 or a small `onLoad` signal.
+
+**Fixed:** `CrossfadeImage` calls `onSettled` once the slide shows its thumbnail
+or original — not just the blur-up — or has failed, and the timer waits for it.
+A clip already waited for its own `timeupdate`.
+
+## 5. A black frame on every switch
+
+Reported after 1–4: tapping from one moment to the next went black for a moment,
+every time, and flickered. Recorded frame by frame in Chromium (encrypted
+fixtures, 4.5 MB originals, a delayed media server), ten taps gave six separate
+dark flashes — including where the next thumbnail was already decrypted.
+
+The cause was the one `<img>`. `EncryptedImage` keeps a single element and
+changes its `src`; the browser drops the old picture as soon as the new one
+loads and paints nothing until it has decoded it. On the story's near-black
+background (`bark`) that gap is a black frame. Each slide could pay it up to
+three times: blur-up to thumbnail, and thumbnail to original about 1.5 s later.
+Around it, the progress bar and the info card reset in effects, after paint, so
+each switch also showed one frame of the previous slide's progress.
+
+**Fixed:** `components/media/CrossfadeImage.jsx` is the picture area now. Every
+image it shows is its own layer, transparent until `img.decode()` has finished,
+then faded in (200 ms) over whatever is up; what is underneath is dropped only
+once the new layer is fully opaque. So a switch is the previous photo, then the
+next one fading in over it — its blur-up first if the thumbnail is not in memory
+yet. With nothing at all to show (an older moment without `thumbsTiny`, still
+downloading), the previous photo stays up, and after 320 ms dims under the
+decrypt spinner. A clip fades in over the held photo once it has a frame. The
+slide resets happen in the render that shows the new slide. Recorded again: no
+dark frame between slides, on mobile or desktop, on a fast or a throttled
+network. The only dark frames left are the first two when the viewer opens,
+as the first photo fades in from the backdrop.
 
 ## Why *sometimes* — the sources of variance
 
@@ -190,6 +232,12 @@ and slow the next time:
 
 ## Two smaller things found on the way
 
+Both **fixed**: the viewer mounts one layout, chosen with `useMediaQuery`, so the
+ref is on the clip that is on screen. That exposed a third thing — a press on a
+clip was paused by the viewer and then toggled back by the clip's own controls
+on click, so a clip once touched stayed paused. A press on the clip is now left
+to its controls, as it effectively was before.
+
 - **`MomentViewer` mounts both layouts at once.** The mobile (`md:hidden`) and
   desktop (`hidden md:flex`) trees are both in the DOM; Tailwind only hides one
   with CSS. Every slide therefore creates two `useDecryptedMedia` subscriptions
@@ -208,10 +256,10 @@ and slow the next time:
 | --- | --- | --- | --- |
 | 1 | ~~decrypt `thumbsTiny` in the moments hooks~~ **done** | small | blur-up on every moment surface; removes up to 200 junk requests |
 | 2 | ~~`thumbSrc` + `tinyPreview` in `MomentViewer`~~ **done** | small | opening a moment reuses bytes already in the cache instead of a 10 MB cold start |
-| 3 | cap the prefetch at ±1 | small | the on-screen photo stops competing with ten warm-ups |
-| 4 | gate auto-advance on `loading` | small | slides stop skipping past photos that never painted |
+| 3 | ~~cap the prefetch at ±1~~ **done** | small | the on-screen photo stops competing with ten warm-ups |
+| 4 | ~~gate auto-advance on `loading`~~ **done** | small | slides stop skipping past photos that never painted |
 | 5 | reserve a foreground slot in `pump()` | small | the general form of 3; helps every surface |
 | 6 | split the SW cache budgets (originals / thumbs) | small | re-opening a moment stops re-downloading |
 
 1 and 2 are the two a user feels immediately, and neither touched the decrypt
-path itself. 3 through 6 remain.
+path itself. 5 and 6 remain.
