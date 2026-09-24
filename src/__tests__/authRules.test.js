@@ -296,6 +296,38 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'families', OTHER_FAMILY)))
     })
 
+    // The lookup AuthContext makes at sign-in, and api/cloudinary-sign for an
+    // admin without a claim. The read rule cannot answer a query — its get()
+    // needs a concrete familyId — so this was refused for everyone, and an admin
+    // without a claim could neither sign in on a new device nor upload.
+    it('finds their own family by adminUids, with or without a claim', async () => {
+      for (const db of [asAdmin(ADMIN, FAMILY), asClaimlessAdmin(ADMIN)]) {
+        const snap = await assertSucceeds(
+          getDocs(query(collection(db, 'families'), where('adminUids', 'array-contains', ADMIN))),
+        )
+        expect(snap.docs.map((d) => d.id)).toEqual([FAMILY])
+      }
+    })
+
+    it('finds a family from before adminUids by its owner', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'families', 'family-oldest'), { adminUid: 'uid-oldest-owner' })
+      })
+      const db = asClaimlessAdmin('uid-oldest-owner')
+      const snap = await assertSucceeds(
+        getDocs(query(collection(db, 'families'), where('adminUid', '==', 'uid-oldest-owner'))),
+      )
+      expect(snap.docs.map((d) => d.id)).toEqual(['family-oldest'])
+    })
+
+    it('cannot look families up by anyone else, or list them unfiltered', async () => {
+      const db = asClaimlessAdmin(ADMIN)
+      await assertFails(getDocs(query(collection(db, 'families'), where('adminUids', 'array-contains', 'uid-admin-2'))))
+      await assertFails(getDocs(query(collection(db, 'families'), where('adminUid', '==', 'uid-admin-2'))))
+      await assertFails(getDocs(collection(db, 'families')))
+      await assertFails(getDocs(query(collection(asStranger(), 'families'), where('adminUids', 'array-contains', ADMIN))))
+    })
+
     it('can no longer queue a push notification', async () => {
       // notificationsQueue was how a client asked for a push, carrying the
       // plaintext title of an encrypted memory. The triggers compose the text
