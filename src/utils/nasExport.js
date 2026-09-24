@@ -1,5 +1,3 @@
-import JSZip from 'jszip'
-import { saveAs } from 'file-saver'
 import {
   collection,
   query,
@@ -279,7 +277,10 @@ async function attachCapsuleContents(capsules, encryptionKey) {
  *
  *  - Entries are fetched by author. A list mixing a revealed answer with the
  *    partner's unrevealed one is denied wholesale, so asking for both would
- *    return nothing rather than half.
+ *    return nothing rather than half. The query also has to name the caller
+ *    as a participant: a list is only allowed when its own filters prove the
+ *    read rule, and the rule starts with `uid in participantUids`. Filtering
+ *    by author alone was refused outright, and the whole export with it.
  *  - A letter still sealed stays sealed. Same reasoning as a capsule.
  */
 async function fetchOurYear(familyId, uid, encryptionKey) {
@@ -305,6 +306,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const entrySnap = await getDocs(query(
     collection(db, 'ourYearEntries'),
+    where('participantUids', 'array-contains', uid),
     where('authorUid', '==', uid),
   ))
   const chapterIds = new Set(chapters.map((c) => c.id))
@@ -333,6 +335,12 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
 export async function runNasExport({ familyId, familyName, uid, encryptionKey, onProgress, signal }) {
   if (!familyId || !db) throw new Error('Not authenticated')
+
+  // Loaded on demand, while the data below is fetched: JSZip and file-saver
+  // are only ever needed here, and as static imports they made every visit
+  // to Settings download them.
+  const libraries = Promise.all([import('jszip'), import('file-saver')])
+  libraries.catch(() => {}) // awaited below; an earlier failure must not orphan it
 
   const dateStr = new Date().toISOString().slice(0, 10)
   const rootFolder = `Kaydo-Export-${dateStr}`
@@ -430,6 +438,10 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
   // Phase 3: Build ZIP
   onProgress({ phase: 'zip', current: 0, total: 1, message: 'Building ZIP archive...' })
 
+  // file-saver is CommonJS whose export *is* the function. Rolldown's interop
+  // happens to name it `saveAs` as well; Node's, for one, does not.
+  const [{ default: JSZip }, fileSaver] = await libraries
+  const saveAs = fileSaver.saveAs ?? fileSaver.default
   const zip = new JSZip()
   const root = zip.folder(rootFolder)
 

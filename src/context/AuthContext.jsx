@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
-import { auth, db, functions } from '../config/firebase'
+import { auth, db, functions, resetFirestore } from '../config/firebase'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
@@ -503,6 +503,9 @@ export function AuthProvider({ children }) {
     // The workers hold the family key; tearing them down drops it with the session.
     terminateDecryptPool()
     clearStoredSession()
+    // Firestore keeps documents in memory past their listeners (config/firebase);
+    // the family document among them carries the key. A fresh instance holds none.
+    await resetFirestore()
   }, [user])
 
   // A viewer holds a Firebase session too now, so presence of `user` no longer

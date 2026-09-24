@@ -2,8 +2,7 @@ import { memo, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag, Star } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useMemories } from '../hooks/useMemories'
-import { isOnThisDay } from '../utils/helpers'
+import { useTimeline } from '../hooks/useTimeline'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
@@ -130,17 +129,19 @@ function SkeletonCard() {
 
 export default function SmartTimelinePage() {
   const { familyId, encryptionKey } = useAuth()
-  const { memories, loading } = useMemories(familyId, encryptionKey)
   const [searchParams] = useSearchParams()
-
-  const availableYears = useMemo(() => {
-    const years = [...new Set(memories.map((m) => toDate(m.date).getFullYear()))]
-    return years.sort((a, b) => b - a)
-  }, [memories])
 
   const [selectedYear, setSelectedYear] = useState(null)
   const [selectedSeason, setSelectedSeason] = useState(null)
   const [showOnThisDay, setShowOnThisDay] = useState(false)
+
+  // Each view queries its own date range — see hooks/useTimeline.js. This page
+  // used to filter the home feed's newest 50 memories, which left every older
+  // year out of it.
+  const { years: availableYears, memories, loading } = useTimeline(familyId, encryptionKey, {
+    year: selectedYear,
+    onThisDay: showOnThisDay,
+  })
 
   // Scroll to top on mount
   useEffect(() => { window.scrollTo(0, 0) }, [])
@@ -161,15 +162,11 @@ export default function SmartTimelinePage() {
     }
   }, [availableYears, selectedYear, showOnThisDay])
 
+  // The year and the day are already the query; only the season is left.
   const filteredMemories = useMemo(() => {
-    return memories.filter((m) => {
-      const date = toDate(m.date)
-      if (showOnThisDay) return isOnThisDay(date)
-      const yearMatch = !selectedYear || date.getFullYear() === selectedYear
-      const seasonMatch = !selectedSeason || getSeason(date) === selectedSeason
-      return yearMatch && seasonMatch
-    })
-  }, [memories, selectedYear, selectedSeason, showOnThisDay])
+    if (showOnThisDay || !selectedSeason) return memories
+    return memories.filter((m) => getSeason(toDate(m.date)) === selectedSeason)
+  }, [memories, selectedSeason, showOnThisDay])
 
   const today = new Date()
   const todayLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })
@@ -225,7 +222,7 @@ export default function SmartTimelinePage() {
 
         {/* Year Selector */}
         <div className={`flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-3 transition-opacity ${showOnThisDay ? 'opacity-30 pointer-events-none' : ''}`}>
-          {loading ? (
+          {loading && availableYears.length === 0 ? (
             [1, 2, 3].map((i) => (
               <div key={i} className="h-9 w-16 rounded-full bg-cream-dark animate-pulse flex-shrink-0" />
             ))

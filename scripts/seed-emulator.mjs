@@ -22,13 +22,16 @@ import sharp from 'sharp'
 process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080'
 process.env.FIREBASE_AUTH_EMULATOR_HOST ??= '127.0.0.1:9099'
 
-const admin = (await import('firebase-admin')).default
+// The modular entry points: firebase-admin 14 no longer has the namespaced
+// `admin.firestore()` / `admin.auth()`, which is what this script used to call.
+const { initializeApp } = await import('firebase-admin/app')
+const { getFirestore, Timestamp } = await import('firebase-admin/firestore')
+const { getAuth } = await import('firebase-admin/auth')
 
 const PROJECT_ID = 'demo-kaydo'
-admin.initializeApp({ projectId: PROJECT_ID })
-const db = admin.firestore()
-const auth = admin.auth()
-const { Timestamp } = admin.firestore
+initializeApp({ projectId: PROJECT_ID })
+const db = getFirestore()
+const auth = getAuth()
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SEED_MEDIA_DIR = join(__dirname, '..', 'public', 'seed-media')

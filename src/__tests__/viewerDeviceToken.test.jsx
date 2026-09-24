@@ -40,10 +40,12 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('firebase/functions', () => ({ httpsCallable: () => callable }))
 
+const resetFirestore = vi.fn(async () => {})
 vi.mock('../config/firebase', () => ({
   auth: { name: 'test-auth' },
   db: { name: 'test-db' },
   functions: { name: 'test-functions' },
+  resetFirestore: () => resetFirestore(),
 }))
 
 vi.mock('../utils/encryption', () => ({
@@ -68,6 +70,7 @@ const STORED = 'kaydo_viewer_device:family-1'
 describe('viewer device token', () => {
   beforeEach(() => {
     callable.mockReset()
+    resetFirestore.mockClear()
     window.localStorage.clear()
     window.sessionStorage.clear()
     render(
@@ -92,6 +95,15 @@ describe('viewer device token', () => {
 
     expect(callable).toHaveBeenCalledWith({ familyId: 'family-1', password: 'pw', deviceToken: 'device-abc' })
     expect(window.localStorage.getItem(STORED)).toBe('device-abc')
+  })
+
+  it('leaves nothing of the session in the Firestore cache on logout', async () => {
+    // Documents outlive their listeners in the LRU cache, the family document
+    // and its key among them; logout replaces the instance so none survive.
+    callable.mockResolvedValue({ data: { token: 'custom' } })
+    await act(() => auth.loginAsViewer('pw', 'family-1'))
+    await act(() => auth.logout())
+    expect(resetFirestore).toHaveBeenCalledTimes(1)
   })
 
   it('outlives logout, which is when it is needed next', async () => {

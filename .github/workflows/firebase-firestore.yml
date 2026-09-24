@@ -12,6 +12,8 @@ on:
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'
       - 'functions/viewerLogin.js'
+      - 'src/hooks/useTimeline.js'
+      - 'functions/anniversary.js'
       - '.github/workflows/firebase-firestore.yml'
   pull_request:
     paths:
@@ -21,6 +23,8 @@ on:
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'
       - 'functions/viewerLogin.js'
+      - 'src/hooks/useTimeline.js'
+      - 'functions/anniversary.js'
       - '.github/workflows/firebase-firestore.yml'
   workflow_dispatch:
 

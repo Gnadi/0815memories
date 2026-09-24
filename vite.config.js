@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath } from 'node:url'
+import { shellPrecache } from './scripts/shellPrecache.mjs'
 
 export default defineConfig({
   test: {
@@ -26,7 +28,14 @@ export default defineConfig({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'og-image.png'],
+      // The app shell only — see scripts/shellPrecache.mjs. og-image.png is for
+      // link previews, which crawlers fetch; nothing in the app shows it.
+      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      injectManifest: {
+        manifestTransforms: [
+          shellPrecache(fileURLToPath(new URL('./dist/.vite/manifest.json', import.meta.url))),
+        ],
+      },
       manifest: {
         name: 'Kaydo',
         short_name: 'Kaydo',

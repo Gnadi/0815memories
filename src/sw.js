@@ -24,8 +24,28 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
-// Precache all assets injected by vite-plugin-pwa
+// Precache the app shell injected by vite-plugin-pwa — not the whole app; see
+// scripts/shellPrecache.mjs.
 precacheAndRoute(self.__WB_MANIFEST)
+
+// Everything else the build produced — route chunks, the editors, the PDF and
+// ZIP libraries, the decrypt worker — is cached the first time a page needs it.
+// Their names carry a content hash, so a cached copy is never stale; a chunk a
+// new deploy removed is what RouteErrorScreen's reload is for. Registered after
+// precacheAndRoute, which answers for the shell first.
+registerRoute(
+  ({ request, url }) =>
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/assets/') &&
+    ['script', 'style', 'worker'].includes(request.destination),
+  new CacheFirst({
+    cacheName: 'app-chunks',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 80, purgeOnQuotaError: true }),
+    ],
+  })
+)
 
 // Firebase Auth and Firestore are deliberately not routed here — nothing is
 // cached for them, so they go straight to the network.

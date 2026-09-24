@@ -1,6 +1,12 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  memoryLocalCache,
+  memoryLruGarbageCollector,
+  connectFirestoreEmulator,
+  terminate,
+} from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 
 // Dev-only: route Auth + Firestore to the local Firebase Emulator Suite.
@@ -16,6 +22,24 @@ let auth = null
 let db = null
 let functions = null
 
+// Documents stay in memory after the listener that fetched them closes, until
+// the cache needs the room. The default collects them the moment no listener
+// needs them, so every page change re-read its data from the server: Home, a
+// memory, back to Home was the same 60 documents downloaded — and billed —
+// twice. With them kept, the next listener for the same query starts from
+// memory and resumes it rather than running it again.
+//
+// Memory only, never IndexedDB: these documents include the family document,
+// encryption key and all, which must not outlive the tab. logout() starts a
+// fresh instance for the same reason — see resetFirestore().
+function createFirestore() {
+  const instance = initializeFirestore(app, {
+    localCache: memoryLocalCache({ garbageCollector: memoryLruGarbageCollector() }),
+  })
+  if (USE_EMULATOR) connectFirestoreEmulator(instance, '127.0.0.1', 8080)
+  return instance
+}
+
 try {
   const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -29,7 +53,7 @@ try {
   if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
-    db = getFirestore(app)
+    db = createFirestore()
     // Pinned to the region the callables are deployed to. Without the region
     // the SDK calls us-central1 and every viewer login 404s.
     functions = getFunctions(app, FUNCTIONS_REGION)
@@ -37,7 +61,6 @@ try {
     if (USE_EMULATOR) {
       // Point the SDK at the local emulators (started via `firebase emulators:start`).
       connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
-      connectFirestoreEmulator(db, '127.0.0.1', 8080)
       connectFunctionsEmulator(functions, '127.0.0.1', 5001)
       console.info('🔧 Firebase running against local emulators (Auth:9099, Firestore:8080, Functions:5001)')
     }
@@ -70,6 +93,20 @@ export function getMessagingInstance() {
       })
   }
   return messagingPromise
+}
+
+/**
+ * Drop every document this tab has cached, by replacing the Firestore instance.
+ *
+ * Called on logout. Kept documents are the point of the LRU cache above, but
+ * not across sessions: the next person to sign in on this device must not
+ * start from the previous one's family document. `db` is a live binding, so
+ * every module reading it after this sees the new instance.
+ */
+export async function resetFirestore() {
+  if (!db) return
+  await terminate(db).catch(() => {})
+  db = createFirestore()
 }
 
 export { auth, db, functions }

@@ -31,12 +31,25 @@ vi.mock('../components/layout/Sidebar', () => ({ default: () => <div data-testid
 vi.mock('../components/layout/MobileHeader', () => ({ default: () => <div data-testid="mobile-header" /> }))
 
 // ---------------------------------------------------------------------------
-// Controllable useMemories mock
+// A stand-in for useTimeline that plays Firestore's part: the page asks for a
+// year or for "On this day", and gets back exactly that range of the memories
+// below, the way the real range queries answer.
 // ---------------------------------------------------------------------------
 
-const mockUseMemories = vi.fn()
-vi.mock('../hooks/useMemories', () => ({
-  useMemories: (...args) => mockUseMemories(...args),
+let mockMemories = []
+let mockLoading = false
+const sameDay = (d, ref) => d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate()
+const mockUseTimeline = vi.fn((_familyId, _key, { year, onThisDay }) => {
+  const years = [...new Set(mockMemories.map((m) => m.date.getFullYear()))].sort((a, b) => b - a)
+  const memories = onThisDay
+    ? mockMemories.filter((m) => sameDay(m.date, new Date()))
+    : year
+      ? mockMemories.filter((m) => m.date.getFullYear() === year)
+      : []
+  return { years: mockLoading ? [] : years, memories: mockLoading ? [] : memories, loading: mockLoading }
+})
+vi.mock('../hooks/useTimeline', () => ({
+  useTimeline: (...args) => mockUseTimeline(...args),
 }))
 
 // ---------------------------------------------------------------------------
@@ -79,7 +92,8 @@ describe('SmartTimelinePage', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     // Default: return all memories, not loading
-    mockUseMemories.mockReturnValue({ memories: ALL_MEMORIES, loading: false })
+    mockMemories = ALL_MEMORIES
+    mockLoading = false
     // Import (or re-use) the page component after mocks are set
     SmartTimelinePage = (await import('../pages/SmartTimelinePage')).default
   })
@@ -170,10 +184,7 @@ describe('SmartTimelinePage', () => {
 
   it('"Clear filters" (in empty state) resets the "On This Day" filter', async () => {
     // Use a dataset with no April 16 memories so the empty state renders
-    mockUseMemories.mockReturnValue({
-      memories: [jan01_2022, dec25_2020],
-      loading: false,
-    })
+    mockMemories = [jan01_2022, dec25_2020]
 
     render(
       <MemoryRouter initialEntries={['/timeline?filter=onthisday']}>
@@ -195,10 +206,7 @@ describe('SmartTimelinePage', () => {
 
   it('shows German empty-state message when no "On This Day" memories exist', async () => {
     // Only memories on dates that are NOT April 16
-    mockUseMemories.mockReturnValue({
-      memories: [jan01_2022, dec25_2020],
-      loading: false,
-    })
+    mockMemories = [jan01_2022, dec25_2020]
 
     render(
       <MemoryRouter initialEntries={['/timeline?filter=onthisday']}>
@@ -212,7 +220,7 @@ describe('SmartTimelinePage', () => {
   // ---- loading state -------------------------------------------------------
 
   it('shows skeleton cards while loading', async () => {
-    mockUseMemories.mockReturnValue({ memories: [], loading: true })
+    mockLoading = true
 
     render(
       <MemoryRouter initialEntries={['/timeline']}>

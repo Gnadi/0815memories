@@ -75,3 +75,34 @@ export function anniversaryWindow(now, timeZone, yearsAgo = ANNIVERSARY_YEARS_AG
     year: targetYear,
   }
 }
+
+/**
+ * How many memories each family has in `window`, from one query.
+ *
+ * This used to be one query per family, one after another: every family cost
+ * at least one billed read a day even when nothing matched, and the run grew
+ * with the number of families. A single range on `date` — which the automatic
+ * single-field index serves — reads only the memories that match, and
+ * `select('familyId')` brings back nothing else of them.
+ *
+ * `date` and `familyId` are the two fields that are never encrypted; the
+ * server can only do this because of that.
+ *
+ * @param {import('firebase-admin/firestore').Firestore} db
+ * @param {{ start: Date, end: Date }} window  inclusive at both ends
+ * @returns {Promise<Map<string, number>>} familyId → count, families with none omitted
+ */
+export async function countAnniversaryMemories(db, window) {
+  const snapshot = await db
+    .collection('memories')
+    .where('date', '>=', window.start)
+    .where('date', '<=', window.end)
+    .select('familyId')
+    .get()
+  const counts = new Map()
+  for (const doc of snapshot.docs) {
+    const familyId = doc.get('familyId')
+    if (typeof familyId === 'string' && familyId) counts.set(familyId, (counts.get(familyId) ?? 0) + 1)
+  }
+  return counts
+}
