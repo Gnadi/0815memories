@@ -93,7 +93,7 @@ export function AuthProvider({ children }) {
 
   // Defined before the effects that depend on it: the dependency array is read
   // during render, so a `const` declared further down would be in its TDZ.
-  const resolveFamilyId = useCallback(async (uid) => {
+  const resolveFamilyId = useCallback(async (uid, preferredId = null) => {
     // Primary lookup: multi-admin shape.
     const byAdmins = await getDocs(
       query(collection(db, 'families'), where('adminUids', 'array-contains', uid))
@@ -106,7 +106,15 @@ export function AuthProvider({ children }) {
       )
     }
     if (snapshot.empty) return null
-    const familyDoc = snapshot.docs[0]
+    // Someone can be an admin of more than one family. Which one the session
+    // bound to used to be whichever document Firestore listed first — which
+    // could differ from the family the token's claim names, and so from what
+    // onAuthStateChanged had just set. The claim's family wins, then the one
+    // they own.
+    const familyDoc =
+      snapshot.docs.find((d) => d.id === preferredId) ??
+      snapshot.docs.find((d) => d.data().adminUid === uid) ??
+      snapshot.docs[0]
     const id = familyDoc.id
     const data = familyDoc.data()
     // Lazy migration: if the owner logs in before the family has an `adminUids`
@@ -399,7 +407,11 @@ export function AuthProvider({ children }) {
       if (import.meta.env.DEV) console.warn('Could not set auth persistence:', err)
     }
     const result = await signInWithEmailAndPassword(auth, email, password)
-    const resolved = await resolveFamilyId(result.user.uid)
+    const claimFamily = await result.user
+      .getIdTokenResult()
+      .then(({ claims }) => (typeof claims?.familyId === 'string' ? claims.familyId : null))
+      .catch(() => null)
+    const resolved = await resolveFamilyId(result.user.uid, claimFamily)
     if (!resolved) {
       // The Firebase Auth account exists but no family lists this UID — most
       // likely because the user was removed by another admin. Sign them back
