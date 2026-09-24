@@ -717,6 +717,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Hashes of viewer device tokens, written by the same function. They only
+    // exempt a device from its family's lockout, but a client that could write
+    // one could exempt itself.
+    match /viewerDevices/{deviceId} {
+      allow read, write: if false;
+    }
+
     // Feedback about the app itself — write-only, for every family member.
     //
     // Three things make this collection different from the rest of the app:

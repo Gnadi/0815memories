@@ -57,7 +57,8 @@ export default function SettingsPanel() {
 
   const handleSavePassword = async (e) => {
     e.preventDefault()
-    if (!newPassword || newPassword.length < 4) {
+    // Mirrors setSharedPassword in functions/index.js.
+    if (!newPassword || newPassword.length < 8) {
       setMessage(t('password.tooShort'))
       return
     }
