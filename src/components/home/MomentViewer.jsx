@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   X,
   ChevronLeft,
@@ -12,10 +12,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
-import EncryptedImage from '../media/EncryptedImage'
+import CrossfadeImage, { FADE_MS } from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import useMediaQuery from '../../hooks/useMediaQuery'
 
 // Build a unified media list from a moment's images and videos.
 //
@@ -36,6 +37,27 @@ function buildMediaItems(moment) {
   ]
 }
 
+// The media item `steps` taps away from (momentIndex, mediaIndex), walking into
+// the neighbouring moments the way goNext and goPrev do. Null past either end.
+function itemAtOffset(moments, momentIndex, mediaIndex, steps) {
+  let m = momentIndex
+  let i = mediaIndex + steps
+  let items = buildMediaItems(moments[m])
+  while (i >= items.length) {
+    i -= items.length
+    m += 1
+    if (m >= moments.length) return null
+    items = buildMediaItems(moments[m])
+  }
+  while (i < 0) {
+    m -= 1
+    if (m < 0) return null
+    items = buildMediaItems(moments[m])
+    i += items.length
+  }
+  return items[i] ?? null
+}
+
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const { t } = useTranslation('home')
   const { encryptionKey } = useAuth()
@@ -49,46 +71,65 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const videoRef = useRef(null)
   const pointerStart = useRef(null)
 
+  // One layout, not both with one hidden by CSS. The hidden copy still decoded
+  // every photo a second time, played every clip a second time, and took
+  // videoRef for itself, so pausing on mobile paused the invisible desktop clip.
+  const isDesktop = useMediaQuery('(min-width: 48rem)')
+
   const moment = moments[currentMomentIndex]
   const mediaItems = useMemo(() => buildMediaItems(moment), [moment])
   const currentItem = mediaItems[currentMediaIndex]
   const isVideo = currentItem?.type === 'video'
 
-  // Thumb first, original second.
-  //
-  // Tapping a story circle used to start a cold download of the full original —
-  // up to the 10 MB upload cap — while a perfectly good 1024px copy of the same
-  // photo sat decrypted in the media cache, put there by the circle itself. So
-  // paint that copy now and warm the original alongside it; when it lands,
-  // dropping thumbSrc points the <img> at a blob that is already decrypted,
-  // which resolveImmediate answers during render. One cache, one pipeline, and
-  // no flash back to a placeholder. MemoryHero made the same trade for its hero
-  // and kept the original for its lightbox; here the story *is* the lightbox,
-  // so the original still has to arrive — just not first.
-  //
-  // Keyed on the URLs, not on currentItem: a Firestore re-emit rebuilds
-  // mediaItems, and re-running this on a new object identity would drop back to
-  // the thumbnail for a frame.
+  // The stage shows the thumbnail first and the original once the slide has
+  // been looked at for a moment — CrossfadeImage has the full story. Keyed on
+  // the URLs, not on currentItem: a Firestore re-emit rebuilds mediaItems, and
+  // a new object identity must not look like a new slide.
   const currentUrl = currentItem?.url ?? ''
   const currentThumb = currentItem?.type === 'image' ? currentItem.thumbUrl : ''
   const currentTiny = currentItem?.type === 'image' ? currentItem.tinyPreview : ''
 
-  // Which original is decrypted and waiting, rather than a boolean the slide
-  // change has to reset: comparing it to the URL on screen answers the same
-  // question and leaves the effect with nothing to do but subscribe.
-  const [readyOriginal, setReadyOriginal] = useState('')
-  const showThumb = !!currentThumb && readyOriginal !== currentUrl
+  // The clock starts when there is something to look at: the photo (not its
+  // blur-up) on screen, or a video's first frame. A slow download used to eat
+  // into the five seconds, and on a slow enough network the story moved on
+  // before the photo had arrived at all.
+  const [settledUrl, setSettledUrl] = useState('')
+  const [videoReady, setVideoReady] = useState(false)
+  const videoShown = isVideo && videoReady
+  const imageSettled = !currentUrl || settledUrl === currentUrl
 
-  useEffect(() => {
-    // No thumbnail means EncryptedImage is already showing the original, and
-    // there is nothing to upgrade to.
-    if (!encryptionKey || !currentUrl || !currentThumb) return
-    let cancelled = false
-    prefetchDecryptedMedia(currentUrl, encryptionKey, 'image/*').then((url) => {
-      if (!cancelled && url) setReadyOriginal(currentUrl)
-    })
-    return () => { cancelled = true }
-  }, [currentUrl, currentThumb, encryptionKey])
+  // A slide change resets the clock, the pause and — on a new moment — the info
+  // card, in the same render that shows the new slide. As effects they ran after
+  // the browser had painted, so every switch showed one frame of the old
+  // slide's progress (and a hidden info card) before snapping back.
+  const slideKey = `${currentMomentIndex}:${currentMediaIndex}`
+  const [renderedSlide, setRenderedSlide] = useState(slideKey)
+  const [renderedClip, setRenderedClip] = useState(isVideo ? currentUrl : '')
+  const [renderedMoment, setRenderedMoment] = useState(currentMomentIndex)
+
+  // A clip being left stays up, paused on its last frame, until the next slide
+  // has something on screen over it — the hold the stage gives a photo. Without
+  // it, leaving a clip cut to the dark background while the next photo decoded.
+  const [leavingClip, setLeavingClip] = useState(null) // { key, url }
+
+  if (renderedSlide !== slideKey) {
+    setRenderedSlide(slideKey)
+    setRenderedClip(isVideo ? currentUrl : '')
+    // Only a clip that had a frame is worth holding; coming straight back to
+    // the one being left makes it the current clip again.
+    if (renderedClip && videoReady) setLeavingClip({ key: renderedSlide, url: renderedClip })
+    else if (leavingClip?.key === slideKey) setLeavingClip(null)
+    setProgress(0)
+    setPaused(false)
+    // Every slide gets a new clip element (keyed on the slide), with no frame yet.
+    setVideoReady(false)
+  }
+  if (!currentItem && leavingClip) setLeavingClip(null)
+  if (renderedMoment !== currentMomentIndex) {
+    setRenderedMoment(currentMomentIndex)
+    setInfoVisible(true)
+    setShowMenu(false)
+  }
 
   const isFirstMedia = currentMediaIndex === 0
   const isLastMedia = currentMediaIndex === mediaItems.length - 1
@@ -152,6 +193,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const SWIPE_THRESHOLD = 50
   const handlePointerDown = (e) => {
     pointerStart.current = { x: e.clientX, y: e.clientY }
+    // A press on the clip itself belongs to its own controls, which pause and
+    // resume it on click. Pausing it here as well meant the release resumed it
+    // and the click paused it again, so a clip once touched stayed paused.
+    if (e.target instanceof HTMLVideoElement) return
     setPaused(true)
   }
   const handlePointerUp = (e, tapAction) => {
@@ -187,48 +232,49 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  // Warm the decryption cache for media the user is about to reach, so
-  // navigation shows the next photo instantly instead of a loading placeholder.
+  // Warm the decryption cache for what the next gesture reaches, so it can be
+  // shown straight away. Only the neighbours: warming every photo left in the
+  // moment put the one a tap actually lands on behind the rest of the batch.
+  // In order of likelihood, since the prefetch lane is first come, first served.
   useEffect(() => {
     if (!encryptionKey) return
-    const targets = []
-    // Remaining media in the current moment
-    mediaItems.forEach((item, i) => { if (i > currentMediaIndex) targets.push(item) })
-    // First media of the next moment
-    const nextMoment = moments[currentMomentIndex + 1]
-    if (nextMoment) {
-      const first = buildMediaItems(nextMoment)[0]
-      if (first) targets.push(first)
+    const targets = [
+      itemAtOffset(moments, currentMomentIndex, currentMediaIndex, 1), // tap forward
+      itemAtOffset(moments, currentMomentIndex, currentMediaIndex, 2), // and the one after
+      itemAtOffset(moments, currentMomentIndex, currentMediaIndex, -1), // tap back
+      buildMediaItems(moments[currentMomentIndex + 1])[0], // swipe forward
+      buildMediaItems(moments[currentMomentIndex - 1])[0], // swipe back
+    ]
+    const warmed = new Set()
+    for (const item of targets) {
+      if (!item?.url) continue
+      // The thumbnail, not the original: it is what a slide opens on, and the
+      // slide fetches its own original once it has been looked at.
+      const url = item.type === 'video' ? item.url : item.thumbUrl || item.url
+      if (warmed.has(url)) continue
+      warmed.add(url)
+      prefetchDecryptedMedia(url, encryptionKey, item.type === 'video' ? 'video/*' : 'image/*')
     }
-    // Last media of the previous moment (where goPrev lands)
-    const prevMoment = moments[currentMomentIndex - 1]
-    if (prevMoment) {
-      const prevItems = buildMediaItems(prevMoment)
-      if (prevItems.length) targets.push(prevItems[prevItems.length - 1])
-    }
-    targets.forEach((item) => {
-      if (!item?.url) return
-      if (item.type === 'video') {
-        prefetchDecryptedMedia(item.url, encryptionKey, 'video/*')
-        return
-      }
-      // The thumbnail, not the original: it is what the next slide paints
-      // first, and the slide warms its own original once it is on screen.
-      prefetchDecryptedMedia(item.thumbUrl || item.url, encryptionKey, 'image/*')
-    })
-  }, [currentMomentIndex, currentMediaIndex, encryptionKey, mediaItems, moments])
+  }, [currentMomentIndex, currentMediaIndex, encryptionKey, moments])
 
-  // Reset progress + unpause on media/moment change
+  // The next clip covers the one being left once it has faded in.
   useEffect(() => {
-    setProgress(0)
-    setPaused(false)
-  }, [currentMediaIndex, currentMomentIndex])
+    if (!leavingClip || !videoShown) return
+    const timer = setTimeout(() => setLeavingClip(null), FADE_MS + 50)
+    return () => clearTimeout(timer)
+  }, [leavingClip, videoShown])
+  // …and the next photo, once the stage says it has.
+  const dropLeavingClip = useCallback(() => setLeavingClip(null), [])
 
-  // Restore info card visibility on new moment
-  useEffect(() => {
-    setInfoVisible(true)
-    setShowMenu(false)
-  }, [currentMomentIndex])
+  // The clip being played gets videoRef. One taken back from being left already
+  // has its frame, and no loadeddata is coming for it.
+  const attachClip = useCallback((el) => {
+    videoRef.current = el
+    if (el && el.readyState >= 2) setVideoReady(true)
+  }, [])
+  const pauseClip = useCallback((el) => {
+    el?.pause()
+  }, [])
 
   // Auto-play video when current item is a video
   useEffect(() => {
@@ -244,7 +290,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   // Auto-advance timer for images: 2% per 100ms = 5 000ms total
   useEffect(() => {
-    if (paused || isVideo) return
+    if (paused || isVideo || !imageSettled) return
     const id = setInterval(() => {
       setProgress((prev) => {
         const next = prev + 2
@@ -252,7 +298,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       })
     }, 100)
     return () => clearInterval(id)
-  }, [paused, isVideo, currentMediaIndex, currentMomentIndex])
+  }, [paused, isVideo, imageSettled, currentMediaIndex, currentMomentIndex])
 
   // When image progress reaches 100, advance
   useEffect(() => {
@@ -321,6 +367,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       {mediaItems.map((_, i) => (
         <div key={i} className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden">
           <div
+            data-testid="progress-fill"
             className="h-full rounded-full bg-white"
             style={{
               width:
@@ -340,6 +387,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       {mediaItems.map((_, i) => (
         <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
           <div
+            data-testid="progress-fill"
             className="h-full rounded-full bg-kaydo"
             style={{
               width:
@@ -354,39 +402,70 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     </div>
   )
 
-  return (
-    <>
-      {/* ─── MOBILE: full-screen story ─── */}
+  // The picture area, shared by both layouts: photos through the crossfade
+  // stage, clips inside it. The clip being played sits above the stage's
+  // photos, invisible until it has a frame while the stage holds the previous
+  // picture underneath; a clip being left drops beneath them, frozen, for the
+  // next photo to fade in over.
+  const renderStage = (className, clipClassName) => {
+    const clips = []
+    if (leavingClip) {
+      clips.push(
+        <EncryptedVideo
+          key={leavingClip.key}
+          ref={pauseClip}
+          src={leavingClip.url}
+          muted
+          playsInline
+          controls={false}
+          className={`${clipClassName} pointer-events-none`}
+        />,
+      )
+    }
+    if (isVideo) {
+      clips.push(
+        <EncryptedVideo
+          key={slideKey}
+          ref={attachClip}
+          src={currentItem.url}
+          autoPlay
+          muted
+          playsInline
+          className={`${clipClassName} z-10 transition-opacity duration-200 ease-out motion-reduce:transition-none`}
+          style={{ opacity: videoShown ? 1 : 0 }}
+          onLoadedData={() => setVideoReady(true)}
+          onTimeUpdate={handleVideoTimeUpdate}
+          onEnded={handleVideoEnded}
+        />,
+      )
+    }
+    return (
+      <CrossfadeImage
+        src={isVideo ? '' : currentUrl}
+        thumbSrc={isVideo ? '' : currentThumb}
+        tinyPreview={isVideo ? '' : currentTiny}
+        hold={isVideo && !videoShown}
+        alt={moment.caption}
+        className={className}
+        onSettled={setSettledUrl}
+        onShown={dropLeavingClip}
+      >
+        {clips}
+      </CrossfadeImage>
+    )
+  }
+
+  // ─── MOBILE: full-screen story ───
+  if (!isDesktop) {
+    return (
       <div
-        className="md:hidden fixed inset-0 z-50 bg-bark touch-none"
+        className="fixed inset-0 z-50 bg-bark touch-none"
         onPointerDown={handlePointerDown}
         onPointerUp={(e) => handlePointerUp(e, null)}
         onPointerCancel={handlePointerCancel}
       >
         {/* Background media */}
-        {currentItem?.type === 'video' ? (
-          <EncryptedVideo
-            ref={videoRef}
-            key={currentItem.url}
-            src={currentItem.url}
-            autoPlay
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-            onTimeUpdate={handleVideoTimeUpdate}
-            onEnded={handleVideoEnded}
-          />
-        ) : currentItem?.url ? (
-          <EncryptedImage
-            src={currentItem.url}
-            thumbSrc={showThumb ? currentThumb : ''}
-            tinyPreview={currentTiny}
-            alt={moment.caption}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-bark" />
-        )}
+        {renderStage('absolute inset-0 bg-bark', 'absolute inset-0 w-full h-full object-cover')}
 
         {/* Top gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent pointer-events-none" />
@@ -510,163 +589,148 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           </div>
         )}
       </div>
+    )
+  }
 
-      {/* ─── DESKTOP: centered card modal ─── */}
-      <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center">
-        {/* Dark backdrop */}
-        <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+  // ─── DESKTOP: centered card modal ───
+  return (
+    <div className="flex fixed inset-0 z-50 items-center justify-center">
+      {/* Dark backdrop */}
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
 
-        {/* Left arrow */}
-        <button
-          onClick={goPrev}
-          disabled={isAtStart}
-          className="relative z-10 mr-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          aria-label="Previous"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
+      {/* Left arrow */}
+      <button
+        onClick={goPrev}
+        disabled={isAtStart}
+        className="relative z-10 mr-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+        aria-label="Previous"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
 
-        {/* Card */}
-        <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-          {/* Progress bar */}
-          <div className="px-4 pt-4">
-            {progressBarDesktop}
-          </div>
+      {/* Card */}
+      <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Progress bar */}
+        <div className="px-4 pt-4">
+          {progressBarDesktop}
+        </div>
 
-          {/* User info row */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-kaydo flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-bold">{authorInitials}</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-bark leading-tight">{authorName}</p>
-                <p className="text-xs text-bark-muted">{timeAgo(moment.date)}</p>
-              </div>
+        {/* User info row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-kaydo flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">{authorInitials}</span>
             </div>
-            <div className="flex items-center gap-1">
-              {isAdmin && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowMenu((v) => !v)}
-                    className="text-bark-muted hover:text-bark p-1"
-                    aria-label="More options"
-                  >
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]">
-                      <button
-                        onClick={handleEdit}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
-                      >
-                        <Pencil className="w-4 h-4" /> Edit
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" /> Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={onClose}
-                className="text-bark-muted hover:text-bark p-1"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div>
+              <p className="text-sm font-semibold text-bark leading-tight">{authorName}</p>
+              <p className="text-xs text-bark-muted">{timeAgo(moment.date)}</p>
             </div>
           </div>
-
-          {/* Media — press to pause */}
-          <div
-            className="relative cursor-pointer select-none"
-            onPointerDown={() => setPaused(true)}
-            onPointerUp={() => setPaused(false)}
-            onPointerLeave={() => setPaused(false)}
-            onPointerCancel={() => setPaused(false)}
-          >
-            {currentItem?.type === 'video' ? (
-              <EncryptedVideo
-                ref={videoRef}
-                key={currentItem.url}
-                src={currentItem.url}
-                autoPlay
-                muted
-                playsInline
-                className="w-full aspect-[4/5] object-cover pointer-events-none"
-                onTimeUpdate={handleVideoTimeUpdate}
-                onEnded={handleVideoEnded}
-              />
-            ) : currentItem?.url ? (
-              <EncryptedImage
-                src={currentItem.url}
-                thumbSrc={showThumb ? currentThumb : ''}
-                tinyPreview={currentTiny}
-                alt={moment.caption}
-                className="w-full aspect-[4/5] object-cover pointer-events-none"
-                draggable={false}
-              />
-            ) : (
-              <div className="w-full aspect-[4/5] bg-cream-dark flex items-center justify-center">
-                <span className="text-bark-muted text-sm">No media</span>
-              </div>
-            )}
-          </div>
-
-          {/* Caption pill — first media item only */}
-          {currentMediaIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
-            <div className="mx-4 -mt-6 mb-4 relative z-10">
-              <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+              <div className="relative">
                 <button
-                  onClick={() => setInfoVisible(false)}
-                  className="absolute top-2 right-2 text-bark-muted hover:text-bark"
-                  aria-label="Hide info"
+                  onClick={() => setShowMenu((v) => !v)}
+                  className="text-bark-muted hover:text-bark p-1"
+                  aria-label="More options"
                 >
-                  <X className="w-4 h-4" />
+                  <MoreHorizontal className="w-5 h-5" />
                 </button>
-
-                {moment.caption && (
-                  <p className="text-bark text-sm leading-relaxed pr-5">
-                    <span className="italic">{moment.caption}</span>
-                  </p>
-                )}
-                {(moment.category || moment.location) && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {moment.category && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                        <Heart className="w-3 h-3" />
-                        {moment.category}
-                      </span>
-                    )}
-                    {moment.location && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                        <MapPin className="w-3 h-3" />
-                        {moment.location}
-                      </span>
-                    )}
+                {showMenu && (
+                  <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg py-2 z-30 min-w-[140px]">
+                    <button
+                      onClick={handleEdit}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-bark hover:bg-cream-dark"
+                    >
+                      <Pencil className="w-4 h-4" /> Edit
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
+            )}
+            <button
+              onClick={onClose}
+              className="text-bark-muted hover:text-bark p-1"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Right arrow */}
-        <button
-          onClick={goNext}
-          disabled={false}
-          className="relative z-10 ml-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          aria-label="Next"
+        {/* Media — press to pause */}
+        <div
+          className="relative cursor-pointer select-none"
+          onPointerDown={() => setPaused(true)}
+          onPointerUp={() => setPaused(false)}
+          onPointerLeave={() => setPaused(false)}
+          onPointerCancel={() => setPaused(false)}
         >
-          <ChevronRight className="w-6 h-6" />
-        </button>
+          {renderStage(
+            'relative w-full aspect-[4/5] bg-cream-dark',
+            'absolute inset-0 w-full h-full object-cover pointer-events-none',
+          )}
+          {!currentItem && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-bark-muted text-sm">No media</span>
+            </div>
+          )}
+        </div>
+
+        {/* Caption pill — first media item only */}
+        {currentMediaIndex === 0 && infoVisible && (moment.caption || moment.category || moment.location) && (
+          <div className="mx-4 -mt-6 mb-4 relative z-10">
+            <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
+              <button
+                onClick={() => setInfoVisible(false)}
+                className="absolute top-2 right-2 text-bark-muted hover:text-bark"
+                aria-label="Hide info"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {moment.caption && (
+                <p className="text-bark text-sm leading-relaxed pr-5">
+                  <span className="italic">{moment.caption}</span>
+                </p>
+              )}
+              {(moment.category || moment.location) && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {moment.category && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                      <Heart className="w-3 h-3" />
+                      {moment.category}
+                    </span>
+                  )}
+                  {moment.location && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                      <MapPin className="w-3 h-3" />
+                      {moment.location}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
-    </>
+
+      {/* Right arrow */}
+      <button
+        onClick={goNext}
+        disabled={false}
+        className="relative z-10 ml-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+        aria-label="Next"
+      >
+        <ChevronRight className="w-6 h-6" />
+      </button>
+    </div>
   )
 }

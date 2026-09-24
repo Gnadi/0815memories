@@ -223,6 +223,38 @@ export function prefetchDecryptedMedia(encryptedUrl, encryptionKey, mimeType = '
     .catch(() => null)
 }
 
+/**
+ * The decrypted object URL for `encryptedUrl` if it is already in memory, else
+ * null — synchronously, with no fetch and no LRU bump. A direct URL is its own
+ * answer. For callers that have to choose, during render, between what is ready
+ * now and what they would wait for.
+ */
+export function peekDecryptedMedia(encryptedUrl) {
+  if (!encryptedUrl) return null
+  if (isDirectUrl(encryptedUrl)) return encryptedUrl
+  return cache.get(encryptedUrl)?.objectUrl ?? null
+}
+
+/**
+ * Pin a decrypted entry so eviction cannot revoke it while something outside
+ * the hook is displaying it — the same hold the hook keeps on its own URL.
+ * Returns the release function; releasing twice is harmless, and so is pinning
+ * something that is not cached (a direct URL, or an entry already gone).
+ */
+export function retainDecryptedMedia(encryptedUrl) {
+  const entry = encryptedUrl ? cache.get(encryptedUrl) : undefined
+  if (!entry) return () => {}
+  entry.refs++
+  cache.delete(encryptedUrl)
+  cache.set(encryptedUrl, entry)
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    entry.refs = Math.max(0, entry.refs - 1)
+  }
+}
+
 /** Queue depths, for tests. */
 export function __queueDepths() {
   return { foreground: foreground.length, prefetch: prefetch.length, active: activeDecrypts }
