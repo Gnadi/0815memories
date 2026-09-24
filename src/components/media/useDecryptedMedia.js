@@ -5,7 +5,8 @@ import { decryptBlob } from '../../utils/encryption'
 import { devError } from '../../utils/devLog'
 
 // ── Session cache ───────────────────────────────────────────────────
-// encryptedUrl -> { objectUrl, size, refs }
+// encryptedUrl -> { objectUrl, size, refs, blob }. `blob` costs nothing extra:
+// the object URL keeps the same bytes alive either way.
 // Insertion order doubles as the LRU order: a cache hit re-inserts the entry
 // at the tail, so eviction always starts from the least recently used head.
 const cache = new Map()
@@ -31,8 +32,8 @@ function evict() {
   }
 }
 
-function storeInCache(encryptedUrl, objectUrl, size) {
-  cache.set(encryptedUrl, { objectUrl, size, refs: 0 })
+function storeInCache(encryptedUrl, objectUrl, size, blob) {
+  cache.set(encryptedUrl, { objectUrl, size, refs: 0, blob })
   cachedBytes += size
   evict()
 }
@@ -182,7 +183,7 @@ async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
     : decrypted
 
   const url = URL.createObjectURL(blob)
-  storeInCache(encryptedUrl, url, blob.size)
+  storeInCache(encryptedUrl, url, blob.size, blob)
   return url
 }
 
@@ -233,6 +234,25 @@ export function peekDecryptedMedia(encryptedUrl) {
   if (!encryptedUrl) return null
   if (isDirectUrl(encryptedUrl)) return encryptedUrl
   return cache.get(encryptedUrl)?.objectUrl ?? null
+}
+
+/** The decrypted Blob behind a cached entry, or null — for deriving copies. */
+export function getDecryptedBlob(encryptedUrl) {
+  return (encryptedUrl && cache.get(encryptedUrl)?.blob) || null
+}
+
+/**
+ * Keep a copy derived from decrypted media — a downscaled photo — in the same
+ * cache, under its own key. It is plaintext like the rest, so it is evicted
+ * under the same budget and revoked on logout with the rest; peek and retain
+ * work on its key as on any other. Returns its object URL.
+ */
+export function putDerivedMedia(key, blob) {
+  const existing = cache.get(key)
+  if (existing) return existing.objectUrl
+  const url = URL.createObjectURL(blob)
+  storeInCache(key, url, blob.size, blob)
+  return url
 }
 
 /**

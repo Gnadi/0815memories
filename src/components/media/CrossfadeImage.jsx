@@ -7,6 +7,7 @@ import useDecryptedMedia, {
 } from './useDecryptedMedia'
 import { PLACEHOLDER_CLASSES } from './placeholder'
 import { ORIGINAL, THUMB, TINY, nextLayers } from './crossfadeLayers'
+import { displayCopyKey, fitForDisplay, frameOf } from './displayCopy'
 
 // How long one image takes to fade in over the last. Short enough that tapping
 // through a story still feels immediate, long enough that a new photo arrives
@@ -80,8 +81,8 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, o
  * as well, never a gap.
  *
  * `thumbSrc` is what a slide opens on; the original follows once the slide has
- * been looked at for a moment. `tinyPreview` is the blur-up shown while neither
- * is ready.
+ * been looked at for a moment, downscaled to the frame it fills (displayCopy.js).
+ * `tinyPreview` is the blur-up shown while neither is ready.
  *
  * `src` empty means there is nothing here to show. With `hold`, whatever is on
  * screen stays up (a video about to cover it has no frame yet); without it, the
@@ -115,16 +116,19 @@ function CrossfadeImage({
   // the foreground lane: the thumbnail, or the original when there is none.
   const first = thumbSrc || src
   const { decryptedUrl: firstUrl, error } = useDecryptedMedia(first, 'image/*')
-  // The original is read from the cache on every render rather than kept in
-  // state: an object URL held here could be evicted and revoked while the story
-  // is on another slide, and coming back would paint it blank. The state only
-  // exists to re-render when the download lands.
+  // The original, as shown: its display copy — the original downscaled to this
+  // frame (see displayCopy.js) — or the original itself where a copy would not
+  // help. Read from the cache on every render rather than kept in state: an
+  // object URL held here could be evicted and revoked while the story is on
+  // another slide, and coming back would paint it blank. The state only exists
+  // to re-render when the copy is ready.
   const [, setOriginalLanded] = useState('')
-  const originalUrl = thumbSrc ? peekDecryptedMedia(src) : null
+  const originalKey = src ? displayCopyKey(src) : null
+  const originalUrl = originalKey ? peekDecryptedMedia(originalKey) : null
 
   let best = null
   if (!src) best = null
-  else if (originalUrl) best = { source: src, url: originalUrl, quality: ORIGINAL }
+  else if (originalUrl) best = { source: originalKey, url: originalUrl, quality: ORIGINAL }
   else if (firstUrl) best = { source: first, url: firstUrl, quality: thumbSrc ? THUMB : ORIGINAL }
   else if (tinyPreview) best = { source: tinyPreview, url: tinyPreview, quality: TINY }
 
@@ -201,16 +205,20 @@ function CrossfadeImage({
     return () => clearTimeout(timer)
   }, [firstShown, src])
 
-  // The original, once this slide has been looked at for a moment. Through the
-  // prefetch lane, so it never holds up a thumbnail someone is waiting for.
+  // The original, once this slide has been looked at for a moment — through the
+  // prefetch lane, so it never holds up a thumbnail someone is waiting for —
+  // and then its display copy. A moment without thumbnails already shows the
+  // original; it only needs the copy, and does not wait for it.
+  const frameRef = useRef(null)
   useEffect(() => {
-    if (!thumbSrc || !src || !encryptionKey || !settled || originalUrl) return
+    if (!src || !encryptionKey || !settled || originalUrl) return
     let cancelled = false
-    const timer = setTimeout(() => {
-      prefetchDecryptedMedia(src, encryptionKey, 'image/*').then((url) => {
-        if (!cancelled && url) setOriginalLanded(src)
-      })
-    }, ORIGINAL_DWELL_MS)
+    const timer = setTimeout(async () => {
+      const decrypted = await prefetchDecryptedMedia(src, encryptionKey, 'image/*')
+      if (cancelled || !decrypted) return
+      const key = await fitForDisplay(src, frameOf(frameRef.current))
+      if (!cancelled && key) setOriginalLanded(key)
+    }, thumbSrc ? ORIGINAL_DWELL_MS : 0)
     return () => {
       cancelled = true
       clearTimeout(timer)
@@ -223,7 +231,7 @@ function CrossfadeImage({
   for (const layer of layers) if (layer.slide === src) speaking = layer
 
   return (
-    <div className={`isolate overflow-hidden ${className}`}>
+    <div ref={frameRef} className={`isolate overflow-hidden ${className}`}>
       {children}
       {layers.map((layer) => (
         <Layer

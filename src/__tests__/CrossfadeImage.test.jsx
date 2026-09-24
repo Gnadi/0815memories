@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   version: 0,
   prefetch: null,
   retain: null,
+  display: new Map(), // original -> the key of its display copy
+  fit: null,
 }))
 
 // A stand-in for the decrypt hook whose results the test hands out: `land()`
@@ -39,6 +41,12 @@ vi.mock('../components/media/useDecryptedMedia', async () => {
 })
 const KEY = { fake: 'key' }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ encryptionKey: KEY }) }))
+// displayCopy.test.js covers the downscaling; here it is the key it hands back.
+vi.mock('../components/media/displayCopy', () => ({
+  displayCopyKey: (src) => h.display.get(src) ?? null,
+  fitForDisplay: (...args) => h.fit(...args),
+  frameOf: () => ({ width: 1280, height: 2560 }),
+}))
 
 import CrossfadeImage, { FADE_MS, ORIGINAL_DWELL_MS } from '../components/media/CrossfadeImage'
 
@@ -67,6 +75,11 @@ beforeEach(() => {
   h.media.clear()
   h.prefetch = vi.fn(() => new Promise(() => {}))
   h.retain = vi.fn(() => vi.fn())
+  h.display.clear()
+  h.fit = vi.fn(async (src) => {
+    h.display.set(src, `${src}#display`)
+    return `${src}#display`
+  })
   decodes = new Map()
   HTMLImageElement.prototype.decode = function decode() {
     return new Promise((resolve) => decodes.set(this.getAttribute('src'), resolve))
@@ -224,26 +237,42 @@ describe('the full original', () => {
     expect(h.prefetch.mock.calls.map(([u]) => u)).not.toContain('a')
   })
 
-  it('fades in over the thumbnail when it lands', async () => {
+  it('fades in over the thumbnail — as a copy sized to the frame, not the file itself', async () => {
     let finish
     h.prefetch = vi.fn(() => new Promise((r) => { finish = r }))
     await showA()
     act(() => vi.advanceTimersByTime(ORIGINAL_DWELL_MS))
 
-    h.media.set('a', { url: 'blob:a' })
+    h.media.set('a#display', { url: 'blob:a-display' })
     await act(async () => finish('blob:a'))
-    expect(layers()).toEqual(['blob:a-thumb 1', 'blob:a 0'])
+    // The file a phone took is 12–50 MP; the frame is about 3.
+    expect(h.fit).toHaveBeenCalledWith('a', { width: 1280, height: 2560 })
+    expect(layers()).toEqual(['blob:a-thumb 1', 'blob:a-display 0'])
 
-    await decoded('blob:a')
+    await decoded('blob:a-display')
     act(() => vi.advanceTimersByTime(FADE_MS + 50))
-    expect(layers()).toEqual(['blob:a 1'])
+    expect(layers()).toEqual(['blob:a-display 1'])
   })
 
-  it('is used straight away for a slide whose original is already in memory', async () => {
-    land('a', { url: 'blob:a' })
+  it('is used straight away for a slide whose copy is already in memory', async () => {
+    h.display.set('a', 'a#display')
+    land('a#display', { url: 'blob:a-display' })
     land('a-thumb', { url: 'blob:a-thumb' })
     render(<CrossfadeImage src="a" thumbSrc="a-thumb" />)
-    expect(layers()).toEqual(['blob:a 0'])
+    expect(layers()).toEqual(['blob:a-display 0'])
+  })
+
+  it('swaps a moment without thumbnails onto its copy without waiting', async () => {
+    // It opened on the full original; the copy should take over as soon as it
+    // can, not after the dwell meant for downloads.
+    h.prefetch = vi.fn(async () => 'blob:a')
+    land('a', { url: 'blob:a' })
+    render(<CrossfadeImage src="a" />)
+    await decoded('blob:a')
+    h.media.set('a#display', { url: 'blob:a-display' })
+    await act(async () => vi.advanceTimersByTime(0))
+    expect(h.fit).toHaveBeenCalledWith('a', { width: 1280, height: 2560 })
+    expect(layers()).toEqual(['blob:a 1', 'blob:a-display 0'])
   })
 })
 

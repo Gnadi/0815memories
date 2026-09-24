@@ -201,6 +201,30 @@ dark frame between slides, on mobile or desktop, on a fast or a throttled
 network. The only dark frames left are the first two when the viewer opens,
 as the first photo fades in from the backdrop.
 
+## 6. A blink while a large photo is on screen
+
+Reported after §5: switching was clean, but a moment on screen would sometimes
+go dark for an instant — "maybe only with very large photos".
+
+It was the original. Once a slide had been up for a moment, the viewer faded
+in the full file over the thumbnail and then let the thumbnail go. A phone
+photo is 12 to 50 megapixels, which decoded is 50 to 200 MB of bitmap for a
+screen of about three. A phone's browser cannot always keep a bitmap that size
+ready: it paints it late, or drops it under memory pressure and paints it
+again, and until it has, that part of the story shows the dark background.
+Headless Chromium paints everything at once, so this does not show in a frame
+recording; the trace does show the moment it can happen — the thumbnail going
+250 ms after a 12 MP layer appeared.
+
+**Fixed:** the viewer shows the original downscaled to the frame it fills, in
+device pixels (`components/media/displayCopy.js`, reusing the upload
+thumbnailer). A 12 MP photo on a 3× phone becomes 1920×2560, a 50 MP one
+3414×2561 — as sharp on that screen, a quarter to a sixth of the memory; on the
+desktop card it is about 1 MP. The copy is kept in the decrypted-media cache
+under its own key, so it is evicted, pinned and cleared on logout like the
+rest. Animated GIFs, and originals no larger than the frame, are shown as they
+are.
+
 ## Why *sometimes* — the sources of variance
 
 The complaint is that it is uneven. Four things make the same screen fast once

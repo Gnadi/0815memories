@@ -51,8 +51,11 @@ async function encodeCanvas(canvas, type, quality) {
  * the file is already small, the format is not a still image, or the browser
  * lacks the APIs. Callers treat null as "just use the original".
  *
+ * `maxEdge` can also be a function of the source's (oriented) width and
+ * height, for a target that depends on the photo's shape.
+ *
  * @param {Blob|File} file
- * @param {{ maxEdge?: number, type?: string, quality?: number }} [options]
+ * @param {{ maxEdge?: number|((width: number, height: number) => number), type?: string, quality?: number }} [options]
  * @returns {Promise<Blob|null>}
  */
 export async function createThumbnail(file, options = {}) {
@@ -80,7 +83,8 @@ export async function createThumbnail(file, options = {}) {
   }
 
   try {
-    const size = targetSize(bitmap.width, bitmap.height, maxEdge)
+    const edge = typeof maxEdge === 'function' ? maxEdge(bitmap.width, bitmap.height) : maxEdge
+    const size = targetSize(bitmap.width, bitmap.height, edge)
     // Already smaller than the target. For a real thumbnail that means there is
     // nothing to do; for the tiny preview it still needs producing, at the
     // source's own size.
