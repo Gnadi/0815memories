@@ -202,7 +202,6 @@
   "upload": {
     "previewAlt": "Vorschau",
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
-    "signatureFailed": "Upload-Signatur konnte nicht abgerufen werden",
     "uploadFailed": "Upload fehlgeschlagen"
   }
 }
