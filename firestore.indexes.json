@@ -34,6 +34,14 @@
       ]
     },
     {
+      "collectionGroup": "memories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "moments",
       "queryScope": "COLLECTION",
       "fields": [

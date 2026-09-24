@@ -42,7 +42,7 @@ export const MEMORY_WRITE_FIELDS = [...MEMORY_TEXT_FIELDS, 'contentRich']
  * readers fall back to the `content` plain-text mirror when it is not a parsed
  * document.
  */
-async function decryptMemory(key, data) {
+export async function decryptMemory(key, data) {
   if (!key) return data
   const result = await decryptFields(key, data, MEMORY_TEXT_FIELDS)
   // The blur-up previews, which is the one thing here worth paying for on every
