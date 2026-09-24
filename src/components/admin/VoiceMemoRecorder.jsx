@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mic, Square, Play, Pause, Trash2, Upload, Check, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -20,6 +20,24 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
   const audioRef = useRef(null)
   const timerRef = useRef(null)
   const fileInputRef = useRef(null)
+  const streamRef = useRef(null)
+  const previewUrlRef = useRef(null)
+
+  const releasePreview = () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = null
+  }
+
+  // Closing the dialog mid-recording used to leave the microphone on — the
+  // browser's recording indicator stayed lit until the page was reloaded.
+  useEffect(() => () => {
+    clearInterval(timerRef.current)
+    const recorder = mediaRecorderRef.current
+    if (recorder) recorder.onstop = null
+    if (recorder?.state === 'recording') recorder.stop()
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    releasePreview()
+  }, [])
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0')
@@ -31,6 +49,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
     setError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       const recorder = new MediaRecorder(stream)
       mediaRecorderRef.current = recorder
       chunksRef.current = []
@@ -40,9 +59,16 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       }
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop())
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        streamRef.current = null
+        // Whatever the browser actually recorded: Chrome and Firefox produce
+        // WebM, Safari MP4. Labelling Safari's recording audio/webm left the
+        // preview below unplayable there.
+        const type = recorder.mimeType || chunksRef.current[0]?.type || 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type })
         blobRef.current = blob
+        releasePreview()
         const url = URL.createObjectURL(blob)
+        previewUrlRef.current = url
         if (audioRef.current) {
           audioRef.current.src = url
           audioRef.current.onloadedmetadata = () => {
@@ -82,6 +108,7 @@ export default function VoiceMemoRecorder({ onMemoAdded }) {
       audioRef.current.pause()
       audioRef.current.src = ''
     }
+    releasePreview()
     blobRef.current = null
     setMode('idle')
     setIsPlaying(false)
