@@ -261,6 +261,34 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
   })
 
+  describe('the data export', () => {
+    // nasExport lists the caller's own answers. The rules only allow a list
+    // whose filters prove the read rule, which starts with participantUids.
+    it('may list a partner’s own answers when it names them as participant and author', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore()
+        await setDoc(doc(db, entryPath(A)), entry(A))
+        await setDoc(doc(db, entryPath(A).replace('reflection', 'quiz')), entry(A, { kind: 'quiz', submitted: false }))
+        // The partner's, unrevealed: the query must not reach it.
+        await setDoc(doc(db, entryPath(B)), entry(B))
+      })
+      const snap = await assertSucceeds(
+        getDocs(query(
+          collection(as(A), 'ourYearEntries'),
+          where('participantUids', 'array-contains', A),
+          where('authorUid', '==', A),
+        )),
+      )
+      expect(snap.size).toBe(2)
+    })
+
+    it('is refused a list by author alone — the query the export used to send', async () => {
+      await assertFails(
+        getDocs(query(collection(as(A), 'ourYearEntries'), where('authorUid', '==', A))),
+      )
+    })
+  })
+
   describe('a draft', () => {
     beforeEach(async () => {
       await setDoc(doc(as(A), entryPath(A)), entry(A, { submitted: false }))
