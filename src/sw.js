@@ -1,7 +1,7 @@
 import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
-import { CacheFirst, NetworkFirst, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
@@ -27,22 +27,20 @@ self.addEventListener('message', (event) => {
 // Precache all assets injected by vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Firebase Auth + Firestore — network-first (always fresh data)
-registerRoute(
-  ({ url }) => /^https:\/\/(identitytoolkit|securetoken)\.googleapis\.com\//i.test(url.href),
-  new NetworkFirst({
-    cacheName: 'firebase-auth-cache',
-    plugins: [new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 })],
-  })
-)
+// Firebase Auth and Firestore are deliberately not routed here — nothing is
+// cached for them, so they go straight to the network.
+//
+// They used to be NetworkFirst. That bought nothing: Firestore's listen channel
+// is a GET with a fresh session id in every URL, so a cached response could
+// never be served back, and Auth's token calls are POSTs Workbox does not cache
+// anyway. What it did do was write every Firestore response into Cache Storage
+// on disk — the family document with its encryption key among them — where it
+// outlived logout. Those caches are deleted below, on devices that have them.
+const RETIRED_CACHES = ['firestore-cache', 'firebase-auth-cache']
 
-registerRoute(
-  ({ url }) => /^https:\/\/firestore\.googleapis\.com\//i.test(url.href),
-  new NetworkFirst({
-    cacheName: 'firestore-cache',
-    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 5 })],
-  })
-)
+self.addEventListener('activate', (event) => {
+  event.waitUntil(Promise.all(RETIRED_CACHES.map((name) => caches.delete(name))))
+})
 
 // Encrypted media on Cloudinary — CacheFirst.
 //
