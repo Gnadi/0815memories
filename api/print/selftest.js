@@ -16,6 +16,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { requireFamilyAdmin } from '../_lib/auth.js'
 import { methodGuard, withErrorHandling } from '../_lib/http.js'
 import { getProvider } from '../_lib/printProvider.js'
+import { describeEnvironment } from '../_lib/printEnvironment.js'
 
 /**
  * A way in without a browser session, for the one job this route exists for:
@@ -43,8 +44,18 @@ export default withErrorHandling(async (req, res) => {
   if (!methodGuard(req, res, ['GET'])) return
   if (!hasSelftestSecret(req)) await requireFamilyAdmin(req)
 
+  const environment = describeEnvironment()
+
+  // A missing merchant key would make every probe fail identically, which reads
+  // like a broken integration rather than an unset variable. Say so instead.
+  if (!environment.checks.merchantApiKey.ok) {
+    res.status(200).json({ environment, probes: null })
+    return
+  }
+
   const provider = getProvider()
   res.status(200).json({
+    environment,
     config: provider.describeConfig(),
     probes: await provider.selfTest(),
   })

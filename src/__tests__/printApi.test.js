@@ -413,3 +413,57 @@ describe('POST /api/print/order', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/SECRET/)
   })
 })
+
+describe('describeEnvironment', () => {
+  const load = async () => {
+    vi.resetModules()
+    return import('../../api/_lib/printEnvironment.js')
+  }
+
+  const clear = () => {
+    for (const key of [
+      'PEECHO_MERCHANT_API_KEY', 'FIREBASE_PROJECT_ID', 'VITE_FIREBASE_PROJECT_ID',
+      'FIREBASE_STORAGE_BUCKET', 'VITE_FIREBASE_STORAGE_BUCKET',
+    ]) delete globalThis.process.env[key]
+  }
+
+  beforeEach(clear)
+  afterEach(clear)
+
+  it('names every variable that is missing, not just the first', async () => {
+    // Discovering these one failure at a time is the slow way to configure
+    // something, and each one surfaces far from its cause.
+    const { describeEnvironment } = await load()
+    const result = describeEnvironment()
+    expect(result.ok).toBe(false)
+    expect(result.missing).toHaveLength(3)
+  })
+
+  it('accepts either the server or the client spelling', async () => {
+    globalThis.process.env.PEECHO_MERCHANT_API_KEY = 'k'
+    globalThis.process.env.VITE_FIREBASE_PROJECT_ID = 'demo'
+    globalThis.process.env.VITE_FIREBASE_STORAGE_BUCKET = 'demo.firebasestorage.app'
+    const { describeEnvironment } = await load()
+    expect(describeEnvironment().ok).toBe(true)
+  })
+
+  it('shows the bucket, so a server and app that disagree are visible', async () => {
+    globalThis.process.env.FIREBASE_STORAGE_BUCKET = 'demo.firebasestorage.app'
+    const { describeEnvironment } = await load()
+    expect(describeEnvironment().checks.storageBucket.value).toBe('demo.firebasestorage.app')
+  })
+
+  it('never reports the merchant key itself, only that it is set', async () => {
+    globalThis.process.env.PEECHO_MERCHANT_API_KEY = 'super-secret-key'
+    const { describeEnvironment } = await load()
+    const result = describeEnvironment()
+    expect(result.checks.merchantApiKey.ok).toBe(true)
+    expect(JSON.stringify(result)).not.toMatch(/super-secret-key/)
+  })
+
+  it('treats whitespace as unset, since a blank Vercel variable is not a value', async () => {
+    globalThis.process.env.PEECHO_MERCHANT_API_KEY = '   '
+    const { describeEnvironment } = await load()
+    expect(describeEnvironment().checks.merchantApiKey.ok).toBe(false)
+  })
+})

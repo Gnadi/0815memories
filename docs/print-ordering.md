@@ -60,6 +60,10 @@ merchant key and reports Peecho's own words back.
 1. In Vercel, set `PEECHO_MERCHANT_API_KEY` (test key) and a throwaway
    `PRINT_SELFTEST_SECRET`. Leave `PEECHO_MODE` unset — it defaults to the test
    environment, whose orders never reach a press.
+
+   Check `VITE_FIREBASE_STORAGE_BUCKET` while you are there. Nothing used Cloud
+   Storage before print files did, so a project can have been running fine
+   without it. The selftest's `environment` block reports whether it is set.
 2. Redeploy, then:
 
    ```bash
