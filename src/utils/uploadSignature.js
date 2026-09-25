@@ -22,6 +22,16 @@ export async function fetchUploadSignature(query = '') {
 
   let res = await ask(false)
   if (res.status === 403) res = await ask(true)
-  if (!res.ok) throw new Error('Failed to get upload signature')
+  if (!res.ok) {
+    // Status and reason travel with the error, so the message the uploader
+    // shows can say which step failed and why — "upload failed" alone left no
+    // way to tell a refused signature from a crashed function from the phone.
+    const body = await res.json().catch(() => ({}))
+    throw Object.assign(new Error(`Failed to get upload signature (${res.status})`), {
+      code: 'upload/signature',
+      status: res.status,
+      reason: typeof body?.error === 'string' ? body.error : '',
+    })
+  }
   return res.json()
 }

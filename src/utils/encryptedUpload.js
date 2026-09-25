@@ -55,7 +55,7 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
     if (/file size too large|too large/i.test(reason)) {
       throw uploadTooLargeError(blob.size, MAX_PLAINTEXT_BYTES)
     }
-    throw new Error(reason)
+    throw Object.assign(new Error(reason), { code: 'upload/storage', status: response.status, reason })
   }
 
   const data = await response.json()
