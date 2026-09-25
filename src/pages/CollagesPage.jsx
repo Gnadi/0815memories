@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, LayoutGrid, Trash2 } from 'lucide-react'
+import { Loader2, LayoutGrid, Trash2, BookHeart } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
@@ -12,7 +12,13 @@ import { CARD_FOCUS, CARD_MOTION, railItemClass } from '../components/collage/ga
 import { COLLAGE_TEMPLATES, aspectRatioOf, fillTemplate, makeCollageDoc } from '../components/collage/collageTemplates'
 import { useCollages } from '../hooks/useCollages'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
+import { useMemoryWriter } from '../hooks/useMemories'
+import { exportCollage } from '../utils/collageRenderer'
 import { devError } from '../utils/devLog'
+
+// Lazy: the memory form (and its rich-text editor) is only needed once a
+// collage is being turned into a memory.
+const PostMemoryModal = lazy(() => import('../components/admin/PostMemoryModal'))
 
 export default function CollagesPage() {
   const { t } = useTranslation('collage')
@@ -22,9 +28,12 @@ export default function CollagesPage() {
   const { collages, loading, addCollage, deleteCollage } =
     useCollages(familyId, encryptionKey, { withDoc: true })
   const { photos } = useMemoryPhotos(familyId, encryptionKey)
+  const { addMemory } = useMemoryWriter(familyId, encryptionKey)
 
   const [creating, setCreating] = useState(null)
   const [error, setError] = useState(null)
+  const [exportingId, setExportingId] = useState(null)
+  const [memoryDraft, setMemoryDraft] = useState(null) // { title, file }
 
   // Template cards are previewed with the family's own recent photos — far more
   // inviting than grey boxes, and it shows how a layout treats real pictures.
@@ -49,6 +58,30 @@ export default function CollagesPage() {
       setError(t('errors.createFailed'))
       setCreating(null)
     }
+  }
+
+  // Renders the collage and opens the memory form with it as the photo — the
+  // same flow as "Create memory" inside the editor.
+  const handleCreateMemory = async (collage) => {
+    setExportingId(collage.id)
+    setError(null)
+    try {
+      const blob = await exportCollage(collage.doc, encryptionKey, { width: 1600 })
+      setMemoryDraft({
+        title: collage.title || t('defaultTitle'),
+        file: new File([blob], 'collage.jpg', { type: blob.type }),
+      })
+    } catch (err) {
+      devError('Collage export for memory failed', err)
+      setError(t('errors.exportFailed'))
+    } finally {
+      setExportingId(null)
+    }
+  }
+
+  const handleSaveMemory = async (data) => {
+    await addMemory(data)
+    navigate('/home')
   }
 
   return (
@@ -155,6 +188,20 @@ export default function CollagesPage() {
                       </span>
                     </button>
                     {/* Visible on touch, where there is no hover to reveal it. */}
+                    {collage.doc?.slots?.some((slot) => slot.url) && (
+                      <button
+                        type="button"
+                        onClick={() => handleCreateMemory(collage)}
+                        disabled={exportingId != null}
+                        aria-label={t('editor.createMemory')}
+                        title={t('editor.createMemory')}
+                        className="absolute top-2 left-2 w-8 h-8 rounded-full bg-warm-white/95 text-kaydo opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 flex items-center justify-center shadow-md disabled:opacity-60"
+                      >
+                        {exportingId === collage.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <BookHeart className="w-4 h-4" />}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => deleteCollage(collage.id)}
@@ -170,6 +217,17 @@ export default function CollagesPage() {
           </section>
         </main>
       </div>
+
+      {memoryDraft && (
+        <Suspense fallback={null}>
+          <PostMemoryModal
+            defaults={{ title: memoryDraft.title, category: 'collage' }}
+            initialFiles={[memoryDraft.file]}
+            onClose={() => setMemoryDraft(null)}
+            onSave={handleSaveMemory}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

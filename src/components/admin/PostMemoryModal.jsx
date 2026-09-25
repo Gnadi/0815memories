@@ -65,7 +65,12 @@ function buildInitialVideos(memory) {
   return []
 }
 
-export default function PostMemoryModal({ memory, onClose, onSave }) {
+/**
+ * `memory` edits an existing memory. For a new one, `defaults` pre-fills the
+ * form fields and `initialFiles` are uploaded as photos on open — the same path
+ * as picking them by hand, so they get thumbnails and blur-up previews too.
+ */
+export default function PostMemoryModal({ memory, defaults, initialFiles, onClose, onSave }) {
   const { t } = useTranslation('memory')
   const { encryptionKey, memoryCardStyle } = useAuth()
   const {
@@ -85,9 +90,9 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
   })
 
   const [form, setForm] = useState({
-    title: memory?.title || '',
+    title: memory?.title || defaults?.title || '',
     quote: memory?.quote || '',
-    category: memory?.category || '',
+    category: memory?.category || defaults?.category || '',
     location: memory?.location || '',
     authorName: memory?.authorName || '',
     featured: memory?.featured || false,
@@ -141,6 +146,16 @@ export default function PostMemoryModal({ memory, onClose, onSave }) {
       cancelled = true
     }
   }, [memory, encryptionKey])
+
+  // Once only: a ref survives StrictMode's effect replay, so the files are not
+  // uploaded twice.
+  const initialFilesQueuedRef = useRef(false)
+  useEffect(() => {
+    if (initialFilesQueuedRef.current || !initialFiles?.length) return
+    initialFilesQueuedRef.current = true
+    initialFiles.forEach((file) => addImage(file))
+  }, [initialFiles, addImage])
+
   const [voiceMemos, setVoiceMemos] = useState(memory?.voiceMemos || [])
   const [showRecorder, setShowRecorder] = useState(false)
   const [saving, setSaving] = useState(false)
