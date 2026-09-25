@@ -1,0 +1,80 @@
+{
+  "title": "Sky of Birth",
+  "subtitle": "The stars above {{name}} on the day they arrived",
+  "back": "Back",
+  "loadError": "The star map could not be loaded. Please try again.",
+  "details": {
+    "heading": "Birth details",
+    "date": "Date",
+    "time": "Time of birth",
+    "timeHint": "Leave empty if you don't know it — we'll show the night sky of that day.",
+    "place": "Place of birth",
+    "privacy": "Worked out on this device. The birthplace is encrypted and never sent to a map or search service.",
+    "save": "Save details",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Could not save. Please try again."
+  },
+  "place": {
+    "label": "Search for a place",
+    "placeholder": "Search a town or city…",
+    "change": "Search a different place…",
+    "noResults": "No match. Try another spelling, or enter coordinates.",
+    "loadError": "The place list could not be loaded.",
+    "enterCoordinates": "Not in the list? Enter coordinates",
+    "searchInstead": "Search the place list instead",
+    "manualName": "Name (e.g. St. Wolfgang)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useCoordinates": "Use these coordinates"
+  },
+  "emptyPreview": "Choose the place of birth to see the sky.",
+  "style": {
+    "heading": "Style",
+    "midnight": "Midnight",
+    "kaydo": "Kaydo",
+    "minimal": "Minimal"
+  },
+  "caption": {
+    "heading": "Caption",
+    "titleLabel": "Title",
+    "dedicationLabel": "A line of your own",
+    "dedicationPlaceholder": "e.g. The night the world got brighter",
+    "dateTime": "{{date}} · {{time}}",
+    "moonAndPlanets_one": "{{moon}} · {{planets}} in the sky",
+    "moonAndPlanets_other": "{{moon}} · {{planets}} in the sky",
+    "nightOf": "The night sky of that day, at 10 pm",
+    "daylight": "Born in daylight — these stars shone behind the blue"
+  },
+  "export": {
+    "heading": "Keep it",
+    "png": "Download image (A4)",
+    "pdfA4": "Download PDF (A4)",
+    "pdfA3": "Download PDF (A3)",
+    "post": "Post to the feed",
+    "posting": "Posting…",
+    "rendering": "Preparing…",
+    "error": "Something went wrong. Please try again.",
+    "feedTitle": "The sky the night {{name}} was born",
+    "fileName": "sky-of-birth"
+  },
+  "compass": { "n": "N", "e": "E", "s": "S", "w": "W" },
+  "moon": {
+    "new": "New moon",
+    "waxingCrescent": "Waxing crescent moon",
+    "firstQuarter": "First quarter moon",
+    "waxingGibbous": "Waxing gibbous moon",
+    "full": "Full moon",
+    "waningGibbous": "Waning gibbous moon",
+    "lastQuarter": "Last quarter moon",
+    "waningCrescent": "Waning crescent moon"
+  },
+  "planets": {
+    "Mercury": "Mercury",
+    "Venus": "Venus",
+    "Mars": "Mars",
+    "Jupiter": "Jupiter",
+    "Saturn": "Saturn"
+  },
+  "credits": "Star data: d3-celestial (Olaf Frohn). Places: GeoNames (CC BY 4.0). Positions: astronomy-engine."
+}

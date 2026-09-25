@@ -84,6 +84,7 @@ export default function KidsJournalPage() {
               kid={kid}
               journalCount={journalCountByKid[kid.id] || 0}
               onViewArchive={() => navigate(`/journal/${kid.id}`)}
+              onViewSky={() => navigate(`/journal/${kid.id}/sky`)}
               onEdit={() => {
                 setEditingKid(kid)
                 setShowAddKid(true)

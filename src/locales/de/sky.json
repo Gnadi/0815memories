@@ -1,0 +1,80 @@
+{
+  "title": "Himmel der Geburt",
+  "subtitle": "Die Sterne über {{name}} am Tag der Geburt",
+  "back": "Zurück",
+  "loadError": "Die Sternkarte konnte nicht geladen werden. Bitte versuche es noch einmal.",
+  "details": {
+    "heading": "Geburtsdaten",
+    "date": "Datum",
+    "time": "Uhrzeit der Geburt",
+    "timeHint": "Leer lassen, wenn du sie nicht weißt – dann zeigen wir den Nachthimmel dieses Tages.",
+    "place": "Geburtsort",
+    "privacy": "Wird auf diesem Gerät berechnet. Der Geburtsort wird verschlüsselt und nie an einen Karten- oder Suchdienst geschickt.",
+    "save": "Daten speichern",
+    "saving": "Speichern…",
+    "saved": "Gespeichert",
+    "saveError": "Speichern fehlgeschlagen. Bitte versuche es noch einmal."
+  },
+  "place": {
+    "label": "Ort suchen",
+    "placeholder": "Stadt oder Ort suchen…",
+    "change": "Anderen Ort suchen…",
+    "noResults": "Kein Treffer. Andere Schreibweise probieren oder Koordinaten eingeben.",
+    "loadError": "Die Ortsliste konnte nicht geladen werden.",
+    "enterCoordinates": "Nicht in der Liste? Koordinaten eingeben",
+    "searchInstead": "Doch in der Ortsliste suchen",
+    "manualName": "Name (z. B. St. Wolfgang)",
+    "latitude": "Breitengrad",
+    "longitude": "Längengrad",
+    "useCoordinates": "Diese Koordinaten verwenden"
+  },
+  "emptyPreview": "Wähle den Geburtsort, um den Himmel zu sehen.",
+  "style": {
+    "heading": "Stil",
+    "midnight": "Mitternacht",
+    "kaydo": "Kaydo",
+    "minimal": "Schlicht"
+  },
+  "caption": {
+    "heading": "Beschriftung",
+    "titleLabel": "Titel",
+    "dedicationLabel": "Eine eigene Zeile",
+    "dedicationPlaceholder": "z. B. Die Nacht, in der die Welt heller wurde",
+    "dateTime": "{{date}} · {{time}} Uhr",
+    "moonAndPlanets_one": "{{moon}} · {{planets}} am Himmel",
+    "moonAndPlanets_other": "{{moon}} · {{planets}} am Himmel",
+    "nightOf": "Der Nachthimmel dieses Tages, um 22 Uhr",
+    "daylight": "Bei Tageslicht geboren – diese Sterne leuchteten hinter dem Blau"
+  },
+  "export": {
+    "heading": "Aufbewahren",
+    "png": "Bild herunterladen (A4)",
+    "pdfA4": "PDF herunterladen (A4)",
+    "pdfA3": "PDF herunterladen (A3)",
+    "post": "Im Feed teilen",
+    "posting": "Wird geteilt…",
+    "rendering": "Wird vorbereitet…",
+    "error": "Etwas ist schiefgelaufen. Bitte versuche es noch einmal.",
+    "feedTitle": "Der Himmel in der Nacht, in der {{name}} geboren wurde",
+    "fileName": "himmel-der-geburt"
+  },
+  "compass": { "n": "N", "e": "O", "s": "S", "w": "W" },
+  "moon": {
+    "new": "Neumond",
+    "waxingCrescent": "Zunehmende Mondsichel",
+    "firstQuarter": "Zunehmender Halbmond",
+    "waxingGibbous": "Zunehmender Mond",
+    "full": "Vollmond",
+    "waningGibbous": "Abnehmender Mond",
+    "lastQuarter": "Abnehmender Halbmond",
+    "waningCrescent": "Abnehmende Mondsichel"
+  },
+  "planets": {
+    "Mercury": "Merkur",
+    "Venus": "Venus",
+    "Mars": "Mars",
+    "Jupiter": "Jupiter",
+    "Saturn": "Saturn"
+  },
+  "credits": "Sterndaten: d3-celestial (Olaf Frohn). Orte: GeoNames (CC BY 4.0). Positionen: astronomy-engine."
+}

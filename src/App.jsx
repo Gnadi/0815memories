@@ -45,6 +45,7 @@ const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
 const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
 const JournalArchivePage = lazyPage(() => import('./pages/JournalArchivePage'))
+const BirthSkyPage = lazyPage(() => import('./pages/BirthSkyPage'))
 const JournalEntryPage = lazyPage(() => import('./pages/JournalEntryPage'))
 const JournalDetailPage = lazyPage(() => import('./pages/JournalDetailPage'))
 const BlackBoxPage = lazyPage(() => import('./pages/BlackBoxPage'))
@@ -300,6 +301,7 @@ export const routes = [
       { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },
       { path: 'journal', element: protectAdmin(<KidsJournalPage />) },
       { path: 'journal/:childId', element: protectAdmin(<JournalArchivePage />) },
+      { path: 'journal/:childId/sky', element: protectAdmin(<BirthSkyPage />) },
       { path: 'journal/:childId/new', element: protectAdmin(<JournalEntryPage />) },
       { path: 'journal/:childId/edit/:entryId', element: protectAdmin(<JournalEntryPage />) },
       { path: 'journal/:childId/view/:entryId', element: protectAdmin(<JournalDetailPage />) },

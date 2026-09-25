@@ -20,7 +20,8 @@
     "letters": "Briefe",
     "noLettersYet": "Noch keine Briefe geschrieben — fang heute an.",
     "viewArchive": "Archiv ansehen",
-    "startJournal": "Tagebuch beginnen"
+    "startJournal": "Tagebuch beginnen",
+    "skyOfBirth": "Himmel der Geburt"
   },
   "archive": {
     "fallbackTitle": "Tagebuch",
@@ -35,7 +36,8 @@
       "bodyFallback": "dein Kind",
       "writeFirst": "Ersten Brief schreiben"
     },
-    "deleteLetterConfirm": "Diesen Brief endgültig löschen?"
+    "deleteLetterConfirm": "Diesen Brief endgültig löschen?",
+    "skyOfBirth": "Himmel der Geburt"
   },
   "entryCard": {
     "voiceMemoCount": "{{count}} Sprach{{label}}",

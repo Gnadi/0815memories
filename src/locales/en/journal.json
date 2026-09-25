@@ -20,7 +20,8 @@
     "letters": "Letters",
     "noLettersYet": "No letters written yet — start today.",
     "viewArchive": "View Archive",
-    "startJournal": "Start Journal"
+    "startJournal": "Start Journal",
+    "skyOfBirth": "Sky of birth"
   },
   "archive": {
     "fallbackTitle": "Journal",
@@ -35,7 +36,8 @@
       "bodyFallback": "your child",
       "writeFirst": "Write First Letter"
     },
-    "deleteLetterConfirm": "Delete this letter permanently?"
+    "deleteLetterConfirm": "Delete this letter permanently?",
+    "skyOfBirth": "Sky of birth"
   },
   "entryCard": {
     "voiceMemoCount": "{{count}} voice {{label}}",

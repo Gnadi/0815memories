@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { User, BookOpen, Star, ChevronRight, Plus } from 'lucide-react'
+import { User, BookOpen, Sparkles, ChevronRight, Plus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
-export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdit, onDelete }) {
+export default function KidJournalCard({ kid, journalCount, onViewArchive, onViewSky, onEdit, onDelete }) {
   const { t } = useTranslation('journal')
   const birthdate = kid.birthdate?.toDate ? kid.birthdate.toDate() : new Date(kid.birthdate)
   const age = Math.floor((new Date() - birthdate) / (365.25 * 24 * 60 * 60 * 1000))
@@ -58,17 +58,27 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onEdi
         <p className="text-sm text-bark-muted italic">{t('card.noLettersYet')}</p>
       )}
 
-      {/* Action */}
-      <button
-        onClick={onViewArchive}
-        className="flex items-center gap-1 text-sm font-semibold text-kaydo hover:text-kaydo/80 transition-colors mt-auto"
-      >
-        {journalCount > 0 ? (
-          <>{t('card.viewArchive')} <ChevronRight className="w-4 h-4" /></>
-        ) : (
-          <>{t('card.startJournal')} <Plus className="w-4 h-4" /></>
+      {/* Actions */}
+      <div className="flex items-center justify-between gap-3 mt-auto">
+        <button
+          onClick={onViewArchive}
+          className="flex items-center gap-1 text-sm font-semibold text-kaydo hover:text-kaydo/80 transition-colors"
+        >
+          {journalCount > 0 ? (
+            <>{t('card.viewArchive')} <ChevronRight className="w-4 h-4" /></>
+          ) : (
+            <>{t('card.startJournal')} <Plus className="w-4 h-4" /></>
+          )}
+        </button>
+        {onViewSky && (
+          <button
+            onClick={onViewSky}
+            className="flex items-center gap-1 text-sm text-bark-muted hover:text-bark transition-colors"
+          >
+            <Sparkles className="w-4 h-4" /> {t('card.skyOfBirth')}
+          </button>
         )}
-      </button>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, PenLine, User } from 'lucide-react'
+import { ArrowLeft, PenLine, Sparkles, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useJournals } from '../hooks/useJournals'
@@ -59,6 +59,14 @@ export default function JournalArchivePage() {
               )}
             </div>
           </div>
+          <button
+            onClick={() => navigate(`/journal/${childId}/sky`)}
+            className="flex items-center gap-1.5 text-sm text-bark-muted hover:text-bark py-2 px-2"
+            title={t('archive.skyOfBirth')}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('archive.skyOfBirth')}</span>
+          </button>
           <button
             onClick={() => navigate(`/journal/${childId}/new`)}
             className="btn-kaydo flex items-center gap-1.5 text-sm py-2 px-3"

@@ -14,7 +14,29 @@ import {
 import { db } from '../config/firebase'
 import { encryptFields, decryptFields } from '../utils/encryption'
 
-const ENCRYPTED_FIELDS = ['name']
+// birthTime ("04:17") and birthPlace (JSON: name, country, lat, lon, tz) feed
+// the "Sky of your birth" map. Both are encrypted: together with the birthdate
+// they say exactly when and where a child was born.
+const ENCRYPTED_FIELDS = ['name', 'birthTime', 'birthPlace']
+
+function parseBirthPlace(value) {
+  if (!value || typeof value !== 'string') return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+// A plain place object becomes a JSON string so encryptFields can encrypt it.
+// Anything else — a string, or deleteField() — passes through untouched.
+function serialize(kid) {
+  const place = kid.birthPlace
+  if (place && Object.getPrototypeOf(place) === Object.prototype) {
+    return { ...kid, birthPlace: JSON.stringify(kid.birthPlace) }
+  }
+  return kid
+}
 
 export function useKids(familyId, encryptionKey) {
   const [kids, setKids] = useState([])
@@ -36,7 +58,10 @@ export function useKids(familyId, encryptionKey) {
       async (snapshot) => {
         const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
         const decrypted = await Promise.all(
-          docs.map((d) => decryptFields(encryptionKey, d, ENCRYPTED_FIELDS))
+          docs.map(async (d) => {
+            const kid = await decryptFields(encryptionKey, d, ENCRYPTED_FIELDS)
+            return { ...kid, birthPlace: parseBirthPlace(kid.birthPlace) }
+          })
         )
         setKids(decrypted)
         setLoading(false)
@@ -51,7 +76,7 @@ export function useKids(familyId, encryptionKey) {
   }, [familyId, encryptionKey])
 
   const addKid = async (kid) => {
-    const encrypted = await encryptFields(encryptionKey, kid, ENCRYPTED_FIELDS)
+    const encrypted = await encryptFields(encryptionKey, serialize(kid), ENCRYPTED_FIELDS)
     await addDoc(collection(db, 'children'), {
       ...encrypted,
       familyId,
@@ -60,7 +85,7 @@ export function useKids(familyId, encryptionKey) {
   }
 
   const updateKid = async (id, updates) => {
-    const encrypted = await encryptFields(encryptionKey, updates, ENCRYPTED_FIELDS)
+    const encrypted = await encryptFields(encryptionKey, serialize(updates), ENCRYPTED_FIELDS)
     await updateDoc(doc(db, 'children', id), encrypted)
   }
 
