@@ -127,6 +127,19 @@ service cloud.firestore {
       // anyone who knew the family id — and the login page handed the id out.
       // What the login page actually needs now lives in familyPublic below.
       allow read: if isFamilyMember(familyId);
+      // Finding your own family: `adminUids array-contains <you>`, or the
+      // oldest families' `adminUid == <you>` — the lookups AuthContext makes at
+      // sign-in, and api/cloudinary-sign makes for an admin without a claim.
+      //
+      // The read rule above cannot answer them. A query is checked against its
+      // filters, not document by document, so `familyId` has no value there and
+      // the get() in isAdminByDocument fails: the lookup was refused for
+      // everyone, which left an admin without a role claim unable to sign in on
+      // a new device or to upload. This proves the same thing from the filter
+      // itself, and admits no query that is not about the caller.
+      allow list: if request.auth != null
+                    && (request.auth.uid in resource.data.adminUids
+                        || resource.data.adminUid == request.auth.uid);
       allow create: if request.auth != null
                     && tokenRole() != 'viewer'
                     && request.resource.data.adminUid == request.auth.uid
