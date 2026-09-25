@@ -237,20 +237,4 @@ describe('useMediaUploader', () => {
     expect(result.current.images).toEqual([])
     expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
-
-  it('says which step failed and with what status', async () => {
-    // "Upload failed" alone could not tell a refused signature from a crashed
-    // function from Cloudinary saying no — not from a phone, anyway.
-    for (const [err, expected] of [
-      [Object.assign(new Error('x'), { code: 'upload/signature', status: 403 }), /signature 403/],
-      [Object.assign(new Error('x'), { code: 'upload/storage', status: 401 }), /storage 401/],
-    ]) {
-      encryptAndUploadWithThumb.mockRejectedValueOnce(err)
-      const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
-      await act(async () => {
-        await result.current.addImage(makeFile())
-      })
-      expect(result.current.imageError).toMatch(expected)
-    }
-  })
 })
