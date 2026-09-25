@@ -15,7 +15,8 @@ import PlacePicker from '../components/sky/PlacePicker'
 import Sidebar from '../components/layout/Sidebar'
 import { devError } from '../utils/devLog'
 
-const PREVIEW_WIDTH = 900
+// Sharp at the desktop size (up to ~700 CSS px) on a 2x display.
+const PREVIEW_WIDTH = 1400
 // A4 at 300 dpi. A3 at 300 dpi (3508 × 4961) is over the ~16.7 megapixel
 // canvas limit of iOS Safari, so A3 renders at 275 dpi — still sharp on paper.
 const A4_WIDTH = 2480
@@ -240,10 +241,12 @@ export default function BirthSkyPage() {
           </div>
         </div>
 
-        <div className="p-4 md:p-8 w-full max-w-5xl mx-auto grid gap-6 md:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="p-4 md:p-8 lg:pt-4 w-full max-w-7xl mx-auto grid gap-6 lg:gap-10 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* Preview */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-lg border border-cream-dark bg-warm-white">
+          {/* On desktop the poster fills the screen height (capped by the column width)
+              and stays in view while the settings scroll. */}
+          <div className="flex flex-col items-center gap-3 lg:sticky lg:top-[4.5rem] lg:self-start">
+            <div className="relative w-full max-w-md lg:max-w-none lg:w-[min(100%,calc((100vh_-_7rem)/1.4142))] rounded-2xl overflow-hidden shadow-lg border border-cream-dark bg-warm-white">
               <canvas
                 ref={canvasRef}
                 width={PREVIEW_WIDTH}
@@ -260,7 +263,7 @@ export default function BirthSkyPage() {
                 </div>
               )}
             </div>
-            <p className="text-[11px] text-bark-muted text-center max-w-md">{t('credits')}</p>
+            <p className="text-[11px] text-bark-muted text-center max-w-md lg:max-w-xl">{t('credits')}</p>
           </div>
 
           {/* Controls */}
