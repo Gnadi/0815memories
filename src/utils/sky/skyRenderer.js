@@ -19,12 +19,12 @@ export const SKY_STYLES = {
     star: '#FFFFFF',
     tintStars: true,
     line: 'rgba(217, 178, 111, 0.5)',
-    label: 'rgba(244, 235, 221, 0.62)',
+    label: 'rgba(244, 235, 221, 0.78)',
     planet: '#F2C46D',
     moonLit: '#F7F1E3',
     moonDark: '#253047',
     text: '#F4EBDD',
-    muted: 'rgba(244, 235, 221, 0.72)',
+    muted: 'rgba(244, 235, 221, 0.88)',
   },
   kaydo: {
     background: ['#FFFDF9', '#FDF6EC'],
@@ -33,7 +33,7 @@ export const SKY_STYLES = {
     star: '#2D1B0E',
     tintStars: false,
     line: 'rgba(194, 90, 46, 0.7)',
-    label: 'rgba(160, 68, 32, 0.8)',
+    label: 'rgba(160, 68, 32, 0.95)',
     planet: '#C25A2E',
     moonLit: '#FFFDF9',
     moonDark: '#E3CDAE',
@@ -47,7 +47,7 @@ export const SKY_STYLES = {
     star: '#111111',
     tintStars: false,
     line: 'rgba(17, 17, 17, 0.45)',
-    label: 'rgba(17, 17, 17, 0.6)',
+    label: 'rgba(17, 17, 17, 0.75)',
     planet: '#111111',
     moonLit: '#FFFFFF',
     moonDark: '#CFCFCF',
@@ -206,28 +206,47 @@ export function drawSkyPoster(ctx, { width, sky, style: styleKey, caption, compa
     }
     ctx.globalAlpha = 1
 
-    // Constellation names, only the well-known ones to keep the map calm.
-    ctx.fillStyle = style.label
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.font = `${Math.round(unit * 11)}px ${SERIF_FONT}`
-    for (const c of sky.constellations) {
-      if (c.rank > 1 || c.label.alt < 8) continue
-      const [x, y] = toCanvas(c.label)
-      drawSpacedText(ctx, (c.name[lang] || c.name.en).toUpperCase(), x, y, unit * 2)
+    // Labels get a thin outline in the disc colour so they stay readable where
+    // they cross a constellation line, and a label that would overlap one
+    // already placed is left out rather than printed on top of it.
+    const placed = []
+    const label = (text, x, y, align, spacing) => {
+      const w = ctx.measureText(text).width + spacing * text.length
+      const h = parseFloat(ctx.font.match(/(\d+(?:\.\d+)?)px/)[1])
+      const left = align === 'center' ? x - w / 2 : x
+      const box = { l: left - unit * 4, r: left + w + unit * 4, t: y - h / 2 - unit * 2, b: y + h / 2 + unit * 2 }
+      if (placed.some((o) => box.l < o.r && box.r > o.l && box.t < o.b && box.b > o.t)) return
+      placed.push(box)
+      ctx.textAlign = align
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = unit * 5
+      ctx.strokeStyle = style.disc
+      if ('letterSpacing' in ctx) ctx.letterSpacing = `${spacing}px`
+      ctx.strokeText(text, x, y)
+      ctx.fillText(text, x, y)
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
     }
+    ctx.textBaseline = 'middle'
 
-    // Planets
+    // Planets first: they are rarer, so they win a collision.
     for (const p of sky.planets) {
       if (p.alt < 0) continue
       const [x, y] = toCanvas(p)
       ctx.fillStyle = style.planet
       ctx.beginPath()
-      ctx.arc(x, y, unit * 5, 0, Math.PI * 2)
+      ctx.arc(x, y, unit * 6, 0, Math.PI * 2)
       ctx.fill()
-      ctx.font = `italic ${Math.round(unit * 13)}px ${SERIF_FONT}`
-      ctx.textAlign = 'left'
-      ctx.fillText(planetNames[p.body] || p.body, x + unit * 9, y)
+      ctx.font = `italic ${Math.round(unit * 22)}px ${SERIF_FONT}`
+      label(planetNames[p.body] || p.body, x + unit * 12, y, 'left', 0)
+    }
+
+    // Constellation names, only the well-known ones to keep the map calm.
+    ctx.fillStyle = style.label
+    ctx.font = `${Math.round(unit * 18)}px ${SERIF_FONT}`
+    for (const c of sky.constellations) {
+      if (c.rank > 1 || c.label.alt < 8) continue
+      const [x, y] = toCanvas(c.label)
+      label((c.name[lang] || c.name.en).toUpperCase(), x, y, 'center', unit * 2.5)
     }
 
     // Moon
@@ -252,10 +271,10 @@ export function drawSkyPoster(ctx, { width, sky, style: styleKey, caption, compa
 
   if (compass) {
     ctx.fillStyle = style.edge
-    ctx.font = `${Math.round(unit * 16)}px ${SERIF_FONT}`
+    ctx.font = `${Math.round(unit * 26)}px ${SERIF_FONT}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    const o = R + unit * 30
+    const o = R + unit * 38
     ctx.fillText(compass.n, cx, cy - o)
     ctx.fillText(compass.s, cx, cy + o)
     ctx.fillText(compass.e, cx - o, cy) // east on the left: looking up, not down
@@ -263,22 +282,22 @@ export function drawSkyPoster(ctx, { width, sky, style: styleKey, caption, compa
   }
 
   // Caption
-  const textTop = cy + R + unit * 90
+  const textTop = cy + R + unit * 150
   const maxText = width - margin * 2
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
   if (caption?.title) {
     ctx.fillStyle = style.text
-    const size = fitFont(ctx, caption.title.toUpperCase(), DISPLAY_FONT, Math.round(unit * 56), maxText)
+    const size = fitFont(ctx, caption.title.toUpperCase(), DISPLAY_FONT, Math.round(unit * 84), maxText)
     drawSpacedText(ctx, caption.title.toUpperCase(), cx, textTop, size * 0.08)
   }
-  let y = textTop + unit * 52
+  let y = textTop + unit * 72
   ctx.fillStyle = style.muted
   for (const line of caption?.lines || []) {
     if (!line) continue
-    fitFont(ctx, line, SERIF_FONT, Math.round(unit * 19), maxText)
+    fitFont(ctx, line, SERIF_FONT, Math.round(unit * 30), maxText)
     ctx.fillText(line, cx, y)
-    y += unit * 32
+    y += unit * 46
   }
 
   return { width, height }
