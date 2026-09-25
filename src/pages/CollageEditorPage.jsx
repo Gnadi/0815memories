@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useReducer, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useReducer, useRef, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { X, Share2, Loader2, MoreVertical, Download, Trash2, LayoutGrid, Square } from 'lucide-react'
+import { X, Share2, Loader2, MoreVertical, Download, Trash2, LayoutGrid, Square, BookHeart } from 'lucide-react'
 import { doc as firestoreDoc, getDoc, Timestamp } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +18,10 @@ import { applyTemplate, getTemplate, makeCollageDoc } from '../components/collag
 import { exportCollage } from '../utils/collageRenderer'
 import { encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { devError } from '../utils/devLog'
+
+// Lazy: the memory form (and its rich-text editor) is only needed once the
+// user asks to turn the collage into a memory.
+const PostMemoryModal = lazy(() => import('../components/admin/PostMemoryModal'))
 
 const MAX_HISTORY = 20
 
@@ -114,12 +118,13 @@ export default function CollageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [saveStatus, setSaveStatus] = useState('idle')
-  const [busy, setBusy] = useState(null) // 'export' | 'share'
+  const [busy, setBusy] = useState(null) // 'export' | 'share' | 'memory'
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('templates')
   const [selectedSlotId, setSelectedSlotId] = useState(null)
   const [mode, setMode] = useState('idle') // idle | fill | replace | swap
   const [menuOpen, setMenuOpen] = useState(false)
+  const [memoryFile, setMemoryFile] = useState(null)
 
   const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
   const { upload, uploading, session: sessionPhotos } = useScrapbookPhotoUpload()
@@ -286,6 +291,30 @@ export default function CollageEditorPage() {
     }
   }
 
+  // Renders the collage and opens the full memory form with it as the photo, so
+  // a description, date, place and more photos can be added before posting.
+  const handleCreateMemory = async () => {
+    setMenuOpen(false)
+    if (filledCount === 0) { setError(t('errors.needPhoto')); return }
+    setBusy('memory')
+    setError(null)
+    try {
+      await flushSave()
+      const blob = await exportCollage(doc, encryptionKey, { width: 1600 })
+      setMemoryFile(new File([blob], 'collage.jpg', { type: blob.type }))
+    } catch (err) {
+      devError('Collage export for memory failed', err)
+      setError(t('errors.exportFailed'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleSaveMemory = async (data) => {
+    await addMemory(data)
+    navigate('/home')
+  }
+
   const handleDelete = async () => {
     setMenuOpen(false)
     if (!window.confirm(t('editor.confirmDelete'))) return
@@ -378,6 +407,14 @@ export default function CollageEditorPage() {
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-11 z-30 w-56 rounded-2xl bg-warm-white border border-cream-dark shadow-xl py-1 overflow-hidden">
+              <button
+                onClick={handleCreateMemory}
+                disabled={busy != null || filledCount === 0}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-bark hover:bg-cream disabled:opacity-50"
+              >
+                {busy === 'memory' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookHeart className="w-4 h-4" />}
+                {t('editor.createMemory')}
+              </button>
               <button
                 onClick={handleDownload}
                 disabled={busy != null || filledCount === 0}
@@ -487,6 +524,17 @@ export default function CollageEditorPage() {
           })}
         </div>
       </div>
+
+      {memoryFile && (
+        <Suspense fallback={null}>
+          <PostMemoryModal
+            defaults={{ title: title || t('defaultTitle'), category: 'collage' }}
+            initialFiles={[memoryFile]}
+            onClose={() => setMemoryFile(null)}
+            onSave={handleSaveMemory}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }
