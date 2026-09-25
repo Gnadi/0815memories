@@ -14,6 +14,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Preserve
 - **The Vault (Black Box)** — high-fidelity originals of your most precious documents and photos, with **time-locked capsules** that stay sealed until a date you choose
 - **Letters & kids' journals** — dated entries and letters to your children, written for the future
+- **Sky of birth** — from each child's journal: the stars, constellations, planets and the moon in its exact phase above their birthplace at the moment they were born, as a poster in three styles (PNG, A4 / A3 PDF) or a post in the feed. Everything is computed on the device with `astronomy-engine`; the birthplace is picked from a bundled place list rather than a geocoding service, and birth time and place are stored encrypted. Without a known time it shows the night sky of that day. Star and constellation data © Olaf Frohn ([d3-celestial](https://github.com/ofrohn/d3-celestial), BSD-3-Clause), places from [GeoNames](https://www.geonames.org/) (CC BY 4.0); regenerate them with `scripts/build-sky-data.mjs`
 - **Full data export** — download everything as a ZIP of plain, readable files plus structured JSON; NAS-friendly, no lock-in
 
 ### Create & evolve

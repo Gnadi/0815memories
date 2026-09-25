@@ -37,7 +37,7 @@ export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
 export const LAZY_NAMESPACES = [
   'home', 'memory', 'journal', 'blackbox', 'recipes', 'scrapbook',
   'collage', 'timeline', 'ourYear', 'settings', 'emotions', 'legal',
-  'feedback',
+  'feedback', 'sky',
 ]
 
 export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]

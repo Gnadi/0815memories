@@ -24,6 +24,7 @@
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "@vercel/analytics": "^2.0.1",
+    "astronomy-engine": "^2.1.19",
     "dompurify": "^3.4.11",
     "file-saver": "^2.0.5",
     "firebase": "^12.11.0",
@@ -39,6 +40,7 @@
     "react-helmet-async": "^3.0.0",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^6.30.4",
+    "tz-lookup": "^6.1.25",
     "vite-react-ssg": "^0.9.1-beta.1"
   },
   "devDependencies": {
