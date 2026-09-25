@@ -87,7 +87,6 @@
   },
   "upload": {
     "failed": "Upload failed. Please try again.",
-    "failedWithReason": "Upload failed ({{reason}}). Please try again.",
     "tooLarge": "This file is {{size}} — the limit is {{limit}} per file. Please use a shorter or more compressed clip.",
     "videoTooLong": "Video must be {{seconds}} seconds or shorter."
   }
