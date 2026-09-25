@@ -44,7 +44,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Because of that, uploads are bound by Cloudinary's **raw** file-size cap (10 MB on the free plan), not the far higher video cap. Files above the cap are rejected before upload with a message naming the size and the limit; raise `VITE_CLOUDINARY_MAX_UPLOAD_BYTES` after upgrading the plan
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated
-- Upload signatures from `api/cloudinary-sign` are handed out only against a verified Firebase ID token of a family admin — by its admin role, or, for an admin from before the role claims, by the family document, which the function asks Firestore about as the caller — viewers never upload, and a signature is write access to the Cloudinary account
+- Upload signatures from `api/cloudinary-sign` are handed out only to a family admin — the function asks Firestore, with the caller's own ID token, for the families that list them as an admin, so Firestore verifies the token and the rules decide — viewers never upload, and a signature is write access to the Cloudinary account
 - **Our Year** goes further than the rest of the app: instead of trusting the UI, `firestore.rules` decides who may read what. A partner's answers are unreadable until both have handed in, a sealed letter is unreadable until its open date (`request.time`), and a closed chapter can no longer be edited. Those guarantees are covered by emulator tests — `npm run test:rules`
 - **Nothing is readable without an identity.** A viewer signs in against a Cloud Function that checks the shared password server-side and issues a token carrying their family; `firestore.rules` gates every collection on that token. Until recently viewers had no Firebase session at all, which forced the family document — encryption key included — to be world-readable. See `docs/plan-a-zugriffskontrolle.md`
 - The login page's design is served from `familyPublic/{familyId}`, a mirror written by a Cloud Function from a fixed allowlist, so the public surface of a family cannot grow by accident
@@ -78,7 +78,7 @@ A private, encrypted family memory platform — your family's own corner of the 
    - Deploy the Cloud Functions with `firebase deploy --only functions` (needs the Blaze plan). Viewer login is one of them, so the app is not fully usable without this step
    - Push notifications additionally need a Web Push certificate: Firebase Console → Cloud Messaging → Web Push certificates, then `VITE_FIREBASE_VAPID_KEY`. See `docs/plan-notifications.md` for how the pieces fit together
 
-4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`). The function signs uploads only for a signed-in family admin, and verifies their Firebase ID token against the project named in `VITE_FIREBASE_PROJECT_ID` (or `FIREBASE_PROJECT_ID`) — no service account needed.
+4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`). The function signs uploads only for a signed-in family admin, which it checks by asking Firestore in the project named in `VITE_FIREBASE_PROJECT_ID` (or `FIREBASE_PROJECT_ID`) as the caller — no service account and no dependencies, so it runs on any Node version Vercel is set to.
 
 5. Start the dev server:
    ```bash

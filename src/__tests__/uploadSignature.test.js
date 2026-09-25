@@ -47,6 +47,18 @@ describe('fetchUploadSignature', () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(2)
   })
 
+  it('says which status and reason the endpoint gave', async () => {
+    // So the message on a phone can tell a refusal from a crashed function.
+    globalThis.fetch = vi.fn(async () => reply(500, { error: 'Upload signing is not configured' }))
+    await expect(fetchUploadSignature()).rejects.toMatchObject({
+      code: 'upload/signature',
+      status: 500,
+      reason: 'Upload signing is not configured',
+    })
+    // A 500 is not the claim-lag case; no second try.
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('asks for nothing without a signed-in user', async () => {
     mockAuth.currentUser = null
     globalThis.fetch = vi.fn()

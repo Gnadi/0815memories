@@ -1,38 +1,48 @@
 import { createHash } from 'crypto'
-import { getApps, initializeApp } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
 
 // A signature is permission to write to the Cloudinary account, so it is only
 // handed to family admins — the only people the app lets upload anything. This
 // endpoint used to sign for any caller, which made the account a free file host
 // for anyone who found the URL.
 //
-// Only the caller's ID token is checked, and that needs the project id but no
-// service account: verifyIdToken() works from Google's public signing keys.
-// Vercel exposes the build's VITE_ variables to functions at runtime too.
+// Who is a family admin is Firestore's answer, asked as the caller. The caller's
+// ID token goes to Firestore's REST API with a query for their own family, and
+// Firestore does the rest: it verifies the token — signature, expiry, project —
+// and applies firestore.rules to the query, whose `list` rule on families admits
+// exactly "the families that list me as an admin". A family in the answer means
+// an admin; an empty answer means not one (viewers included: their uid is in no
+// admin list); a refused token means not signed in.
+//
+// That is the test the rules apply to every write, and it holds for admins with
+// a role claim and for those from before the claims alike. It also keeps this
+// function free of dependencies. It used to verify tokens with firebase-admin,
+// whose current release requires Node 22 — so whether uploads worked depended on
+// the Node version the Vercel project happened to be set to.
 const projectId = () => process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID
 
-function tokenVerifier() {
-  if (!projectId()) return null
-  return getAuth(getApps()[0] ?? initializeApp({ projectId: projectId() }))
+/**
+ * The uid a Firebase ID token names. Read, not trusted: nothing is decided on it
+ * until Firestore has verified the same token.
+ */
+function uidOf(idToken) {
+  try {
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString('utf8'))
+    const uid = payload.user_id ?? payload.sub
+    return typeof uid === 'string' && uid ? uid : null
+  } catch {
+    return null
+  }
 }
 
 /**
- * Is the caller an admin of some family by its document?
+ * 'admin', 'not-admin', 'bad-token' (Firestore refused the token), or
+ * 'unavailable' (Firestore could not be asked — never read as a yes).
  *
- * The role claim is set by syncAdminClaims only for admins added after it
- * existed; earlier admins carry none unless the access-control migration was
- * run for them. firestore.rules accepts them by the family document instead
- * (isAdminByDocument), and so must this — refusing them was what broke photo
- * uploads for exactly those admins.
- *
- * Asked as the caller, through Firestore's REST API with their own ID token,
- * so Firestore's rules answer it and no service account is needed. The two
- * shapes of a family document are the two lookups AuthContext makes at sign-in:
- * `adminUids`, and the oldest families' lone `adminUid`. Only document names come
- * back — the family document also holds the encryption key.
+ * Two lookups, the two shapes of a family document, as at sign-in: `adminUids`,
+ * then the oldest families' lone `adminUid`. Only document names come back — the
+ * family document also holds the encryption key.
  */
-async function isAdminByDocument(idToken, uid) {
+async function adminStatus(idToken, uid) {
   const emulator = process.env.FIRESTORE_EMULATOR_HOST
   const base = emulator ? `http://${emulator}` : 'https://firestore.googleapis.com'
   const url = `${base}/v1/projects/${projectId()}/databases/(default)/documents:runQuery`
@@ -53,11 +63,14 @@ async function isAdminByDocument(idToken, uid) {
         },
       }),
     }).catch(() => null)
-    if (!response?.ok) continue
-    const rows = await response.json().catch(() => [])
-    if (Array.isArray(rows) && rows.some((row) => row.document)) return true
+    if (!response) return 'unavailable'
+    if (response.status === 401) return 'bad-token'
+    if (!response.ok) return 'unavailable'
+    const rows = await response.json().catch(() => null)
+    if (!Array.isArray(rows)) return 'unavailable'
+    if (rows.some((row) => row.document)) return 'admin'
   }
-  return false
+  return 'not-admin'
 }
 
 export default async function handler(req, res) {
@@ -65,34 +78,29 @@ export default async function handler(req, res) {
 
   const secret = process.env.CLOUDINARY_API_SECRET
   const apiKey = process.env.CLOUDINARY_API_KEY
-  const verifier = tokenVerifier()
 
-  if (!secret || !apiKey || !verifier) {
+  if (!secret || !apiKey || !projectId()) {
     res.status(500).json({ error: 'Upload signing is not configured' })
     return
   }
 
   const bearer = /^Bearer (.+)$/.exec(req.headers?.authorization || '')?.[1]
-  if (!bearer) {
+  const uid = bearer ? uidOf(bearer) : null
+  if (!uid) {
     res.status(401).json({ error: 'Sign in first' })
     return
   }
 
-  let claims
-  try {
-    claims = await verifier.verifyIdToken(bearer)
-  } catch {
+  const status = await adminStatus(bearer, uid)
+  if (status === 'bad-token') {
     res.status(401).json({ error: 'Sign in first' })
     return
   }
-
-  // The claim is set by the syncAdminClaims trigger and costs nothing to check.
-  // Viewers carry 'viewer' and never upload. Anyone else — an account without a
-  // claim — may still be an admin by the family document, as the rules allow.
-  const isAdmin =
-    claims.role === 'admin' ||
-    (claims.role !== 'viewer' && (await isAdminByDocument(bearer, claims.uid)))
-  if (!isAdmin) {
+  if (status === 'unavailable') {
+    res.status(503).json({ error: 'Could not check your family right now' })
+    return
+  }
+  if (status !== 'admin') {
     res.status(403).json({ error: 'Only family admins can upload' })
     return
   }

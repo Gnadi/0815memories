@@ -18,6 +18,12 @@ export function uploadErrorMessage(err, t) {
       limit: formatBytes(err.limit ?? MAX_PLAINTEXT_BYTES),
     })
   }
+  // Which step failed, with its status, so a failure reported from a phone
+  // says where to look: the signing function or the storage service.
+  if (err?.code === 'upload/signature' || err?.code === 'upload/storage') {
+    const step = err.code === 'upload/signature' ? 'signature' : 'storage'
+    return t('upload.failedWithReason', { reason: `${step} ${err.status}` })
+  }
   return t('upload.failed')
 }
 
