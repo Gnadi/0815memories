@@ -68,7 +68,12 @@
     "cropHint": "Drag the photo inside its frame to move the visible part.",
     "fitWhole": "Whole photo",
     "panHorizontal": "Move crop horizontally",
-    "panVertical": "Move crop vertically"
+    "panVertical": "Move crop vertically",
+    "polaroid": "Polaroid",
+    "caption": "Caption",
+    "captionPlaceholder": "Write a caption…",
+    "polaroidOn": "Border on",
+    "polaroidOff": "Border off"
   },
   "swap": {
     "tapToSwap": "Tap another photo on the page to swap",

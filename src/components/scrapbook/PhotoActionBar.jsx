@@ -5,6 +5,7 @@ import {
   Replace,
   Crop,
   Expand,
+  PanelBottom,
   RotateCw,
   FlipHorizontal2,
   ImageOff,
@@ -13,7 +14,7 @@ import {
 
 /**
  * Contextual bottom bar shown when a filled photo element is selected.
- * Mirrors the reference action strip: Done · Change · Swap · Crop · Rotate · Flip
+ * Mirrors the reference action strip: Done · Change · Swap · Crop · Polaroid · Rotate · Flip
  * Plus two destructive actions: Remove picture (keep slot empty) and Remove.
  *
  * Props:
@@ -25,8 +26,11 @@ import {
  *  - onFlip()
  *  - onScale(newScale)           → 0.5..3
  *  - onCrop(updates)             → { offsetX, offsetY, fit, imageScale } for the crop panel
- *  - cropOpen / onToggleCrop()   → the crop panel; while open, dragging the
- *                                  photo pans it inside its frame
+ *  - onPolaroid(on)              → white polaroid border on / off
+ *  - onCaption(text)             → the line written under a polaroid
+ *  - panel / onTogglePanel(id)   → which panel is open: 'crop' | 'polaroid' | null.
+ *                                  While 'crop' is open, dragging the photo pans
+ *                                  it inside its frame
  *  - onRemovePicture()           → clears url, keeps slot
  *  - onRemove()                  → deletes the element
  *  - mode: 'idle' | 'replace' | 'swap' (to highlight active action)
@@ -40,8 +44,10 @@ export default function PhotoActionBar({
   onFlip,
   onScale,
   onCrop,
-  cropOpen = false,
-  onToggleCrop,
+  onPolaroid,
+  onCaption,
+  panel = null,
+  onTogglePanel,
   onRemovePicture,
   onRemove,
   mode = 'idle',
@@ -49,12 +55,26 @@ export default function PhotoActionBar({
   const { t } = useTranslation('scrapbook')
   const currentScale = element?.imageScale || 1
   const isFit = element?.fit === 'contain'
+  const isPolaroid = !!element?.polaroid
+  const cropOpen = panel === 'crop'
+
+  // Turning the border on opens the caption field straight away — writing the
+  // line underneath is the reason to want a polaroid.
+  const handlePolaroidAction = () => {
+    if (!isPolaroid) {
+      onPolaroid?.(true)
+      if (panel !== 'polaroid') onTogglePanel?.('polaroid')
+      return
+    }
+    onTogglePanel?.('polaroid')
+  }
 
   const actions = [
     { id: 'done', icon: Check, label: t('photoActions.done'), onClick: onDone, primary: true },
     { id: 'change', icon: Camera, label: t('photoActions.change'), onClick: onChange, active: mode === 'replace' },
     { id: 'swap', icon: Replace, label: t('photoActions.swap'), onClick: onSwap, active: mode === 'swap' },
-    { id: 'crop', icon: Crop, label: t('photoActions.crop'), onClick: onToggleCrop, active: cropOpen },
+    { id: 'crop', icon: Crop, label: t('photoActions.crop'), onClick: () => onTogglePanel?.('crop'), active: cropOpen },
+    { id: 'polaroid', icon: PanelBottom, label: t('photoActions.polaroid'), onClick: handlePolaroidAction, active: isPolaroid || panel === 'polaroid' },
     { id: 'rotate', icon: RotateCw, label: t('photoActions.rotate'), onClick: onRotate },
     { id: 'flip', icon: FlipHorizontal2, label: t('photoActions.flip'), onClick: onFlip },
     { id: 'remove-picture', icon: ImageOff, label: t('photoActions.clear'), onClick: onRemovePicture, variant: 'warn' },
@@ -121,6 +141,33 @@ export default function PhotoActionBar({
               className="text-[11px] font-medium text-kaydo hover:text-kaydo-dark"
             >
               {t('photoActions.reset')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {panel === 'polaroid' && (
+        <div className="px-4 pt-3 pb-1 space-y-2">
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={element?.caption || ''}
+              onChange={(e) => onCaption?.(e.target.value)}
+              disabled={!isPolaroid}
+              maxLength={60}
+              placeholder={t('photoActions.captionPlaceholder')}
+              aria-label={t('photoActions.caption')}
+              className="flex-1 min-w-0 px-3 py-2 bg-cream-dark rounded-xl text-sm text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={() => onPolaroid?.(!isPolaroid)}
+              aria-pressed={isPolaroid}
+              className={`flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors ${
+                isPolaroid ? 'bg-kaydo text-white border-kaydo' : 'border-cream-dark text-bark hover:bg-cream'
+              }`}
+            >
+              {isPolaroid ? t('photoActions.polaroidOn') : t('photoActions.polaroidOff')}
             </button>
           </div>
         </div>

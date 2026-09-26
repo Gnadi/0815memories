@@ -196,6 +196,7 @@ export default function CanvasElement({
     const startH = height
     const startEX = x
     const startEY = y
+    const gesture = crypto.randomUUID()
 
     const onMove = (me) => {
       const dx = (me.clientX - startX) / canvasScale
@@ -220,7 +221,7 @@ export default function CanvasElement({
         newY = startEY + (startH - newH)
       }
 
-      onUpdate(id, { width: newW, height: newH, x: newX, y: newY })
+      onUpdate(id, { width: newW, height: newH, x: newX, y: newY }, gesture)
     }
 
     const onUp = () => {
@@ -240,10 +241,11 @@ export default function CanvasElement({
     if (!rect) return
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
+    const gesture = crypto.randomUUID()
 
     const onMove = (me) => {
       const angle = Math.atan2(me.clientY - cy, me.clientX - cx) * (180 / Math.PI) + 90
-      onUpdate(id, { rotation: Math.round(angle) })
+      onUpdate(id, { rotation: Math.round(angle) }, gesture)
     }
 
     const onUp = () => {
@@ -277,13 +279,14 @@ export default function CanvasElement({
     const rad = (-rotation * Math.PI) / 180
     const cos = Math.cos(rad)
     const sin = Math.sin(rad)
+    const gesture = crypto.randomUUID()
 
     const onMove = (me) => {
       const sx = (me.clientX - startX) / canvasScale
       const sy = (me.clientY - startY) / canvasScale
       const dx = sx * cos - sy * sin
       const dy = sx * sin + sy * cos
-      onUpdate(id, panBy(start, naturalSize.w, naturalSize.h, frameSize.w, frameSize.h, dx, dy))
+      onUpdate(id, panBy(start, naturalSize.w, naturalSize.h, frameSize.w, frameSize.h, dx, dy), gesture)
     }
 
     const onUp = () => {

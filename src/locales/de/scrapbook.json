@@ -68,7 +68,12 @@
     "cropHint": "Ziehe das Foto im Rahmen, um den Ausschnitt zu verschieben.",
     "fitWhole": "Ganzes Foto",
     "panHorizontal": "Ausschnitt horizontal verschieben",
-    "panVertical": "Ausschnitt vertikal verschieben"
+    "panVertical": "Ausschnitt vertikal verschieben",
+    "polaroid": "Polaroid",
+    "caption": "Bildunterschrift",
+    "captionPlaceholder": "Bildunterschrift schreiben…",
+    "polaroidOn": "Rahmen an",
+    "polaroidOff": "Rahmen aus"
   },
   "swap": {
     "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",
