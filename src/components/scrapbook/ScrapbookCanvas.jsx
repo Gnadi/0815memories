@@ -20,7 +20,7 @@ const PATTERN_SIZE = {
 }
 
 export default forwardRef(function ScrapbookCanvas(
-  { page, selectedId, onSelectElement, onUpdateElement, onDeleteElement, editable = true, exporting = false },
+  { page, selectedId, onSelectElement, onUpdateElement, onDeleteElement, editable = true, exporting = false, cropping = false },
   ref
 ) {
   const containerRef = useRef(null)
@@ -106,6 +106,7 @@ export default forwardRef(function ScrapbookCanvas(
                 canvasScale={scale}
                 editable={editable}
                 exporting={exporting}
+                cropping={cropping && selectedId === el.id}
               />
             ))}
           </div>

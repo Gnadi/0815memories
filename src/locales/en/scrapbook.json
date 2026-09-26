@@ -58,13 +58,17 @@
     "done": "Done",
     "change": "Change",
     "swap": "Swap",
-    "scale": "Scale",
     "rotate": "Rotate",
     "flip": "Flip",
     "clear": "Clear",
     "remove": "Remove",
     "zoom": "Zoom",
-    "reset": "Reset"
+    "reset": "Reset",
+    "crop": "Crop",
+    "cropHint": "Drag the photo inside its frame to move the visible part.",
+    "fitWhole": "Whole photo",
+    "panHorizontal": "Move crop horizontally",
+    "panVertical": "Move crop vertically"
   },
   "swap": {
     "tapToSwap": "Tap another photo on the page to swap",

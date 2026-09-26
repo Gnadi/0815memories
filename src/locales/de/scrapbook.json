@@ -58,13 +58,17 @@
     "done": "Fertig",
     "change": "Ändern",
     "swap": "Tauschen",
-    "scale": "Größe",
     "rotate": "Drehen",
     "flip": "Spiegeln",
     "clear": "Leeren",
     "remove": "Entfernen",
     "zoom": "Zoom",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "crop": "Ausschnitt",
+    "cropHint": "Ziehe das Foto im Rahmen, um den Ausschnitt zu verschieben.",
+    "fitWhole": "Ganzes Foto",
+    "panHorizontal": "Ausschnitt horizontal verschieben",
+    "panVertical": "Ausschnitt vertikal verschieben"
   },
   "swap": {
     "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",

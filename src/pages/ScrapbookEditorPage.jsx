@@ -35,6 +35,17 @@ function makeBlankPage() {
   }
 }
 
+// How a photo is framed travels with the photo: a swap moves it along, and a
+// new picture in the same frame starts from the plain centred crop.
+const cropOf = (el) => ({
+  imageScale: el.imageScale || 1,
+  flipped: !!el.flipped,
+  offsetX: el.offsetX || 0,
+  offsetY: el.offsetY || 0,
+  fit: el.fit || null,
+})
+const FRESH_CROP = { imageScale: 1, offsetX: 0, offsetY: 0, fit: null }
+
 function editorReducer(state, action) {
   const { pages, currentPageIndex } = state
 
@@ -97,8 +108,8 @@ function editorReducer(state, action) {
         return {
           ...p,
           elements: p.elements.map((el) => {
-            if (el.id === idA) return { ...el, url: b.url, isSlot: !b.url, imageScale: b.imageScale || 1, flipped: !!b.flipped }
-            if (el.id === idB) return { ...el, url: a.url, isSlot: !a.url, imageScale: a.imageScale || 1, flipped: !!a.flipped }
+            if (el.id === idA) return { ...el, url: b.url, isSlot: !b.url, ...cropOf(b) }
+            if (el.id === idB) return { ...el, url: a.url, isSlot: !a.url, ...cropOf(a) }
             return el
           }),
         }
@@ -160,6 +171,9 @@ export default function ScrapbookEditorPage() {
   const [exporting, setExporting] = useState(false)
   // Photo bar interaction mode: 'idle' | 'fill' | 'replace' | 'swap'
   const [photoMode, setPhotoMode] = useState('idle')
+  // The crop panel of the photo action bar; while open, dragging the selected
+  // photo moves the picture inside its frame instead of moving the frame.
+  const [cropOpen, setCropOpen] = useState(false)
 
   // Family memory photos + session uploads
   const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
@@ -339,6 +353,7 @@ export default function ScrapbookEditorPage() {
   const handleChangeBackground = (updates) => dispatch({ type: 'CHANGE_BACKGROUND', updates })
 
   const handleSelectElement = (elementId) => {
+    if (elementId !== selectedId) setCropOpen(false)
     dispatch({ type: 'SELECT', id: elementId })
     // Auto switch mode: if the new selection is an empty slot, enter fill mode
     if (!elementId) {
@@ -360,12 +375,12 @@ export default function ScrapbookEditorPage() {
   // ── Photo picker behaviour ──────────────────────────────────────────────────
   const handlePickPhoto = (url) => {
     if (isSlotSelected && (photoMode === 'fill' || photoMode === 'idle')) {
-      handleUpdateElement(selectedId, { url, isSlot: false })
+      handleUpdateElement(selectedId, { url, isSlot: false, ...FRESH_CROP })
       setPhotoMode('idle')
       return
     }
     if (isPhotoSelected && photoMode === 'replace') {
-      handleUpdateElement(selectedId, { url })
+      handleUpdateElement(selectedId, { url, ...FRESH_CROP })
       setPhotoMode('idle')
       return
     }
@@ -406,6 +421,7 @@ export default function ScrapbookEditorPage() {
 
   // Action bar handlers
   const handleActionDone = () => {
+    setCropOpen(false)
     dispatch({ type: 'SELECT', id: null })
     setPhotoMode('idle')
   }
@@ -421,11 +437,15 @@ export default function ScrapbookEditorPage() {
   }
   const handleActionScale = (newScale) => {
     if (!selectedElement) return
-    handleUpdateElement(selectedId, { imageScale: newScale })
+    handleUpdateElement(selectedId, { imageScale: newScale, fit: null })
+  }
+  const handleActionCrop = (updates) => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, updates)
   }
   const handleActionRemovePicture = () => {
     if (!selectedElement) return
-    handleUpdateElement(selectedId, { url: null, isSlot: true, imageScale: 1, flipped: false })
+    handleUpdateElement(selectedId, { url: null, isSlot: true, flipped: false, ...FRESH_CROP })
     setPhotoMode('fill')
   }
   const handleActionRemove = () => {
@@ -486,6 +506,7 @@ export default function ScrapbookEditorPage() {
           onDeleteElement={handleDeleteElement}
           editable={editable}
           exporting={exporting}
+          cropping={cropOpen && isPhotoSelected}
         />
       </div>
 
@@ -517,6 +538,9 @@ export default function ScrapbookEditorPage() {
             onRotate={handleActionRotate}
             onFlip={handleActionFlip}
             onScale={handleActionScale}
+            onCrop={handleActionCrop}
+            cropOpen={cropOpen}
+            onToggleCrop={() => setCropOpen((open) => !open)}
             onRemovePicture={handleActionRemovePicture}
             onRemove={handleActionRemove}
             mode={photoMode}

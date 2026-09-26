@@ -64,14 +64,27 @@ export function drawImageCovered(ctx, img, w, h, scale = 1, flipped = false, off
   const { sx, sy, sw, sh } = computeCoverRect(iw, ih, w, h, scale, offsetX, offsetY)
   if (!sw || !sh) return
 
+  // Zoomed out past the cover crop (the scrapbook's "whole photo"), the source
+  // rectangle reaches beyond the image. Draw only the part that exists, into
+  // the matching part of the box, rather than leave that to each browser.
+  const kx = w / sw
+  const ky = h / sh
+  const cx = Math.max(0, sx)
+  const cy = Math.max(0, sy)
+  const cw = Math.min(iw, sx + sw) - cx
+  const ch = Math.min(ih, sy + sh) - cy
+  if (cw <= 0 || ch <= 0) return
+  const dx = (cx - sx) * kx
+  const dy = (cy - sy) * ky
+
   if (flipped) {
     ctx.save()
     ctx.translate(w, 0)
     ctx.scale(-1, 1)
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h)
+    ctx.drawImage(img, cx, cy, cw, ch, dx, dy, cw * kx, ch * ky)
     ctx.restore()
   } else {
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h)
+    ctx.drawImage(img, cx, cy, cw, ch, dx, dy, cw * kx, ch * ky)
   }
 }
 
