@@ -70,6 +70,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
   })
   const [mediaError, setMediaError] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
@@ -110,6 +111,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
       setMediaError(true)
       return
     }
+    setSaveError('')
     setSaving(true)
     try {
       const thumbs = buildThumbs(readyImages)
@@ -131,6 +133,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
       onClose()
     } catch (err) {
       devError('Failed to save moment:', err)
+      setSaveError(t('postMoment.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -369,6 +372,12 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
               {t('postMoment.labelHelp')}
             </p>
           </div>
+
+          {saveError && (
+            <p className="flex items-center gap-1.5 text-sm text-red-600" role="alert">
+              <X className="w-4 h-4 flex-shrink-0" /> {saveError}
+            </p>
+          )}
 
           {/* Submit */}
           <button

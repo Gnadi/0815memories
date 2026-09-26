@@ -75,7 +75,8 @@
     "labelHelp": "Wird unter dem Story-Kreis angezeigt. Standardmäßig das Datum, wenn leer.",
     "uploading": "Lädt hoch...",
     "saveChanges": "Änderungen speichern",
-    "shareMoment": "Moment teilen"
+    "shareMoment": "Moment teilen",
+    "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut."
   },
   "entryType": {
     "label": "Teilen als",

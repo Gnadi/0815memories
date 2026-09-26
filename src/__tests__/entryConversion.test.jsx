@@ -138,6 +138,21 @@ describe('PostEntryModal', () => {
     expect(onConverted).toHaveBeenCalledWith('memory', 'memory-new')
   })
 
+  it('converts even when the caller does not ask to hear about it', async () => {
+    // The home page passes no onConverted; the conversion must still happen.
+    render(<PostEntryModal type="moment" entry={{ id: 'mo2' }} onSave={vi.fn()} onClose={vi.fn()} />)
+    await userEvent.click(screen.getByText('to memory'))
+    await userEvent.click(screen.getByText('save'))
+    expect(mockToMemory).toHaveBeenCalledWith('mo2', { title: 'T' })
+  })
+
+  it('converts a memory without an onConverted callback too', async () => {
+    render(<PostEntryModal type="memory" entry={{ id: 'me2', date: null }} onSave={vi.fn()} onClose={vi.fn()} />)
+    await userEvent.click(screen.getByText('to moment'))
+    await userEvent.click(screen.getByText('save'))
+    expect(mockToMoment).toHaveBeenCalledWith('me2', { caption: 'C' }, null)
+  })
+
   it('a new memory switched to a moment is posted as a new moment', async () => {
     const onSave = vi.fn()
     render(<PostEntryModal type="memory" onSave={onSave} onClose={vi.fn()} />)
