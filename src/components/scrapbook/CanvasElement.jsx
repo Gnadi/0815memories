@@ -15,6 +15,10 @@ import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
 import { EXPORT_PENDING_ATTR } from './exportReady'
 // Zoom, pan and "whole photo" — the same crop on screen and in the export.
 import { effectiveScale, imageLayout, panBy } from './photoCrop'
+// Filters, corner rounding and a coloured frame — CSS on screen, the same
+// maths painted by hand in the export.
+import { filterCss, applyFilterToPixels, frameRadius, frameBorder } from './photoStyle'
+import { roundRectPath } from '../collage/collageDecorations'
 
 const HANDLE_SIZE = 10
 
@@ -62,6 +66,11 @@ export default function CanvasElement({
   const cropScale = element.imageScale || 1
   const cropOffsetX = element.offsetX || 0
   const cropOffsetY = element.offsetY || 0
+  const photoFilter = element.filter || 'none'
+  const cornerRadius = element.cornerRadius
+  const borderWidth = element.borderWidth || 0
+  const borderColor = element.borderColor || null
+  const isPolaroidPhoto = !!element.polaroid
 
   // Always decrypt the image URL so it's warm in the cache before export starts.
   // (EncryptedImage does the same internally; the shared cache avoids double-fetching.)
@@ -94,8 +103,32 @@ export default function CanvasElement({
     let cancelled = false
     img.onload = () => {
       if (cancelled) return
+      const style = { cornerRadius, borderWidth, borderColor, polaroid: isPolaroidPhoto }
+      const radius = frameRadius(style, cw, ch)
       const scale = effectiveScale({ fit: cropFit, imageScale: cropScale }, img.naturalWidth, img.naturalHeight, cw, ch)
+      ctx.save()
+      roundRectPath(ctx, 0, 0, cw, ch, radius)
+      ctx.clip()
       drawImageCovered(ctx, img, cw, ch, scale, flipped, cropOffsetX, cropOffsetY)
+      ctx.restore()
+      if (photoFilter !== 'none') {
+        // A canvas tainted by a cross-origin photo refuses to be read; the
+        // photo then goes into the PDF unfiltered rather than not at all.
+        try {
+          const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          applyFilterToPixels(pixels.data, photoFilter)
+          ctx.putImageData(pixels, 0, 0)
+        } catch { /* keep the unfiltered photo */ }
+      }
+      const border = frameBorder(style)
+      if (border) {
+        // Drawn inside the frame, as the editor's inset border is.
+        ctx.lineWidth = border.width
+        ctx.strokeStyle = border.color
+        const half = border.width / 2
+        roundRectPath(ctx, half, half, cw - border.width, ch - border.width, Math.max(0, radius - half))
+        ctx.stroke()
+      }
       canvas.removeAttribute(EXPORT_PENDING_ATTR)
     }
     // A photo that cannot be loaded must not hold the whole export hostage.
@@ -104,7 +137,10 @@ export default function CanvasElement({
     }
     img.src = decryptedUrl
     return () => { cancelled = true }
-  }, [exporting, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height])
+  }, [
+    exporting, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
+    photoFilter, cornerRadius, borderWidth, borderColor, isPolaroidPhoto,
+  ])
 
   // Text styling, shared by the editor's DOM and the export's canvas so both
   // read from one source.
@@ -353,7 +389,7 @@ export default function CanvasElement({
             <div className="flex-1 w-full relative">
               <canvas
                 ref={exportCanvasRef}
-                className={`absolute inset-0 w-full h-full${isPolaroid ? '' : ' rounded'}`}
+                className="absolute inset-0 w-full h-full"
                 style={{ display: 'block' }}
               />
             </div>
@@ -375,13 +411,16 @@ export default function CanvasElement({
           cropOffsetX, cropOffsetY,
         )
         : null
+      const radius = frameSize ? frameRadius(element, frameSize.w, frameSize.h) : frameRadius(element, width, height)
+      const border = frameBorder(element)
+      const cssFilter = filterCss(photoFilter)
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col overflow-hidden`}>
           <div
             ref={photoFrameRef}
-            className={`flex-1 w-full relative overflow-hidden${isPolaroid ? '' : ' rounded'}`}
+            className="flex-1 w-full relative overflow-hidden"
             onPointerDown={canPan ? handlePanPointerDown : undefined}
-            style={canPan ? { cursor: 'move' } : undefined}
+            style={{ borderRadius: radius, ...(canPan ? { cursor: 'move' } : {}) }}
           >
             <div className="absolute inset-0" style={flipped ? { transform: 'scaleX(-1)' } : undefined}>
               <EncryptedImage
@@ -389,9 +428,13 @@ export default function CanvasElement({
                 alt=""
                 crossOrigin="anonymous"
                 className={layout ? 'absolute' : 'absolute inset-0 w-full h-full object-cover'}
-                style={layout
-                  ? { left: layout.left, top: layout.top, width: layout.width, height: layout.height, maxWidth: 'none' }
-                  : { transform: `scale(${imageScale})`, transformOrigin: 'center center' }}
+                // The filter sits on the <img>, so the frame border over it stays unfiltered.
+                style={{
+                  ...(layout
+                    ? { left: layout.left, top: layout.top, width: layout.width, height: layout.height, maxWidth: 'none' }
+                    : { transform: `scale(${imageScale})`, transformOrigin: 'center center' }),
+                  ...(cssFilter ? { filter: cssFilter } : {}),
+                }}
                 onLoad={(e) => {
                   const { naturalWidth: w, naturalHeight: h, src } = e.currentTarget
                   // The blank placeholder loads first; only the decrypted photo counts.
@@ -402,6 +445,12 @@ export default function CanvasElement({
                 draggable={false}
               />
             </div>
+            {border && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ borderRadius: radius, boxShadow: `inset 0 0 0 ${border.width}px ${border.color}` }}
+              />
+            )}
           </div>
           {isPolaroid && element.caption && (
             <p className="text-center text-xs font-serif text-bark-muted mt-1 truncate px-1">

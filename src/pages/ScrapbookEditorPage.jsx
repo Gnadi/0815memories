@@ -313,10 +313,13 @@ export default function ScrapbookEditorPage() {
     if (!selectedElement) return
     handleUpdateElement(selectedId, { imageScale: newScale, fit: null }, `zoom:${selectedId}`)
   }
-  const handleActionCrop = (updates) => {
+  // Slider fields: a run of ticks on one of them is one undo step. Taps on a
+  // filter or a colour stay a step each.
+  const SLIDER_FIELDS = ['offsetX', 'offsetY', 'rotation', 'borderWidth', 'cornerRadius']
+  const handleActionUpdate = (updates) => {
     if (!selectedElement) return
-    const [field] = Object.keys(updates)
-    const gesture = Object.keys(updates).length === 1 ? `crop-${field}:${selectedId}` : null
+    const fields = Object.keys(updates)
+    const gesture = fields.length === 1 && SLIDER_FIELDS.includes(fields[0]) ? `${fields[0]}:${selectedId}` : null
     handleUpdateElement(selectedId, updates, gesture)
   }
   const handleActionPolaroid = (on) => {
@@ -423,7 +426,8 @@ export default function ScrapbookEditorPage() {
             onRotate={handleActionRotate}
             onFlip={handleActionFlip}
             onScale={handleActionScale}
-            onCrop={handleActionCrop}
+            onCrop={handleActionUpdate}
+            onStyle={handleActionUpdate}
             onPolaroid={handleActionPolaroid}
             onCaption={handleActionCaption}
             panel={photoPanel}

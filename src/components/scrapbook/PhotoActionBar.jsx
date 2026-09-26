@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import EncryptedImage from '../media/EncryptedImage'
+import { FILTER_PRESETS, FRAME_COLORS, MAX_FRAME_WIDTH, filterCss } from './photoStyle'
 import {
   Check,
   Camera,
@@ -6,6 +8,8 @@ import {
   Crop,
   Expand,
   PanelBottom,
+  Wand2,
+  Square,
   RotateCw,
   FlipHorizontal2,
   ImageOff,
@@ -14,7 +18,8 @@ import {
 
 /**
  * Contextual bottom bar shown when a filled photo element is selected.
- * Mirrors the reference action strip: Done · Change · Swap · Crop · Polaroid · Rotate · Flip
+ * Mirrors the reference action strip:
+ * Done · Change · Swap · Crop · Polaroid · Frame · Filter · Rotate · Flip
  * Plus two destructive actions: Remove picture (keep slot empty) and Remove.
  *
  * Props:
@@ -23,12 +28,14 @@ import {
  *  - onChange()                  → triggers PhotoBar "replace" mode
  *  - onSwap()                    → triggers PhotoBar "swap" mode
  *  - onRotate()                  → 90° step clockwise
+ *  - onStyle(updates)            → { rotation } | { filter } | { borderWidth, borderColor } | { cornerRadius }
  *  - onFlip()
  *  - onScale(newScale)           → 0.5..3
  *  - onCrop(updates)             → { offsetX, offsetY, fit, imageScale } for the crop panel
  *  - onPolaroid(on)              → white polaroid border on / off
  *  - onCaption(text)             → the line written under a polaroid
- *  - panel / onTogglePanel(id)   → which panel is open: 'crop' | 'polaroid' | null.
+ *  - panel / onTogglePanel(id)   → which panel is open:
+ *                                  'crop' | 'polaroid' | 'frame' | 'filter' | 'rotate' | null.
  *                                  While 'crop' is open, dragging the photo pans
  *                                  it inside its frame
  *  - onRemovePicture()           → clears url, keeps slot
@@ -41,6 +48,7 @@ export default function PhotoActionBar({
   onChange,
   onSwap,
   onRotate,
+  onStyle,
   onFlip,
   onScale,
   onCrop,
@@ -57,6 +65,11 @@ export default function PhotoActionBar({
   const isFit = element?.fit === 'contain'
   const isPolaroid = !!element?.polaroid
   const cropOpen = panel === 'crop'
+  const rotation = normaliseAngle(element?.rotation || 0)
+  const borderWidth = element?.borderWidth || 0
+  const borderColor = element?.borderColor || FRAME_COLORS[0]
+  const cornerRadius = typeof element?.cornerRadius === 'number' ? element.cornerRadius : 0
+  const currentFilter = element?.filter || 'none'
 
   // Turning the border on opens the caption field straight away — writing the
   // line underneath is the reason to want a polaroid.
@@ -75,7 +88,9 @@ export default function PhotoActionBar({
     { id: 'swap', icon: Replace, label: t('photoActions.swap'), onClick: onSwap, active: mode === 'swap' },
     { id: 'crop', icon: Crop, label: t('photoActions.crop'), onClick: () => onTogglePanel?.('crop'), active: cropOpen },
     { id: 'polaroid', icon: PanelBottom, label: t('photoActions.polaroid'), onClick: handlePolaroidAction, active: isPolaroid || panel === 'polaroid' },
-    { id: 'rotate', icon: RotateCw, label: t('photoActions.rotate'), onClick: onRotate },
+    { id: 'frame', icon: Square, label: t('photoActions.frame'), onClick: () => onTogglePanel?.('frame'), active: panel === 'frame' },
+    { id: 'filter', icon: Wand2, label: t('photoActions.filter'), onClick: () => onTogglePanel?.('filter'), active: panel === 'filter' },
+    { id: 'rotate', icon: RotateCw, label: t('photoActions.rotate'), onClick: () => onTogglePanel?.('rotate'), active: panel === 'rotate' },
     { id: 'flip', icon: FlipHorizontal2, label: t('photoActions.flip'), onClick: onFlip },
     { id: 'remove-picture', icon: ImageOff, label: t('photoActions.clear'), onClick: onRemovePicture, variant: 'warn' },
     { id: 'remove', icon: Trash2, label: t('photoActions.remove'), onClick: onRemove, variant: 'danger' },
@@ -173,6 +188,126 @@ export default function PhotoActionBar({
         </div>
       )}
 
+      {panel === 'rotate' && (
+        <div className="px-4 pt-3 pb-1 space-y-2">
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={1}
+              value={rotation}
+              onChange={(e) => onStyle?.({ rotation: parseInt(e.target.value, 10) })}
+              aria-label={t('photoActions.angle')}
+              className="flex-1 accent-kaydo"
+            />
+            <span className="text-[11px] font-mono text-bark-light w-10 text-right">{rotation}°</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onRotate}
+              className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-cream-dark text-bark hover:bg-cream"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              {t('photoActions.rotate90')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onStyle?.({ rotation: 0 })}
+              className="text-[11px] font-medium text-kaydo hover:text-kaydo-dark"
+            >
+              {t('photoActions.straighten')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {panel === 'filter' && (
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pt-3 pb-1">
+          {FILTER_PRESETS.map((preset) => {
+            const selected = currentFilter === preset.id
+            const css = filterCss(preset.id)
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onStyle?.({ filter: preset.id === 'none' ? null : preset.id })}
+                aria-pressed={selected}
+                className="flex-shrink-0 flex flex-col items-center gap-1"
+              >
+                <span
+                  className={`relative block w-14 h-14 rounded-xl overflow-hidden border-2 ${
+                    selected ? 'border-kaydo' : 'border-transparent'
+                  }`}
+                >
+                  {element?.url && (
+                    <EncryptedImage
+                      src={element.url}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={css ? { filter: css } : undefined}
+                    />
+                  )}
+                </span>
+                <span className={`text-[10px] font-medium ${selected ? 'text-kaydo' : 'text-bark-muted'}`}>
+                  {t(`photoActions.filters.${preset.id}`)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {panel === 'frame' && (
+        <div className="pt-3 pb-1 space-y-2">
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4">
+            {FRAME_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                aria-label={color}
+                aria-pressed={borderWidth > 0 && borderColor === color}
+                // Picking a colour on a frameless photo gives it a frame to show it on.
+                onClick={() => onStyle?.({ borderColor: color, borderWidth: borderWidth || 6 })}
+                className={`flex-shrink-0 w-8 h-8 rounded-full border-2 transition-transform active:scale-95 ${
+                  borderWidth > 0 && borderColor === color ? 'border-kaydo scale-110' : 'border-cream-dark'
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-3 px-4">
+            <span className="text-[11px] font-medium text-bark-muted w-14 flex-shrink-0">{t('photoActions.thickness')}</span>
+            <input
+              type="range"
+              min={0}
+              max={MAX_FRAME_WIDTH}
+              step={1}
+              value={borderWidth}
+              onChange={(e) => onStyle?.({ borderWidth: parseInt(e.target.value, 10) })}
+              aria-label={t('photoActions.thickness')}
+              className="flex-1 accent-kaydo"
+            />
+            <span className="text-[11px] font-mono text-bark-light w-10 text-right">{borderWidth}px</span>
+          </div>
+          <div className="flex items-center gap-3 px-4">
+            <span className="text-[11px] font-medium text-bark-muted w-14 flex-shrink-0">{t('photoActions.corners')}</span>
+            <input
+              type="range"
+              min={0}
+              max={0.5}
+              step={0.01}
+              value={cornerRadius}
+              onChange={(e) => onStyle?.({ cornerRadius: parseFloat(e.target.value) })}
+              aria-label={t('photoActions.corners')}
+              className="flex-1 accent-kaydo"
+            />
+            <span className="text-[11px] font-mono text-bark-light w-10 text-right">{Math.round(cornerRadius * 200)}%</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-1 overflow-x-auto hide-scrollbar px-2 py-3">
         {actions.map(({ id, icon: Icon, label, onClick, primary, active, variant }) => (
           <button
@@ -198,4 +333,11 @@ export default function PhotoActionBar({
       </div>
     </div>
   )
+}
+
+// The slider runs from −180° to 180°; stored angles can be anything (the 90°
+// button counts up to 270°).
+function normaliseAngle(deg) {
+  const a = ((Math.round(deg) % 360) + 360) % 360
+  return a > 180 ? a - 360 : a
 }

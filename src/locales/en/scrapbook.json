@@ -73,7 +73,24 @@
     "caption": "Caption",
     "captionPlaceholder": "Write a caption…",
     "polaroidOn": "Border on",
-    "polaroidOff": "Border off"
+    "polaroidOff": "Border off",
+    "frame": "Frame",
+    "filter": "Filter",
+    "thickness": "Width",
+    "corners": "Corners",
+    "angle": "Angle",
+    "rotate90": "Rotate 90°",
+    "straighten": "Straighten",
+    "filters": {
+      "none": "Original",
+      "bw": "B&W",
+      "sepia": "Sepia",
+      "warm": "Warm",
+      "vintage": "Vintage",
+      "vivid": "Vivid",
+      "fade": "Fade",
+      "cool": "Cool"
+    }
   },
   "swap": {
     "tapToSwap": "Tap another photo on the page to swap",

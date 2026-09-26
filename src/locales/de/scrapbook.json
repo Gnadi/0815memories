@@ -73,7 +73,24 @@
     "caption": "Bildunterschrift",
     "captionPlaceholder": "Bildunterschrift schreiben…",
     "polaroidOn": "Rahmen an",
-    "polaroidOff": "Rahmen aus"
+    "polaroidOff": "Rahmen aus",
+    "frame": "Rahmen",
+    "filter": "Filter",
+    "thickness": "Stärke",
+    "corners": "Ecken",
+    "angle": "Winkel",
+    "rotate90": "90° drehen",
+    "straighten": "Gerade ausrichten",
+    "filters": {
+      "none": "Original",
+      "bw": "S/W",
+      "sepia": "Sepia",
+      "warm": "Warm",
+      "vintage": "Vintage",
+      "vivid": "Kräftig",
+      "fade": "Blass",
+      "cool": "Kühl"
+    }
   },
   "swap": {
     "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",
