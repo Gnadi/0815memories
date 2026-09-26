@@ -75,7 +75,8 @@
     "labelHelp": "Shows under the story circle. Defaults to date if blank.",
     "uploading": "Uploading...",
     "saveChanges": "Save Changes",
-    "shareMoment": "Share Moment"
+    "shareMoment": "Share Moment",
+    "saveFailed": "Could not save. Please try again."
   },
   "entryType": {
     "label": "Post as",
