@@ -212,6 +212,7 @@
     "checkoutUnavailable": "Peecho's checkout could not be loaded. If you use an ad or content blocker, allow peecho.com and try again.",
     "preview": "View the print file",
     "failed": "The print file could not be prepared. Please try again.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "noProduct": "Peecho has no product for a book of {{count}} pages in this size yet. Hardcover books need at least 24 pages – add pages, or ask whoever runs Kaydo to offer a product that fits."
   }
 }

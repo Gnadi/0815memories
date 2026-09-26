@@ -8,6 +8,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+// The link's text is Peecho's to write (see PeechoPrintButton), so tests find
+// it by its class.
+const peechoLink = () => waitFor(() => {
+  const link = document.querySelector('a.peecho-print-button')
+  if (!link) throw new Error('no Peecho button yet')
+  return link
+})
+
 vi.mock('../utils/printUpload', () => ({ uploadPrintFile: vi.fn() }))
 vi.mock('../utils/peechoButton', () => ({ loadPeechoButtons: vi.fn() }))
 
@@ -66,7 +74,7 @@ describe('PrintOrderModal', () => {
     const { onRender } = open()
     fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
 
-    const link = await screen.findByText('Order at Peecho')
+    const link = await peechoLink()
     expect(onRender).toHaveBeenCalledTimes(1)
     expect(uploadPrintFile).toHaveBeenCalledWith(expect.objectContaining({
       familyId: 'fam',
@@ -74,7 +82,11 @@ describe('PrintOrderModal', () => {
       thumbnail: renderedFile.thumbnail,
     }))
 
-    expect(link).toHaveClass('peecho-print-button')
+    expect(link).toHaveAttribute('href', 'https://www.peecho.com/')
+    expect(link).toHaveAttribute('data-text', 'Order at Peecho')
+    expect(link).toHaveAttribute('data-new-window', 'true')
+    expect(link).toHaveAttribute('data-style', 'false')
+    expect(link).toBeEmptyDOMElement()
     expect(link).toHaveAttribute('data-src', uploadedFile.pdfUrl)
     expect(link).toHaveAttribute('data-thumbnail', uploadedFile.thumbnailUrl)
     expect(link).toHaveAttribute('data-pages', '4')
@@ -92,6 +104,17 @@ describe('PrintOrderModal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/checkout could not be loaded/)
   })
 
+  it('says so when none of the shop\u2019s products fits the book', async () => {
+    // What Peecho's script does to a button no product matches.
+    loadPeechoButtons.mockImplementation(async () => {
+      document.querySelector('a.peecho-print-button').classList.add('peecho-btn', 'peecho-btn-disabled')
+    })
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Peecho has no product for a book of 4 pages')
+    expect(document.querySelector('a.peecho-print-button')).toBeInTheDocument()
+  })
+
   it('offers another try when the print file cannot be made', async () => {
     const onRender = vi.fn()
       .mockRejectedValueOnce(new Error('html2canvas fell over'))
@@ -102,7 +125,7 @@ describe('PrintOrderModal', () => {
     expect(uploadPrintFile).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await screen.findByText('Order at Peecho')).toBeInTheDocument()
+    expect(await peechoLink()).toBeInTheDocument()
     expect(onRender).toHaveBeenCalledTimes(2)
   })
 

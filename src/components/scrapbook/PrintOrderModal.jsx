@@ -33,7 +33,8 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
   const [rendered, setRendered] = useState({ done: 0, total: sheets.length })
   const [uploaded, setUploaded] = useState(0)
   const [result, setResult] = useState(null)
-  const [checkoutUnavailable, setCheckoutUnavailable] = useState(false)
+  // null | 'failed' (Peecho's script did not load) | 'noProduct' (no product fits)
+  const [checkoutStatus, setCheckoutStatus] = useState(null)
   const cancelledRef = useRef(false)
 
   // Leaving the dialog, however it happens, stops a render or upload under way.
@@ -48,7 +49,7 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
   const handlePrepare = async () => {
     cancelledRef.current = false
     const isCancelled = () => cancelledRef.current
-    setCheckoutUnavailable(false)
+    setCheckoutStatus(null)
     setRendered({ done: 0, total: pageCount })
     setPhase('rendering')
     try {
@@ -168,7 +169,7 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
                 <p className="font-semibold text-bark">{t('print.readyHeading')}</p>
                 <p className="text-bark-muted mt-1">{t('print.readyBody')}</p>
               </div>
-              {checkoutUnavailable ? (
+              {checkoutStatus === 'failed' ? (
                 <p role="alert" className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700">
                   {t('print.checkoutUnavailable')}
                 </p>
@@ -177,8 +178,13 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
                   buttonKey={config.buttonKey}
                   attributes={buttonAttributes}
                   label={t('print.orderAtPeecho')}
-                  onUnavailable={() => setCheckoutUnavailable(true)}
+                  onStatus={setCheckoutStatus}
                 />
+              )}
+              {checkoutStatus === 'noProduct' && (
+                <p role="alert" className="px-3 py-2 rounded-xl bg-cream text-bark">
+                  {t('print.noProduct', { count: result.pageCount })}
+                </p>
               )}
               <a
                 href={result.pdfUrl}

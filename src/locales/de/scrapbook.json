@@ -212,6 +212,7 @@
     "checkoutUnavailable": "Die Kasse von Peecho konnte nicht geladen werden. Falls du einen Werbe- oder Inhaltsblocker nutzt, erlaube peecho.com und versuche es erneut.",
     "preview": "Druckdatei ansehen",
     "failed": "Die Druckdatei konnte nicht vorbereitet werden. Bitte versuche es erneut.",
-    "tryAgain": "Erneut versuchen"
+    "tryAgain": "Erneut versuchen",
+    "noProduct": "Peecho hat für ein Buch mit {{count}} Seiten in diesem Format noch kein Produkt. Hardcover-Bücher brauchen mindestens 24 Seiten – füge Seiten hinzu oder bitte die Betreiber von Kaydo, ein passendes Produkt anzubieten."
   }
 }

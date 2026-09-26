@@ -36,7 +36,9 @@ describe('security headers', () => {
     const csp = directives(pageHeaders()['content-security-policy'] ?? '')
     expect(csp['object-src']).toEqual(["'none'"])
     expect(csp['base-uri']).toEqual(["'self'"])
-    expect(csp['form-action']).toEqual(["'self'"])
+    // Peecho's print button posts the order to its checkout as a form — the
+    // one cross-origin form post the app makes (PeechoPrintButton).
+    expect(csp['form-action']).toEqual(["'self'", 'https://secure.print.peecho.com'])
     expect(csp['frame-ancestors']).toEqual(["'none'"])
   })
 

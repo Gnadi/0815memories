@@ -200,10 +200,10 @@ Peecho products.
    `purgePrintFiles` deletes print files after 30 days. The number is
    `PRINT_FILE_RETENTION_DAYS` in `functions/printFiles.js` and
    `src/utils/printBook.js`, and the order dialog shows it to the family.
-5. Place a test order. If the Peecho button does nothing, check the browser
-   console. A Content-Security-Policy `form-action` violation would mean
-   Peecho's checkout posts a form from the page, and `vercel.json` would then
-   need Peecho added to `form-action`.
+5. Place a test order. The button shows your lowest price for the book, or
+   "unavailable" when none of your products fits its page count and shape.
+   It posts the order to `https://secure.print.peecho.com` in a new tab, which
+   is why `vercel.json`'s `form-action` allows that host.
 
 `storage.rules` is not deployed by the Firestore workflow. Its tests run with
 the others in `npm run test:rules`, which now starts the Storage emulator too.
