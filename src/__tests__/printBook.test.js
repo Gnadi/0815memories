@@ -11,8 +11,6 @@ import {
   printFrame,
   printPixelRatio,
   printSequence,
-  peechoLocale,
-  printButtonAttributes,
   createPrintPdf,
   DEFAULT_FORMAT,
   PAGE_WIDTH,
@@ -22,23 +20,18 @@ import {
 const A4_LANDSCAPE = { widthMm: 297, heightMm: 210 }
 
 describe('printConfig', () => {
-  it('is off without a button key, and prints A4 landscape by default', () => {
-    expect(printConfig({})).toEqual({ buttonKey: '', ...DEFAULT_FORMAT, currency: '' })
+  it('is off unless turned on, and prints A4 landscape by default', () => {
+    expect(printConfig({})).toEqual({ enabled: false, ...DEFAULT_FORMAT, currency: '' })
+    expect(printConfig({ VITE_PEECHO_ENABLED: 'yes' }).enabled).toBe(false)
   })
 
-  it('reads the key, the format and the currency', () => {
+  it('reads the switch, the format and the currency', () => {
     expect(printConfig({
-      VITE_PEECHO_BUTTON_KEY: ' 13032875623450 ',
+      VITE_PEECHO_ENABLED: 'true',
       VITE_PEECHO_PAGE_WIDTH_MM: '280',
       VITE_PEECHO_PAGE_HEIGHT_MM: '210',
       VITE_PEECHO_CURRENCY: 'eur',
-    })).toEqual({ buttonKey: '13032875623450', widthMm: 280, heightMm: 210, currency: 'EUR' })
-  })
-
-  // The key becomes part of a script URL.
-  it('refuses a key that is not a plain token', () => {
-    expect(printConfig({ VITE_PEECHO_BUTTON_KEY: '../evil.js?x=' }).buttonKey).toBe('')
-    expect(printConfig({ VITE_PEECHO_BUTTON_KEY: 'a/b' }).buttonKey).toBe('')
+    })).toEqual({ enabled: true, widthMm: 280, heightMm: 210, currency: 'EUR' })
   })
 
   it('falls back per dimension on nonsense sizes, and drops a malformed currency', () => {
@@ -121,43 +114,6 @@ describe('printSequence', () => {
   it('falls back to the default background when the cover colour is not a plain hex colour', () => {
     expect(printSequence([page(undefined)]).at(-1).color).toBe('#FDF6EC')
     expect(printSequence([page('url(x)')]).at(-1).color).toBe('#FDF6EC')
-  })
-})
-
-describe('printButtonAttributes', () => {
-  const base = {
-    pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/book.pdf?alt=media&token=t',
-    thumbnailUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/cover.jpg?alt=media&token=u',
-    pageCount: 24,
-    format: A4_LANDSCAPE,
-    reference: 'print-1',
-  }
-
-  it('describes the file the way Peecho’s print button expects', () => {
-    expect(printButtonAttributes({ ...base, language: 'en' })).toEqual({
-      'data-filetype': 'pdf',
-      'data-width': '297',
-      'data-height': '210',
-      'data-pages': '24',
-      'data-src': base.pdfUrl,
-      'data-thumbnail': base.thumbnailUrl,
-      'data-reference': 'print-1',
-    })
-  })
-
-  it('opens the checkout in German for a German admin, and in the configured currency', () => {
-    const attributes = printButtonAttributes({ ...base, language: 'de-AT', currency: 'EUR' })
-    expect(attributes['data-locale']).toBe('de_DE')
-    expect(attributes['data-currency']).toBe('EUR')
-  })
-
-  it('leaves out a thumbnail it does not have', () => {
-    expect(printButtonAttributes({ ...base, thumbnailUrl: null })).not.toHaveProperty('data-thumbnail')
-  })
-
-  it('leaves the locale to Peecho outside German', () => {
-    expect(peechoLocale('en')).toBeNull()
-    expect(peechoLocale('de')).toBe('de_DE')
   })
 })
 

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Loader2, Printer, LockOpen, Info, ExternalLink, RotateCcw } from 'lucide-react'
-import PeechoPrintButton from './PeechoPrintButton'
 import {
   printConfig,
-  printButtonAttributes,
   HARDCOVER_MIN_PAGES,
   PRINT_FILE_RETENTION_DAYS,
 } from '../../utils/printBook'
 import { uploadPrintFile } from '../../utils/printUpload'
+import { createPrintCheckout } from '../../utils/printCheckout'
 import { devError } from '../../utils/devLog'
 
 /**
@@ -16,61 +15,103 @@ import { devError } from '../../utils/devLog'
  *
  * Kaydo's part ends at the checkout: it renders the print file (through
  * `onRender`, which the editor provides because only the editor can draw its
- * pages), uploads it, and shows Peecho's print button. Product, address and
- * payment all happen at Peecho — see utils/printBook.js for why.
+ * pages), uploads it, and has the createPrintCheckout Cloud Function open a
+ * Peecho checkout for it. Product, address and payment all happen at Peecho —
+ * see utils/printBook.js for why.
  *
  * The dialog says up front that the file is unencrypted, before anything is
  * rendered: it is the one time the app hands a family's photos to someone
  * outside it in readable form.
  *
- * `sheets` is the book as it will be printed (printSequence).
+ * `sheets` is the book as it will be printed (printSequence); `title` names
+ * it at the checkout.
  */
-export default function PrintOrderModal({ familyId, sheets, onRender, onClose }) {
+export default function PrintOrderModal({ familyId, title, sheets, onRender, onClose }) {
   const { t, i18n } = useTranslation('scrapbook')
   const config = useMemo(() => printConfig(), [])
-  // 'intro' | 'rendering' | 'uploading' | 'ready' | 'error'
+  // 'intro' | 'rendering' | 'uploading' | 'checkout' | 'ready' | 'error'
   const [phase, setPhase] = useState('intro')
   const [rendered, setRendered] = useState({ done: 0, total: sheets.length })
   const [uploaded, setUploaded] = useState(0)
-  const [result, setResult] = useState(null)
-  // null | 'failed' (Peecho's script did not load) | 'noProduct' (no product fits)
-  const [checkoutStatus, setCheckoutStatus] = useState(null)
+  // The uploaded print file, kept so a failed checkout can be retried alone.
+  const [file, setFile] = useState(null)
+  const [checkout, setCheckout] = useState(null)
+  // Where it went wrong: 'file' (render or upload) or 'checkout' (Peecho).
+  const [failedAt, setFailedAt] = useState(null)
   const cancelledRef = useRef(false)
 
   // Leaving the dialog, however it happens, stops a render or upload under way.
   useEffect(() => () => { cancelledRef.current = true }, [])
 
-  const busy = phase === 'rendering' || phase === 'uploading'
+  const busy = phase === 'rendering' || phase === 'uploading' || phase === 'checkout'
   const pageCount = sheets.length
   const blankAdded = sheets.some((sheet) => sheet.kind === 'blank')
 
   const cm = (mm) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(mm / 10)
 
+  const isCancelled = () => cancelledRef.current
+
+  const openCheckout = async (printFile) => {
+    setPhase('checkout')
+    try {
+      const result = await createPrintCheckout({
+        familyId,
+        printId: printFile.printId,
+        pageCount: printFile.pageCount,
+        format: printFile.format,
+        currency: config.currency,
+        language: i18n.language,
+        title,
+      })
+      if (isCancelled()) return
+      setCheckout(result)
+      setPhase('ready')
+    } catch (err) {
+      if (isCancelled()) return
+      devError('Creating the Peecho checkout failed', err)
+      setFailedAt('checkout')
+      setPhase('error')
+    }
+  }
+
   const handlePrepare = async () => {
     cancelledRef.current = false
-    const isCancelled = () => cancelledRef.current
-    setCheckoutStatus(null)
+    setFailedAt(null)
     setRendered({ done: 0, total: pageCount })
     setPhase('rendering')
+    let printFile
     try {
-      const file = await onRender({ onProgress: setRendered, isCancelled })
-      if (!file || isCancelled()) return
+      const rendering = await onRender({ onProgress: setRendered, isCancelled })
+      if (!rendering || isCancelled()) return
       setUploaded(0)
       setPhase('uploading')
       const upload = await uploadPrintFile({
         familyId,
-        pdf: file.pdf,
-        thumbnail: file.thumbnail,
+        pdf: rendering.pdf,
+        thumbnail: rendering.thumbnail,
         onProgress: setUploaded,
         isCancelled,
       })
       if (!upload || isCancelled()) return
-      setResult({ ...upload, pageCount: file.pageCount, format: file.format })
-      setPhase('ready')
+      printFile = { ...upload, pageCount: rendering.pageCount, format: rendering.format }
+      setFile(printFile)
     } catch (err) {
       if (isCancelled()) return
       devError('Preparing the print file failed', err)
+      setFailedAt('file')
       setPhase('error')
+      return
+    }
+    await openCheckout(printFile)
+  }
+
+  const handleRetry = () => {
+    cancelledRef.current = false
+    if (failedAt === 'checkout' && file) {
+      setFailedAt(null)
+      openCheckout(file)
+    } else {
+      handlePrepare()
     }
   }
 
@@ -78,18 +119,6 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
     cancelledRef.current = true
     onClose()
   }
-
-  const buttonAttributes = useMemo(() => (result
-    ? printButtonAttributes({
-      pdfUrl: result.pdfUrl,
-      thumbnailUrl: result.thumbnailUrl,
-      pageCount: result.pageCount,
-      format: result.format,
-      reference: result.printId,
-      language: i18n.language,
-      currency: config.currency,
-    })
-    : null), [result, i18n.language, config.currency])
 
   const renderedFraction = rendered.total > 0 ? rendered.done / rendered.total : 0
 
@@ -151,43 +180,42 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
               <p className="text-bark text-center">
                 {phase === 'rendering'
                   ? t('print.rendering', { current: Math.min(rendered.done + 1, rendered.total), total: rendered.total })
-                  : t('print.uploading', { percent: Math.round(uploaded * 100) })}
+                  : phase === 'uploading'
+                    ? t('print.uploading', { percent: Math.round(uploaded * 100) })
+                    : t('print.creatingCheckout')}
               </p>
               <div className="h-2 rounded-full bg-cream-dark overflow-hidden">
                 <div
                   className="h-full bg-kaydo transition-[width] duration-300"
-                  style={{ width: `${Math.round((phase === 'rendering' ? renderedFraction : uploaded) * 100)}%` }}
+                  style={{ width: `${Math.round((phase === 'rendering' ? renderedFraction : phase === 'uploading' ? uploaded : 1) * 100)}%` }}
                 />
               </div>
               <p className="text-xs text-bark-muted text-center">{t('print.keepOpen')}</p>
             </div>
           )}
 
-          {phase === 'ready' && result && (
+          {phase === 'ready' && checkout && (
             <div className="space-y-4">
               <div>
                 <p className="font-semibold text-bark">{t('print.readyHeading')}</p>
                 <p className="text-bark-muted mt-1">{t('print.readyBody')}</p>
               </div>
-              {checkoutStatus === 'failed' ? (
-                <p role="alert" className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700">
-                  {t('print.checkoutUnavailable')}
-                </p>
-              ) : (
-                <PeechoPrintButton
-                  buttonKey={config.buttonKey}
-                  attributes={buttonAttributes}
-                  label={t('print.orderAtPeecho')}
-                  onStatus={setCheckoutStatus}
-                />
-              )}
-              {checkoutStatus === 'noProduct' && (
-                <p role="alert" className="px-3 py-2 rounded-xl bg-cream text-bark">
-                  {t('print.noProduct', { count: result.pageCount })}
-                </p>
-              )}
+              <div className="flex justify-center">
+                <a
+                  href={checkout.checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-kaydo inline-flex items-center gap-2 text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {t('print.orderAtPeecho')}
+                </a>
+              </div>
+              <p className="text-xs text-bark-muted text-center">
+                {t('print.linkExpires', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(new Date(checkout.expiresAt)) })}
+              </p>
               <a
-                href={result.pdfUrl}
+                href={file.pdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 text-xs text-bark-muted hover:text-kaydo"
@@ -200,7 +228,7 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
 
           {phase === 'error' && (
             <p role="alert" className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700">
-              {t('print.failed')}
+              {failedAt === 'checkout' ? t('print.checkoutFailed') : t('print.failed')}
             </p>
           )}
         </div>
@@ -224,7 +252,7 @@ export default function PrintOrderModal({ familyId, sheets, onRender, onClose })
             </button>
           )}
           {phase === 'error' && (
-            <button onClick={handlePrepare} className="btn-kaydo flex items-center gap-2 text-sm">
+            <button onClick={handleRetry} className="btn-kaydo flex items-center gap-2 text-sm">
               <RotateCcw className="w-4 h-4" />
               {t('print.tryAgain')}
             </button>

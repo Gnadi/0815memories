@@ -37,8 +37,8 @@ import {
 } from '../components/scrapbook/pageCapture'
 import { editorReducer, initialState, makeBlankPage, FRESH_CROP } from '../components/scrapbook/editorState'
 
-// Printing is on when the deployment has a Peecho button key.
-const PRINTING_ENABLED = !!printConfig().buttonKey
+// Printing is on when the deployment has turned it on (VITE_PEECHO_ENABLED).
+const PRINTING_ENABLED = printConfig().enabled
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -513,6 +513,7 @@ export default function ScrapbookEditorPage() {
       {printOpen && (
         <PrintOrderModal
           familyId={familyId}
+          title={title}
           sheets={printSequence(pages)}
           onRender={renderPrintFile}
           onClose={() => setPrintOpen(false)}

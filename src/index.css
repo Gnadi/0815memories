@@ -84,27 +84,6 @@ select {
   box-shadow: 0 6px 16px rgba(194, 90, 46, 0.4);
 }
 
-/* Peecho's print button (PeechoPrintButton) looks like the app's own primary
-   button: the link asks Peecho's script for no stylesheet (data-style="false"),
-   and the script marks a book no product fits as disabled. Inside :where(), so
-   anything Peecho does style still wins. */
-:where(.peecho-button-host > a.peecho-print-button) {
-  display: inline-block;
-  background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
-  color: white;
-  border-radius: 9999px;
-  padding: 0.75rem 2rem;
-  font-weight: 600;
-  text-decoration: none;
-  box-shadow: 0 4px 12px rgba(194, 90, 46, 0.3);
-}
-:where(.peecho-button-host > a.peecho-btn-disabled, .peecho-button-host > a.peecho-btn-error) {
-  background: var(--color-cream-dark);
-  color: var(--color-bark-muted);
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
 .story-ring {
   background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
   padding: 3px;

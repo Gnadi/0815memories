@@ -1,26 +1,18 @@
 /**
  * Ordering a printed scrapbook — PrintOrderModal.
  *
- * The dialog must say the print file is unencrypted before it makes one, hand
- * Peecho exactly the file it uploaded, and stop rendering and uploading the
- * moment the admin walks away.
+ * The dialog must say the print file is unencrypted before it makes one, ask
+ * for a checkout for exactly the file it uploaded, and stop rendering and
+ * uploading the moment the admin walks away.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
-// The link's text is Peecho's to write (see PeechoPrintButton), so tests find
-// it by its class.
-const peechoLink = () => waitFor(() => {
-  const link = document.querySelector('a.peecho-print-button')
-  if (!link) throw new Error('no Peecho button yet')
-  return link
-})
-
 vi.mock('../utils/printUpload', () => ({ uploadPrintFile: vi.fn() }))
-vi.mock('../utils/peechoButton', () => ({ loadPeechoButtons: vi.fn() }))
+vi.mock('../utils/printCheckout', () => ({ createPrintCheckout: vi.fn() }))
 
 const { uploadPrintFile } = await import('../utils/printUpload')
-const { loadPeechoButtons } = await import('../utils/peechoButton')
+const { createPrintCheckout } = await import('../utils/printCheckout')
 const PrintOrderModal = (await import('../components/scrapbook/PrintOrderModal')).default
 
 const pages = (n) => Array.from({ length: n }, (_, index) => ({ kind: 'page', index }))
@@ -33,9 +25,13 @@ const renderedFile = {
   format: { widthMm: 297, heightMm: 210 },
 }
 const uploadedFile = {
-  printId: 'print-123',
-  pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/k/o/printFiles%2Ffam%2Fprint-123%2Fbook.pdf?alt=media&token=t',
-  thumbnailUrl: 'https://firebasestorage.googleapis.com/v0/b/k/o/printFiles%2Ffam%2Fprint-123%2Fcover.jpg?alt=media&token=u',
+  printId: '0b6e3c1e-6f7a-4c1e-9d2b-3a4b5c6d7e8f',
+  pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/k/o/printFiles%2Ffam%2Fp%2Fbook.pdf?alt=media&token=t',
+  thumbnailUrl: 'https://firebasestorage.googleapis.com/v0/b/k/o/printFiles%2Ffam%2Fp%2Fcover.jpg?alt=media&token=u',
+}
+const checkout = {
+  checkoutUrl: 'https://www.peecho.com/checkout/print/en/dec27b95?token=4b33',
+  expiresAt: '2026-10-03T18:00:00.000Z',
 }
 
 function open(props = {}) {
@@ -44,14 +40,16 @@ function open(props = {}) {
     return renderedFile
   })
   const onClose = props.onClose ?? vi.fn()
-  render(<PrintOrderModal familyId="fam" sheets={sheets} onRender={onRender} onClose={onClose} {...props} />)
+  render(<PrintOrderModal familyId="fam" title="Summer" sheets={sheets} onRender={onRender} onClose={onClose} {...props} />)
   return { onRender, onClose }
 }
 
+const prepare = () => fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+
 beforeEach(() => {
-  vi.stubEnv('VITE_PEECHO_BUTTON_KEY', 'key123')
+  vi.stubEnv('VITE_PEECHO_CURRENCY', 'EUR')
   uploadPrintFile.mockReset().mockResolvedValue(uploadedFile)
-  loadPeechoButtons.mockReset().mockResolvedValue()
+  createPrintCheckout.mockReset().mockResolvedValue(checkout)
 })
 
 afterEach(() => {
@@ -70,49 +68,43 @@ describe('PrintOrderModal', () => {
     expect(uploadPrintFile).not.toHaveBeenCalled()
   })
 
-  it('renders, uploads, and hands Peecho the uploaded file', async () => {
+  it('renders, uploads, and opens a checkout for the uploaded file', async () => {
     const { onRender } = open()
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+    prepare()
 
-    const link = await peechoLink()
+    const link = await screen.findByRole('link', { name: 'Order at Peecho' })
     expect(onRender).toHaveBeenCalledTimes(1)
     expect(uploadPrintFile).toHaveBeenCalledWith(expect.objectContaining({
       familyId: 'fam',
       pdf: renderedFile.pdf,
       thumbnail: renderedFile.thumbnail,
     }))
-
-    expect(link).toHaveAttribute('href', 'https://www.peecho.com/')
-    expect(link).toHaveAttribute('data-text', 'Order at Peecho')
-    expect(link).toHaveAttribute('data-new-window', 'true')
-    expect(link).toHaveAttribute('data-style', 'false')
-    expect(link).toBeEmptyDOMElement()
-    expect(link).toHaveAttribute('data-src', uploadedFile.pdfUrl)
-    expect(link).toHaveAttribute('data-thumbnail', uploadedFile.thumbnailUrl)
-    expect(link).toHaveAttribute('data-pages', '4')
-    expect(link).toHaveAttribute('data-width', '297')
-    expect(link).toHaveAttribute('data-height', '210')
-    expect(link).toHaveAttribute('data-reference', 'print-123')
-    expect(loadPeechoButtons).toHaveBeenCalledWith('key123')
+    expect(createPrintCheckout).toHaveBeenCalledWith({
+      familyId: 'fam',
+      printId: uploadedFile.printId,
+      pageCount: 4,
+      format: { widthMm: 297, heightMm: 210 },
+      currency: 'EUR',
+      language: 'en',
+      title: 'Summer',
+    })
+    expect(link).toHaveAttribute('href', checkout.checkoutUrl)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(screen.getByText('The checkout link works until October 3, 2026.')).toBeInTheDocument()
     expect(screen.getByText('View the print file').closest('a')).toHaveAttribute('href', uploadedFile.pdfUrl)
   })
 
-  it('says so when Peecho’s checkout cannot be loaded', async () => {
-    loadPeechoButtons.mockRejectedValue(new Error('blocked'))
-    open()
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/checkout could not be loaded/)
-  })
+  it('retries only the checkout when Peecho failed, without making the file again', async () => {
+    createPrintCheckout.mockRejectedValueOnce(new Error('unavailable'))
+    const { onRender } = open()
+    prepare()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Peecho did not open a checkout')
 
-  it('says so when none of the shop\u2019s products fits the book', async () => {
-    // What Peecho's script does to a button no product matches.
-    loadPeechoButtons.mockImplementation(async () => {
-      document.querySelector('a.peecho-print-button').classList.add('peecho-btn', 'peecho-btn-disabled')
-    })
-    open()
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Peecho has no product for a book of 4 pages')
-    expect(document.querySelector('a.peecho-print-button')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('link', { name: 'Order at Peecho' })).toBeInTheDocument()
+    expect(onRender).toHaveBeenCalledTimes(1)
+    expect(uploadPrintFile).toHaveBeenCalledTimes(1)
+    expect(createPrintCheckout).toHaveBeenCalledTimes(2)
   })
 
   it('offers another try when the print file cannot be made', async () => {
@@ -120,12 +112,13 @@ describe('PrintOrderModal', () => {
       .mockRejectedValueOnce(new Error('html2canvas fell over'))
       .mockResolvedValueOnce(renderedFile)
     open({ onRender })
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+    prepare()
     expect(await screen.findByRole('alert')).toHaveTextContent('The print file could not be prepared')
     expect(uploadPrintFile).not.toHaveBeenCalled()
+    expect(createPrintCheckout).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await peechoLink()).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Order at Peecho' })).toBeInTheDocument()
     expect(onRender).toHaveBeenCalledTimes(2)
   })
 
@@ -138,7 +131,7 @@ describe('PrintOrderModal', () => {
       return new Promise((resolve) => { finishRender = resolve })
     })
     const { onClose } = open({ onRender })
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+    prepare()
     expect(await screen.findByText('Preparing page 2 of 4…')).toBeInTheDocument()
     expect(isCancelled()).toBe(false)
 
@@ -149,12 +142,13 @@ describe('PrintOrderModal', () => {
     finishRender(renderedFile)
     await waitFor(() => expect(onRender).toHaveBeenCalled())
     expect(uploadPrintFile).not.toHaveBeenCalled()
+    expect(createPrintCheckout).not.toHaveBeenCalled()
   })
 
   it('ignores a backdrop click while it is working', async () => {
     const onRender = vi.fn(() => new Promise(() => {}))
     const { onClose } = open({ onRender })
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare print file' }))
+    prepare()
     await screen.findByText(/Preparing page/)
     fireEvent.click(document.querySelector('.bg-black\\/50'))
     expect(onClose).not.toHaveBeenCalled()

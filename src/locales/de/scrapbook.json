@@ -209,10 +209,11 @@
     "readyHeading": "Dein Buch kann bestellt werden",
     "readyBody": "Bei Peecho wählst du das Produkt, gibst die Lieferadresse ein und bezahlst. Peecho druckt das Buch und schickt es dir.",
     "orderAtPeecho": "Bei Peecho bestellen",
-    "checkoutUnavailable": "Die Kasse von Peecho konnte nicht geladen werden. Falls du einen Werbe- oder Inhaltsblocker nutzt, erlaube peecho.com und versuche es erneut.",
     "preview": "Druckdatei ansehen",
     "failed": "Die Druckdatei konnte nicht vorbereitet werden. Bitte versuche es erneut.",
     "tryAgain": "Erneut versuchen",
-    "noProduct": "Peecho hat für ein Buch mit {{count}} Seiten in diesem Format noch kein Produkt. Hardcover-Bücher brauchen mindestens 24 Seiten – füge Seiten hinzu oder bitte die Betreiber von Kaydo, ein passendes Produkt anzubieten."
+    "creatingCheckout": "Die Kasse bei Peecho wird eingerichtet…",
+    "linkExpires": "Der Link zur Kasse gilt bis {{date}}.",
+    "checkoutFailed": "Die Druckdatei ist fertig, aber Peecho hat keine Kasse dafür geöffnet. Bitte versuche es gleich noch einmal."
   }
 }

@@ -2,11 +2,11 @@
  * Printed scrapbooks, ordered through Peecho's hosted checkout.
  *
  * Kaydo never takes the order itself. It renders the book into the one PDF a
- * print shop needs, puts that file where Peecho can fetch it, and hands the
- * admin to Peecho's checkout through a print button that carries the file's
- * address and dimensions. Peecho asks for the product, the shipping address and
- * the payment, then prints and ships the book — so no money passes through
- * Kaydo, and nobody can run up a bill on the Peecho account behind it.
+ * print shop needs, puts that file where Peecho can fetch it, and has Peecho
+ * create a checkout for it (the createPrintCheckout Cloud Function). Peecho
+ * asks for the product, the shipping address and the payment, then prints and
+ * ships the book — so no money passes through Kaydo, and nobody can run up a
+ * bill on the Peecho account behind it.
  *
  * What Peecho expects of a book file (its hardcover guideline):
  *  - one PDF of single pages, the front cover first and the back cover last
@@ -16,8 +16,8 @@
  *  - hardcover books need 24 pages or more
  *
  * This module is the arithmetic of that. Rendering happens in the editor
- * (ScrapbookEditorPage), uploading in printUpload.js, and the checkout in
- * PrintOrderModal.
+ * (ScrapbookEditorPage), uploading in printUpload.js, the checkout in
+ * functions/peechoCheckout.js.
  */
 
 /** The editor draws every page at this size, in CSS pixels. */
@@ -59,23 +59,20 @@ const DEFAULT_BACKGROUND = '#FDF6EC'
 const BLANK_PAGE = '#FFFFFF'
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
-// The key goes into a script URL, so it is held to what Peecho issues.
-const BUTTON_KEY = /^[A-Za-z0-9_-]{1,64}$/
 const CURRENCY = /^[A-Z]{3}$/
 
 /**
- * Printing as configured for this deployment. `buttonKey` is empty when the
- * feature is off — no key, no Print button.
+ * Printing as configured for this deployment. Off unless VITE_PEECHO_ENABLED
+ * is 'true' — the Peecho API key itself lives with the Cloud Function.
  */
 export function printConfig(env = import.meta.env) {
   const size = (value, fallback) => {
     const n = Number(value)
     return Number.isFinite(n) && n > 0 ? n : fallback
   }
-  const buttonKey = String(env.VITE_PEECHO_BUTTON_KEY ?? '').trim()
   const currency = String(env.VITE_PEECHO_CURRENCY ?? '').trim().toUpperCase()
   return {
-    buttonKey: BUTTON_KEY.test(buttonKey) ? buttonKey : '',
+    enabled: String(env.VITE_PEECHO_ENABLED ?? '').trim() === 'true',
     widthMm: size(env.VITE_PEECHO_PAGE_WIDTH_MM, DEFAULT_FORMAT.widthMm),
     heightMm: size(env.VITE_PEECHO_PAGE_HEIGHT_MM, DEFAULT_FORMAT.heightMm),
     currency: CURRENCY.test(currency) ? currency : '',
@@ -128,33 +125,6 @@ export function printSequence(pages) {
   if (sheets.length % 2 === 0) sheets.push({ kind: 'blank', color: BLANK_PAGE })
   sheets.push({ kind: 'back', color: colorOr(pages[0]?.backgroundColor, DEFAULT_BACKGROUND) })
   return sheets
-}
-
-/** Peecho's checkout in the admin's language; English is its default. */
-export function peechoLocale(language) {
-  return String(language ?? '').toLowerCase().startsWith('de') ? 'de_DE' : null
-}
-
-/**
- * The data attributes of a Peecho print button for one print file.
- *
- * `reference` comes back to us on Peecho's side of the order — it is how an
- * order in the Peecho dashboard is traced to its file in Storage.
- */
-export function printButtonAttributes({ pdfUrl, thumbnailUrl, pageCount, format, reference, language, currency }) {
-  const attributes = {
-    'data-filetype': 'pdf',
-    'data-width': String(format.widthMm),
-    'data-height': String(format.heightMm),
-    'data-pages': String(pageCount),
-    'data-src': pdfUrl,
-    'data-reference': reference,
-  }
-  if (thumbnailUrl) attributes['data-thumbnail'] = thumbnailUrl
-  const locale = peechoLocale(language)
-  if (locale) attributes['data-locale'] = locale
-  if (currency) attributes['data-currency'] = currency
-  return attributes
 }
 
 /**

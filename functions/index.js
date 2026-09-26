@@ -21,6 +21,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
+import { defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
@@ -29,6 +30,7 @@ import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
+import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -196,6 +198,44 @@ export const purgePrintFiles = onSchedule(
   async () => {
     const { checked, deleted, failed } = await purgeExpiredPrintFiles(getStorage().bucket())
     console.log(`[print] checked=${checked} deleted=${deleted} failed=${failed}`)
+  },
+)
+
+// The merchant API key from Peecho's dashboard (Settings > API), held in
+// Secret Manager: `firebase functions:secrets:set PEECHO_API_KEY`.
+const PEECHO_API_KEY = defineSecret('PEECHO_API_KEY')
+// https://test.www.peecho.com while trying it out — test orders are free and
+// never shipped — then https://www.peecho.com. Asked for on the first deploy.
+const PEECHO_API_BASE = defineString('PEECHO_API_BASE', {
+  default: PEECHO_PROD,
+  description: 'Peecho environment: https://test.www.peecho.com or https://www.peecho.com',
+})
+
+/**
+ * A Peecho checkout link for a print file an admin has just uploaded — see
+ * functions/peechoCheckout.js. Admin only; the key never leaves the server.
+ */
+export const createPrintCheckout = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [PEECHO_API_KEY] },
+  async (request) => {
+    try {
+      return await createCheckout(
+        {
+          db: getFirestore(),
+          bucket: getStorage().bucket(),
+          downloadUrl: (file) => firebaseDownloadUrl(file, process.env.FIREBASE_STORAGE_EMULATOR_HOST),
+          fetch,
+          apiKey: PEECHO_API_KEY.value(),
+          apiBase: PEECHO_API_BASE.value().replace(/\/+$/, ''),
+        },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof CheckoutError) throw new HttpsError(error.code, error.message)
+      console.error('[print] checkout failed', error)
+      throw new HttpsError('internal', 'Could not create the checkout')
+    }
   },
 )
 
