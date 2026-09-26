@@ -127,5 +127,37 @@
       "quote": "\"Your beautiful memory goes here\"",
       "title": "YOUR TITLE"
     }
+  },
+  "auto": {
+    "open": "Create automatically",
+    "title": "Create a scrapbook automatically",
+    "subtitle": "Pick a month or your favourite moments – we lay out the pages for you.",
+    "close": "Close",
+    "byMonth": "By month",
+    "bySelection": "Your selection",
+    "suggestions": "Suggestions",
+    "busiest": "Your most photographed month",
+    "otherMonth": "Or pick another month",
+    "monthSummary": "{{entries}} with {{photos}} go into the book.",
+    "monthEmpty": "No memories with photos in this month yet.",
+    "noPhotos": "No memories or moments with photos yet – once you share some, we'll suggest books here.",
+    "entryCount_one": "{{count}} entry",
+    "entryCount_other": "{{count}} entries",
+    "photoCount_one": "{{count}} photo",
+    "photoCount_other": "{{count}} photos",
+    "bookTitle": "Book title",
+    "selectionDefaultTitle": "Our favourite moments",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "filter": {
+      "all": "All",
+      "memory": "Memories",
+      "moment": "Moments"
+    },
+    "kind": {
+      "memory": "Memory",
+      "moment": "Moment"
+    },
+    "create": "Create book"
   }
 }

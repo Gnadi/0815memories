@@ -127,5 +127,37 @@
       "quote": "„Deine schöne Erinnerung kommt hierher“",
       "title": "DEIN TITEL"
     }
+  },
+  "auto": {
+    "open": "Automatisch erstellen",
+    "title": "Sammelalbum automatisch erstellen",
+    "subtitle": "Wähle einen Monat oder deine Lieblingsmomente – die Seiten gestalten wir für dich.",
+    "close": "Schließen",
+    "byMonth": "Nach Monat",
+    "bySelection": "Eigene Auswahl",
+    "suggestions": "Vorschläge",
+    "busiest": "Dein fotoreichster Monat",
+    "otherMonth": "Oder einen anderen Monat wählen",
+    "monthSummary": "{{entries}} mit {{photos}} kommen ins Album.",
+    "monthEmpty": "In diesem Monat gibt es noch keine Erinnerungen mit Fotos.",
+    "noPhotos": "Noch keine Erinnerungen oder Momente mit Fotos – sobald du welche teilst, schlagen wir hier Alben vor.",
+    "entryCount_one": "{{count}} Eintrag",
+    "entryCount_other": "{{count}} Einträge",
+    "photoCount_one": "{{count}} Foto",
+    "photoCount_other": "{{count}} Fotos",
+    "bookTitle": "Titel des Albums",
+    "selectionDefaultTitle": "Unsere Lieblingsmomente",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt",
+    "filter": {
+      "all": "Alle",
+      "memory": "Erinnerungen",
+      "moment": "Momente"
+    },
+    "kind": {
+      "memory": "Erinnerung",
+      "moment": "Moment"
+    },
+    "create": "Album erstellen"
   }
 }
