@@ -5,7 +5,7 @@ import { ChevronLeft, Camera } from 'lucide-react'
 import { useAllMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
 import MomentViewer from '../components/home/MomentViewer'
-import PostMomentModal from '../components/admin/PostMomentModal'
+import PostEntryModal from '../components/admin/PostEntryModal'
 import { formatRelativeDate } from '../utils/helpers'
 import EncryptedImage from '../components/media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
@@ -71,6 +71,11 @@ export default function MomentsAllPage() {
 
   const handleCloseViewer = useCallback(() => setViewingMomentIndex(null), [])
 
+  // A moment turned into a memory has left this grid; show it where it went.
+  const handleConverted = useCallback((type, id) => {
+    if (type === 'memory') navigate(`/memory/${id}`)
+  }, [navigate])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -126,10 +131,12 @@ export default function MomentsAllPage() {
 
       {/* Edit Moment Modal */}
       {showEditModal && (
-        <PostMomentModal
-          moment={editingMoment}
+        <PostEntryModal
+          type="moment"
+          entry={editingMoment}
           onClose={handleCloseEditModal}
           onSave={updateMoment}
+          onConverted={handleConverted}
         />
       )}
     </div>

@@ -77,6 +77,15 @@
     "saveChanges": "Save Changes",
     "shareMoment": "Share Moment"
   },
+  "entryType": {
+    "label": "Post as",
+    "memory": "Memory",
+    "moment": "Moment",
+    "toMomentHint": "Saving turns this into a moment. Voice memos, the quote and text formatting are not kept.",
+    "toMemoryHint": "Saving turns this into a memory.",
+    "convertToMoment": "Save as Moment",
+    "convertToMemory": "Save as Memory"
+  },
   "richEditor": {
     "placeholder": "Tell the story… add photos, videos and voice memos anywhere in the text.",
     "bold": "Bold",
