@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
 import { Trash2, RotateCw, ImagePlus, ChevronsUp } from 'lucide-react'
@@ -13,6 +13,12 @@ import { drawImageCovered } from '../../utils/collageRenderer'
 import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
 // Marks a canvas the capture still has to wait for.
 import { EXPORT_PENDING_ATTR } from './exportReady'
+// Zoom, pan and "whole photo" — the same crop on screen and in the export.
+import { effectiveScale, imageLayout, panBy } from './photoCrop'
+// Filters, corner rounding and a coloured frame — CSS on screen, the same
+// maths painted by hand in the export.
+import { filterCss, applyFilterToPixels, frameRadius, frameBorder } from './photoStyle'
+import { roundRectPath } from '../collage/collageDecorations'
 
 const HANDLE_SIZE = 10
 
@@ -42,12 +48,29 @@ export default function CanvasElement({
   canvasScale,
   editable = true,
   exporting = false,
+  cropping = false,
 }) {
   const { t } = useTranslation('scrapbook')
   const { id, type, x, y, width, height, rotation = 0, zIndex = 0 } = element
   const elementRef = useRef(null)
   const exportCanvasRef = useRef(null)
   const [isEditing, setIsEditing] = useState(false)
+  // The photo's frame (inside the polaroid border, when there is one) and the
+  // photo's own pixel size: together they decide which part of it is shown.
+  const photoFrameRef = useRef(null)
+  const [frameSize, setFrameSize] = useState(null)
+  // Keyed by url, so a replaced photo never borrows the previous one's size.
+  const [loadedSize, setNaturalSize] = useState(null)
+  const naturalSize = loadedSize && loadedSize.url === element.url ? loadedSize : null
+  const cropFit = element.fit || null
+  const cropScale = element.imageScale || 1
+  const cropOffsetX = element.offsetX || 0
+  const cropOffsetY = element.offsetY || 0
+  const photoFilter = element.filter || 'none'
+  const cornerRadius = element.cornerRadius
+  const borderWidth = element.borderWidth || 0
+  const borderColor = element.borderColor || null
+  const isPolaroidPhoto = !!element.polaroid
 
   // Always decrypt the image URL so it's warm in the cache before export starts.
   // (EncryptedImage does the same internally; the shared cache avoids double-fetching.)
@@ -72,7 +95,6 @@ export default function CanvasElement({
     const cw = canvas.offsetWidth || width
     const ch = canvas.offsetHeight || height
     if (!cw || !ch) return undefined
-    const imageScale = element.imageScale || 1
     const flipped = !!element.flipped
     // A backing store at the capture's own scale — at CSS resolution the PDF
     // would be upscaling every photo by two.
@@ -81,7 +103,32 @@ export default function CanvasElement({
     let cancelled = false
     img.onload = () => {
       if (cancelled) return
-      drawImageCovered(ctx, img, cw, ch, imageScale, flipped)
+      const style = { cornerRadius, borderWidth, borderColor, polaroid: isPolaroidPhoto }
+      const radius = frameRadius(style, cw, ch)
+      const scale = effectiveScale({ fit: cropFit, imageScale: cropScale }, img.naturalWidth, img.naturalHeight, cw, ch)
+      ctx.save()
+      roundRectPath(ctx, 0, 0, cw, ch, radius)
+      ctx.clip()
+      drawImageCovered(ctx, img, cw, ch, scale, flipped, cropOffsetX, cropOffsetY)
+      ctx.restore()
+      if (photoFilter !== 'none') {
+        // A canvas tainted by a cross-origin photo refuses to be read; the
+        // photo then goes into the PDF unfiltered rather than not at all.
+        try {
+          const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          applyFilterToPixels(pixels.data, photoFilter)
+          ctx.putImageData(pixels, 0, 0)
+        } catch { /* keep the unfiltered photo */ }
+      }
+      const border = frameBorder(style)
+      if (border) {
+        // Drawn inside the frame, as the editor's inset border is.
+        ctx.lineWidth = border.width
+        ctx.strokeStyle = border.color
+        const half = border.width / 2
+        roundRectPath(ctx, half, half, cw - border.width, ch - border.width, Math.max(0, radius - half))
+        ctx.stroke()
+      }
       canvas.removeAttribute(EXPORT_PENDING_ATTR)
     }
     // A photo that cannot be loaded must not hold the whole export hostage.
@@ -90,7 +137,10 @@ export default function CanvasElement({
     }
     img.src = decryptedUrl
     return () => { cancelled = true }
-  }, [exporting, type, decryptedUrl, element.imageScale, element.flipped, width, height])
+  }, [
+    exporting, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
+    photoFilter, cornerRadius, borderWidth, borderColor, isPolaroidPhoto,
+  ])
 
   // Text styling, shared by the editor's DOM and the export's canvas so both
   // read from one source.
@@ -160,7 +210,11 @@ export default function CanvasElement({
 
   // When `editable` is false (fixed layout) and this is a photo, freeze
   // position/size. Text and stickers remain free-form regardless.
-  const allowDrag = editable || type !== 'photo'
+  //
+  // A selected photo is panned inside its frame instead of moved whenever the
+  // frame itself is fixed (a locked layout) or the crop panel is open.
+  const canPan = type === 'photo' && !!element.url && isSelected && !exporting && (cropping || !editable)
+  const allowDrag = (editable && !canPan) || type !== 'photo'
   const allowResize = editable || type !== 'photo'
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !allowDrag })
@@ -178,6 +232,7 @@ export default function CanvasElement({
     const startH = height
     const startEX = x
     const startEY = y
+    const gesture = crypto.randomUUID()
 
     const onMove = (me) => {
       const dx = (me.clientX - startX) / canvasScale
@@ -202,7 +257,7 @@ export default function CanvasElement({
         newY = startEY + (startH - newH)
       }
 
-      onUpdate(id, { width: newW, height: newH, x: newX, y: newY })
+      onUpdate(id, { width: newW, height: newH, x: newX, y: newY }, gesture)
     }
 
     const onUp = () => {
@@ -222,10 +277,11 @@ export default function CanvasElement({
     if (!rect) return
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
+    const gesture = crypto.randomUUID()
 
     const onMove = (me) => {
       const angle = Math.atan2(me.clientY - cy, me.clientX - cx) * (180 / Math.PI) + 90
-      onUpdate(id, { rotation: Math.round(angle) })
+      onUpdate(id, { rotation: Math.round(angle) }, gesture)
     }
 
     const onUp = () => {
@@ -236,6 +292,47 @@ export default function CanvasElement({
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }, [id, onUpdate])
+
+  // Measured rather than derived from width/height: the polaroid border and its
+  // caption take a share of the element that the photo does not get.
+  useLayoutEffect(() => {
+    const node = photoFrameRef.current
+    if (!node) return
+    const w = node.offsetWidth
+    const h = node.offsetHeight
+    setFrameSize((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
+  }, [width, height, element.url, element.polaroid, element.caption, exporting])
+
+  // Drag the picture under the finger. The movement is turned into the
+  // element's own axes first, so a tilted polaroid pans along its tilt.
+  const handlePanPointerDown = useCallback((e) => {
+    if (!canPan || !naturalSize || !frameSize) return
+    e.stopPropagation()
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const start = { fit: cropFit, imageScale: cropScale, offsetX: cropOffsetX, offsetY: cropOffsetY, flipped: element.flipped }
+    const rad = (-rotation * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const gesture = crypto.randomUUID()
+
+    const onMove = (me) => {
+      const sx = (me.clientX - startX) / canvasScale
+      const sy = (me.clientY - startY) / canvasScale
+      const dx = sx * cos - sy * sin
+      const dy = sx * sin + sy * cos
+      onUpdate(id, panBy(start, naturalSize.w, naturalSize.h, frameSize.w, frameSize.h, dx, dy), gesture)
+    }
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }, [canPan, naturalSize, frameSize, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, rotation, canvasScale, id, onUpdate])
 
   const handleDoubleClick = (e) => {
     if (type === 'text') {
@@ -292,7 +389,7 @@ export default function CanvasElement({
             <div className="flex-1 w-full relative">
               <canvas
                 ref={exportCanvasRef}
-                className={`absolute inset-0 w-full h-full${isPolaroid ? '' : ' rounded'}`}
+                className="absolute inset-0 w-full h-full"
                 style={{ display: 'block' }}
               />
             </div>
@@ -305,17 +402,55 @@ export default function CanvasElement({
         )
       }
 
+      // Once the photo's size is known it is placed exactly where the export
+      // will crop it; until then a plain centred cover crop stands in.
+      const layout = naturalSize && frameSize
+        ? imageLayout(
+          naturalSize.w, naturalSize.h, frameSize.w, frameSize.h,
+          effectiveScale(element, naturalSize.w, naturalSize.h, frameSize.w, frameSize.h),
+          cropOffsetX, cropOffsetY,
+        )
+        : null
+      const radius = frameSize ? frameRadius(element, frameSize.w, frameSize.h) : frameRadius(element, width, height)
+      const border = frameBorder(element)
+      const cssFilter = filterCss(photoFilter)
       return (
         <div className={`w-full h-full ${isPolaroid ? 'bg-white p-2 pb-6 shadow-md' : ''} flex flex-col overflow-hidden`}>
-          <div className="flex-1 w-full relative overflow-hidden">
-            <EncryptedImage
-              src={element.url}
-              alt=""
-              crossOrigin="anonymous"
-              className={`absolute inset-0 w-full h-full object-cover${isPolaroid ? '' : ' rounded'}`}
-              style={{ transform: `scale(${imageScale * (flipped ? -1 : 1)}, ${imageScale})`, transformOrigin: 'center center' }}
-              draggable={false}
-            />
+          <div
+            ref={photoFrameRef}
+            className="flex-1 w-full relative overflow-hidden"
+            onPointerDown={canPan ? handlePanPointerDown : undefined}
+            style={{ borderRadius: radius, ...(canPan ? { cursor: 'move' } : {}) }}
+          >
+            <div className="absolute inset-0" style={flipped ? { transform: 'scaleX(-1)' } : undefined}>
+              <EncryptedImage
+                src={element.url}
+                alt=""
+                crossOrigin="anonymous"
+                className={layout ? 'absolute' : 'absolute inset-0 w-full h-full object-cover'}
+                // The filter sits on the <img>, so the frame border over it stays unfiltered.
+                style={{
+                  ...(layout
+                    ? { left: layout.left, top: layout.top, width: layout.width, height: layout.height, maxWidth: 'none' }
+                    : { transform: `scale(${imageScale})`, transformOrigin: 'center center' }),
+                  ...(cssFilter ? { filter: cssFilter } : {}),
+                }}
+                onLoad={(e) => {
+                  const { naturalWidth: w, naturalHeight: h, src } = e.currentTarget
+                  // The blank placeholder loads first; only the decrypted photo counts.
+                  if (!w || !h || src.startsWith('data:')) return
+                  const url = element.url
+                  setNaturalSize((prev) => (prev && prev.url === url && prev.w === w && prev.h === h ? prev : { url, w, h }))
+                }}
+                draggable={false}
+              />
+            </div>
+            {border && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ borderRadius: radius, boxShadow: `inset 0 0 0 ${border.width}px ${border.color}` }}
+              />
+            )}
           </div>
           {isPolaroid && element.caption && (
             <p className="text-center text-xs font-serif text-bark-muted mt-1 truncate px-1">

@@ -1,31 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Plus, BookOpen, Loader2 } from 'lucide-react'
+import { Plus, BookOpen, Loader2, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useScrapbooks } from '../hooks/useScrapbooks'
 import ScrapbookCard from '../components/scrapbook/ScrapbookCard'
+import AutoScrapbookModal from '../components/scrapbook/AutoScrapbookModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { LAYOUT_PRESETS } from '../components/scrapbook/layoutPresets'
 import { devError } from '../utils/devLog'
-
-const COVER_SCHEMES = [
-  // Light backgrounds → dark titles
-  { bg: '#FDF6EC', titleColor: '#2D1B0E', accentColor: '#C25A2E' }, // cream + bark + kaydo
-  { bg: '#FBCFE8', titleColor: '#4A1942', accentColor: '#7B3F6E' }, // blush + dark purple + mauve
-  { bg: '#EFF6FF', titleColor: '#1E3A5F', accentColor: '#3B5E8A' }, // ice blue + navy + blue
-  { bg: '#F0FFF4', titleColor: '#1B4332', accentColor: '#4A7C59' }, // mint + dark forest + green
-  { bg: '#FAF5FF', titleColor: '#3B0764', accentColor: '#7B3F6E' }, // lavender + deep violet + mauve
-  { bg: '#FEFCE8', titleColor: '#451A03', accentColor: '#C25A2E' }, // warm yellow + dark brown + orange
-  { bg: '#FFF5F5', titleColor: '#7F1D1D', accentColor: '#C25A2E' }, // blush white + dark red + orange
-  // Dark backgrounds → light titles
-  { bg: '#2D1B0E', titleColor: '#FFFDF9', accentColor: '#D4784A' }, // dark bark + white + light orange
-  { bg: '#3B5E8A', titleColor: '#FFFDF9', accentColor: '#BFDBFE' }, // dark blue + white + sky
-  { bg: '#C25A2E', titleColor: '#FFFDF9', accentColor: '#FEFCE8' }, // kaydo orange + white + pale yellow
-  { bg: '#4A7C59', titleColor: '#FFFDF9', accentColor: '#DCFCE7' }, // forest green + white + mint
-  { bg: '#7B3F6E', titleColor: '#FFFDF9', accentColor: '#FBCFE8' }, // mauve + white + blush
-]
+import { COVER_SCHEMES } from '../utils/autoScrapbook'
 
 function makeCoverPage() {
   const currentYear = new Date().getFullYear().toString()
@@ -59,6 +44,7 @@ export default function ScrapbooksPage() {
   const { scrapbooks, loading, addScrapbook, deleteScrapbook } = useScrapbooks(familyId, encryptionKey)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
+  const [autoOpen, setAutoOpen] = useState(false)
 
   const handleCreate = async () => {
     if (!familyId) { setError(t('errors.notAuthenticated')); return }
@@ -79,6 +65,24 @@ export default function ScrapbooksPage() {
     }
   }
 
+  // The modal builds the pages; saving and opening the book happen here, so a
+  // generated book lands in the editor exactly like a hand-made one.
+  const handleAutoCreate = async ({ title, pages, coverImageUrl }) => {
+    if (!familyId) throw new Error('not authenticated')
+    const id = await addScrapbook({ title, coverImageUrl, pages })
+    navigate(`/scrapbook/${id}`)
+  }
+
+  const autoButton = (
+    <button
+      onClick={() => setAutoOpen(true)}
+      className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border-2 border-kaydo text-kaydo hover:bg-kaydo/5 transition-colors"
+    >
+      <Sparkles className="w-4 h-4" />
+      {t('auto.open')}
+    </button>
+  )
+
   return (
     <div className="min-h-screen bg-cream flex">
       <Sidebar />
@@ -93,23 +97,26 @@ export default function ScrapbooksPage() {
           )}
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between gap-3 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-bark">{t('list.title')}</h1>
               <p className="text-sm text-bark-muted mt-0.5">{t('list.subtitle')}</p>
             </div>
-            <button
-              onClick={handleCreate}
-              disabled={creating}
-              className="btn-kaydo flex items-center gap-2 text-sm"
-            >
-              {creating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-              {t('list.newScrapbook')}
-            </button>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {autoButton}
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="btn-kaydo flex items-center gap-2 text-sm"
+              >
+                {creating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {t('list.newScrapbook')}
+              </button>
+            </div>
           </div>
 
           {/* Content */}
@@ -126,10 +133,13 @@ export default function ScrapbooksPage() {
               <p className="text-sm text-bark-muted mb-6 max-w-xs">
                 {t('empty.body')}
               </p>
-              <button onClick={handleCreate} disabled={creating} className="btn-kaydo flex items-center gap-2">
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                {t('list.createScrapbook')}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <button onClick={handleCreate} disabled={creating} className="btn-kaydo flex items-center gap-2">
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {t('list.createScrapbook')}
+                </button>
+                {autoButton}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -153,6 +163,14 @@ export default function ScrapbooksPage() {
           )}
         </main>
       </div>
+      {autoOpen && (
+        <AutoScrapbookModal
+          familyId={familyId}
+          encryptionKey={encryptionKey}
+          onClose={() => setAutoOpen(false)}
+          onCreate={handleAutoCreate}
+        />
+      )}
     </div>
   )
 }

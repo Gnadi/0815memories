@@ -83,10 +83,14 @@ export const LAYOUT_PRESETS = [
     label: 'Cover: Magazine',
     preview: '📖',
     group: 'cover',
+    // Text is centred in its box, and Anton's glyphs sit a little below the
+    // box's middle: title ≈ 46–170, year ≈ 196–252. The photo starts at 284,
+    // so title, year and photo are spaced evenly instead of the year touching
+    // the photo.
     elements: [
-      displayText('TITLE', { x: 0, y: 30, width: 800, height: 200, fontSize: 160, color: '#FFFFFF', zIndex: 1 }),
-      displayText('2025',  { x: 0, y: 210, width: 800, height: 80,  fontSize: 68,  color: '#E91E8C', zIndex: 2 }),
-      slot(140, 275, 520, 295, 0, 3),
+      displayText('TITLE', { x: 0, y: 0, width: 800, height: 200, fontSize: 140, color: '#FFFFFF', zIndex: 1 }),
+      displayText('2025',  { x: 0, y: 175, width: 800, height: 80,  fontSize: 60,  color: '#E91E8C', zIndex: 2 }),
+      slot(140, 284, 520, 286, 0, 3),
     ],
   },
 

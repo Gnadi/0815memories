@@ -58,13 +58,40 @@
     "done": "Fertig",
     "change": "Ändern",
     "swap": "Tauschen",
-    "scale": "Größe",
     "rotate": "Drehen",
     "flip": "Spiegeln",
     "clear": "Leeren",
     "remove": "Entfernen",
     "zoom": "Zoom",
-    "reset": "Zurücksetzen"
+    "reset": "Zurücksetzen",
+    "crop": "Ausschnitt",
+    "cropHint": "Ziehe das Foto im Rahmen, um den Ausschnitt zu verschieben.",
+    "fitWhole": "Ganzes Foto",
+    "panHorizontal": "Ausschnitt horizontal verschieben",
+    "panVertical": "Ausschnitt vertikal verschieben",
+    "polaroid": "Polaroid",
+    "caption": "Bildunterschrift",
+    "captionPlaceholder": "Bildunterschrift schreiben…",
+    "polaroidOn": "Rahmen an",
+    "polaroidOff": "Rahmen aus",
+    "frame": "Rahmen",
+    "filter": "Filter",
+    "thickness": "Stärke",
+    "corners": "Ecken",
+    "angle": "Winkel",
+    "rotate90": "90° drehen",
+    "straighten": "Gerade ausrichten",
+    "filters": {
+      "none": "Original",
+      "bw": "S/W",
+      "sepia": "Sepia",
+      "warm": "Warm",
+      "vintage": "Vintage",
+      "vivid": "Kräftig",
+      "fade": "Blass",
+      "cool": "Kühl"
+    },
+    "style": "Stil"
   },
   "swap": {
     "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",
@@ -127,5 +154,37 @@
       "quote": "„Deine schöne Erinnerung kommt hierher“",
       "title": "DEIN TITEL"
     }
+  },
+  "auto": {
+    "open": "Automatisch erstellen",
+    "title": "Sammelalbum automatisch erstellen",
+    "subtitle": "Wähle einen Monat oder deine Lieblingsmomente – die Seiten gestalten wir für dich.",
+    "close": "Schließen",
+    "byMonth": "Nach Monat",
+    "bySelection": "Eigene Auswahl",
+    "suggestions": "Vorschläge",
+    "busiest": "Dein fotoreichster Monat",
+    "otherMonth": "Oder einen anderen Monat wählen",
+    "monthSummary": "{{entries}} mit {{photos}} kommen ins Album.",
+    "monthEmpty": "In diesem Monat gibt es noch keine Erinnerungen mit Fotos.",
+    "noPhotos": "Noch keine Erinnerungen oder Momente mit Fotos – sobald du welche teilst, schlagen wir hier Alben vor.",
+    "entryCount_one": "{{count}} Eintrag",
+    "entryCount_other": "{{count}} Einträge",
+    "photoCount_one": "{{count}} Foto",
+    "photoCount_other": "{{count}} Fotos",
+    "bookTitle": "Titel des Albums",
+    "selectionDefaultTitle": "Unsere Lieblingsmomente",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt",
+    "filter": {
+      "all": "Alle",
+      "memory": "Erinnerungen",
+      "moment": "Momente"
+    },
+    "kind": {
+      "memory": "Erinnerung",
+      "moment": "Moment"
+    },
+    "create": "Album erstellen"
   }
 }

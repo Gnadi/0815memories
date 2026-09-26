@@ -20,125 +20,7 @@ import { exportFileName } from '../utils/helpers'
 import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
 import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
 import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
-
-// ─── Editor state reducer ─────────────────────────────────────────────────────
-
-const MAX_HISTORY = 20
-
-function makeBlankPage() {
-  return {
-    id: crypto.randomUUID(),
-    backgroundColor: '#FDF6EC',
-    backgroundPattern: 'none',
-    elements: [],
-    customizable: false,
-  }
-}
-
-function editorReducer(state, action) {
-  const { pages, currentPageIndex } = state
-
-  const withHistory = (newPages) => {
-    const history = [pages, ...state.history].slice(0, MAX_HISTORY)
-    return { ...state, pages: newPages, history, isDirty: true }
-  }
-
-  const updateCurrentPage = (updater) => {
-    const newPages = pages.map((p, i) => i === currentPageIndex ? updater(p) : p)
-    return withHistory(newPages)
-  }
-
-  switch (action.type) {
-    case 'LOAD':
-      return { ...state, pages: action.pages, title: action.title ?? state.title, isDirty: false, history: [] }
-
-    case 'SET_TITLE':
-      return { ...state, title: action.title, isDirty: true }
-
-    case 'SWITCH_PAGE':
-      return { ...state, currentPageIndex: action.index, selectedId: null }
-
-    case 'ADD_PAGE':
-      return { ...withHistory([...pages, makeBlankPage()]), currentPageIndex: pages.length, selectedId: null }
-
-    case 'DELETE_PAGE': {
-      if (pages.length <= 1) return state
-      const newPages = pages.filter((_, i) => i !== action.index)
-      const newIndex = Math.min(currentPageIndex, newPages.length - 1)
-      return { ...withHistory(newPages), currentPageIndex: newIndex, selectedId: null }
-    }
-
-    case 'ADD_ELEMENT':
-      return updateCurrentPage((p) => ({
-        ...p,
-        elements: [...p.elements, { id: crypto.randomUUID(), ...action.element }],
-      }))
-
-    case 'UPDATE_ELEMENT':
-      return updateCurrentPage((p) => ({
-        ...p,
-        elements: p.elements.map((el) =>
-          el.id === action.id ? { ...el, ...action.updates } : el
-        ),
-      }))
-
-    case 'DELETE_ELEMENT':
-      return updateCurrentPage((p) => ({
-        ...p,
-        elements: p.elements.filter((el) => el.id !== action.id),
-      }))
-
-    case 'SWAP_PHOTOS': {
-      const { idA, idB } = action
-      return updateCurrentPage((p) => {
-        const a = p.elements.find((e) => e.id === idA)
-        const b = p.elements.find((e) => e.id === idB)
-        if (!a || !b) return p
-        return {
-          ...p,
-          elements: p.elements.map((el) => {
-            if (el.id === idA) return { ...el, url: b.url, isSlot: !b.url, imageScale: b.imageScale || 1, flipped: !!b.flipped }
-            if (el.id === idB) return { ...el, url: a.url, isSlot: !a.url, imageScale: a.imageScale || 1, flipped: !!a.flipped }
-            return el
-          }),
-        }
-      })
-    }
-
-    case 'APPLY_LAYOUT':
-      return updateCurrentPage((p) => ({ ...p, elements: action.elements }))
-
-    case 'CHANGE_BACKGROUND':
-      return updateCurrentPage((p) => ({ ...p, ...action.updates }))
-
-    case 'TOGGLE_CUSTOMIZE':
-      return updateCurrentPage((p) => ({ ...p, customizable: !p.customizable }))
-
-    case 'SELECT':
-      return { ...state, selectedId: action.id }
-
-    case 'UNDO': {
-      if (state.history.length === 0) return state
-      const [prev, ...rest] = state.history
-      return { ...state, pages: prev, history: rest, isDirty: true }
-    }
-
-    case 'MARK_SAVED':
-      return { ...state, isDirty: false }
-
-    default:
-      return state
-  }
-}
-
-const initialState = {
-  pages: [makeBlankPage()],
-  currentPageIndex: 0,
-  selectedId: null,
-  history: [],
-  isDirty: false,
-  title: 'My Scrapbook',
-}
+import { editorReducer, initialState, makeBlankPage, FRESH_CROP } from '../components/scrapbook/editorState'
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -160,6 +42,10 @@ export default function ScrapbookEditorPage() {
   const [exporting, setExporting] = useState(false)
   // Photo bar interaction mode: 'idle' | 'fill' | 'replace' | 'swap'
   const [photoMode, setPhotoMode] = useState('idle')
+  // The open panel of the photo action bar: 'crop' | 'polaroid' | null. While
+  // the crop panel is open, dragging the selected photo moves the picture
+  // inside its frame instead of moving the frame.
+  const [photoPanel, setPhotoPanel] = useState(null)
 
   // Family memory photos + session uploads
   const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
@@ -330,7 +216,7 @@ export default function ScrapbookEditorPage() {
   const editable = !!currentPage?.customizable
 
   const handleAddElement = (element) => dispatch({ type: 'ADD_ELEMENT', element })
-  const handleUpdateElement = (elementId, updates) => dispatch({ type: 'UPDATE_ELEMENT', id: elementId, updates })
+  const handleUpdateElement = (elementId, updates, gesture) => dispatch({ type: 'UPDATE_ELEMENT', id: elementId, updates, gesture })
   const handleDeleteElement = (elementId) => {
     dispatch({ type: 'DELETE_ELEMENT', id: elementId })
     setPhotoMode('idle')
@@ -339,6 +225,7 @@ export default function ScrapbookEditorPage() {
   const handleChangeBackground = (updates) => dispatch({ type: 'CHANGE_BACKGROUND', updates })
 
   const handleSelectElement = (elementId) => {
+    if (elementId !== selectedId) setPhotoPanel(null)
     dispatch({ type: 'SELECT', id: elementId })
     // Auto switch mode: if the new selection is an empty slot, enter fill mode
     if (!elementId) {
@@ -360,12 +247,12 @@ export default function ScrapbookEditorPage() {
   // ── Photo picker behaviour ──────────────────────────────────────────────────
   const handlePickPhoto = (url) => {
     if (isSlotSelected && (photoMode === 'fill' || photoMode === 'idle')) {
-      handleUpdateElement(selectedId, { url, isSlot: false })
+      handleUpdateElement(selectedId, { url, isSlot: false, ...FRESH_CROP })
       setPhotoMode('idle')
       return
     }
     if (isPhotoSelected && photoMode === 'replace') {
-      handleUpdateElement(selectedId, { url })
+      handleUpdateElement(selectedId, { url, ...FRESH_CROP })
       setPhotoMode('idle')
       return
     }
@@ -406,6 +293,7 @@ export default function ScrapbookEditorPage() {
 
   // Action bar handlers
   const handleActionDone = () => {
+    setPhotoPanel(null)
     dispatch({ type: 'SELECT', id: null })
     setPhotoMode('idle')
   }
@@ -419,13 +307,33 @@ export default function ScrapbookEditorPage() {
     if (!selectedElement) return
     handleUpdateElement(selectedId, { flipped: !selectedElement.flipped })
   }
+  // Slider ticks and keystrokes on one field of one photo are a single undo
+  // step, like a drag on the canvas.
   const handleActionScale = (newScale) => {
     if (!selectedElement) return
-    handleUpdateElement(selectedId, { imageScale: newScale })
+    handleUpdateElement(selectedId, { imageScale: newScale, fit: null }, `zoom:${selectedId}`)
   }
+  // Slider fields: a run of ticks on one of them is one undo step. Taps on a
+  // filter or a colour stay a step each.
+  const SLIDER_FIELDS = ['offsetX', 'offsetY', 'rotation', 'borderWidth', 'cornerRadius']
+  const handleActionUpdate = (updates) => {
+    if (!selectedElement) return
+    const fields = Object.keys(updates)
+    const gesture = fields.length === 1 && SLIDER_FIELDS.includes(fields[0]) ? `${fields[0]}:${selectedId}` : null
+    handleUpdateElement(selectedId, updates, gesture)
+  }
+  const handleActionPolaroid = (on) => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { polaroid: on })
+  }
+  const handleActionCaption = (caption) => {
+    if (!selectedElement) return
+    handleUpdateElement(selectedId, { caption }, `caption:${selectedId}`)
+  }
+  const togglePhotoPanel = (panel) => setPhotoPanel((open) => (open === panel ? null : panel))
   const handleActionRemovePicture = () => {
     if (!selectedElement) return
-    handleUpdateElement(selectedId, { url: null, isSlot: true, imageScale: 1, flipped: false })
+    handleUpdateElement(selectedId, { url: null, isSlot: true, flipped: false, ...FRESH_CROP })
     setPhotoMode('fill')
   }
   const handleActionRemove = () => {
@@ -486,6 +394,7 @@ export default function ScrapbookEditorPage() {
           onDeleteElement={handleDeleteElement}
           editable={editable}
           exporting={exporting}
+          cropping={photoPanel === 'crop' && isPhotoSelected}
         />
       </div>
 
@@ -517,6 +426,12 @@ export default function ScrapbookEditorPage() {
             onRotate={handleActionRotate}
             onFlip={handleActionFlip}
             onScale={handleActionScale}
+            onCrop={handleActionUpdate}
+            onStyle={handleActionUpdate}
+            onPolaroid={handleActionPolaroid}
+            onCaption={handleActionCaption}
+            panel={photoPanel}
+            onTogglePanel={togglePhotoPanel}
             onRemovePicture={handleActionRemovePicture}
             onRemove={handleActionRemove}
             mode={photoMode}
