@@ -13,6 +13,8 @@ import PolaroidBorderEditor from './PolaroidBorderEditor'
 import RichTextEditorLazy, { EditorSkeleton } from './RichTextEditorLazy'
 import { resolvePolaroidBorder } from '../home/polaroidBorder'
 import { thumbsFor, buildThumbs, buildTinyPreviews } from '../../utils/mediaThumbs'
+import { memoryFormToMomentDraft } from '../../utils/entryConversion'
+import EntryTypeSwitch from './EntryTypeSwitch'
 import {
   EMPTY_RICH_DOC,
   isRichDoc,
@@ -69,8 +71,22 @@ function buildInitialVideos(memory) {
  * `memory` edits an existing memory. For a new one, `defaults` pre-fills the
  * form fields and `initialFiles` are uploaded as photos on open — the same path
  * as picking them by hand, so they get thumbnails and blur-up previews too.
+ *
+ * `draft` is a plaintext, document-shaped pre-fill, media included, handed over
+ * by the moment modal's type switch. `onSwitchType`, when given, shows the
+ * Memory / Moment switch; `converting` says saving will turn an existing moment
+ * into this memory.
  */
-export default function PostMemoryModal({ memory, defaults, initialFiles, onClose, onSave }) {
+export default function PostMemoryModal({
+  memory,
+  defaults,
+  draft,
+  converting,
+  initialFiles,
+  onClose,
+  onSave,
+  onSwitchType,
+}) {
   const { t } = useTranslation('memory')
   const { encryptionKey, memoryCardStyle } = useAuth()
   const {
@@ -85,20 +101,21 @@ export default function PostMemoryModal({ memory, defaults, initialFiles, onClos
     imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey, {
-    initialImages: buildInitialImages(memory),
-    initialVideos: buildInitialVideos(memory),
+    initialImages: buildInitialImages(memory || draft),
+    initialVideos: buildInitialVideos(memory || draft),
   })
 
+  const seed = memory || draft
   const [form, setForm] = useState({
-    title: memory?.title || defaults?.title || '',
+    title: seed?.title || defaults?.title || '',
     quote: memory?.quote || '',
-    category: memory?.category || defaults?.category || '',
-    location: memory?.location || '',
+    category: seed?.category || defaults?.category || '',
+    location: seed?.location || '',
     authorName: memory?.authorName || '',
     featured: memory?.featured || false,
     polaroidBorder: resolvePolaroidBorder(memory?.polaroidBorder),
-    date: memory?.date
-      ? new Date(memory.date.seconds ? memory.date.seconds * 1000 : memory.date)
+    date: seed?.date
+      ? new Date(seed.date.seconds ? seed.date.seconds * 1000 : seed.date)
           .toISOString()
           .split('T')[0]
       : new Date().toISOString().split('T')[0],
@@ -111,7 +128,9 @@ export default function PostMemoryModal({ memory, defaults, initialFiles, onClos
   // existing memory the editor must not mount until the effect below has
   // decrypted it, or it would seed itself from ciphertext and then overwrite
   // the real description on save.
-  const [richDoc, setRichDoc] = useState(memory ? null : { ...EMPTY_RICH_DOC })
+  const [richDoc, setRichDoc] = useState(
+    memory ? null : draft?.content ? plainTextToRich(draft.content) : { ...EMPTY_RICH_DOC }
+  )
   const [richReady, setRichReady] = useState(!memory)
   const [pendingInline, setPendingInline] = useState(0)
   const [saveError, setSaveError] = useState('')
@@ -188,6 +207,17 @@ export default function PostMemoryModal({ memory, defaults, initialFiles, onClos
 
   const handleVideoTitleChange = (id, title) => {
     setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, title } : v)))
+  }
+
+  const handleSwitchType = () => {
+    onSwitchType(
+      memoryFormToMomentDraft({
+        form,
+        storyText: isRichDoc(richDoc) ? richToPlainText(richDoc) : '',
+        images,
+        videos,
+      })
+    )
   }
 
   const handleSubmit = async (e) => {
@@ -272,6 +302,19 @@ export default function PostMemoryModal({ memory, defaults, initialFiles, onClos
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {onSwitchType && (
+            <div>
+              <EntryTypeSwitch
+                value="memory"
+                onChange={handleSwitchType}
+                disabled={saving || hasUploading || pendingInline > 0 || !richReady}
+              />
+              {converting && (
+                <p className="text-xs text-bark-muted mt-2">{t('entryType.toMemoryHint')}</p>
+              )}
+            </div>
+          )}
+
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">{t('postMemory.photos')}</label>
@@ -601,6 +644,8 @@ export default function PostMemoryModal({ memory, defaults, initialFiles, onClos
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {t('postMemory.uploading')}
               </>
+            ) : converting ? (
+              t('entryType.convertToMemory')
             ) : (
               memory ? t('postMemory.saveChanges') : t('postMemory.shareMemory')
             )}

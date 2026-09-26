@@ -9,8 +9,7 @@ import FeaturedJourney from '../components/home/FeaturedJourney'
 import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
-import PostMemoryModal from '../components/admin/PostMemoryModal'
-import PostMomentModal from '../components/admin/PostMomentModal'
+import PostEntryModal from '../components/admin/PostEntryModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
 
@@ -121,8 +120,9 @@ export default function HomePage() {
 
       {/* Post Memory Modal */}
       {showPostModal && (
-        <PostMemoryModal
-          memory={editingMemory}
+        <PostEntryModal
+          type="memory"
+          entry={editingMemory}
           onClose={handleCloseModal}
           onSave={editingMemory ? updateMemory : addMemory}
         />
@@ -142,8 +142,9 @@ export default function HomePage() {
 
       {/* Post Moment Modal (admin only) */}
       {showMomentModal && (
-        <PostMomentModal
-          moment={editingMoment}
+        <PostEntryModal
+          type="moment"
+          entry={editingMoment}
           onClose={handleCloseMomentModal}
           onSave={editingMoment ? updateMoment : addMoment}
         />

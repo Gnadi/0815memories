@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   where,
   limit,
+  writeBatch,
 } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { encryptFields, decryptFields, decryptStringArray } from '../utils/encryption'
@@ -241,9 +242,11 @@ function useMomentsSubscription(familyId, encryptionKey, pageSize) {
   return { moments, loading, error }
 }
 
-export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_LIMIT) {
-  const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
-
+/**
+ * Moment writes without a subscription — the counterpart of useMemoryWriter,
+ * for surfaces that can post a moment without showing the moments row.
+ */
+export function useMomentWriter(familyId) {
   const addMoment = async (moment) => {
     await addDoc(collection(db, 'moments'), {
       ...moment,
@@ -252,6 +255,56 @@ export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_L
       date: serverTimestamp(),
     })
   }
+
+  return { addMoment }
+}
+
+/**
+ * Turns a memory into a moment and back. The two live in separate collections,
+ * so a conversion is a create in one and a delete in the other, in one batch so
+ * a failure never leaves the entry in both places or in neither.
+ *
+ * The media is reused as-is: both collections store the same encrypted uploads
+ * under the same family key. Only the text differs — memories encrypt theirs,
+ * moments keep it in clear — so each side goes through its own write path.
+ */
+export function useEntryConverter(familyId, encryptionKey) {
+  const convertMemoryToMoment = async (memoryId, moment, date) => {
+    const batch = writeBatch(db)
+    const momentRef = doc(collection(db, 'moments'))
+    batch.set(momentRef, {
+      ...moment,
+      familyId,
+      createdByUid: auth?.currentUser?.uid || null,
+      // Keep the memory's own date so it lands where it happened, not as today.
+      date: date || serverTimestamp(),
+    })
+    batch.delete(doc(db, 'memories', memoryId))
+    await batch.commit()
+    return momentRef.id
+  }
+
+  const convertMomentToMemory = async (momentId, memory) => {
+    const encrypted = await encryptMemoryData(encryptionKey, memory)
+    const batch = writeBatch(db)
+    const memoryRef = doc(collection(db, 'memories'))
+    batch.set(memoryRef, {
+      ...encrypted,
+      familyId,
+      createdByUid: auth?.currentUser?.uid || null,
+      createdAt: serverTimestamp(),
+    })
+    batch.delete(doc(db, 'moments', momentId))
+    await batch.commit()
+    return memoryRef.id
+  }
+
+  return { convertMemoryToMoment, convertMomentToMemory }
+}
+
+export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_LIMIT) {
+  const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
+  const { addMoment } = useMomentWriter(familyId)
 
   const updateMoment = async (id, updates) => {
     await updateDoc(doc(db, 'moments', id), updates)

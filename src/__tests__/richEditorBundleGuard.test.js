@@ -18,6 +18,8 @@ const TIPTAP = /@tiptap/
 // Files that must never reach for the editor.
 const READ_PATH = [
   'src/components/admin/PostMemoryModal.jsx',
+  'src/components/admin/PostMomentModal.jsx',
+  'src/components/admin/PostEntryModal.jsx',
   'src/components/memory/MemoryBody.jsx',
   'src/components/memory/RichContent.jsx',
   'src/components/memory/VoiceMemoPlayer.jsx',

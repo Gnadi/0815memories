@@ -77,6 +77,15 @@
     "saveChanges": "Änderungen speichern",
     "shareMoment": "Moment teilen"
   },
+  "entryType": {
+    "label": "Teilen als",
+    "memory": "Erinnerung",
+    "moment": "Moment",
+    "toMomentHint": "Beim Speichern wird daraus ein Moment. Sprachnachrichten, das Zitat und die Textformatierung gehen dabei verloren.",
+    "toMemoryHint": "Beim Speichern wird daraus eine Erinnerung.",
+    "convertToMoment": "Als Moment speichern",
+    "convertToMemory": "Als Erinnerung speichern"
+  },
   "richEditor": {
     "placeholder": "Erzähl die Geschichte … füge überall im Text Fotos, Videos und Sprachnotizen ein.",
     "bold": "Fett",

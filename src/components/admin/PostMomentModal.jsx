@@ -7,6 +7,8 @@ import { useMediaUploader } from '../../hooks/useMediaUploader'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { thumbsFor, buildThumbs, buildTinyPreviews } from '../../utils/mediaThumbs'
+import { momentFormToMemoryDraft } from '../../utils/entryConversion'
+import EntryTypeSwitch from './EntryTypeSwitch'
 
 function buildInitialImages(moment) {
   if (moment?.images?.length) {
@@ -35,7 +37,13 @@ function buildInitialVideos(moment) {
   return []
 }
 
-export default function PostMomentModal({ moment, onClose, onSave }) {
+/**
+ * `moment` edits an existing moment. `draft` pre-fills a new one — media
+ * included — when the form arrives from the memory modal's type switch.
+ * `onSwitchType`, when given, shows the Memory / Moment switch; `converting`
+ * says saving will turn an existing memory into this moment.
+ */
+export default function PostMomentModal({ moment, draft, converting, onClose, onSave, onSwitchType }) {
   const { t } = useTranslation('memory')
   const { encryptionKey } = useAuth()
   const {
@@ -49,15 +57,16 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     imageError,
     hasUploading,
   } = useMediaUploader(encryptionKey, {
-    initialImages: buildInitialImages(moment),
-    initialVideos: buildInitialVideos(moment),
+    initialImages: buildInitialImages(moment || draft),
+    initialVideos: buildInitialVideos(moment || draft),
   })
 
+  const seed = moment || draft
   const [form, setForm] = useState({
-    caption: moment?.caption || '',
-    category: moment?.category || '',
-    location: moment?.location || '',
-    label: moment?.label || '',
+    caption: seed?.caption || '',
+    category: seed?.category || '',
+    location: seed?.location || '',
+    label: seed?.label || '',
   })
   const [mediaError, setMediaError] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -87,6 +96,10 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
     if (inputRef?.current) inputRef.current.value = ''
     setMediaError(false)
     await addVideo(file)
+  }
+
+  const handleSwitchType = () => {
+    onSwitchType(momentFormToMemoryDraft({ form, images, videos, date: moment?.date }))
   }
 
   const handleSubmit = async (e) => {
@@ -141,6 +154,19 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {onSwitchType && (
+            <div>
+              <EntryTypeSwitch
+                value="moment"
+                onChange={handleSwitchType}
+                disabled={saving || hasUploading}
+              />
+              {converting && (
+                <p className="text-xs text-bark-muted mt-2">{t('entryType.toMomentHint')}</p>
+              )}
+            </div>
+          )}
+
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">
@@ -357,6 +383,8 @@ export default function PostMomentModal({ moment, onClose, onSave }) {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {t('postMoment.uploading')}
               </>
+            ) : converting ? (
+              t('entryType.convertToMoment')
             ) : isEditing ? (
               t('postMoment.saveChanges')
             ) : (

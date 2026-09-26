@@ -6,7 +6,7 @@ import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
-import PostMemoryModal from '../components/admin/PostMemoryModal'
+import PostEntryModal from '../components/admin/PostEntryModal'
 import { useAuth } from '../context/AuthContext'
 import { useMemoryWriter, decryptMemoryDoc } from '../hooks/useMemories'
 import { parseRichDoc } from '../utils/richText'
@@ -74,6 +74,9 @@ export default function MemoryDetailPage() {
     }))
     setShowEditModal(false)
   }
+
+  // Turned into a moment, this memory no longer exists; follow it to the moments.
+  const handleConverted = () => navigate('/moments', { replace: true })
 
   if (loading) {
     return (
@@ -163,10 +166,12 @@ export default function MemoryDetailPage() {
       </div>
 
       {showEditModal && (
-        <PostMemoryModal
-          memory={memory}
+        <PostEntryModal
+          type="memory"
+          entry={memory}
           onClose={() => setShowEditModal(false)}
           onSave={handleSaveEdit}
+          onConverted={handleConverted}
         />
       )}
     </div>

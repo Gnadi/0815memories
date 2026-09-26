@@ -11,7 +11,7 @@ import { devError } from '../../utils/devLog'
 // Lazy: this nav is mounted on every route, so a static import dragged the
 // whole upload stack — media uploader, encrypted image/video, voice recorder,
 // polaroid editor — into the startup bundle, landing page included.
-const PostMemoryModal = lazy(() => import('../admin/PostMemoryModal'))
+const PostEntryModal = lazy(() => import('../admin/PostEntryModal'))
 
 function makeCoverPage() {
   const preset = LAYOUT_PRESETS.find((p) => p.id === 'cover-magazine')
@@ -256,7 +256,8 @@ export default function AdminMobileBottomNav() {
 
       {showCreateModal && (
         <Suspense fallback={null}>
-          <PostMemoryModal
+          <PostEntryModal
+            type="memory"
             onClose={() => setShowCreateModal(false)}
             onSave={addMemory}
           />
