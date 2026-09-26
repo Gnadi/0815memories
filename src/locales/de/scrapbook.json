@@ -186,5 +186,32 @@
       "moment": "Moment"
     },
     "create": "Album erstellen"
+  },
+  "print": {
+    "open": "Drucken",
+    "openTooltip": "Als gedrucktes Buch bestellen",
+    "title": "Gedrucktes Buch bestellen",
+    "subtitle": "Gedruckt und verschickt von unserem Druckpartner Peecho",
+    "close": "Schließen",
+    "summary_one": "{{count}} Seite · {{width}} × {{height}} cm",
+    "summary_other": "{{count}} Seiten · {{width}} × {{height}} cm",
+    "pagesExplained": "Die erste Seite wird zum Vorderumschlag. Am Ende kommt eine schlichte Rückseite in der Farbe des Umschlags dazu.",
+    "blankAdded": "Vor der Rückseite wird eine leere Seite eingefügt, weil ein Buch eine gerade Seitenzahl braucht.",
+    "tooFewPages": "Hardcover-Bücher brauchen mindestens {{min}} Seiten, dieses hat {{count}}. Füge für ein Hardcover Seiten hinzu oder wähle an der Kasse ein anderes Produkt.",
+    "marginTip": "Halte Text und Gesichter etwa 1 cm vom Seitenrand entfernt – ganz am Rand kann beim Binden etwas abgeschnitten werden.",
+    "privacyHeading": "Diese Kopie ist nicht verschlüsselt",
+    "privacyBody": "Eine Druckerei kann nur drucken, was sie lesen kann. Für die Bestellung macht Kaydo aus diesem Buch ein unverschlüsseltes PDF und gibt Peecho einen privaten Link dazu. Wer diesen Link hat, kann die Datei öffnen. Sie wird nach {{days}} Tagen automatisch gelöscht.",
+    "prepare": "Druckdatei vorbereiten",
+    "rendering": "Seite {{current}} von {{total}} wird vorbereitet…",
+    "uploading": "Druckdatei wird hochgeladen… {{percent}} %",
+    "keepOpen": "Bitte lass diese Seite geöffnet, bis alles fertig ist.",
+    "cancel": "Abbrechen",
+    "readyHeading": "Dein Buch kann bestellt werden",
+    "readyBody": "Bei Peecho wählst du das Produkt, gibst die Lieferadresse ein und bezahlst. Peecho druckt das Buch und schickt es dir.",
+    "orderAtPeecho": "Bei Peecho bestellen",
+    "checkoutUnavailable": "Die Kasse von Peecho konnte nicht geladen werden. Falls du einen Werbe- oder Inhaltsblocker nutzt, erlaube peecho.com und versuche es erneut.",
+    "preview": "Druckdatei ansehen",
+    "failed": "Die Druckdatei konnte nicht vorbereitet werden. Bitte versuche es erneut.",
+    "tryAgain": "Erneut versuchen"
   }
 }

@@ -84,6 +84,21 @@ select {
   box-shadow: 0 6px 16px rgba(194, 90, 46, 0.4);
 }
 
+/* Peecho's print button (PrintOrderModal) looks like the app's own primary
+   button. Inside :where(), so it has no specificity: any style Peecho's script
+   brings for its button wins, and this only fills in when it brings none. The
+   link's class stays exactly what Peecho's script looks for. */
+:where(.peecho-button-host > a.peecho-print-button) {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
+  color: white;
+  border-radius: 9999px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(194, 90, 46, 0.3);
+}
+
 .story-ring {
   background: linear-gradient(135deg, var(--color-kaydo), var(--color-kaydo-light));
   padding: 3px;

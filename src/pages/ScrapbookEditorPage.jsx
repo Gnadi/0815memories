@@ -15,12 +15,30 @@ import PhotoBar from '../components/scrapbook/PhotoBar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
 import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
+import PrintOrderModal from '../components/scrapbook/PrintOrderModal'
 import { devError } from '../utils/devLog'
 import { exportFileName } from '../utils/helpers'
 import { EXPORT_PIXEL_RATIO } from '../utils/canvasText'
-import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
-import { prefetchDecryptedMedia } from '../components/media/useDecryptedMedia'
+import {
+  printConfig,
+  printFrame,
+  printPixelRatio,
+  printSequence,
+  createPrintPdf,
+  PRINT_JPEG_QUALITY,
+  THUMBNAIL_WIDTH,
+} from '../utils/printBook'
+import {
+  capturePages,
+  warmBookPhotos,
+  canvasToJpeg,
+  canvasThumbnail,
+  releaseCanvas,
+} from '../components/scrapbook/pageCapture'
 import { editorReducer, initialState, makeBlankPage, FRESH_CROP } from '../components/scrapbook/editorState'
+
+// Printing is on when the deployment has a Peecho button key.
+const PRINTING_ENABLED = !!printConfig().buttonKey
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -40,6 +58,9 @@ export default function ScrapbookEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [exporting, setExporting] = useState(false)
+  // Set while the print file is drawn: { frame, ratio } — see renderPrintFile.
+  const [printCapture, setPrintCapture] = useState(null)
+  const [printOpen, setPrintOpen] = useState(false)
   // Photo bar interaction mode: 'idle' | 'fill' | 'replace' | 'swap'
   const [photoMode, setPhotoMode] = useState('idle')
   // The open panel of the photo action bar: 'crop' | 'polaroid' | null. While
@@ -118,11 +139,16 @@ export default function ScrapbookEditorPage() {
 
   useEffect(() => () => clearTimeout(saveTimerRef.current), [])
 
+  // Force the page switch to commit synchronously so html2canvas reads the
+  // freshly-rendered DOM instead of whatever was mounted before.
+  const switchPageNow = (index) => flushSync(() => {
+    dispatch({ type: 'SWITCH_PAGE', index })
+  })
+
   // ── PDF export ──────────────────────────────────────────────────────────────
   const handleExportPDF = async () => {
     if (!canvasRef.current) return
     const originalPageIndex = currentPageIndex
-    const totalPages = pages.length
     setExporting(true)
     // Loaded on demand, while fonts and photos warm up below: jsPDF and
     // html2canvas are only ever needed here, and as static imports they were
@@ -131,70 +157,27 @@ export default function ScrapbookEditorPage() {
     libraries.catch(() => {}) // awaited below; an earlier failure must not orphan it
     try {
       await document.fonts.ready
-      // Warm every page's photos before the first capture. The editor only
-      // mounts the page it is showing, so otherwise each page would start
-      // fetching and decrypting its images at the moment it is captured.
-      // Capped, so one photo that never arrives cannot hold the export here.
-      await Promise.race([
-        Promise.all(
-          pages.flatMap((page) => (page.elements || [])
-            .filter((el) => el.type === 'photo' && el.url)
-            .map((el) => prefetchDecryptedMedia(el.url, encryptionKey, 'image/*')))
-        ),
-        new Promise((resolve) => setTimeout(resolve, EXPORT_PENDING_TIMEOUT_MS)),
-      ])
+      await warmBookPhotos(pages, encryptionKey)
       const [{ default: jsPDF }, { default: html2canvas }] = await libraries
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [800, 600] })
 
-      for (let i = 0; i < totalPages; i++) {
-        // Force the page switch to commit synchronously so html2canvas reads
-        // the freshly-rendered DOM instead of whatever was mounted before.
-        flushSync(() => {
-          dispatch({ type: 'SWITCH_PAGE', index: i })
-        })
-        // Wait 3 frames: one for the React commit to paint, one for passive
-        // effects (canvas draw useEffect) to flush, one spare.
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))
-        // Frames alone are a guess; photos land on their canvas whenever their
-        // decode finishes. Hold the capture until they actually have.
-        await waitForExportCanvases(canvasRef.current)
-
-        // The canvas element has a viewport-fit transform (e.g. scale(0.4) on
-        // mobile). html2canvas uses getBoundingClientRect() to size its output,
-        // which returns the *visual* size, so the capture would be undersized
-        // and then stretched to fill the PDF page. Reset the transform to none
-        // for the duration of the capture so html2canvas always sees 800×600.
-        const el = canvasRef.current
-        const savedTransform = el.style.transform
-        const savedTransformOrigin = el.style.transformOrigin
-        el.style.transform = 'none'
-        el.style.transformOrigin = 'top left'
-
-        let pageCanvas
-        try {
-          pageCanvas = await html2canvas(el, {
-            useCORS: true,
-            // Photos and text are drawn onto <canvas> elements at this same
-            // ratio, so their pixels land in the capture one for one.
-            scale: EXPORT_PIXEL_RATIO,
-            width: 800,
-            height: 600,
-            backgroundColor: null,
-            logging: false,
-          })
-        } finally {
-          el.style.transform = savedTransform
-          el.style.transformOrigin = savedTransformOrigin
-        }
-        const imgData = pageCanvas.toDataURL('image/jpeg', 0.92)
-        if (i > 0) pdf.addPage([800, 600], 'landscape')
-        pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
-      }
+      await capturePages({
+        count: pages.length,
+        getElement: () => canvasRef.current,
+        switchPage: switchPageNow,
+        html2canvas,
+        width: 800,
+        height: 600,
+        scale: EXPORT_PIXEL_RATIO,
+        onPage: (pageCanvas, i) => {
+          const imgData = pageCanvas.toDataURL('image/jpeg', 0.92)
+          if (i > 0) pdf.addPage([800, 600], 'landscape')
+          pdf.addImage(imgData, 'JPEG', 0, 0, 800, 600)
+        },
+      })
 
       // Restore the page the user was viewing before export.
-      flushSync(() => {
-        dispatch({ type: 'SWITCH_PAGE', index: originalPageIndex })
-      })
+      switchPageNow(originalPageIndex)
 
       // Titled and stamped: every book starts life under the same default
       // title, so naming the file after the title alone would have each export
@@ -205,6 +188,56 @@ export default function ScrapbookEditorPage() {
       alert(t('errors.pdfExportFailed'))
     } finally {
       setExporting(false)
+    }
+  }
+
+  // ── Print file ──────────────────────────────────────────────────────────────
+  // The book as Peecho prints it (see utils/printBook): the print format, about
+  // 300 dpi, a back cover and an even page count. Drawn here because only the
+  // editor can draw its pages; PrintOrderModal uploads the result and opens
+  // Peecho's checkout. Resolves to null when `isCancelled` stopped it.
+  const renderPrintFile = async ({ onProgress, isCancelled }) => {
+    const originalPageIndex = currentPageIndex
+    const format = printConfig()
+    const frame = printFrame(format)
+    const ratio = printPixelRatio(frame, format)
+    const sheets = printSequence(pages)
+    const libraries = Promise.all([import('jspdf'), import('html2canvas')])
+    libraries.catch(() => {}) // awaited below; an earlier failure must not orphan it
+    onProgress({ done: 0, total: sheets.length })
+    try {
+      await document.fonts.ready
+      await warmBookPhotos(pages, encryptionKey)
+      const [{ default: jsPDF }, { default: html2canvas }] = await libraries
+      const pdf = createPrintPdf(jsPDF, format, { title })
+      let thumbnail = null
+
+      flushSync(() => setPrintCapture({ frame, ratio }))
+      const finished = await capturePages({
+        count: pages.length,
+        getElement: () => canvasRef.current,
+        switchPage: switchPageNow,
+        html2canvas,
+        width: frame.width,
+        height: frame.height,
+        scale: ratio,
+        isCancelled,
+        onPage: async (pageCanvas, i) => {
+          if (i === 0) thumbnail = await canvasThumbnail(pageCanvas, THUMBNAIL_WIDTH)
+          pdf.addImage(await canvasToJpeg(pageCanvas, PRINT_JPEG_QUALITY))
+          releaseCanvas(pageCanvas)
+          onProgress({ done: i + 1, total: sheets.length })
+        },
+      })
+      if (!finished) return null
+
+      // The blank page and the back cover follow the editor's pages.
+      for (const sheet of sheets.slice(pages.length)) pdf.addPlain(sheet.color)
+      onProgress({ done: sheets.length, total: sheets.length })
+      return { pdf: pdf.toBlob(), thumbnail, pageCount: pdf.pageCount, format }
+    } finally {
+      flushSync(() => setPrintCapture(null))
+      switchPageNow(originalPageIndex)
     }
   }
 
@@ -381,6 +414,7 @@ export default function ScrapbookEditorPage() {
         onSwitchPage={handleSwitchPage}
         onExportPDF={handleExportPDF}
         exporting={exporting}
+        onPrint={PRINTING_ENABLED ? () => setPrintOpen(true) : undefined}
       />
 
       {/* Canvas area — fits available space, no scroll */}
@@ -393,7 +427,9 @@ export default function ScrapbookEditorPage() {
           onUpdateElement={handleUpdateElement}
           onDeleteElement={handleDeleteElement}
           editable={editable}
-          exporting={exporting}
+          exporting={exporting || !!printCapture}
+          exportRatio={printCapture?.ratio}
+          printFrame={printCapture?.frame}
           cropping={photoPanel === 'crop' && isPhotoSelected}
         />
       </div>
@@ -473,6 +509,15 @@ export default function ScrapbookEditorPage() {
           onChangeBackground={handleChangeBackground}
         />
       </div>
+
+      {printOpen && (
+        <PrintOrderModal
+          familyId={familyId}
+          sheets={printSequence(pages)}
+          onRender={renderPrintFile}
+          onClose={() => setPrintOpen(false)}
+        />
+      )}
     </div>
   )
 }

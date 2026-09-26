@@ -19,8 +19,19 @@ const PATTERN_SIZE = {
   lines: '100% 24px',
 }
 
+/**
+ * `printFrame` ({ width, height, offsetX, offsetY }, from utils/printBook) lays
+ * the page out as it will be printed: the canvas takes the print format's
+ * shape, the page's background fills all of it, and the elements sit in an
+ * 800 × 600 box at the offset. The editor's border is dropped — on paper it
+ * would be a dark line around every page. `exportRatio` is the backing-store
+ * ratio of the export canvases, which must match the capture's scale.
+ */
 export default forwardRef(function ScrapbookCanvas(
-  { page, selectedId, onSelectElement, onUpdateElement, onDeleteElement, editable = true, exporting = false, cropping = false },
+  {
+    page, selectedId, onSelectElement, onUpdateElement, onDeleteElement,
+    editable = true, exporting = false, cropping = false, exportRatio, printFrame = null,
+  },
   ref
 ) {
   const containerRef = useRef(null)
@@ -68,13 +79,25 @@ export default forwardRef(function ScrapbookCanvas(
   const patternSize = PATTERN_SIZE[page.backgroundPattern] || null
 
   const canvasStyle = {
-    width: CANVAS_W,
-    height: CANVAS_H,
+    width: printFrame ? printFrame.width : CANVAS_W,
+    height: printFrame ? printFrame.height : CANVAS_H,
     transform: `scale(${scale})`,
     transformOrigin: 'top left',
     background,
-    ...(pattern ? { backgroundImage: pattern, backgroundSize: patternSize } : {}),
+    // Positioned at the page box, so the pattern lines up with the elements
+    // exactly as it does in the editor while it runs on into the margins.
+    ...(pattern ? {
+      backgroundImage: pattern,
+      backgroundSize: patternSize,
+      ...(printFrame ? { backgroundPosition: `${printFrame.offsetX}px ${printFrame.offsetY}px` } : {}),
+    } : {}),
   }
+
+  // The box the elements are positioned in and clipped to: the whole canvas in
+  // the editor, the page's own 800 × 600 inside a print frame.
+  const pageBoxStyle = printFrame
+    ? { position: 'absolute', left: printFrame.offsetX, top: printFrame.offsetY, width: CANVAS_W, height: CANVAS_H, overflow: 'hidden' }
+    : { position: 'absolute', inset: 0, overflow: 'hidden' }
 
   const sorted = [...(page.elements || [])].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
 
@@ -90,25 +113,28 @@ export default forwardRef(function ScrapbookCanvas(
               ...canvasStyle,
               position: 'relative',
               overflow: 'hidden',
-              border: '2px solid var(--color-bark)',
+              border: printFrame ? 'none' : '2px solid var(--color-bark)',
               boxSizing: 'border-box',
             }}
             onClick={() => onSelectElement(null)}
           >
-            {sorted.map((el) => (
-              <CanvasElement
-                key={el.id}
-                element={el}
-                isSelected={selectedId === el.id}
-                onSelect={onSelectElement}
-                onUpdate={onUpdateElement}
-                onDelete={onDeleteElement}
-                canvasScale={scale}
-                editable={editable}
-                exporting={exporting}
-                cropping={cropping && selectedId === el.id}
-              />
-            ))}
+            <div style={pageBoxStyle}>
+              {sorted.map((el) => (
+                <CanvasElement
+                  key={el.id}
+                  element={el}
+                  isSelected={selectedId === el.id}
+                  onSelect={onSelectElement}
+                  onUpdate={onUpdateElement}
+                  onDelete={onDeleteElement}
+                  canvasScale={scale}
+                  editable={editable}
+                  exporting={exporting}
+                  exportRatio={exportRatio}
+                  cropping={cropping && selectedId === el.id}
+                />
+              ))}
+            </div>
           </div>
         </DndContext>
       </div>

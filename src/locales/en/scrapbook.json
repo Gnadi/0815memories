@@ -186,5 +186,32 @@
       "moment": "Moment"
     },
     "create": "Create book"
+  },
+  "print": {
+    "open": "Print",
+    "openTooltip": "Order as a printed book",
+    "title": "Order a printed book",
+    "subtitle": "Printed and shipped by our print partner Peecho",
+    "close": "Close",
+    "summary_one": "{{count}} page · {{width}} × {{height}} cm",
+    "summary_other": "{{count}} pages · {{width}} × {{height}} cm",
+    "pagesExplained": "The first page becomes the front cover. A plain back cover in the cover's colour is added at the end.",
+    "blankAdded": "A blank page goes in before the back cover, because a book needs an even number of pages.",
+    "tooFewPages": "Hardcover books need at least {{min}} pages, and this one has {{count}}. Add pages for a hardcover, or pick another product at checkout.",
+    "marginTip": "Keep text and faces about 1 cm away from the page edges – the very edge can be trimmed when the book is bound.",
+    "privacyHeading": "This copy is not encrypted",
+    "privacyBody": "A print shop can only print what it can read. To order, Kaydo turns this book into an unencrypted PDF and gives Peecho a private link to it. Anyone who has that link can open the file. It is deleted automatically after {{days}} days.",
+    "prepare": "Prepare print file",
+    "rendering": "Preparing page {{current}} of {{total}}…",
+    "uploading": "Uploading the print file… {{percent}}%",
+    "keepOpen": "Please keep this page open until it is done.",
+    "cancel": "Cancel",
+    "readyHeading": "Your book is ready to order",
+    "readyBody": "At Peecho's checkout you choose the product, enter the shipping address and pay. Peecho prints the book and sends it to you.",
+    "orderAtPeecho": "Order at Peecho",
+    "checkoutUnavailable": "Peecho's checkout could not be loaded. If you use an ad or content blocker, allow peecho.com and try again.",
+    "preview": "View the print file",
+    "failed": "The print file could not be prepared. Please try again.",
+    "tryAgain": "Try again"
   }
 }

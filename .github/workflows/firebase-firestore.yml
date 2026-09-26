@@ -8,6 +8,7 @@ on:
     paths:
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - 'storage.rules'
       - 'firebase.json'
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - 'storage.rules'
       - 'firebase.json'
       - 'src/__tests__/*Rules.test.js'
       - 'functions/slugs.js'

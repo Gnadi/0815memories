@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Firebase Storage holds exactly one kind of file: the print file of a
+// scrapbook a family is ordering as a printed book from Peecho, and its cover
+// picture — see src/utils/printUpload.js. Everything else Kaydo stores lives on
+// Cloudinary, encrypted. So the whole bucket is closed except for that folder.
+//
+// These files are unencrypted on purpose (a print shop has to be able to read
+// them), which is why the rules below are strict about who writes them and
+// what they may be. Peecho does not come through these rules at all: it
+// fetches a file by its download URL, whose token is the permission.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // The same test firestore.rules applies to every write: the admin claim
+    // first, then the family document for an admin whose claim has not landed
+    // yet (syncAdminClaims writes it after the write that made them admin).
+    function isFamilyAdmin(familyId) {
+      return request.auth != null
+        && ((request.auth.token.get('familyId', '') == familyId
+             && request.auth.token.get('role', '') == 'admin')
+            || isAdminByDocument(familyId));
+    }
+
+    function isAdminByDocument(familyId) {
+      let fam = firestore.get(/databases/(default)/documents/families/$(familyId)).data;
+      return request.auth.uid in fam.get('adminUids', [])
+        || request.auth.uid == fam.get('adminUid', '');
+    }
+
+    match /printFiles/{familyId}/{printId}/{name} {
+      // Reading the metadata is what getDownloadURL() needs.
+      allow read: if isFamilyAdmin(familyId);
+
+      // Write-once. Once a download URL has gone to Peecho, the file behind it
+      // must stay the file that was ordered. Storage treats an upload over an
+      // existing file as a create too, so leaving out `update` is not enough:
+      // the file must not exist yet.
+      allow create: if resource == null
+        && isFamilyAdmin(familyId)
+        && ((name == 'book.pdf'
+             && request.resource.contentType == 'application/pdf'
+             && request.resource.size < 300 * 1024 * 1024)
+            || (name == 'cover.jpg'
+             && request.resource.contentType == 'image/jpeg'
+             && request.resource.size < 5 * 1024 * 1024));
+
+      allow delete: if isFamilyAdmin(familyId);
+    }
+  }
+}

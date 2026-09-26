@@ -1,7 +1,8 @@
 /**
  * Firebase Cloud Functions — Kaydo
  *
- * Push notifications (this file's first half) and access control (the second).
+ * Push notifications (this file's first half) and access control (the second),
+ * with the daily clean-up of printed-book files between them.
  * Everything runs in europe-west3, set once at the top: setGlobalOptions only
  * reaches v2 functions, and only those defined after the call.
  *
@@ -25,7 +26,9 @@ import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { getStorage } from 'firebase-admin/storage'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
+import { purgeExpiredPrintFiles } from './printFiles.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -176,6 +179,23 @@ export const dailyAnniversaryCheck = onSchedule(
     }
 
     console.log(`[anniversary] year=${window.year} notified=${counts.size}`)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Printed books — see functions/printFiles.js
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete print files once Peecho has had ample time to fetch them. They are
+ * the one unencrypted copy of a family's photos Kaydo keeps, so they do not
+ * stay a day longer than the order dialog promised.
+ */
+export const purgePrintFiles = onSchedule(
+  { schedule: '30 3 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
+  async () => {
+    const { checked, deleted, failed } = await purgeExpiredPrintFiles(getStorage().bucket())
+    console.log(`[print] checked=${checked} deleted=${deleted} failed=${failed}`)
   },
 )
 

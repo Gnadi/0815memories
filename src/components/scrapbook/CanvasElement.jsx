@@ -10,7 +10,7 @@ import useDecryptedMedia from '../media/useDecryptedMedia'
 import { drawImageCovered } from '../../utils/collageRenderer'
 // Same reasoning for glyphs: html2canvas places them with font metrics of its
 // own and gets the display face wrong, so the export paints the text itself.
-import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
+import { drawTextBlock, prepareExportCanvas, EXPORT_PIXEL_RATIO } from '../../utils/canvasText'
 // Marks a canvas the capture still has to wait for.
 import { EXPORT_PENDING_ATTR } from './exportReady'
 // Zoom, pan and "whole photo" — the same crop on screen and in the export.
@@ -48,6 +48,9 @@ export default function CanvasElement({
   canvasScale,
   editable = true,
   exporting = false,
+  // The export canvases' backing-store ratio: the capture's own scale, which
+  // is higher for a print file than for the PDF download.
+  exportRatio = EXPORT_PIXEL_RATIO,
   cropping = false,
 }) {
   const { t } = useTranslation('scrapbook')
@@ -98,7 +101,7 @@ export default function CanvasElement({
     const flipped = !!element.flipped
     // A backing store at the capture's own scale — at CSS resolution the PDF
     // would be upscaling every photo by two.
-    const ctx = prepareExportCanvas(canvas, cw, ch)
+    const ctx = prepareExportCanvas(canvas, cw, ch, exportRatio)
     const img = new Image()
     let cancelled = false
     img.onload = () => {
@@ -138,7 +141,7 @@ export default function CanvasElement({
     img.src = decryptedUrl
     return () => { cancelled = true }
   }, [
-    exporting, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
+    exporting, exportRatio, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
     photoFilter, cornerRadius, borderWidth, borderColor, isPolaroidPhoto,
   ])
 
@@ -165,7 +168,7 @@ export default function CanvasElement({
     const boxW = width + overflowPad * 2
     const boxH = height + overflowPad * 2
     if (!boxW || !boxH) return
-    const ctx = prepareExportCanvas(canvas, boxW, boxH)
+    const ctx = prepareExportCanvas(canvas, boxW, boxH, exportRatio)
     ctx.clearRect(0, 0, boxW, boxH)
     drawTextBlock(ctx, {
       text: type === 'sticker' ? element.emoji || '' : element.text || '',
@@ -183,7 +186,7 @@ export default function CanvasElement({
       letterSpacing: type === 'text' && isDisplay ? fontSize * DISPLAY_LETTER_SPACING_EM : 0,
     })
   }, [
-    exporting, type, width, height, overflowPad, element.text, element.emoji,
+    exporting, exportRatio, type, width, height, overflowPad, element.text, element.emoji,
     stickerSize, fontSize, fontFamily, fontWeight, textColor, textAlign, lineHeight, isDisplay,
   ])
 

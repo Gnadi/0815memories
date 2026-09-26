@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Undo2, FileDown, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Undo2, FileDown, Printer, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function EditorToolbar({
@@ -16,6 +16,7 @@ export default function EditorToolbar({
   onSwitchPage,
   onExportPDF,
   exporting,
+  onPrint,
 }) {
   const { t } = useTranslation('scrapbook')
   const navigate = useNavigate()
@@ -129,6 +130,19 @@ export default function EditorToolbar({
         {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
         <span className="hidden sm:inline">{t('editor.pdf')}</span>
       </button>
+
+      {/* Order a printed copy — only when this deployment is set up for it */}
+      {onPrint && (
+        <button
+          onClick={onPrint}
+          disabled={exporting}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-kaydo/10 hover:bg-kaydo/20 text-kaydo text-xs font-medium transition-colors flex-shrink-0"
+          title={t('print.openTooltip')}
+        >
+          <Printer className="w-4 h-4" />
+          <span className="hidden sm:inline">{t('print.open')}</span>
+        </button>
+      )}
 
       {/* Share */}
       <button
