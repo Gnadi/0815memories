@@ -216,7 +216,7 @@ function titleFontSize(title) {
   // Anton is narrow — roughly half an em per capital — so this keeps a long
   // title on one line across the 800px cover without shrinking short ones.
   const len = Math.max(title.length, 1)
-  return Math.max(56, Math.min(160, Math.floor(1500 / len)))
+  return Math.max(56, Math.min(140, Math.floor(1500 / len)))
 }
 
 function coverPage({ title, subtitle, coverPhoto, scheme }) {

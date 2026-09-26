@@ -133,3 +133,17 @@ describe('yearSpan', () => {
     expect(yearSpan(collectEntries([memory('a', new Date(2023, 0, 1), 1), memory('b', new Date(2025, 0, 1), 1)], []))).toBe('2023 – 2025')
   })
 })
+
+describe('cover layout', () => {
+  it('leaves room between the year and the cover photo', () => {
+    const entries = collectEntries([memory('a', new Date(2026, 8, 1), 2)], [])
+    const [cover] = buildScrapbook(entries, { title: 'September', subtitle: '2026', random: fixed }).pages
+    const year = cover.elements.find((e) => e.type === 'text' && e.text === '2026')
+    const photo = cover.elements.find((e) => e.type === 'photo')
+    // Display text is centred in its box; Anton's digits sit ~0.16em below the
+    // box's middle and are ~0.94em tall (measured in Chromium).
+    const glyphBottom = year.y + year.height / 2 + year.fontSize * 0.63
+    expect(photo.y - glyphBottom).toBeGreaterThanOrEqual(28)
+    expect(photo.y + photo.height).toBeLessThanOrEqual(600)
+  })
+})
