@@ -46,7 +46,12 @@ export default function PostEntryModal({ type, entry, onClose, onSave, onConvert
     const handleSave = isOriginal
       ? onSave
       : converting
-        ? async (data) => onConverted?.('memory', await convertMomentToMemory(entry.id, data))
+        ? async (data) => {
+            // Not folded into `onConverted?.(...)`: optional chaining skips the
+            // arguments too, so the conversion would never run without a callback.
+            const id = await convertMomentToMemory(entry.id, data)
+            onConverted?.('memory', id)
+          }
         : addMemory
     // `rest` is only for the first opening: once a draft exists it already holds
     // the uploaded `initialFiles`, and passing them again would upload them twice.
@@ -65,7 +70,10 @@ export default function PostEntryModal({ type, entry, onClose, onSave, onConvert
   const handleSave = isOriginal
     ? onSave
     : converting
-      ? async (data) => onConverted?.('moment', await convertMemoryToMoment(entry.id, data, entry.date))
+      ? async (data) => {
+          const id = await convertMemoryToMoment(entry.id, data, entry.date)
+          onConverted?.('moment', id)
+        }
       : addMoment
   return (
     <PostMomentModal
