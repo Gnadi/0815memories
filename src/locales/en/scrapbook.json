@@ -90,7 +90,8 @@
       "vivid": "Vivid",
       "fade": "Fade",
       "cool": "Cool"
-    }
+    },
+    "style": "Style"
   },
   "swap": {
     "tapToSwap": "Tap another photo on the page to swap",

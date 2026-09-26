@@ -12,14 +12,15 @@ const bar = (props) => render(
 
 describe('PhotoActionBar', () => {
   it('shows a stored 270° turn as −90° on the free-rotation slider', () => {
-    bar({ panel: 'rotate' })
+    bar({ panel: 'style' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Rotate' }))
     expect(screen.getByLabelText('Angle')).toHaveValue('-90')
     expect(screen.getByText('-90°')).toBeInTheDocument()
   })
 
   it('picks a filter, and clears it with Original', () => {
     const onStyle = vi.fn()
-    bar({ panel: 'filter', onStyle })
+    bar({ panel: 'style', onStyle })
     fireEvent.click(screen.getByText('B&W'))
     expect(onStyle).toHaveBeenLastCalledWith({ filter: 'bw' })
     fireEvent.click(screen.getByText('Original'))
@@ -28,19 +29,25 @@ describe('PhotoActionBar', () => {
 
   it('gives a frameless photo a visible frame when a colour is picked', () => {
     const onStyle = vi.fn()
-    bar({ panel: 'frame', onStyle })
+    bar({ panel: 'style', onStyle })
+    fireEvent.click(screen.getByRole('tab', { name: 'Frame' }))
     fireEvent.click(screen.getByLabelText('#C25A2E'))
     expect(onStyle).toHaveBeenLastCalledWith({ borderColor: '#C25A2E', borderWidth: 6 })
     fireEvent.change(screen.getByLabelText('Corners'), { target: { value: '0.5' } })
     expect(onStyle).toHaveBeenLastCalledWith({ cornerRadius: 0.5 })
   })
 
-  it('opens panels from the action strip', () => {
+  it('groups frame, filter and rotation under one Style action', () => {
     const onTogglePanel = vi.fn()
     bar({ onTogglePanel })
-    fireEvent.click(screen.getByText('Frame'))
-    fireEvent.click(screen.getByText('Filter'))
-    fireEvent.click(screen.getByText('Rotate'))
-    expect(onTogglePanel.mock.calls.map(([p]) => p)).toEqual(['frame', 'filter', 'rotate'])
+    expect(screen.queryByText('Frame')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Style'))
+    expect(onTogglePanel).toHaveBeenCalledWith('style')
+  })
+
+  it('opens the Style panel on filters', () => {
+    bar({ panel: 'style' })
+    expect(screen.getByRole('tab', { name: 'Filter' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('B&W')).toBeInTheDocument()
   })
 })

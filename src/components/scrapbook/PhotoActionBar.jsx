@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import EncryptedImage from '../media/EncryptedImage'
 import { FILTER_PRESETS, FRAME_COLORS, MAX_FRAME_WIDTH, filterCss } from './photoStyle'
@@ -8,8 +9,7 @@ import {
   Crop,
   Expand,
   PanelBottom,
-  Wand2,
-  Square,
+  Palette,
   RotateCw,
   FlipHorizontal2,
   ImageOff,
@@ -19,7 +19,8 @@ import {
 /**
  * Contextual bottom bar shown when a filled photo element is selected.
  * Mirrors the reference action strip:
- * Done · Change · Swap · Crop · Polaroid · Frame · Filter · Rotate · Flip
+ * Done · Change · Swap · Crop · Polaroid · Style · Flip
+ * where "Style" holds three tabs: Filter · Frame · Rotate.
  * Plus two destructive actions: Remove picture (keep slot empty) and Remove.
  *
  * Props:
@@ -35,7 +36,7 @@ import {
  *  - onPolaroid(on)              → white polaroid border on / off
  *  - onCaption(text)             → the line written under a polaroid
  *  - panel / onTogglePanel(id)   → which panel is open:
- *                                  'crop' | 'polaroid' | 'frame' | 'filter' | 'rotate' | null.
+ *                                  'crop' | 'polaroid' | 'style' | null.
  *                                  While 'crop' is open, dragging the photo pans
  *                                  it inside its frame
  *  - onRemovePicture()           → clears url, keeps slot
@@ -65,6 +66,9 @@ export default function PhotoActionBar({
   const isFit = element?.fit === 'contain'
   const isPolaroid = !!element?.polaroid
   const cropOpen = panel === 'crop'
+  // Which part of the "Style" panel is showing; filters are what people reach
+  // for first.
+  const [styleTab, setStyleTab] = useState('filter')
   const rotation = normaliseAngle(element?.rotation || 0)
   const borderWidth = element?.borderWidth || 0
   const borderColor = element?.borderColor || FRAME_COLORS[0]
@@ -88,9 +92,7 @@ export default function PhotoActionBar({
     { id: 'swap', icon: Replace, label: t('photoActions.swap'), onClick: onSwap, active: mode === 'swap' },
     { id: 'crop', icon: Crop, label: t('photoActions.crop'), onClick: () => onTogglePanel?.('crop'), active: cropOpen },
     { id: 'polaroid', icon: PanelBottom, label: t('photoActions.polaroid'), onClick: handlePolaroidAction, active: isPolaroid || panel === 'polaroid' },
-    { id: 'frame', icon: Square, label: t('photoActions.frame'), onClick: () => onTogglePanel?.('frame'), active: panel === 'frame' },
-    { id: 'filter', icon: Wand2, label: t('photoActions.filter'), onClick: () => onTogglePanel?.('filter'), active: panel === 'filter' },
-    { id: 'rotate', icon: RotateCw, label: t('photoActions.rotate'), onClick: () => onTogglePanel?.('rotate'), active: panel === 'rotate' },
+    { id: 'style', icon: Palette, label: t('photoActions.style'), onClick: () => onTogglePanel?.('style'), active: panel === 'style' },
     { id: 'flip', icon: FlipHorizontal2, label: t('photoActions.flip'), onClick: onFlip },
     { id: 'remove-picture', icon: ImageOff, label: t('photoActions.clear'), onClick: onRemovePicture, variant: 'warn' },
     { id: 'remove', icon: Trash2, label: t('photoActions.remove'), onClick: onRemove, variant: 'danger' },
@@ -188,7 +190,28 @@ export default function PhotoActionBar({
         </div>
       )}
 
-      {panel === 'rotate' && (
+      {panel === 'style' && (
+        <div className="px-4 pt-3" role="tablist" aria-label={t('photoActions.style')}>
+          <div className="flex gap-1 p-1 bg-cream rounded-xl">
+            {STYLE_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={styleTab === tab}
+                onClick={() => setStyleTab(tab)}
+                className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                  styleTab === tab ? 'bg-warm-white text-bark shadow-sm' : 'text-bark-muted hover:text-bark'
+                }`}
+              >
+                {t(`photoActions.${tab}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {panel === 'style' && styleTab === 'rotate' && (
         <div className="px-4 pt-3 pb-1 space-y-2">
           <div className="flex items-center gap-3">
             <input
@@ -223,7 +246,7 @@ export default function PhotoActionBar({
         </div>
       )}
 
-      {panel === 'filter' && (
+      {panel === 'style' && styleTab === 'filter' && (
         <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pt-3 pb-1">
           {FILTER_PRESETS.map((preset) => {
             const selected = currentFilter === preset.id
@@ -259,7 +282,7 @@ export default function PhotoActionBar({
         </div>
       )}
 
-      {panel === 'frame' && (
+      {panel === 'style' && styleTab === 'frame' && (
         <div className="pt-3 pb-1 space-y-2">
           <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4">
             {FRAME_COLORS.map((color) => (
@@ -334,6 +357,8 @@ export default function PhotoActionBar({
     </div>
   )
 }
+
+const STYLE_TABS = ['filter', 'frame', 'rotate']
 
 // The slider runs from −180° to 180°; stored angles can be anything (the 90°
 // button counts up to 270°).

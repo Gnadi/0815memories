@@ -90,7 +90,8 @@
       "vivid": "Kräftig",
       "fade": "Blass",
       "cool": "Kühl"
-    }
+    },
+    "style": "Stil"
   },
   "swap": {
     "tapToSwap": "Tippe ein anderes Foto auf der Seite an, um zu tauschen",
