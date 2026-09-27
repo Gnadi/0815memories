@@ -1,155 +1,156 @@
-# Notifications — warum nichts ankommt und wie wir es richtig bauen
+# Notifications — why nothing arrives, and how to build it properly
 
-Es gibt einen kompletten Push-Stack im Code: Service Worker, Token-Handling,
-Prompt, Queue-Collection, Cloud Function. Trotzdem hat vermutlich noch nie
-jemand eine Push-Nachricht von Kaydo bekommen. Dieses Dokument sagt, woran das
-liegt — jeder Punkt zeigt auf eine Datei — und wie der Stack mit Blaze aussehen
-soll.
+The code contains a complete push stack: service worker, token handling,
+prompt, queue collection, Cloud Function. Even so, probably nobody has ever
+received a push notification from Kaydo. This document says why — every point
+refers to a file — and what the stack should look like on the Blaze plan.
 
-> **Stand:** live. Rules, Client und Functions sind deployt, eine Testbenachrichtigung
-> ist auf einem echten Gerät angekommen. Der Test-Knopf, der das geprüft hat, ist
-> danach wieder entfernt worden — siehe [Nach dem Rollout](#nach-dem-rollout).
+> **Status:** live. Rules, client and functions are deployed, and a test
+> notification arrived on a real device. The test button that checked this has
+> been removed again since — see [After the rollout](#after-the-rollout).
 
-## Ist-Zustand
+## Current state
 
-| Teil | Wo | Zustand |
+| Part | Where | State |
 | --- | --- | --- |
-| Berechtigung + Token holen | `src/utils/notifications.js` → `requestAndSaveFCMToken` | kaputt (Befund 1) |
-| Token-Ablage | Collection `fcmTokens`, Rules `firestore.rules:580` | leer |
-| Prompt / Foreground-Toast | `src/components/NotificationPrompt.jsx`, `src/App.jsx` → `AppNotifications` | ok |
-| Anzeige im Hintergrund | `src/sw.js` → `push` / `notificationclick` | ok |
-| Auslöser „neue Erinnerung/Moment" | `src/hooks/useMemories.js:103,213` → Schreiben in `notificationsQueue` | Konzept fragwürdig (Befund 5) |
-| Auslöser „3 Jahre her" | `src/hooks/useAnniversaryReminder.js` | Notlösung aus der Spark-Zeit |
-| Versand | `functions/index.js` → `dispatchPushNotifications` | Gen 1, `us-central1` (Befund 2/3) |
+| Permission + fetching the token | `src/utils/notifications.js` → `requestAndSaveFCMToken` | broken (finding 1) |
+| Token storage | collection `fcmTokens`, rules `firestore.rules:580` | empty |
+| Prompt / foreground toast | `src/components/NotificationPrompt.jsx`, `src/App.jsx` → `AppNotifications` | ok |
+| Display in the background | `src/sw.js` → `push` / `notificationclick` | ok |
+| Trigger "new memory/moment" | `src/hooks/useMemories.js:103,213` → writes to `notificationsQueue` | questionable concept (finding 5) |
+| Trigger "3 years ago" | `src/hooks/useAnniversaryReminder.js` | stopgap from the Spark days |
+| Sending | `functions/index.js` → `dispatchPushNotifications` | gen 1, `us-central1` (findings 2/3) |
 
-## Die Befunde
+## The findings
 
-### 1. Die Token-Registrierung scheitert an unseren eigenen Rules
+### 1. Token registration fails on our own rules
 
-`requestAndSaveFCMToken` sucht vor dem Schreiben nach einem vorhandenen
-Token-Dokument:
+`requestAndSaveFCMToken` looks for an existing token document before it
+writes:
 
 ```js
 const q = query(collection(db, 'fcmTokens'), where('token', '==', token))
 const existing = await getDocs(q)      // ← permission-denied
 ```
 
-`firestore.rules:598` sagt für dieselbe Collection `allow read: if false`. Die
-Query wirft, die Funktion bricht ab, bevor sie schreibt, und der Aufrufer in
-`NotificationPrompt.handleEnable` fängt nichts ab (`try/finally`, kein `catch`)
-— der Prompt schließt sich, als wäre alles gut.
+`firestore.rules:598` says `allow read: if false` for the same collection. The
+query throws, the function aborts before it writes, and the caller in
+`NotificationPrompt.handleEnable` catches nothing (`try/finally`, no `catch`)
+— the prompt closes as if all were well.
 
-Ergebnis: `fcmTokens` bleibt leer. Selbst eine perfekt deployte Function fände
-`tokens.length === 0` und täte nichts. **Das ist der eigentliche Grund, warum
-Notifications nicht funktionieren** — alles andere ist nachgelagert.
+Result: `fcmTokens` stays empty. Even a perfectly deployed function would find
+`tokens.length === 0` and do nothing. **This is the actual reason notifications
+don't work** — everything else comes after it.
 
-### 2. Der Dispatcher liegt in den USA und bleibt dort
+### 2. The dispatcher lives in the US and stays there
 
-`setGlobalOptions({ region: 'europe-west3' })` in `functions/index.js` wirkt
-ausschließlich auf v2-Funktionen und steht außerdem *hinter* der Definition von
-`dispatchPushNotifications`. Der v1-Trigger
-(`firestore.document(...).onCreate(...)`) hat keine Region gesetzt und läuft
-damit in `us-central1`.
+`setGlobalOptions({ region: 'europe-west3' })` in `functions/index.js` only
+affects v2 functions, and it also comes *after* the definition of
+`dispatchPushNotifications`. The v1 trigger
+(`firestore.document(...).onCreate(...)`) sets no region and so runs in
+`us-central1`.
 
-Das lässt sich nicht per Redeploy ändern: Eine bestehende Function kann die
-Region nicht wechseln, sie muss gelöscht und neu angelegt werden
-(`firebase functions:delete dispatchPushNotifications`). Wer das vergisst, hat
-am Ende zwei Dispatcher und doppelte Pushes.
+A redeploy cannot change that: an existing function cannot switch regions; it
+has to be deleted and created again
+(`firebase functions:delete dispatchPushNotifications`). Forget that, and you
+end up with two dispatchers and duplicate pushes.
 
-### 3. Gen 1 war ein Spark-Workaround, der nie gestimmt hat
+### 3. Gen 1 was a Spark workaround that was never right
 
-Der Kommentar in `.env.example` („Uses Cloud Functions gen 1, which works on the
-free Firebase Spark plan") ist seit dem Artifact-Registry-/Cloud-Build-Umbau
-falsch — auch Gen 1 braucht Blaze. Genau deshalb steht in der README „push ist
-optional". Mit Blaze fällt der Grund für v1 komplett weg, und die v2-API
-(`onDocumentCreated`) ist die, auf der der Rest der Datei bereits steht.
+The comment in `.env.example` ("Uses Cloud Functions gen 1, which works on the
+free Firebase Spark plan") has been wrong since the move to Artifact Registry
+and Cloud Build — gen 1 needs Blaze too. That is exactly why the README says
+"push is optional". With Blaze, the reason for v1 is gone entirely, and the v2
+API (`onDocumentCreated`) is the one the rest of the file already uses.
 
-### 4. Die Stale-Token-Bereinigung löscht gültige Geräte
+### 4. The stale-token cleanup deletes valid devices
 
 ```js
 const staleTokenDocs = tokenDocs.filter((_, i) => results[i].status === 'rejected')
 await Promise.allSettled(staleTokenDocs.map((d) => d.ref.delete()))
 ```
 
-Jeder Fehlschlag löscht das Token — auch ein kurzzeitiges `UNAVAILABLE`, ein
-Quota-Fehler oder ein Netzwerk-Timeout. Ein einziger FCM-Schluckauf meldet ein
-gesundes Handy dauerhaft ab, und niemand merkt es, weil der Nutzer die
-Berechtigung ja längst erteilt hat. Gelöscht werden darf nur bei
-`messaging/registration-token-not-registered` und `messaging/invalid-argument`.
+Every failure deletes the token — including a brief `UNAVAILABLE`, a quota
+error or a network timeout. A single FCM hiccup unsubscribes a healthy phone
+for good, and nobody notices, because the user granted the permission long
+ago. Deleting is only right for `messaging/registration-token-not-registered`
+and `messaging/invalid-argument`.
 
-### 5. Der Klartext-Titel im Queue-Dokument hebelt die Verschlüsselung aus
+### 5. The plaintext title in the queue document undoes the encryption
 
-`useMemories.js:103` schreibt:
+`useMemories.js:103` writes:
 
 ```js
 body: memory.title ? `"${memory.title}" was just shared.` : ...
 ```
 
-Der Titel liegt in `memories` verschlüsselt — und landet hier unverschlüsselt in
-Firestore und anschließend bei Google im FCM-Payload. Dasselbe gilt für
-`moment.caption`. Der ganze Aufwand aus „Stop publishing the key that encrypts
-everything" ist damit für den Inhalt der Benachrichtigung aufgehoben.
+The title is encrypted in `memories` — and ends up here unencrypted in
+Firestore, and then with Google in the FCM payload. The same goes for
+`moment.caption`. All the effort of "Stop publishing the key that encrypts
+everything" is void for the content of the notification.
 
-Dazu kommt: Der Weg „Client schreibt beliebigen Text nach `notificationsQueue`"
-ist ein Push-Kanal, dessen Inhalt niemand prüft. Die Rules validieren nur, dass
-der Absender Admin der Familie ist, nicht *was* er an alle Geräte schickt.
+On top of that, the path "the client writes arbitrary text to
+`notificationsQueue`" is a push channel whose content nobody checks. The rules
+only validate that the sender is an admin of the family, not *what* they send
+to every device.
 
-### 6. Nebenbefunde
+### 6. Side findings
 
-- **Texte sind englisch** (`'New memory added'`), obwohl die App i18n hat. Der
-  Server weiß heute nicht, welche Sprache ein Gerät spricht.
-- **iOS** liefert Web Push erst ab 16.4 und **nur**, wenn die PWA auf dem
-  Homescreen installiert ist. Im Safari-Tab erscheint der Prompt, das Abo
-  schlägt fehl. Das erklärt einen Großteil der „bei mir kommt nichts an"-Fälle,
-  die nach dem Fix übrig bleiben.
-- **`VITE_FIREBASE_VAPID_KEY`** muss in Vercel gesetzt sein, sonst gibt
-  `requestAndSaveFCMToken` stillschweigend `null` zurück und der Prompt zeigt
-  sich gar nicht erst (`NotificationPrompt.jsx:25`).
-- **Der Jahrestags-Check** (`useAnniversaryReminder`) läuft nur, wenn ein Admin
-  die App öffnet. Das war die Spark-Notlösung nach dem Wegfall des Vercel-Crons.
+- **The texts are English** (`'New memory added'`), although the app has i18n.
+  Today the server doesn't know which language a device speaks.
+- **iOS** delivers web push only from 16.4, and **only** when the PWA is
+  installed on the home screen. In a Safari tab the prompt appears and the
+  subscription fails. That explains most of the "nothing arrives for me" cases
+  that remain after the fix.
+- **`VITE_FIREBASE_VAPID_KEY`** must be set in Vercel; otherwise
+  `requestAndSaveFCMToken` silently returns `null` and the prompt never shows
+  (`NotificationPrompt.jsx:25`).
+- **The anniversary check** (`useAnniversaryReminder`) only runs when an admin
+  opens the app. That was the Spark stopgap after the Vercel cron went away.
 
-## Zielbild
+## Target design
 
 ```
-Erinnerung/Moment wird angelegt          Cloud Scheduler (täglich 08:00 Europe/Berlin)
+Memory/moment is created                 Cloud Scheduler (daily 08:00 Europe/Berlin)
         │                                          │
         ▼                                          ▼
 onDocumentCreated (europe-west3)          onSchedule (europe-west3)
         │                                          │
         └──────────────► sendToFamily() ◄──────────┘
                               │
-                   fcmTokens (nach familyId + Sprache)
+                   fcmTokens (by familyId + language)
                               │
                      sendEachForMulticast
                               │
                         sw.js: push → showNotification
 ```
 
-Drei Änderungen gegenüber heute: der Text entsteht **auf dem Server** (kein
-Klartext aus verschlüsselten Feldern, kein vom Client steuerbarer Push),
-`notificationsQueue` entfällt, und alles liegt in `europe-west3`.
+Three changes from today: the text is written **on the server** (no plaintext
+from encrypted fields, no push the client can steer), `notificationsQueue` goes
+away, and everything lives in `europe-west3`.
 
-## Umsetzung
+## Implementation
 
-### Schritt 0 — Voraussetzungen prüfen (15 Min, kein Code)
+### Step 0 — Check the prerequisites (15 min, no code)
 
-1. Firestore-Location bestätigen: `gcloud firestore databases describe --database='(default)'`.
-   Bei der regionalen Location `europe-west3` (wovon auszugehen ist, weil
-   `mirrorFamilyPublic`/`syncAdminClaims` dort als v2-Firestore-Trigger deployt
-   sind) passen Function und Datenbank zusammen. Wäre es die Multiregion `eur3`,
-   müssten die Firestore-Trigger nach `europe-west4` — dann ist das vor Schritt 2
-   zu klären.
-2. VAPID-Key in der Firebase Console (Cloud Messaging → Web Push certificates)
-   erzeugen bzw. prüfen und als `VITE_FIREBASE_VAPID_KEY` in Vercel hinterlegen
-   (alle drei Environments).
-3. `firebase functions:list` — steht `dispatchPushNotifications` tatsächlich in
-   `us-central1`, und laufen die vier v2-Funktionen in `europe-west3`?
+1. Confirm the Firestore location:
+   `gcloud firestore databases describe --database='(default)'`. With the
+   regional location `europe-west3` (which is to be expected, because
+   `mirrorFamilyPublic`/`syncAdminClaims` are deployed there as v2 Firestore
+   triggers), function and database match. If it were the multi-region `eur3`,
+   the Firestore triggers would have to go to `europe-west4` — to be settled
+   before step 2.
+2. Create or check the VAPID key in the Firebase console (Cloud Messaging → Web
+   Push certificates) and store it as `VITE_FIREBASE_VAPID_KEY` in Vercel (all
+   three environments).
+3. `firebase functions:list` — is `dispatchPushNotifications` really in
+   `us-central1`, and do the four v2 functions run in `europe-west3`?
 
-### Schritt 1 — Token-Registrierung reparieren (Blocker)
+### Step 1 — Fix the token registration (blocker)
 
-`src/utils/notifications.js`: Query raus, deterministische Dokument-ID rein. Der
-SHA-256 des Tokens ist die ID, damit kein Lesezugriff nötig ist und ein Gerät
-genau ein Dokument hat.
+`src/utils/notifications.js`: the query goes, a deterministic document id comes
+in. The SHA-256 of the token is the id, so that no read access is needed and a
+device has exactly one document.
 
 ```js
 const idBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
@@ -164,18 +165,18 @@ await setDoc(doc(db, 'fcmTokens', tokenId), {
 }, { merge: true })
 ```
 
-Dazu:
+In addition:
 
-- Fehler nicht mehr verschlucken: `handleEnable` bekommt ein `catch`, das in DEV
-  loggt und dem Nutzer im Fehlerfall einen Hinweis zeigt.
-- Beim Abmelden/Familienwechsel `deleteToken()` aufrufen und das Dokument
-  löschen, statt es auf eine neue `familyId` umzubiegen.
-- iOS: Prompt nur zeigen, wenn `window.matchMedia('(display-mode: standalone)')`
-  oder `navigator.standalone` — sonst stattdessen den Hinweis „Zum Homescreen
-  hinzufügen, dann sind Mitteilungen möglich".
+- Stop swallowing errors: `handleEnable` gets a `catch` that logs in DEV and
+  shows the user a hint when it fails.
+- On sign-out or a change of family, call `deleteToken()` and delete the
+  document, instead of pointing it at a new `familyId`.
+- iOS: show the prompt only when `window.matchMedia('(display-mode: standalone)')`
+  or `navigator.standalone` holds — otherwise show the hint "Add to the home
+  screen to allow notifications" instead.
 
-`firestore.rules` entsprechend (Viewer haben seit Plan A eine echte Identität,
-die Regel darf also anonyme Schreibzugriffe verbieten):
+`firestore.rules` to match (since Plan A, viewers have a real identity, so the
+rule may forbid anonymous writes):
 
 ```
 match /fcmTokens/{tokenId} {
@@ -189,16 +190,16 @@ match /fcmTokens/{tokenId} {
 }
 ```
 
-Test in `src/__tests__/authRules.test.js`: Fremdfamilie darf nicht schreiben,
-eigenes Gerät darf schreiben und löschen, niemand darf lesen.
+Test in `src/__tests__/authRules.test.js`: another family may not write, the
+own device may write and delete, nobody may read.
 
-### Schritt 2 — Dispatcher nach europe-west3, auf v2
+### Step 2 — Dispatcher to europe-west3, on v2
 
 1. `firebase functions:delete dispatchPushNotifications --region us-central1`
-   **zuerst** — sonst läuft die alte Function weiter.
-2. In `functions/index.js`: `firebase-functions/v1`-Import raus,
-   `setGlobalOptions` nach oben vor alle Definitionen.
-3. Eine gemeinsame Versandfunktion, die alle Auslöser nutzen:
+   **first** — otherwise the old function keeps running.
+2. In `functions/index.js`: remove the `firebase-functions/v1` import, move
+   `setGlobalOptions` to the top, before all definitions.
+3. One shared sending function that every trigger uses:
 
 ```js
 async function sendToFamily(familyId, build, { excludeUid } = {}) {
@@ -207,7 +208,7 @@ async function sendToFamily(familyId, build, { excludeUid } = {}) {
   const docs = snap.docs.filter((d) => !excludeUid || d.data().uid !== excludeUid)
   if (docs.length === 0) return
 
-  // Nach Sprache gruppieren — der Text entsteht hier, nicht im Client.
+  // Group by language — the text is written here, not in the client.
   const byLang = new Map()
   for (const d of docs) {
     const lang = d.data().lang === 'en' ? 'en' : 'de'
@@ -226,23 +227,23 @@ async function sendToFamily(familyId, build, { excludeUid } = {}) {
       const code = r.error?.code
       if (code === 'messaging/registration-token-not-registered' ||
           code === 'messaging/invalid-argument') return group[i].ref.delete()
-      return null                       // transiente Fehler: Token behalten
+      return null                       // transient errors: keep the token
     }))
     console.log(`[push] family=${familyId} lang=${lang} ok=${res.successCount} fail=${res.failureCount}`)
   }
 }
 ```
 
-`sendEachForMulticast` macht aus N Einzel-Requests einen Batch (bis 500 Tokens)
-und liefert pro Token einen Fehlercode — beides braucht die saubere Bereinigung
-aus Befund 4.
+`sendEachForMulticast` turns N single requests into one batch (up to 500
+tokens) and returns an error code per token — both are needed for the precise
+cleanup from finding 4.
 
-### Schritt 3 — Auslöser auf den Server verlegen
+### Step 3 — Move the triggers to the server
 
-`notificationsQueue` entfällt: Collection, die beiden `addDoc`-Aufrufe in
-`useMemories.js` und der Rules-Block `firestore.rules:600`.
+`notificationsQueue` goes away: the collection, the two `addDoc` calls in
+`useMemories.js` and the rules block `firestore.rules:600`.
 
-Stattdessen zwei Trigger, die von dort lesen, wo die Daten ohnehin entstehen:
+Instead, two triggers that read from where the data is created anyway:
 
 ```js
 export const notifyOnMemory = onDocumentCreated('memories/{memoryId}', (event) => {
@@ -257,25 +258,24 @@ export const notifyOnMemory = onDocumentCreated('memories/{memoryId}', (event) =
 })
 ```
 
-analog `notifyOnMoment` auf `moments/{momentId}` mit `url: '/'`.
+and likewise `notifyOnMoment` on `moments/{momentId}` with `url: '/'`.
 
-Kein Inhalt im Text — der Server kann und soll ihn nicht kennen. Wer mehr sehen
-will, tippt auf die Notification und bekommt den entschlüsselten Titel in der
-App. Der Foreground-Toast (`AppNotifications`) darf dagegen gerne den echten
-Titel zeigen, dort liegt der Schlüssel ja vor.
+No content in the text — the server cannot and should not know it. Whoever
+wants to see more taps the notification and gets the decrypted title in the
+app. The foreground toast (`AppNotifications`), on the other hand, may show the
+real title: the key is available there.
 
-Damit der Autor sich nicht selbst benachrichtigt, schreibt
-`useMemoryWriter.addMemory` künftig `createdByUid: auth.currentUser.uid` mit
-(Klartext-UID, unkritisch; `memoryContentOk()` hat keine Feld-Whitelist, die
-Rules brauchen keine Änderung). Für Viewer greift die Unterdrückung nicht — sie
-teilen sich die Identität `viewer:${familyId}` —, aber Viewer legen ohnehin
-nichts an.
+So that authors don't notify themselves, `useMemoryWriter.addMemory` will write
+`createdByUid: auth.currentUser.uid` (a plaintext uid, harmless;
+`memoryContentOk()` has no field whitelist, so the rules need no change). For
+viewers the suppression does not apply — they share the identity
+`viewer:${familyId}` — but viewers don't create anything anyway.
 
-### Schritt 4 — Jahrestag als echter Scheduler
+### Step 4 — The anniversary as a real scheduler
 
-Mit Blaze gibt es Cloud Scheduler. Der Client-Lock (`useAnniversaryReminder`,
-`utils/anniversaryClient.js`, das Feld `lastAnniversaryCheckDate` auf dem
-Familien-Dokument) fällt weg:
+With Blaze there is Cloud Scheduler. The client lock (`useAnniversaryReminder`,
+`utils/anniversaryClient.js`, the field `lastAnniversaryCheckDate` on the
+family document) goes away:
 
 ```js
 export const dailyAnniversaryCheck = onSchedule(
@@ -283,128 +283,125 @@ export const dailyAnniversaryCheck = onSchedule(
   async () => {
     const families = await getFirestore().collection('families').select().get()
     for (const fam of families.docs) {
-      const hit = await countAnniversaryMemories(fam.id)   // Admin-SDK-Variante
+      const hit = await countAnniversaryMemories(fam.id)   // Admin SDK variant
       if (!hit) continue
-      await sendToFamily(fam.id, (lang) => ({ /* … 3-Jahre-Text … */ }))
+      await sendToFamily(fam.id, (lang) => ({ /* … 3-years text … */ }))
     }
   })
 ```
 
-Die Abfrage funktioniert serverseitig, weil `date` und `familyId` im Klartext
-liegen — gezählt wird, der Inhalt bleibt verschlüsselt. Vorteil gegenüber heute:
-die Erinnerung kommt auch dann, wenn an dem Tag kein Admin die App öffnet, und
-sie kommt einmal, nicht einmal pro Gerät-Race.
+The query works on the server because `date` and `familyId` are stored in
+plaintext — it counts, and the content stays encrypted. The advantage over
+today: the reminder arrives even when no admin opens the app that day, and it
+arrives once, not once per device race.
 
-### Schritt 5 — Testen und sichtbar machen
+### Step 5 — Test and make it visible
 
-- **Test-Callable** `sendTestNotification` (onCall, `europe-west3`, prüft
-  `isFamilyAdmin` wie `setSharedPassword`) schickt einen festen Text an die
-  eigene Familie. Damit ist die Kette Token → FCM → Service Worker in zehn
-  Sekunden prüfbar, ohne eine Erinnerung anzulegen. Im Admin-Bereich als Knopf
-  „Testbenachrichtigung senden". *(Hat seinen Zweck erfüllt und ist nach dem
-  Rollout wieder entfernt worden.)*
-- **Manueller Durchlauf** je Gerät: Android/Chrome, Desktop/Chrome,
-  iOS ≥ 16.4 als installierte PWA. Jeweils App geschlossen, App im Hintergrund,
-  App im Vordergrund.
-- **Logs**: `firebase functions:log --only notifyOnMemory` — die
-  `[push] family=… sent=… failed=…`-Zeile ist der schnellste Gesundheitscheck,
-  und seit der Test-Knopf weg ist der einzige.
-- **Rules-Tests** laufen über `npm run test:rules` mit; der neue `fcmTokens`-Fall
-  gehört in `authRules.test.js`.
+- **Test callable** `sendTestNotification` (onCall, `europe-west3`, checks
+  `isFamilyAdmin` like `setSharedPassword`) sends a fixed text to the caller's
+  own family. That makes the chain token → FCM → service worker checkable in
+  ten seconds, without creating a memory. In the admin area as a button "Send
+  test notification". *(It served its purpose and was removed again after the
+  rollout.)*
+- **Manual run** per device: Android/Chrome, desktop/Chrome, iOS ≥ 16.4 as an
+  installed PWA. Each with the app closed, in the background, and in the
+  foreground.
+- **Logs**: `firebase functions:log --only notifyOnMemory` — the
+  `[push] family=… sent=… failed=…` line is the quickest health check, and
+  since the test button is gone the only one.
+- **Rules tests** run with `npm run test:rules`; the new `fcmTokens` case
+  belongs in `authRules.test.js`.
 
-### Reihenfolge
+### Order
 
-Zuerst Rules + Client (Schritt 1) deployen und ein paar Tage Tokens einsammeln —
-solange `fcmTokens` leer ist, lässt sich am Versand nichts verifizieren. Danach
-Schritt 2–4 in einem Function-Deploy, mit dem Löschen der alten `us-central1`-
-Function als erstem Kommando.
+Deploy rules + client first (step 1) and collect tokens for a few days — as
+long as `fcmTokens` is empty, nothing about sending can be verified. Then steps
+2–4 in one functions deploy, with deleting the old `us-central1` function as
+the first command.
 
-## Bewusst nicht
+## Deliberately not
 
-- **Kein E-Mail-Fallback.** Push ist der Kanal, den die PWA ohne weiteren
-  Anbieter (und ohne eine weitere Kopie der Familiendaten bei einem Dritten)
-  bedienen kann.
-- **Keine Inhalte im Push-Payload**, auch nicht „nur der Titel". Entweder die
-  Verschlüsselung gilt oder sie gilt nicht.
-- **Keine Pro-Nutzer-Einstellungen** in dieser Runde. Ein Gerät, das keine
-  Mitteilungen will, entzieht die Berechtigung; das Token wird beim nächsten
-  Fehlversuch aufgeräumt.
+- **No email fallback.** Push is the channel the PWA can serve without another
+  provider (and without another copy of the family's data at a third party).
+- **No content in the push payload**, not even "just the title". Either the
+  encryption holds or it doesn't.
+- **No per-user settings** in this round. A device that doesn't want
+  notifications revokes the permission; the token is cleaned up on the next
+  failed attempt.
 
-## Kosten
+## Cost
 
-Bei einer Handvoll Familien praktisch null: FCM ist kostenlos, Cloud Scheduler
-hat drei Jobs frei, die Trigger-Aufrufe liegen weit unter dem Free-Tier der
-Blaze-Abrechnung. `maxInstances: 10` aus `setGlobalOptions` deckelt Ausreißer
-ohnehin; `minInstances` bleibt bei 0, damit nichts im Leerlauf kostet.
+Practically zero for a handful of families: FCM is free, Cloud Scheduler has
+three free jobs, and the trigger invocations stay far below the free tier of
+Blaze billing. `maxInstances: 10` from `setGlobalOptions` caps outliers anyway;
+`minInstances` stays at 0 so that nothing costs money while idle.
 
 ## Deploy
 
-Durchgeführt, in dieser Reihenfolge — sie ist nicht beliebig, Schritt 3 muss vor
-Schritt 4 kommen:
+Done, in this order — it is not arbitrary, step 3 must come before step 4:
 
-1. **VAPID-Key** in Vercel (Firebase Console → Cloud Messaging → Web Push
+1. **VAPID key** in Vercel (Firebase console → Cloud Messaging → Web Push
    certificates).
-2. **Rules und Client zuerst**, damit sich Token-Dokumente ansammeln — ohne die
-   lässt sich am Versand nichts prüfen. Die Rules deployt inzwischen die CI beim
-   Merge auf `main` (`.github/workflows/firebase-firestore.yml`).
-3. **Alte Function löschen**:
+2. **Rules and client first**, so that token documents accumulate — without
+   them nothing about sending can be checked. The rules are now deployed by CI
+   on merge to `main` (`.github/workflows/firebase-firestore.yml`).
+3. **Delete the old function**:
    `firebase functions:delete dispatchPushNotifications --region us-central1`.
-   Eine Function kann ihre Region nicht wechseln; ohne diesen Schritt laufen
-   beide und stellen doppelt zu.
-4. **Functions deployen**: `firebase deploy --only functions`. Legt beim ersten
-   Mal den Cloud-Scheduler-Job für `dailyAnniversaryCheck` an.
-5. **Geprüft**: Testbenachrichtigung auf einem echten Gerät angekommen.
+   A function cannot change its region; without this step both run and deliver
+   twice.
+4. **Deploy the functions**: `firebase deploy --only functions`. The first time,
+   this creates the Cloud Scheduler job for `dailyAnniversaryCheck`.
+5. **Checked**: a test notification arrived on a real device.
 
-## Nach dem Rollout
+## After the rollout
 
-`sendTestNotification` und der Knopf „Testbenachrichtigung senden" sind wieder
-entfernt. Sie waren dafür da, die vier Glieder der Kette — Berechtigung,
-Token-Dokument, Function, Service Worker — einmal gemeinsam zum Klingeln zu
-bringen, als noch keines davon je funktioniert hatte. In Produktion trägt sie
-nichts mehr: jede neue Erinnerung löst denselben Weg aus, und ob er gehalten
-hat, steht in der Log-Zeile.
+`sendTestNotification` and the "Send test notification" button have been
+removed again. They were there to make the four links of the chain —
+permission, token document, function, service worker — ring together once,
+when none of them had ever worked. In production they add nothing: every new
+memory triggers the same path, and whether it held is in the log line.
 
-Der nächste `firebase deploy --only functions` bietet an, die Function zu
-löschen — bestätigen, sonst bleibt sie als Waise im Projekt stehen.
+The next `firebase deploy --only functions` offers to delete the function —
+confirm it, or it stays behind as an orphan in the project.
 
-Wenn Mitteilungen später auf einem Gerät ausbleiben, in dieser Reihenfolge
-suchen: Berechtigung im Browser, dann `[push] … sent=0` im Log (Token weg oder
-nie geschrieben), dann `failed=` (FCM lehnt ab). Der Knopf ist einen Revert
-entfernt, falls er dafür doch wieder gebraucht wird.
+If notifications later fail to arrive on a device, look in this order: the
+permission in the browser, then `[push] … sent=0` in the log (token gone or
+never written), then `failed=` (FCM rejects). The button is one revert away,
+should it be needed for this after all.
 
-## Checkliste
+## Checklist
 
-- [x] `fcmTokens`-Schreibpfad ohne Query, mit Hash-ID; Fehler wird nicht mehr verschluckt
-- [x] Rules für `fcmTokens` verschärft (Session nötig, Löschen erlaubt) + Emulator-Tests
-- [x] iOS-Prompt nur in der installierten PWA (`isPushSupported`)
-- [x] Token wird beim Logout abgemeldet (`removeFCMToken`)
-- [x] `sendToFamily` mit Batch-Versand und präziser Token-Bereinigung
-- [x] `notifyOnMemory` / `notifyOnMoment` in `europe-west3`, Texte serverseitig, Autor ausgenommen
-- [x] `notificationsQueue` samt Client-Schreibern entfernt, Rule auf `false`
-- [x] `dailyAnniversaryCheck` per Scheduler, Client-Lock und `lastAnniversaryCheckDate` entfernt
-- [x] `.env.example`/README: der Satz „gen 1 works on Spark" korrigiert
-- [x] VAPID-Key gesetzt, Rules und Client deployt
-- [x] Functions deployt, Testbenachrichtigung auf einem echten Gerät angekommen
-- [x] `sendTestNotification` samt Knopf nach dem Rollout wieder entfernt
-- [ ] `firebase functions:list` gegenprüfen: keine `dispatchPushNotifications`
-      in `us-central1` und keine `sendTestNotification` mehr übrig
+- [x] `fcmTokens` write path without a query, with a hash id; errors are no longer swallowed
+- [x] Rules for `fcmTokens` tightened (session required, deleting allowed) + emulator tests
+- [x] iOS prompt only in the installed PWA (`isPushSupported`)
+- [x] The token is unsubscribed on sign-out (`removeFCMToken`)
+- [x] `sendToFamily` with batch sending and precise token cleanup
+- [x] `notifyOnMemory` / `notifyOnMoment` in `europe-west3`, texts written on the server, author excluded
+- [x] `notificationsQueue` and its client writers removed, rule set to `false`
+- [x] `dailyAnniversaryCheck` via the scheduler, client lock and `lastAnniversaryCheckDate` removed
+- [x] `.env.example`/README: the sentence "gen 1 works on Spark" corrected
+- [x] VAPID key set, rules and client deployed
+- [x] Functions deployed, test notification arrived on a real device
+- [x] `sendTestNotification` and its button removed again after the rollout
+- [ ] Cross-check `firebase functions:list`: no `dispatchPushNotifications`
+      left in `us-central1` and no `sendTestNotification`
 
-## Wo es gelandet ist
+## Where it ended up
 
-| Teil | Datei |
+| Part | File |
 | --- | --- |
-| Token registrieren, abmelden, iOS-Check | `src/utils/notifications.js` |
-| Prompt inkl. Fehlermeldung | `src/components/NotificationPrompt.jsx` |
-| Autor-UID an Erinnerung/Moment | `src/hooks/useMemories.js` |
-| Abmelden beim Logout | `src/context/AuthContext.jsx` |
-| Versand, Trigger, Scheduler | `functions/index.js` |
-| Sprachwahl, Texte, Token-Bereinigung | `functions/push.js` |
-| Zeitfenster „vor 3 Jahren" | `functions/anniversary.js` |
+| Registering and unsubscribing the token, iOS check | `src/utils/notifications.js` |
+| Prompt incl. error message | `src/components/NotificationPrompt.jsx` |
+| Author uid on memory/moment | `src/hooks/useMemories.js` |
+| Unsubscribing on sign-out | `src/context/AuthContext.jsx` |
+| Sending, triggers, scheduler | `functions/index.js` |
+| Language choice, texts, token cleanup | `functions/push.js` |
+| The "3 years ago" window | `functions/anniversary.js` |
 | Rules | `firestore.rules` (`fcmTokens`, `notificationsQueue`) |
 | Tests | `src/__tests__/fcmToken.test.js`, `pushNotifications.test.js`, `anniversaryWindow.test.js`, `authRules.test.js` |
 
-Eine Abweichung vom Entwurf oben: die reine Logik des Versands — Sprachgruppen,
-Texte, die Entscheidung „totes Token oder nur ein schlechter Moment" — liegt in
-`functions/push.js` statt in `index.js`. Sie importiert kein firebase-admin und
-läuft damit direkt in der Test-Suite der App mit, was bei genau den beiden
-Regeln, an denen der alte Dispatcher gescheitert ist, den Unterschied macht.
+One deviation from the draft above: the pure logic of sending — language
+groups, texts, the decision "dead token or just a bad moment" — lives in
+`functions/push.js` instead of `index.js`. It imports no firebase-admin and so
+runs directly in the app's test suite, which makes the difference for exactly
+the two rules the old dispatcher failed on.

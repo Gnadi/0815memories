@@ -1,7 +1,7 @@
 /**
  * Security-rule tests for who may read a family's data at all.
  *
- * These cover the change described in docs/plan-a-zugriffskontrolle.md. Before
+ * These cover the change described in docs/plan-a-access-control.md. Before
  * it, `families`, `memories`, `moments` and `albums` were all `allow read: if
  * true` — because a viewer had no identity Firestore could check, so the only
  * way to let viewers read was to let everyone read. The family document carries

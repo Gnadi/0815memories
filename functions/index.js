@@ -180,7 +180,7 @@ export const dailyAnniversaryCheck = onSchedule(
 )
 
 // ---------------------------------------------------------------------------
-// Access control — see docs/plan-a-zugriffskontrolle.md
+// Access control — see docs/plan-a-access-control.md
 //
 // Everything below exists because a viewer used to have no identity Firestore
 // could check: loginAsViewer compared the password in the browser and set a

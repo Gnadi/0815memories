@@ -45,6 +45,11 @@ CI also runs CodeQL, `npm audit` and, when workflows change, actionlint.
 
 ## How the code is written
 
+**The project's language is English** — code, comments, documentation,
+commit messages, issues and reviews. The app itself speaks English and German,
+and a German issue is still welcome if English is hard for you; someone will
+answer in English.
+
 There is no formatter; match the file you are in. In practice: 2-space
 indentation, single quotes, no semicolons, and comments that say *why*
 something is the way it is rather than what the next line does.

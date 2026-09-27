@@ -45,6 +45,8 @@ changes to sign-in, routing or the seed.
 
 ## Style
 
+- Everything in the repository is in English: code, comments, docs, commit
+  messages. German belongs only in `src/locales/de/`.
 - No formatter: match the surrounding file — 2 spaces, single quotes, no
   semicolons.
 - Comments explain *why* (a constraint, a past bug, a trade-off), in full

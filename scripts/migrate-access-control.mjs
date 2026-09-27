@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * One-time migration for the access-control change.
- * See docs/plan-a-zugriffskontrolle.md.
+ * See docs/plan-a-access-control.md.
  *
  * Three things, all idempotent — run it as often as you like:
  *
