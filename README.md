@@ -223,6 +223,14 @@ level can be started under Actions → npm audit → Run workflow.
 - **Viewers** (family & friends): enter the shared family password — read-only, no account, no app install
 - **Admins**: Firebase email/password login; create and manage content, design the login page, manage the shared password and invite further co-admins
 
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `npm run dev:local` gets you a
+running app without any account. [docs/architecture.md](docs/architecture.md)
+maps the code, and security problems go through [SECURITY.md](SECURITY.md),
+never a public issue.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Bundled data and fonts from others are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
