@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useRouteError } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from './KaydoLogo'
+import { uncoverPage } from '../utils/prehydrationCover'
 
 // A tab that predates the latest deploy references hashed assets (lazy route
 // chunks, CSS, vite-react-ssg data files) that no longer exist on the server.
@@ -53,6 +54,12 @@ export default function RouteErrorScreen() {
   useEffect(() => {
     if (import.meta.env.DEV) console.error('Route error:', error)
   }, [error])
+
+  // The error replaces the layout, so the page's own reveal never runs; without
+  // this the error would sit hidden behind index.html's pre-hydration cover.
+  useEffect(() => {
+    uncoverPage()
+  }, [])
 
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-6 text-center">

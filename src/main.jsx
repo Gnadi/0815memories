@@ -19,6 +19,9 @@ import { routes } from './App.jsx'
 if (typeof window !== 'undefined') {
   window.__VITE_REACT_SSG_STATIC_LOADER_MANIFEST__ = {}
   window.__VITE_REACT_SSG_STATIC_LOADER_DATA__ = {}
+  // Tells index.html's failsafe timeout the app is running and will lift the
+  // pre-hydration cover itself (see src/utils/prehydrationCover.js).
+  window.__KAYDO_BOOTED__ = true
 }
 
 // Pre-render only the public marketing landing page to static HTML. All other
