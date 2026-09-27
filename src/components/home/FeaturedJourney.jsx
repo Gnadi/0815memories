@@ -144,8 +144,10 @@ function TimelineSlide({ memories }) {
       style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
     >
       {previews.length > 0 ? (
-        <div className="absolute inset-x-0 top-6 lg:top-12 flex justify-center" aria-hidden="true">
-          <div className="relative w-28 h-32 lg:w-40 lg:h-48">
+        // In the flow rather than absolute, so the photos take only the room the
+        // text leaves them and shrink when a long title wraps.
+        <div className="flex-1 min-h-0 flex items-center justify-center pt-1 pb-6 lg:pb-10" aria-hidden="true">
+          <div className="relative h-full max-h-32 lg:max-h-48 aspect-[7/8]">
             {previews.map((m, i) => (
               <div
                 key={m.id}
