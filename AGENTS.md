@@ -51,6 +51,10 @@ changes to sign-in, routing or the seed.
   sentences, at the density of the file you are in. Don't narrate the code.
 - Commit subjects are imperative and say what changes ("Show moment save
   errors"); the body explains why. No prefixes like `feat:`.
+- Every commit ends with a `Signed-off-by:` trailer for the **person you are
+  working for**, with their name and email — never your own identity, which
+  the DCO check rejects. If you don't know whom to sign off for, ask. Don't
+  use `git commit -s` when git is configured with the agent's identity.
 - Keep changes to the task. Don't reformat, rename or refactor code you
   were not asked to touch.
 

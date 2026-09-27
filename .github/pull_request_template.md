@@ -13,3 +13,4 @@
 - [ ] Changes to `firestore.rules` or to the queries the app makes come with a rules test (`npm run test:rules`)
 - [ ] New family content is encrypted before it is stored, or the PR says why not
 - [ ] No real family data, credentials or keys in code, tests or screenshots
+- [ ] Every commit is signed off (`git commit -s`, see CONTRIBUTING.md)

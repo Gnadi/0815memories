@@ -148,6 +148,7 @@ Every pull request and every push to `main` runs:
 | `npm-audit.yml` | Known vulnerabilities in both lockfiles (below) |
 | `codeql.yml` | CodeQL security analysis of the JavaScript and of the workflows; findings under Security → Code scanning |
 | `actionlint.yml` | The workflow files themselves, when they change |
+| `dco.yml` | Every commit of a pull request is signed off under the DCO (see CONTRIBUTING.md) |
 
 The actions are pinned to commit SHAs rather than tags, since a tag can be
 moved. Dependabot (`.github/dependabot.yml`) opens a weekly pull request that

@@ -88,6 +88,26 @@ and add screenshots for anything visible. CI must be green before review.
 Changes to the rules, the functions, `api/`, encryption or the workflows are
 reviewed by a code owner (`.github/CODEOWNERS`).
 
+### Sign your commits
+
+Every commit in a pull request must be signed off under the
+[Developer Certificate of Origin](https://developercertificate.org/) (DCO).
+With it you state that you wrote the change, or otherwise have the right to
+contribute it, under the project's license. In practice it is one line at the
+end of the commit message, with your real name and the email the commit is
+authored with:
+
+```
+Signed-off-by: Jane Doe <jane@example.com>
+```
+
+`git commit -s` adds it for you. Forgot it? `git rebase --signoff origin/main`
+signs off every commit on your branch; then push with `--force-with-lease`.
+The DCO check on the pull request lists any commit that is missing one.
+
+This is not a contributor license agreement: you keep the copyright to your
+contribution, and nothing is transferred.
+
 ### Using AI tools
 
 Much of this codebase was written with AI assistance, and you are welcome to
@@ -95,7 +115,13 @@ use it too. You are still the author: read and understand every line you
 submit, run the checks above yourself, and be ready to explain the change in
 review. `AGENTS.md` describes the project's conventions for coding agents.
 
+An agent cannot certify the DCO. A commit written by an agent is signed off
+by the person who directed it, with their own name and email — never by the
+agent — and that person answers for it like for their own code. The DCO
+check rejects sign-offs from agents and bots.
+
 ## License
 
 Kaydo is released under the [MIT License](LICENSE). By contributing, you
-agree that your contribution is licensed under the same terms.
+agree that your contribution is licensed under the same terms, and certify
+that under the DCO with your sign-off.

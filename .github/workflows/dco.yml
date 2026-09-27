@@ -1,0 +1,32 @@
+name: DCO
+
+# Every commit in a pull request must be signed off under the Developer
+# Certificate of Origin — see "Sign your commits" in CONTRIBUTING.md. The
+# check itself is .github/scripts/dco.mjs.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dco-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dco:
+    name: Sign-off
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commits between the base and the head, not only the merge.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check the sign-offs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/scripts/dco.mjs "$BASE_SHA" "$HEAD_SHA"
