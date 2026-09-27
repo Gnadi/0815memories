@@ -14,7 +14,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Preserve
 - **The Vault (Black Box)** — high-fidelity originals of your most precious documents and photos, with **time-locked capsules** that stay sealed until a date you choose
 - **Letters & kids' journals** — dated entries and letters to your children, written for the future
-- **Sky of birth** — from each child's journal: the stars, constellations, planets and the moon in its exact phase above their birthplace at the moment they were born, as a poster in three styles (PNG, A4 / A3 PDF) or a post in the feed. Everything is computed on the device with `astronomy-engine`; the birthplace is picked from a bundled place list rather than a geocoding service, and birth time and place are stored encrypted. Without a known time it shows the night sky of that day. Star and constellation data © Olaf Frohn ([d3-celestial](https://github.com/ofrohn/d3-celestial), BSD-3-Clause), places from [GeoNames](https://www.geonames.org/) (CC BY 4.0); regenerate them with `scripts/build-sky-data.mjs`
+- **Sky of birth** — from each child's journal: the stars, constellations, planets and the moon in its exact phase above their birthplace at the moment they were born, as a poster in three styles (PNG, A4 / A3 PDF) or a post in the feed. Everything is computed on the device with `astronomy-engine`; the birthplace is picked from a bundled place list rather than a geocoding service, and birth time and place are stored encrypted. Without a known time it shows the night sky of that day. Star and constellation data © Olaf Frohn ([d3-celestial](https://github.com/ofrohn/d3-celestial), BSD-3-Clause), places from [GeoNames](https://www.geonames.org/) (CC BY 4.0); regenerate them with `scripts/build-sky-data.mjs`. Licenses and attributions for this data and the bundled font are in `THIRD_PARTY_NOTICES.md`
 - **Full data export** — download everything as a ZIP of plain, readable files plus structured JSON; NAS-friendly, no lock-in
 
 ### Create & evolve
@@ -65,6 +65,31 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 ## Getting started
 
+### Run it locally — no accounts needed
+
+```bash
+npm install
+npm run dev:local
+```
+
+That starts the Firebase emulators (Auth, Firestore, Functions; UI on
+http://127.0.0.1:4000), seeds a demo family and opens the app on
+http://localhost:5173. Needs Node 22 and Java 11+ for the Firestore emulator —
+or open the repository in GitHub Codespaces / a VS Code Dev Container
+(`.devcontainer/`), which brings both.
+
+| Sign in as | Where | Credentials |
+| --- | --- | --- |
+| Admin | `/login?admin=1` | `demo@kaydo.app` / `demo123456` |
+| Second admin (for Our Year) | `/login?admin=1` | `partner@kaydo.app` / `demo123456` |
+| Viewer | `/family/the-bennetts` | `bennetts-family` |
+
+The data is thrown away when you stop it and seeded afresh on the next start.
+Media uploads go to Cloudinary and do not work in this mode; everything
+else does.
+
+### Run it against your own Firebase project
+
 1. Install dependencies:
    ```bash
    npm install
@@ -86,12 +111,13 @@ A private, encrypted family memory platform — your family's own corner of the 
    npm run dev
    ```
 
-### Local development with the Firebase emulator
+### The emulators by hand
 
-No real Firebase project needed — seed a demo family (the same one used for the landing-page screenshots):
+`npm run dev:local` does these three steps in one; run them separately to keep
+the emulators up while restarting the dev server:
 
 ```bash
-npm run emulators          # start Auth + Firestore emulators
+npm run emulators          # Auth, Firestore and Functions emulators
 npm run seed:emulator      # seed the demo family
 VITE_USE_EMULATOR=true npm run dev
 ```
@@ -101,6 +127,7 @@ VITE_USE_EMULATOR=true npm run dev
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Vite dev server |
+| `npm run dev:local` | Emulators + demo data + dev server, no Firebase project needed |
 | `npm run build` | Production build incl. static pre-render of `/` |
 | `npm test` | Run the Vitest suite |
 | `npm run test:rules` | Firestore security-rule tests for "Our Year" (needs the emulator + Java) |
@@ -196,6 +223,14 @@ level can be started under Actions → npm audit → Run workflow.
 - **Viewers** (family & friends): enter the shared family password — read-only, no account, no app install
 - **Admins**: Firebase email/password login; create and manage content, design the login page, manage the shared password and invite further co-admins
 
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `npm run dev:local` gets you a
+running app without any account. [docs/architecture.md](docs/architecture.md)
+maps the code, and security problems go through [SECURITY.md](SECURITY.md),
+never a public issue.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Bundled data and fonts from others are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
