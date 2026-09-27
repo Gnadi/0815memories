@@ -28,7 +28,7 @@ export default function LanguageSwitcher({ variant = 'sidebar' }) {
             onClick={() => handleChange(lng)}
             aria-pressed={active}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              active ? 'bg-kaydo text-white shadow-sm' : 'text-bark-light hover:text-bark'
+              active ? 'bg-kaydo-dark text-white shadow-sm' : 'text-bark-light hover:text-bark'
             }`}
           >
             {t(`language.${lng}`)}

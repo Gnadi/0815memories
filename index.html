@@ -35,14 +35,17 @@
     <!-- The Anton display font is self-hosted via @font-face in src/index.css,
          so there is no render-blocking external font stylesheet here. -->
 
-    <!-- "/" is pre-rendered to the marketing landing page and is also the SPA
-         fallback for every other path and the PWA's start_url, so whatever URL
-         is loaded, that page paints for the moment before the app renders. On
-         any other path it is simply the wrong page — a reload of /home flashed
-         the marketing page — and on "/" with a stored session it makes a
-         returning member look logged out. In both cases hide it behind the same
-         cream the loading shell uses; the app uncovers the page once the real
-         one has rendered (src/utils/prehydrationCover.js).
+    <!-- Only a few public pages are pre-rendered (src/prerenderedRoutes.js); every
+         other path is served the "/" landing page's HTML as the SPA fallback,
+         and "/" is also the PWA's start_url. So before the app renders, a
+         reload of /home would paint the marketing page, and a returning
+         member's launch of "/" would look logged out. Each pre-rendered page
+         carries the path it was built for (data-prerendered, stamped in
+         vite.config.js): when that is not the URL, or it is "/" and a session
+         is stored, hide the page behind the same cream the loading shell uses;
+         the app uncovers it once the real page has rendered
+         (src/utils/prehydrationCover.js). A page served its own HTML, like
+         /terms, paints straight away.
          The timeout is the failsafe for a bundle that never runs: without it a
          broken deploy would leave the visitor on a blank page. Once the bundle
          has started (src/main.jsx sets __KAYDO_BOOTED__) the app owns the cover
@@ -54,8 +57,9 @@
     </style>
     <script>
       (function () {
-        var cover = location.pathname !== '/'
-        if (!cover) {
+        var builtFor = document.documentElement.getAttribute('data-prerendered')
+        var cover = location.pathname !== builtFor
+        if (!cover && builtFor === '/') {
           try {
             cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId'))
           } catch (e) { /* storage blocked — show the page as normal */ }

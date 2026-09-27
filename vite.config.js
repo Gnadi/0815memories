@@ -11,6 +11,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/__tests__/setup.js'],
   },
+  ssgOptions: {
+    // Stamp each pre-rendered page with the path it was built for. index.html's
+    // inline script compares it with the URL to tell a page served its own HTML
+    // from one served another page's as the SPA fallback (see
+    // src/utils/prehydrationCover.js).
+    onPageRendered: (path, html) => html.replace('<html', `<html data-prerendered="${path}"`),
+  },
   build: {
     // The pre-rendered landing page ("/") paints from HTML + CSS alone. Vite's
     // automatic <link rel="modulepreload"> hints would otherwise fetch the whole
