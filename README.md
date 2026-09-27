@@ -104,16 +104,39 @@ VITE_USE_EMULATOR=true npm run dev
 | `npm run build` | Production build incl. static pre-render of `/` |
 | `npm test` | Run the Vitest suite |
 | `npm run test:rules` | Firestore security-rule tests for "Our Year" (needs the emulator + Java) |
+| `npm run test:e2e` | End-to-end smoke tests in Chromium against the seeded emulators (needs Java; Chromium via `npx playwright install chromium`, or `CHROMIUM_PATH`) |
 | `npm run lint` | ESLint |
 | `npm run emulators` | Firebase Auth + Firestore emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |
+
+## Continuous integration
+
+Every pull request and every push to `main` runs:
+
+| Workflow | What it checks |
+| --- | --- |
+| `ci.yml` → Lint, test, build | ESLint, the Vitest suite, the production build — and the bundle size, compared with the last build of `main` in the job summary. The *shell* is what every visit downloads before the first paint; a pull request that grows it by more than 10 KB (gzip) gets a warning |
+| `ci.yml` → End-to-end smoke tests | `npm run test:e2e`: the landing page, an admin sign-in (and a wrong password) and every main section, in Chromium against the seeded emulators. On failure the Playwright report is attached to the run |
+| `firebase-firestore.yml` | The Firestore rules tests; on `main` also the deploy (below) |
+| `npm-audit.yml` | Known vulnerabilities in both lockfiles (below) |
+| `codeql.yml` | CodeQL security analysis of the JavaScript and of the workflows; findings under Security → Code scanning |
+| `actionlint.yml` | The workflow files themselves, when they change |
+
+The actions are pinned to commit SHAs rather than tags, since a tag can be
+moved. Dependabot (`.github/dependabot.yml`) opens a weekly pull request that
+moves the pins, and one per lockfile for npm minor and patch updates; major
+updates come one at a time. The Node version for all of it is in `.nvmrc`.
+
+The Cloud Functions in `functions/` are not deployed from CI yet — see
+Getting started.
 
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
 (`.github/workflows/firebase-firestore.yml`) as soon as a change to either one
-lands on `main` — i.e. on merge. Pull requests that touch them run the
-validation job only, so broken rules are caught before the merge.
+lands on `main` — i.e. on merge. The rules tests run on every pull request,
+not only on those that touch the rules: they also check that the queries the
+client makes are still allowed, and those queries live all over `src/`.
 
 Two repository settings are required (Settings → Secrets and variables →
 Actions):

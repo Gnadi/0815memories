@@ -5,8 +5,11 @@ name: CI
 # errors without anyone noticing.
 #
 # The Firestore rules tests need the emulator and Java, and run in their own
-# workflow (firebase-firestore.yml) when the rules change. Here they skip
-# themselves — they look for FIRESTORE_EMULATOR_HOST, which is not set.
+# workflow (firebase-firestore.yml). Here they skip themselves — they look for
+# FIRESTORE_EMULATOR_HOST, which is not set.
+#
+# Actions are pinned to a commit, not a tag, because a tag can be moved;
+# Dependabot keeps the pins current (.github/dependabot.yml).
 on:
   push:
     branches: [main]
@@ -24,12 +27,13 @@ jobs:
   check:
     name: Lint, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
@@ -45,3 +49,66 @@ jobs:
       # VITE_ variables are set, which the app already tolerates.
       - name: Build
         run: npm run build
+
+      # The sizes of the last build of main, which a pull request compares
+      # against. A pull request can read the caches main wrote; the key never
+      # matches, so the restore key picks the newest one.
+      - name: Restore the bundle sizes of main
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: bundle-sizes-main.json
+          key: bundle-sizes-main-${{ github.sha }}
+          restore-keys: bundle-sizes-main-
+
+      - name: Bundle size
+        run: node .github/scripts/bundle-size.mjs dist bundle-sizes.json bundle-sizes-main.json
+
+      - name: Keep the bundle sizes of main
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: mv bundle-sizes.json bundle-sizes-main.json
+
+      - name: Save the bundle sizes of main
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: bundle-sizes-main.json
+          key: bundle-sizes-main-${{ github.sha }}
+
+  e2e:
+    name: End-to-end smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # The Firestore emulator needs Java.
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Starts the Auth and Firestore emulators, seeds the demo family
+      # (scripts/seed-emulator.mjs), then runs e2e/ against the dev server.
+      - name: Run the smoke tests
+        run: npm run test:e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

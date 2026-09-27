@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --only firestore --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js src/__tests__/blackboxRules.test.js src/__tests__/authRules.test.js src/__tests__/feedbackRules.test.js src/__tests__/familySlugRules.test.js src/__tests__/viewerLoginRules.test.js src/__tests__/timelineRules.test.js src/__tests__/anniversaryQueryRules.test.js src/__tests__/entryConversionRules.test.js\"",
+    "test:e2e": "firebase emulators:exec --only auth,firestore --project demo-kaydo \"node scripts/seed-emulator.mjs && playwright test\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-kaydo",
     "seed:emulator": "node scripts/seed-emulator.mjs",
     "migrate:access": "node scripts/migrate-access-control.mjs"
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
