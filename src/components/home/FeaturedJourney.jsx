@@ -4,27 +4,33 @@ import { useTranslation } from 'react-i18next'
 import { Clock } from 'lucide-react'
 import { timeAgo } from '../../utils/helpers'
 import EncryptedImage from '../media/EncryptedImage'
+import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
 // The featured memory shares a swipeable strip with the Smart Timeline, so the
 // timeline is one swipe away instead of at the bottom of an ever-growing feed.
 // Native scroll-snap does the swiping; the dots are for mouse and keyboard.
+// On a phone each slide is a little narrower than the strip, so the edge of the
+// other one peeks in and shows there is something to swipe to.
 const SLIDE_COUNT = 2
+const PREVIEW_COUNT = 3
 
-export default function FeaturedJourney({ memory }) {
+export default function FeaturedJourney({ memory, memories = [] }) {
   const { t } = useTranslation('home')
   const trackRef = useRef(null)
   const [active, setActive] = useState(0)
 
   const handleScroll = () => {
     const el = trackRef.current
-    if (!el || !el.clientWidth) return
-    setActive(Math.round(el.scrollLeft / el.clientWidth))
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    if (max <= 0) return
+    setActive(el.scrollLeft > max / 2 ? 1 : 0)
   }
 
   const goTo = (index) => {
     const el = trackRef.current
     if (!el) return
-    el.scrollTo?.({ left: index * el.clientWidth, behavior: 'smooth' })
+    el.scrollTo?.({ left: index === 0 ? 0 : el.scrollWidth, behavior: 'smooth' })
     setActive(index)
   }
 
@@ -33,13 +39,13 @@ export default function FeaturedJourney({ memory }) {
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar rounded-2xl"
+        className="flex gap-3 lg:gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar"
       >
-        <div className="w-full flex-shrink-0 snap-center">
+        <div className="w-[88%] lg:w-full flex-shrink-0 snap-start">
           {memory ? <FeaturedSlide memory={memory} /> : <FeaturedPlaceholder />}
         </div>
-        <div className="w-full flex-shrink-0 snap-center">
-          <TimelineSlide />
+        <div className="w-[88%] lg:w-full flex-shrink-0 snap-end">
+          <TimelineSlide memories={memories} />
         </div>
       </div>
 
@@ -94,21 +100,84 @@ function FeaturedSlide({ memory }) {
   )
 }
 
-function TimelineSlide() {
+const yearOf = (date) => {
+  if (!date) return null
+  const d = date.toDate ? date.toDate() : new Date(date)
+  return Number.isNaN(d.getTime()) ? null : d.getFullYear()
+}
+
+// A few photos for the timeline slide, one per year where the feed reaches that
+// far back, so the preview already hints at travelling through time.
+function pickPreviews(memories) {
+  const withPhoto = memories.filter((m) => m.images?.length || m.imageUrl)
+  const picks = []
+  const years = new Set()
+  for (const m of withPhoto) {
+    const year = yearOf(m.date || m.createdAt)
+    if (years.has(year)) continue
+    years.add(year)
+    picks.push(m)
+    if (picks.length === PREVIEW_COUNT) return picks
+  }
+  for (const m of withPhoto) {
+    if (picks.length === PREVIEW_COUNT) break
+    if (!picks.includes(m)) picks.push(m)
+  }
+  return picks
+}
+
+// Fanned polaroids: the newest in front, older ones tilted out behind it.
+const FAN = [
+  'rotate-[-3deg] z-30',
+  'rotate-[8deg] translate-x-16 -translate-y-2 z-20',
+  'rotate-[-12deg] -translate-x-16 -translate-y-1 z-10',
+]
+
+function TimelineSlide({ memories }) {
   const { t } = useTranslation('home')
+  const previews = pickPreviews(memories)
+
   return (
     <Link
       to="/timeline"
       className="relative flex flex-col justify-end rounded-2xl overflow-hidden h-80 lg:h-[480px] p-6 group"
       style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
     >
-      <Clock
-        className="absolute -top-6 -right-6 w-48 h-48 lg:w-64 lg:h-64 text-white/10"
-        strokeWidth={1.2}
-        aria-hidden="true"
-      />
-      <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-2">{t('timelineCta.eyebrow')}</p>
-      <div className="flex items-end justify-between gap-4">
+      {previews.length > 0 ? (
+        // In the flow rather than absolute, so the photos take only the room the
+        // text leaves them and shrink when a long title wraps.
+        <div className="flex-1 min-h-0 flex items-center justify-center pt-1 pb-6 lg:pb-10" aria-hidden="true">
+          <div className="relative h-full max-h-32 lg:max-h-48 aspect-[7/8]">
+            {previews.map((m, i) => (
+              <div
+                key={m.id}
+                className={`absolute inset-0 bg-white p-1.5 pb-5 lg:p-2 lg:pb-7 rounded-sm shadow-lg transition-transform duration-500 group-hover:scale-105 ${FAN[i]}`}
+              >
+                <EncryptedImage
+                  src={m.images?.[0] || m.imageUrl}
+                  thumbSrc={thumbAt(m, 0)}
+                  tinyPreview={tinyPreviewAt(m, 0)}
+                  alt=""
+                  className="w-full h-full object-cover bg-cream-dark"
+                />
+                {yearOf(m.date || m.createdAt) && (
+                  <span className="absolute bottom-0.5 lg:bottom-1.5 inset-x-0 text-center text-[10px] lg:text-xs font-semibold text-bark-muted">
+                    {yearOf(m.date || m.createdAt)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Clock
+          className="absolute -top-6 -right-6 w-48 h-48 lg:w-64 lg:h-64 text-white/10"
+          strokeWidth={1.2}
+          aria-hidden="true"
+        />
+      )}
+      <p className="relative text-xs font-semibold tracking-widest text-white/70 uppercase mb-2">{t('timelineCta.eyebrow')}</p>
+      <div className="relative flex items-end justify-between gap-4">
         <div>
           <h3 className="text-2xl lg:text-3xl font-bold font-serif text-white mb-1">{t('timelineCta.title')}</h3>
           <p className="text-sm text-white/85 leading-relaxed max-w-xs">{t('timelineCta.body')}</p>
