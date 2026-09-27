@@ -86,6 +86,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       # The Firestore emulator needs Java.
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -95,11 +98,16 @@ jobs:
 
       - run: npm ci
 
+      # The Functions emulator runs functions/ with its own dependencies:
+      # viewer login is a Cloud Function.
+      - run: npm ci --prefix functions
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # Starts the Auth and Firestore emulators, seeds the demo family
-      # (scripts/seed-emulator.mjs), then runs e2e/ against the dev server.
+      # Starts the Auth, Firestore and Functions emulators, seeds the demo
+      # family (scripts/seed-emulator.mjs), then runs e2e/ against the dev
+      # server.
       - name: Run the smoke tests
         run: npm run test:e2e
 

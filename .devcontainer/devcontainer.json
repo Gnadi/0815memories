@@ -1,0 +1,24 @@
+// A ready-made environment for GitHub Codespaces and VS Code Dev Containers:
+// Node from .nvmrc's major, Java for the Firestore emulator, and every
+// dependency installed. Then: npm run dev:local
+{
+  "name": "Kaydo",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "jdkDistro": "tem"
+    }
+  },
+  "postCreateCommand": "npm ci && npm ci --prefix functions",
+  "forwardPorts": [5173, 4000],
+  "portsAttributes": {
+    "5173": { "label": "App (Vite)", "onAutoForward": "openBrowser" },
+    "4000": { "label": "Emulator UI" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss"]
+    }
+  }
+}
