@@ -19,7 +19,8 @@
     "badge": "Neue Reise",
     "awaiting": "Warte auf Erinnerungen...",
     "placeholderTitle": "Sonntag im Weinberg",
-    "placeholderBody": "Endlich war die ganze Bande da! Teile deine erste Erinnerung, um loszulegen."
+    "placeholderBody": "Endlich war die ganze Bande da! Teile deine erste Erinnerung, um loszulegen.",
+    "goToSlide": "Seite {{n}} von {{total}}"
   },
   "timelineCta": {
     "eyebrow": "Entdecken",
