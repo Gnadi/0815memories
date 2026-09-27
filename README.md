@@ -166,8 +166,11 @@ lands on `main` — i.e. on merge. The rules tests run on every pull request,
 not only on those that touch the rules: they also check that the queries the
 client makes are still allowed, and those queries live all over `src/`.
 
-Two repository settings are required (Settings → Secrets and variables →
-Actions):
+The deploy job runs in the GitHub environment `production`, which holds its
+settings. Create it under Settings → Environments, and under *Deployment
+branches and tags* allow only `main`: then no other branch — and no one who
+can push one — can run a workflow that reads the key (see
+[GOVERNANCE.md](GOVERNANCE.md)). Two settings go into that environment:
 
 | Name | Type | Value |
 | --- | --- | --- |
@@ -226,7 +229,9 @@ level can be started under Actions → npm audit → Run workflow.
 
 ## Contributing
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `npm run dev:local` gets you a
+Kaydo is open source; the service at kaydo.app is run by one operator, who
+alone has access to its data — [GOVERNANCE.md](GOVERNANCE.md) spells out what
+that means. Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `npm run dev:local` gets you a
 running app without any account. [docs/architecture.md](docs/architecture.md)
 maps the code, and security problems go through [SECURITY.md](SECURITY.md),
 never a public issue.

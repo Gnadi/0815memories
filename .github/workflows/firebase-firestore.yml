@@ -89,6 +89,11 @@ jobs:
     needs: [validate, changes]
     if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
+    # The deploy credentials live in this environment, not in the repository,
+    # and the environment only admits main (Settings → Environments →
+    # production → Deployment branches). Without that, anyone who can push a
+    # branch could run a workflow that reads them. See GOVERNANCE.md.
+    environment: production
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,11 +110,11 @@ jobs:
         run: |
           missing=0
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT is not set (Settings → Secrets and variables → Actions)."
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT is not set in the production environment (Settings → Environments → production)."
             missing=1
           fi
           if [ -z "$FIREBASE_PROJECT_ID" ]; then
-            echo "::error::Variable FIREBASE_PROJECT_ID is not set (Settings → Secrets and variables → Actions → Variables)."
+            echo "::error::Variable FIREBASE_PROJECT_ID is not set (Settings → Environments → production, or Secrets and variables → Actions → Variables)."
             missing=1
           fi
           exit "$missing"

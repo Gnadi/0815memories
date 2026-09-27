@@ -26,8 +26,10 @@ npm run dev:local
 
 That starts the Firebase emulators, seeds a demo family and serves the app on
 http://localhost:5173. The sign-ins are in the README under *Getting started*.
-You never need access to the hosted service or its Firebase project, and you
-should not test against it: it holds real families' data.
+You never need access to the hosted service or its Firebase project, and
+contributing does not grant it: only the operator can reach production and
+its data ([GOVERNANCE.md](GOVERNANCE.md)). Don't test against it either — it
+holds real families' data.
 
 ## Before you open a pull request
 

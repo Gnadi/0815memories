@@ -63,6 +63,7 @@ changes to sign-in, routing or the seed.
 ## Don't
 
 - Don't deploy, and don't run anything against a non-demo Firebase project.
+  Production and its data are the operator's alone (`GOVERNANCE.md`).
 - Don't weaken a rule, skip or delete a test, or lower the audit level to
   get CI green. Fix the cause.
 - Don't edit `package-lock.json` by hand; use npm.
