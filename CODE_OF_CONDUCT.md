@@ -1,5 +1,3 @@
-<!-- TODO(maintainer): replace CONDUCT_CONTACT below with a monitored address before announcing the project. -->
-
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -38,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at CONDUCT_CONTACT. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at [support@kaydo.app](mailto:support@kaydo.app). All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
