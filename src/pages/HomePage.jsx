@@ -79,7 +79,7 @@ export default function HomePage() {
             onMomentClick={(index) => setViewingMomentIndex(index)}
             onViewAll={() => navigate('/moments')}
           />
-          <FeaturedJourney memory={featuredMemory} />
+          <FeaturedJourney memory={featuredMemory} memories={memories} />
           <MemoryFeed
             memories={nonFeaturedMemories}
             onEdit={handleEdit}
