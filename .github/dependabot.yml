@@ -1,0 +1,46 @@
+# Dependabot opens pull requests for dependency updates; the npm audit
+# workflow only reports what is vulnerable. Security updates arrive whenever
+# an advisory is published (turn them on under Settings → Code security →
+# Dependabot security updates); the version updates below come once a week.
+#
+# Minor and patch updates arrive as one pull request per directory, so a week
+# of releases is one review, not twenty. Major updates stay separate: they are
+# the ones that need reading.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+    groups:
+      app-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /functions
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(functions)
+    groups:
+      functions-minor-and-patch:
+        update-types: [minor, patch]
+
+  # The actions are pinned to commits; this moves the pins, and the version
+  # comment next to each, to new releases.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

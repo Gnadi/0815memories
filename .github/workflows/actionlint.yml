@@ -1,0 +1,35 @@
+name: Lint workflows
+
+# A typo in a workflow — a wrong expression, an unknown input, a shell
+# mistake in a `run:` block — otherwise shows up only when the workflow runs,
+# and for the deploy that means on main. actionlint checks them on the pull
+# request, with shellcheck for the scripts.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actionlint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # The official image, which bundles shellcheck. Pinned by version;
+      # bump it together with the version in the comment.
+      - name: Run actionlint 1.7.12
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
