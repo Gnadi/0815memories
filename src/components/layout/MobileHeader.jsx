@@ -1,4 +1,4 @@
-import { LogOut, Settings, ChefHat } from 'lucide-react'
+import { LogOut, Settings, ChefHat, Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import FeedbackLauncher from '../FeedbackLauncher'
@@ -22,6 +22,15 @@ export default function MobileHeader() {
         <h1 className="text-lg font-bold text-bark">Kaydo</h1>
       </div>
       <div className="flex items-center gap-1">
+        {/* The timeline sits in the sidebar on desktop; on a phone this is the
+            only way in that does not mean scrolling past every memory. */}
+        <button
+          onClick={() => navigate('/timeline')}
+          className="p-2 text-bark-light hover:text-kaydo transition-colors"
+          aria-label={t('nav.timeline')}
+        >
+          <Clock className="w-5 h-5" />
+        </button>
         {isAdmin && (
           <button
             onClick={() => navigate('/recipes')}

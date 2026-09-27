@@ -80,17 +80,10 @@ export default function HomePage() {
             onViewAll={() => navigate('/moments')}
           />
           <FeaturedJourney memory={featuredMemory} />
-          <MemoryFeed
-            memories={nonFeaturedMemories}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-          <AlbumGlimpse memories={memories} />
-
-          {/* Smart Timeline CTA */}
+          {/* Smart Timeline CTA — above the feed, which grows with every memory */}
           <Link
             to="/timeline"
-            className="block mt-6 rounded-2xl overflow-hidden group"
+            className="block mb-6 rounded-2xl overflow-hidden group"
             style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
           >
             <div className="px-6 py-7 flex items-center justify-between">
@@ -112,6 +105,13 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+
+          <MemoryFeed
+            memories={nonFeaturedMemories}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+          <AlbumGlimpse memories={memories} />
 
           {/* "Our Year" — renders only for the two partners of a ritual */}
           <OurYearHomeCard />
