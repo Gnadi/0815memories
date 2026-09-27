@@ -1,0 +1,51 @@
+name: CodeQL
+
+# Static security analysis of the JavaScript — the app, api/ and functions/ —
+# and of the workflows themselves. Findings appear under Security → Code
+# scanning, and on a pull request as annotations on the lines they concern.
+# The weekly run picks up new queries when nothing is pushed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Wednesdays, 05:23 UTC.
+    - cron: '23 5 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # Neither language needs a build: CodeQL reads the source as it is.
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config: |
+            paths-ignore:
+              - node_modules
+              - dist
+              - public/sky
+
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:${{ matrix.language }}

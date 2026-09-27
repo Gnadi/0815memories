@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -50,9 +50,17 @@ export default defineConfig([
     },
   },
   {
-    // Cloud Functions, the Vercel functions and the migration scripts run in
-    // Node, where `process` and friends exist and `window` does not.
-    files: ['functions/**/*.js', 'api/**/*.js', 'scripts/**/*.{js,mjs}'],
+    // Cloud Functions, the Vercel functions, the migration scripts and the
+    // Playwright setup run in Node, where `process` and friends exist and
+    // `window` does not.
+    files: [
+      'functions/**/*.js',
+      'api/**/*.js',
+      'scripts/**/*.{js,mjs}',
+      '.github/scripts/**/*.mjs',
+      'e2e/**/*.js',
+      'playwright.config.js',
+    ],
     languageOptions: {
       globals: globals.node,
     },
