@@ -2,6 +2,7 @@ import { ViteReactSSG } from 'vite-react-ssg'
 import './index.css'
 import './i18n' // initialize i18next (runs in both Node pre-render and browser)
 import { routes } from './App.jsx'
+import { PRERENDERED_PATHS } from './prerenderedRoutes'
 
 // None of our routes define a data loader, yet vite-react-ssg attaches a hidden
 // loader to every route on server-rendered pages. On the first client-side
@@ -24,10 +25,17 @@ if (typeof window !== 'undefined') {
   window.__KAYDO_BOOTED__ = true
 }
 
-// Pre-render only the public marketing landing page to static HTML. All other
-// routes (auth + protected app) stay client-side rendered. vite-react-ssg reads
-// this as a named export from the entry module.
-export const includedRoutes = (paths) => paths.filter((path) => path === '/')
+// Pre-render the public pages — the marketing landing page and the legal pages —
+// to static HTML. All other routes (auth + protected app) stay client-side
+// rendered. vite-react-ssg reads this as a named export from the entry module.
+// It lists nested routes without their parent's "/" ("terms"), so normalise
+// before matching; the leading slash also reaches onPageRendered in
+// vite.config.js, which stamps it on the page for index.html to compare with
+// location.pathname.
+export const includedRoutes = (paths) =>
+  paths
+    .map((path) => (path.startsWith('/') ? path : `/${path}`))
+    .filter((path) => PRERENDERED_PATHS.includes(path))
 
 export const createRoot = ViteReactSSG(
   { routes },

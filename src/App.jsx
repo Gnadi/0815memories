@@ -287,9 +287,9 @@ const protect = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 // and be left looking at nothing.
 const protectAdmin = (element) => <ProtectedRoute adminOnly>{element}</ProtectedRoute>
 
-// Route table consumed by ViteReactSSG (src/main.jsx). Only the index route ("/")
-// is pre-rendered to static HTML; all other routes stay client-side (see the
-// includedRoutes filter in main.jsx).
+// Route table consumed by ViteReactSSG (src/main.jsx). Only the public pages in
+// src/prerenderedRoutes.js are pre-rendered to static HTML; all other routes
+// stay client-side (see the includedRoutes filter in main.jsx).
 export const routes = [
   {
     path: '/',
