@@ -375,10 +375,12 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
   const elementRef = useRef(null)
   const observerRef = useRef(null)
 
-  // Keep the displayed entry pinned so eviction can never revoke it.
+  // Keep the displayed entry pinned so eviction can never revoke it. The test
+  // is on the source URL: a decrypted URL is always blob:, and asking whether
+  // *it* was direct left every photo unpinned.
   const retainedRef = useRef(null)
   useEffect(() => {
-    const held = decryptedUrl && !isDirectUrl(decryptedUrl) ? encryptedUrl : null
+    const held = decryptedUrl && encryptedUrl && !isDirectUrl(encryptedUrl) ? encryptedUrl : null
     if (retainedRef.current === held) return
 
     const previous = retainedRef.current
