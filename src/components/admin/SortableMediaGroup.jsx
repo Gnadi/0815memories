@@ -1,6 +1,6 @@
 import {
   DndContext,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -14,7 +14,11 @@ import {
  */
 export default function SortableMediaGroup({ onMove, children }) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    // MouseSensor rather than PointerSensor: Chrome on Android fires
+    // pointerdown before touchstart, so a PointerSensor claimed every touch
+    // first, and in a dialog that can scroll the browser took the gesture for a
+    // scroll and cancelled it. Mouse events leave touches to the TouchSensor.
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 

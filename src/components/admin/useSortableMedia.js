@@ -43,6 +43,6 @@ export function useSortableMedia(id, { prevId, nextId, onMove }) {
 
 // Keeps a tap on a button inside a draggable from being claimed as a drag.
 export const stopDrag = {
-  onPointerDown: (e) => e.stopPropagation(),
+  onMouseDown: (e) => e.stopPropagation(),
   onTouchStart: (e) => e.stopPropagation(),
 }
