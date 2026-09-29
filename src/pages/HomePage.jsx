@@ -72,49 +72,55 @@ export default function HomePage() {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
 
-        <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
+        {/* The page widens on large screens only so the memory feed can spread
+            into two columns; the other sections keep their single-column width. */}
+        <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl min-[88rem]:max-w-[92rem] mx-auto w-full">
           <DailyMoments
             moments={moments}
             onAddMoment={() => setShowMomentModal(true)}
             onMomentClick={(index) => setViewingMomentIndex(index)}
             onViewAll={() => navigate('/moments')}
           />
-          <FeaturedJourney memory={featuredMemory} memories={memories} />
+          <div className="mx-auto w-full max-w-[44rem]">
+            <FeaturedJourney memory={featuredMemory} memories={memories} />
+          </div>
           <MemoryFeed
             memories={nonFeaturedMemories}
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-          <AlbumGlimpse memories={memories} />
+          <div className="mx-auto w-full max-w-[44rem]">
+            <AlbumGlimpse memories={memories} />
 
-          {/* Smart Timeline CTA */}
-          <Link
-            to="/timeline"
-            className="block mt-6 rounded-2xl overflow-hidden group"
-            style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
-          >
-            <div className="px-6 py-7 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">{t('timelineCta.eyebrow')}</p>
-                <h3 className="font-serif text-xl font-bold text-white leading-snug">
-                  {t('timelineCta.title')}
-                </h3>
-                <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
-                  {t('timelineCta.body')}
-                </p>
-              </div>
-              <div className="flex-shrink-0 ml-4">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
+            {/* Smart Timeline CTA */}
+            <Link
+              to="/timeline"
+              className="block mt-6 rounded-2xl overflow-hidden group"
+              style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
+            >
+              <div className="px-6 py-7 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">{t('timelineCta.eyebrow')}</p>
+                  <h3 className="font-serif text-xl font-bold text-white leading-snug">
+                    {t('timelineCta.title')}
+                  </h3>
+                  <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
+                    {t('timelineCta.body')}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 ml-4">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
 
-          {/* "Our Year" — renders only for the two partners of a ritual */}
-          <OurYearHomeCard />
+            {/* "Our Year" — renders only for the two partners of a ritual */}
+            <OurYearHomeCard />
+          </div>
         </main>
       </div>
 
