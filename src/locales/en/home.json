@@ -20,7 +20,9 @@
     "awaiting": "Awaiting memories...",
     "placeholderTitle": "Sunday at the Vineyard",
     "placeholderBody": "The whole gang finally made it! Share your first memory to get started.",
-    "goToSlide": "Slide {{n}} of {{total}}"
+    "goToSlide": "Slide {{n}} of {{total}}",
+    "previous": "Previous slide",
+    "next": "Next slide"
   },
   "timelineCta": {
     "eyebrow": "Explore",
