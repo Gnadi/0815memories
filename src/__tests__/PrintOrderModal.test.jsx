@@ -91,7 +91,10 @@ describe('PrintOrderModal', () => {
     expect(link).toHaveAttribute('href', checkout.checkoutUrl)
     expect(link).toHaveAttribute('target', '_blank')
     expect(screen.getByText('The checkout link works until October 3, 2026.')).toBeInTheDocument()
-    expect(screen.getByText('View the print file').closest('a')).toHaveAttribute('href', uploadedFile.pdfUrl)
+    // Peecho shows only the cover, so the whole book is offered first.
+    const preview = screen.getByRole('link', { name: 'Preview the whole book (PDF)' })
+    expect(preview).toHaveAttribute('href', uploadedFile.pdfUrl)
+    expect(preview.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('retries only the checkout when Peecho failed, without making the file again', async () => {

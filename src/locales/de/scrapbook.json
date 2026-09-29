@@ -206,15 +206,17 @@
     "uploading": "Druckdatei wird hochgeladen… {{percent}} %",
     "keepOpen": "Bitte lass diese Seite geöffnet, bis alles fertig ist.",
     "cancel": "Abbrechen",
-    "readyHeading": "Dein Buch kann bestellt werden",
+    "readyHeading": "Bei Peecho bestellen",
     "readyBody": "Bei Peecho wählst du das Produkt, gibst die Lieferadresse ein und bezahlst. Peecho druckt das Buch und schickt es dir.",
     "orderAtPeecho": "Bei Peecho bestellen",
-    "preview": "Druckdatei ansehen",
+    "preview": "Ganzes Buch ansehen (PDF)",
     "failed": "Die Druckdatei konnte nicht vorbereitet werden. Bitte versuche es erneut.",
     "tryAgain": "Erneut versuchen",
     "creatingCheckout": "Die Kasse bei Peecho wird eingerichtet…",
     "linkExpires": "Der Link zur Kasse gilt bis {{date}}.",
     "checkoutFailed": "Die Druckdatei ist fertig, aber Peecho hat keine Kasse dafür geöffnet. Bitte versuche es gleich noch einmal.",
-    "photosMissing": "Ein Foto auf Seite {{page}} konnte nicht geladen werden, deshalb wurde keine Druckdatei erstellt – ein gedrucktes Buch soll keine Lücke haben, wo ein Foto hingehört. Prüfe deine Verbindung und versuche es erneut."
+    "photosMissing": "Ein Foto auf Seite {{page}} konnte nicht geladen werden, deshalb wurde keine Druckdatei erstellt – ein gedrucktes Buch soll keine Lücke haben, wo ein Foto hingehört. Prüfe deine Verbindung und versuche es erneut.",
+    "checkHeading": "Alle Seiten prüfen",
+    "checkBody": "Die Kasse von Peecho zeigt nur den Umschlag. Sieh dir hier vorher das ganze Buch an – genau diese Datei wird gedruckt."
   }
 }

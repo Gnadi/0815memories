@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Loader2, Printer, LockOpen, Info, ExternalLink, RotateCcw } from 'lucide-react'
+import { X, Loader2, Printer, LockOpen, Info, ExternalLink, RotateCcw, BookOpen } from 'lucide-react'
 import {
   printConfig,
   HARDCOVER_MIN_PAGES,
@@ -199,35 +199,45 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
           )}
 
           {phase === 'ready' && checkout && (
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold text-bark">{t('print.readyHeading')}</p>
+            // Two steps, in order. Peecho's checkout shows only the cover, so
+            // the whole book is looked through here, before anyone pays.
+            <ol className="space-y-4">
+              <li className="rounded-xl border border-cream-dark p-4">
+                <p className="font-semibold text-bark flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-kaydo text-white text-xs flex items-center justify-center">1</span>
+                  {t('print.checkHeading')}
+                </p>
+                <p className="text-bark-muted mt-1">{t('print.checkBody')}</p>
+                <a
+                  href={file.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-kaydo text-kaydo font-semibold hover:bg-kaydo/5 transition-colors"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  {t('print.preview')}
+                </a>
+              </li>
+              <li className="rounded-xl border border-cream-dark p-4">
+                <p className="font-semibold text-bark flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-kaydo text-white text-xs flex items-center justify-center">2</span>
+                  {t('print.readyHeading')}
+                </p>
                 <p className="text-bark-muted mt-1">{t('print.readyBody')}</p>
-              </div>
-              <div className="flex justify-center">
                 <a
                   href={checkout.checkoutUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-kaydo inline-flex items-center gap-2 text-sm"
+                  className="btn-kaydo mt-3 w-full inline-flex items-center justify-center gap-2 text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {t('print.orderAtPeecho')}
                 </a>
-              </div>
-              <p className="text-xs text-bark-muted text-center">
-                {t('print.linkExpires', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(new Date(checkout.expiresAt)) })}
-              </p>
-              <a
-                href={file.pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 text-xs text-bark-muted hover:text-kaydo"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {t('print.preview')}
-              </a>
-            </div>
+                <p className="text-xs text-bark-muted text-center mt-2">
+                  {t('print.linkExpires', { date: new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(new Date(checkout.expiresAt)) })}
+                </p>
+              </li>
+            </ol>
           )}
 
           {phase === 'error' && (
