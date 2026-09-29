@@ -157,5 +157,13 @@
       "tape": "Tape",
       "corners": "Corners"
     }
+  },
+  "mediaOrder": {
+    "photoHint": "Drag photos to change their order. The first one is shown first.",
+    "photoLabel": "Photo {{position}} of {{count}}. Drag, or use the arrow keys, to move it.",
+    "photoRemove": "Remove photo",
+    "videoHint": "Drag videos to change their order.",
+    "videoLabel": "Video {{position}} of {{count}}. Drag, or use the arrow keys, to move it.",
+    "videoRemove": "Remove video"
   }
 }
