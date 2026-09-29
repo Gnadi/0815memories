@@ -14,7 +14,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Preserve
 - **The Vault (Black Box)** — high-fidelity originals of your most precious documents and photos, with **time-locked capsules** that stay sealed until a date you choose
 - **Letters & kids' journals** — dated entries and letters to your children, written for the future
-- **Sky of birth** — from each child's journal: the stars, constellations, planets and the moon in its exact phase above their birthplace at the moment they were born, as a poster in three styles (PNG, A4 / A3 PDF) or a post in the feed. Everything is computed on the device with `astronomy-engine`; the birthplace is picked from a bundled place list rather than a geocoding service, and birth time and place are stored encrypted. Without a known time it shows the night sky of that day. Star and constellation data © Olaf Frohn ([d3-celestial](https://github.com/ofrohn/d3-celestial), BSD-3-Clause), places from [GeoNames](https://www.geonames.org/) (CC BY 4.0); regenerate them with `scripts/build-sky-data.mjs`
+- **Sky of birth** — from each child's journal: the stars, constellations, planets and the moon in its exact phase above their birthplace at the moment they were born, as a poster in three styles (PNG, A4 / A3 PDF) or a post in the feed. Everything is computed on the device with `astronomy-engine`; the birthplace is picked from a bundled place list rather than a geocoding service, and birth time and place are stored encrypted. Without a known time it shows the night sky of that day. Star and constellation data © Olaf Frohn ([d3-celestial](https://github.com/ofrohn/d3-celestial), BSD-3-Clause), places from [GeoNames](https://www.geonames.org/) (CC BY 4.0); regenerate them with `scripts/build-sky-data.mjs`. Licenses and attributions for this data and the bundled font are in `THIRD_PARTY_NOTICES.md`
 - **Full data export** — download everything as a ZIP of plain, readable files plus structured JSON; NAS-friendly, no lock-in
 
 ### Create & evolve
@@ -68,6 +68,31 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 ## Getting started
 
+### Run it locally — no accounts needed
+
+```bash
+npm install
+npm run dev:local
+```
+
+That starts the Firebase emulators (Auth, Firestore, Functions, Storage; UI on
+http://127.0.0.1:4000), seeds a demo family and opens the app on
+http://localhost:5173. Needs Node 22 and Java 11+ for the Firestore emulator —
+or open the repository in GitHub Codespaces / a VS Code Dev Container
+(`.devcontainer/`), which brings both.
+
+| Sign in as | Where | Credentials |
+| --- | --- | --- |
+| Admin | `/login?admin=1` | `demo@kaydo.app` / `demo123456` |
+| Second admin (for Our Year) | `/login?admin=1` | `partner@kaydo.app` / `demo123456` |
+| Viewer | `/family/the-bennetts` | `bennetts-family` |
+
+The data is thrown away when you stop it and seeded afresh on the next start.
+Media uploads go to Cloudinary and do not work in this mode; everything
+else does.
+
+### Run it against your own Firebase project
+
 1. Install dependencies:
    ```bash
    npm install
@@ -89,12 +114,13 @@ A private, encrypted family memory platform — your family's own corner of the 
    npm run dev
    ```
 
-### Local development with the Firebase emulator
+### The emulators by hand
 
-No real Firebase project needed — seed a demo family (the same one used for the landing-page screenshots):
+`npm run dev:local` does these three steps in one; run them separately to keep
+the emulators up while restarting the dev server:
 
 ```bash
-npm run emulators          # start Auth, Firestore + Storage emulators
+npm run emulators          # Auth, Firestore, Functions and Storage emulators
 npm run seed:emulator      # seed the demo family
 VITE_USE_EMULATOR=true npm run dev
 ```
@@ -104,19 +130,43 @@ VITE_USE_EMULATOR=true npm run dev
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Vite dev server |
+| `npm run dev:local` | Emulators + demo data + dev server, no Firebase project needed |
 | `npm run build` | Production build incl. static pre-render of `/` |
 | `npm test` | Run the Vitest suite |
 | `npm run test:rules` | Firestore and Storage security-rule tests (needs the emulators + Java) |
+| `npm run test:e2e` | End-to-end smoke tests in Chromium against the seeded emulators (needs Java; Chromium via `npx playwright install chromium`, or `CHROMIUM_PATH`) |
 | `npm run lint` | ESLint |
-| `npm run emulators` | Firebase Auth, Firestore + Storage emulators |
+| `npm run emulators` | Firebase Auth, Firestore, Functions and Storage emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |
+
+## Continuous integration
+
+Every pull request and every push to `main` runs:
+
+| Workflow | What it checks |
+| --- | --- |
+| `ci.yml` → Lint, test, build | ESLint, the Vitest suite, the production build — and the bundle size, compared with the last build of `main` in the job summary. The *shell* is what every visit downloads before the first paint; a pull request that grows it by more than 10 KB (gzip) gets a warning |
+| `ci.yml` → End-to-end smoke tests | `npm run test:e2e`: the landing page, an admin sign-in (and a wrong password) and every main section, in Chromium against the seeded emulators. On failure the Playwright report is attached to the run |
+| `firebase-firestore.yml` | The Firestore rules tests; on `main` also the deploy (below) |
+| `npm-audit.yml` | Known vulnerabilities in both lockfiles (below) |
+| `codeql.yml` | CodeQL security analysis of the JavaScript and of the workflows; findings under Security → Code scanning |
+| `actionlint.yml` | The workflow files themselves, when they change |
+
+The actions are pinned to commit SHAs rather than tags, since a tag can be
+moved. Dependabot (`.github/dependabot.yml`) opens a weekly pull request that
+moves the pins, and one per lockfile for npm minor and patch updates; major
+updates come one at a time. The Node version for all of it is in `.nvmrc`.
+
+The Cloud Functions in `functions/` are not deployed from CI yet — see
+Getting started.
 
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
 (`.github/workflows/firebase-firestore.yml`) as soon as a change to either one
-lands on `main` — i.e. on merge. Pull requests that touch them run the
-validation job only, so broken rules are caught before the merge.
+lands on `main` — i.e. on merge. The rules tests run on every pull request,
+not only on those that touch the rules: they also check that the queries the
+client makes are still allowed, and those queries live all over `src/`.
 
 Two repository settings are required (Settings → Secrets and variables →
 Actions):
@@ -247,6 +297,14 @@ level can be started under Actions → npm audit → Run workflow.
 - **Viewers** (family & friends): enter the shared family password — read-only, no account, no app install
 - **Admins**: Firebase email/password login; create and manage content, design the login page, manage the shared password and invite further co-admins
 
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) — `npm run dev:local` gets you a
+running app without any account. [docs/architecture.md](docs/architecture.md)
+maps the code, and security problems go through [SECURITY.md](SECURITY.md),
+never a public issue.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE). Bundled data and fonts from others are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

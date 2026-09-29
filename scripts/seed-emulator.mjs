@@ -17,6 +17,7 @@ import { mkdir, writeFile, access } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
+import bcrypt from 'bcryptjs'
 
 // Point the Admin SDK at the local emulators BEFORE importing firebase-admin.
 process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080'
@@ -46,6 +47,10 @@ const ADMIN_NAME = 'Sarah Bennett'
 const PARTNER_EMAIL = 'partner@kaydo.app'
 const PARTNER_PASSWORD = 'demo123456'
 const PARTNER_NAME = 'David Bennett'
+// Viewers sign in with one shared family password, checked by the viewerLogin
+// function. It only works when the Functions emulator runs too, as it does
+// under `npm run dev:local`.
+const VIEWER_PASSWORD = 'bennetts-family'
 const FAMILY_NAME = 'The Bennett Family'
 const FAMILY_SLUG = 'the-bennetts'
 
@@ -136,6 +141,9 @@ async function main() {
     'families', 'memories', 'moments', 'recipes', 'children', 'journals', 'scrapbooks', 'blackbox',
     'collages', 'highlights',
     'ourYearRituals', 'ourYearChapters', 'ourYearEntries', 'ourYearLetters',
+    // Written by the Cloud Functions. A slug still registered to the family
+    // of a previous seed would keep the new one off its login page.
+    'familyPublic', 'familySlugs', 'viewerDevices', 'rateLimits',
   ]) {
     await clearCollection(c)
   }
@@ -170,6 +178,11 @@ async function main() {
     createdAt: ts('2023-01-01'),
   })
   const familyId = familyRef.id
+  // What setSharedPassword stores: a bcrypt hash, never the password.
+  await familyRef.collection('secrets').doc('auth').set({
+    sharedPassword: await bcrypt.hash(VIEWER_PASSWORD, 10),
+    updatedAt: new Date(),
+  })
 
   console.log('⑤ Seeding memories …')
   const memories = [
@@ -599,6 +612,7 @@ async function main() {
   console.log(`   Family:   ${FAMILY_NAME}  (slug: ${FAMILY_SLUG}, id: ${familyId})`)
   console.log(`   Admin:    ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
   console.log(`   Partner:  ${PARTNER_EMAIL} / ${PARTNER_PASSWORD}`)
+  console.log(`   Viewers:  /family/${FAMILY_SLUG} with password ${VIEWER_PASSWORD} (needs the Functions emulator)`)
   process.exit(0)
 }
 

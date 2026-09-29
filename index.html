@@ -35,27 +35,41 @@
     <!-- The Anton display font is self-hosted via @font-face in src/index.css,
          so there is no render-blocking external font stylesheet here. -->
 
-    <!-- "/" is pre-rendered to the marketing landing page and is also the SPA
-         fallback and the PWA's start_url, so a returning member's app launch
-         paints that page for the moment before hydration — the app looking
-         logged out, every time. When a session is stored, hide it behind the
-         same cream the loading shell uses; src/App.jsx (RootRoute) uncovers the
-         page as soon as it has decided between the app and the landing page.
+    <!-- Only a few public pages are pre-rendered (src/prerenderedRoutes.js); every
+         other path is served the "/" landing page's HTML as the SPA fallback,
+         and "/" is also the PWA's start_url. So before the app renders, a
+         reload of /home would paint the marketing page, and a returning
+         member's launch of "/" would look logged out. Each pre-rendered page
+         carries the path it was built for (data-prerendered, stamped in
+         vite.config.js): when that is not the URL, or it is "/" and a session
+         is stored, hide the page behind the same cream the loading shell uses;
+         the app uncovers it once the real page has rendered
+         (src/utils/prehydrationCover.js). A page served its own HTML, like
+         /terms, paints straight away.
          The timeout is the failsafe for a bundle that never runs: without it a
-         broken deploy would leave a returning visitor on a blank page. -->
+         broken deploy would leave the visitor on a blank page. Once the bundle
+         has started (src/main.jsx sets __KAYDO_BOOTED__) the app owns the cover
+         and has its own valves, so a slow route chunk does not flash the
+         landing page back in. -->
     <style>
       html.kaydo-restoring body { background: #FDF6EC; }
       html.kaydo-restoring #root { visibility: hidden; }
     </style>
     <script>
-      try {
-        if (location.pathname === '/' && localStorage.getItem('fh_familyId')) {
-          document.documentElement.classList.add('kaydo-restoring')
-          setTimeout(function () {
-            document.documentElement.classList.remove('kaydo-restoring')
-          }, 4000)
+      (function () {
+        var builtFor = document.documentElement.getAttribute('data-prerendered')
+        var cover = location.pathname !== builtFor
+        if (!cover && builtFor === '/') {
+          try {
+            cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId'))
+          } catch (e) { /* storage blocked — show the page as normal */ }
         }
-      } catch (e) { /* storage blocked — show the page as normal */ }
+        if (!cover) return
+        document.documentElement.classList.add('kaydo-restoring')
+        setTimeout(function () {
+          if (!window.__KAYDO_BOOTED__) document.documentElement.classList.remove('kaydo-restoring')
+        }, 4000)
+      })()
     </script>
   </head>
   <body>

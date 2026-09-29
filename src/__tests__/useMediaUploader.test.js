@@ -237,4 +237,28 @@ describe('useMediaUploader', () => {
     expect(result.current.images).toEqual([])
     expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
+
+  it('moves an image to the slot of another via moveImage', () => {
+    const initialImages = ['a', 'b', 'c'].map((id) => ({ id, url: `${id}.enc`, uploading: false }))
+    const { result } = renderHook(() => useMediaUploader('key', { initialImages }))
+
+    act(() => result.current.moveImage('a', 'c'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['b', 'c', 'a'])
+
+    act(() => result.current.moveImage('a', 'b'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['a', 'b', 'c'])
+
+    // Unknown ids leave the order alone rather than dropping a photo.
+    act(() => result.current.moveImage('a', 'gone'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('moves a video to the slot of another via moveVideo, keeping its title', () => {
+    const initialVideos = ['a', 'b', 'c'].map((id) => ({ id, url: `${id}.enc`, title: id.toUpperCase() }))
+    const { result } = renderHook(() => useMediaUploader('key', { initialVideos }))
+
+    act(() => result.current.moveVideo('c', 'a'))
+    expect(result.current.videos.map((v) => v.id)).toEqual(['c', 'a', 'b'])
+    expect(result.current.videos[0].title).toBe('C')
+  })
 })

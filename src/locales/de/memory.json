@@ -157,5 +157,13 @@
       "tape": "Klebeband",
       "corners": "Ecken"
     }
+  },
+  "mediaOrder": {
+    "photoHint": "Ziehe Fotos, um ihre Reihenfolge zu ändern. Das erste wird zuerst gezeigt.",
+    "photoLabel": "Foto {{position}} von {{count}}. Ziehen oder mit den Pfeiltasten verschieben.",
+    "photoRemove": "Foto entfernen",
+    "videoHint": "Ziehe Videos, um ihre Reihenfolge zu ändern.",
+    "videoLabel": "Video {{position}} von {{count}}. Ziehen oder mit den Pfeiltasten verschieben.",
+    "videoRemove": "Video entfernen"
   }
 }

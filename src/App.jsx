@@ -4,7 +4,7 @@
    fast-refresh "components-only export" rule does not apply here. */
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n, { ensureAppTranslations } from './i18n'
 import { AuthProvider } from './context/AuthContext'
@@ -19,6 +19,7 @@ import { devError } from './utils/devLog'
 
 import { getSubdomainSlug } from './utils/familySlug'
 import { hasStoredSession } from './utils/authStorage'
+import { uncoverPage } from './utils/prehydrationCover'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -136,8 +137,8 @@ export function RootRoute() {
   // commit that rendered the shell or the landing page, so the markup being
   // revealed is already the right one.
   useEffect(() => {
-    if (status === 'unknown' || typeof document === 'undefined') return
-    document.documentElement.classList.remove('kaydo-restoring')
+    if (status === 'unknown') return
+    uncoverPage()
   }, [status])
 
   if (status === 'restoring') return <PageLoader />
@@ -146,6 +147,20 @@ export function RootRoute() {
 
 function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
+}
+
+// Lifts index.html's pre-hydration cover on every path but "/", which RootRoute
+// handles because it has its own decision to make first. It renders inside the
+// same <Suspense> as the page, so its effect runs only once the page itself has
+// committed: while a lazy page is still loading, React keeps the pre-rendered
+// landing markup in place of the boundary during hydration, and uncovering
+// before then is exactly the flash the cover exists to hide.
+function RevealPage() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    if (pathname !== '/') uncoverPage()
+  }, [pathname])
+  return null
 }
 
 // Vercel's analytics script is only served on Vercel deployments; on localhost,
@@ -254,6 +269,7 @@ function Layout() {
         <HtmlLangSync />
         <Suspense fallback={<PageLoader />}>
           <Outlet />
+          <RevealPage />
         </Suspense>
         <AdminMobileBottomNav />
         <PWAInstallPrompt />
@@ -271,9 +287,9 @@ const protect = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 // and be left looking at nothing.
 const protectAdmin = (element) => <ProtectedRoute adminOnly>{element}</ProtectedRoute>
 
-// Route table consumed by ViteReactSSG (src/main.jsx). Only the index route ("/")
-// is pre-rendered to static HTML; all other routes stay client-side (see the
-// includedRoutes filter in main.jsx).
+// Route table consumed by ViteReactSSG (src/main.jsx). Only the public pages in
+// src/prerenderedRoutes.js are pre-rendered to static HTML; all other routes
+// stay client-side (see the includedRoutes filter in main.jsx).
 export const routes = [
   {
     path: '/',
