@@ -1,23 +1,30 @@
 import { useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Clock } from 'lucide-react'
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { timeAgo } from '../../utils/helpers'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
 // The featured memory shares a swipeable strip with the Smart Timeline, so the
 // timeline is one swipe away instead of at the bottom of an ever-growing feed.
-// Native scroll-snap does the swiping; the dots are for mouse and keyboard.
+// Native scroll-snap does the swiping on touch. A mouse cannot swipe a scroll
+// container, so on desktop the strip can be dragged, and arrows and dots page it.
 // On a phone each slide is a little narrower than the strip, so the edge of the
 // other one peeks in and shows there is something to swipe to.
 const SLIDE_COUNT = 2
 const PREVIEW_COUNT = 3
+// How far a mouse drag must travel to count as a swipe rather than a click.
+const CLICK_SLOP = 6
+const SWIPE_DISTANCE = 60
 
 export default function FeaturedJourney({ memory, memories = [] }) {
   const { t } = useTranslation('home')
   const trackRef = useRef(null)
   const [active, setActive] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef(null)
+  const suppressClick = useRef(false)
 
   const handleScroll = () => {
     const el = trackRef.current
@@ -34,19 +41,81 @@ export default function FeaturedJourney({ memory, memories = [] }) {
     setActive(index)
   }
 
+  // Mouse only: touch and pen already scroll the strip natively. Snapping is
+  // off while dragging, or the browser would fight every pixel of the drag.
+  const onPointerDown = (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    const el = trackRef.current
+    if (!el) return
+    drag.current = { x: e.clientX, scrollLeft: el.scrollLeft, from: active, moved: false }
+    suppressClick.current = false
+  }
+
+  const onPointerMove = (e) => {
+    const d = drag.current
+    const el = trackRef.current
+    if (!d || !el) return
+    const dx = e.clientX - d.x
+    if (!d.moved && Math.abs(dx) < CLICK_SLOP) return
+    if (!d.moved) {
+      d.moved = true
+      setDragging(true)
+      el.setPointerCapture?.(e.pointerId)
+    }
+    el.scrollLeft = d.scrollLeft - dx
+  }
+
+  const onPointerUp = (e) => {
+    const d = drag.current
+    drag.current = null
+    if (!d?.moved) return
+    // The click that ends a drag must not open the slide under the mouse.
+    suppressClick.current = true
+    setDragging(false)
+    const dx = e.clientX - d.x
+    if (dx <= -SWIPE_DISTANCE) goTo(Math.min(d.from + 1, SLIDE_COUNT - 1))
+    else if (dx >= SWIPE_DISTANCE) goTo(Math.max(d.from - 1, 0))
+    else goTo(d.from)
+  }
+
+  const onClickCapture = (e) => {
+    if (!suppressClick.current) return
+    suppressClick.current = false
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   return (
     <section className="mb-8">
-      <div
-        ref={trackRef}
-        onScroll={handleScroll}
-        className="flex gap-3 lg:gap-4 overflow-x-auto snap-x snap-mandatory hide-scrollbar"
-      >
-        <div className="w-[88%] lg:w-full flex-shrink-0 snap-start">
-          {memory ? <FeaturedSlide memory={memory} /> : <FeaturedPlaceholder />}
+      <div className="relative group/featured">
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClickCapture={onClickCapture}
+          onDragStart={(e) => e.preventDefault()}
+          className={`flex gap-3 lg:gap-4 overflow-x-auto hide-scrollbar ${
+            dragging ? 'snap-none select-none cursor-grabbing' : 'snap-x snap-mandatory'
+          }`}
+        >
+          <div className="w-[88%] lg:w-full flex-shrink-0 snap-start">
+            {memory ? <FeaturedSlide memory={memory} /> : <FeaturedPlaceholder />}
+          </div>
+          <div className="w-[88%] lg:w-full flex-shrink-0 snap-end">
+            <TimelineSlide memories={memories} />
+          </div>
         </div>
-        <div className="w-[88%] lg:w-full flex-shrink-0 snap-end">
-          <TimelineSlide memories={memories} />
-        </div>
+
+        {/* Desktop only: on a phone the swipe and the peeking edge are enough. */}
+        {active > 0 && (
+          <SlideArrow side="left" label={t('featured.previous')} onClick={() => goTo(active - 1)} />
+        )}
+        {active < SLIDE_COUNT - 1 && (
+          <SlideArrow side="right" label={t('featured.next')} onClick={() => goTo(active + 1)} />
+        )}
       </div>
 
       <div className="flex justify-center gap-2 mt-3">
@@ -64,6 +133,22 @@ export default function FeaturedJourney({ memory, memories = [] }) {
         ))}
       </div>
     </section>
+  )
+}
+
+function SlideArrow({ side, label, onClick }) {
+  const Icon = side === 'left' ? ChevronLeft : ChevronRight
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`hidden lg:flex absolute top-1/2 -translate-y-1/2 ${
+        side === 'left' ? 'left-3' : 'right-3'
+      } z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-bark shadow-md items-center justify-center opacity-0 group-hover/featured:opacity-100 focus-visible:opacity-100 transition-opacity`}
+    >
+      <Icon className="w-5 h-5" />
+    </button>
   )
 }
 
