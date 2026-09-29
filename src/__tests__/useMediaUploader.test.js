@@ -252,4 +252,13 @@ describe('useMediaUploader', () => {
     act(() => result.current.moveImage('a', 'gone'))
     expect(result.current.images.map((img) => img.id)).toEqual(['a', 'b', 'c'])
   })
+
+  it('moves a video to the slot of another via moveVideo, keeping its title', () => {
+    const initialVideos = ['a', 'b', 'c'].map((id) => ({ id, url: `${id}.enc`, title: id.toUpperCase() }))
+    const { result } = renderHook(() => useMediaUploader('key', { initialVideos }))
+
+    act(() => result.current.moveVideo('c', 'a'))
+    expect(result.current.videos.map((v) => v.id)).toEqual(['c', 'a', 'b'])
+    expect(result.current.videos[0].title).toBe('C')
+  })
 })

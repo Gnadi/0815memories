@@ -40,6 +40,19 @@ export function getVideoDuration(file) {
   })
 }
 
+// Moves the item with `id` to the slot `overId` holds. Works on ids rather
+// than indexes so a reorder that lands while an upload is still swapping in its
+// URL cannot move the wrong item.
+export function moveById(items, id, overId) {
+  const from = items.findIndex((item) => item.id === id)
+  const to = items.findIndex((item) => item.id === overId)
+  if (from < 0 || to < 0 || from === to) return items
+  const next = [...items]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
+}
+
 let nextId = 1
 const generateId = () => `upl-${Date.now()}-${nextId++}`
 
@@ -148,23 +161,16 @@ export function useMediaUploader(encryptionKey, {
     setImages((prev) => prev.filter((img) => img.id !== id))
   }, [])
 
-  // Moves the image with `id` to the slot `overId` holds. Works on ids rather
-  // than indexes so a reorder that lands while an upload is still swapping in
-  // its URL cannot move the wrong photo.
   const moveImage = useCallback((id, overId) => {
-    setImages((prev) => {
-      const from = prev.findIndex((img) => img.id === id)
-      const to = prev.findIndex((img) => img.id === overId)
-      if (from < 0 || to < 0 || from === to) return prev
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
+    setImages((prev) => moveById(prev, id, overId))
   }, [])
 
   const removeVideo = useCallback((id) => {
     setVideos((prev) => prev.filter((v) => v.id !== id))
+  }, [])
+
+  const moveVideo = useCallback((id, overId) => {
+    setVideos((prev) => moveById(prev, id, overId))
   }, [])
 
   const hasUploading = useMemo(
@@ -182,6 +188,7 @@ export function useMediaUploader(encryptionKey, {
     removeImage,
     moveImage,
     removeVideo,
+    moveVideo,
     videoError,
     setVideoError,
     imageError,

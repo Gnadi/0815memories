@@ -4,11 +4,10 @@ import { X, Plus, Image as ImageIcon, Video, Camera } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
-import EncryptedVideo from '../media/EncryptedVideo'
 import { thumbsFor, buildThumbs, tinyPreviewsUpdate } from '../../utils/mediaThumbs'
 import { momentFormToMemoryDraft } from '../../utils/entryConversion'
 import EntryTypeSwitch from './EntryTypeSwitch'
-import SortablePhotoTiles from './SortablePhotoTiles'
+import SortableMediaTiles from './SortableMediaTiles'
 
 function buildInitialImages(moment) {
   if (moment?.images?.length) {
@@ -54,6 +53,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
     removeImage,
     moveImage,
     removeVideo,
+    moveVideo,
     videoError,
     imageError,
     hasUploading,
@@ -175,8 +175,9 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
             <label className="block text-sm font-medium text-bark mb-2">
               {t('postMoment.photos')}
             </label>
-            <SortablePhotoTiles
-              images={images}
+            <SortableMediaTiles
+              kind="photo"
+              items={images}
               onRemove={removeImage}
               onMove={moveImage}
               className={mediaError ? 'p-2 ring-2 ring-kaydo rounded-xl' : ''}
@@ -206,7 +207,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
                 <Camera className="w-6 h-6 text-bark-muted" />
                 <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.camera')}</span>
               </button>
-            </SortablePhotoTiles>
+            </SortableMediaTiles>
             {imageError && (
               <p className="text-xs text-kaydo mt-1">{imageError}</p>
             )}
@@ -217,50 +218,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
             <label className="block text-sm font-medium text-bark mb-2">
               {t('postMoment.shortVideos')} <span className="text-bark-muted font-normal">{t('postMoment.shortVideosHint')}</span>
             </label>
-            <div className="flex gap-3 flex-wrap">
-              {videos.map((v) => (
-                <div key={v.id} className="relative w-20 h-20 flex-shrink-0">
-                  {v.preview?.startsWith('blob:') ? (
-                    <video
-                      src={v.preview}
-                      className="w-20 h-20 rounded-xl object-cover bg-black"
-                      muted
-                      playsInline
-                    />
-                  ) : (
-                    <EncryptedVideo
-                      src={v.preview}
-                      className="w-20 h-20 rounded-xl object-cover bg-black"
-                      controls={false}
-                      muted
-                      playsInline
-                    />
-                  )}
-                  {/* Video icon overlay */}
-                  {!v.uploading && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-7 h-7 rounded-full bg-black/50 flex items-center justify-center">
-                        <Video className="w-3.5 h-3.5 text-white" />
-                      </div>
-                    </div>
-                  )}
-                  {v.uploading && (
-                    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                  {!v.uploading && (
-                    <button
-                      type="button"
-                      onClick={() => removeVideo(v.id)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-
+            <SortableMediaTiles kind="video" items={videos} onRemove={removeVideo} onMove={moveVideo}>
               {/* Add video button */}
               <button
                 type="button"
@@ -280,7 +238,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
                 <Camera className="w-6 h-6 text-bark-muted" />
                 <span className="text-xs text-bark-muted text-center leading-tight">{t('postMoment.record')}</span>
               </button>
-            </div>
+            </SortableMediaTiles>
             {videoError && (
               <p className="text-xs text-kaydo mt-1">{videoError}</p>
             )}
