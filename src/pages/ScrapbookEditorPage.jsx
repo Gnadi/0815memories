@@ -35,6 +35,7 @@ import {
   canvasThumbnail,
   releaseCanvas,
 } from '../components/scrapbook/pageCapture'
+import { PRINT_PENDING_TIMEOUT_MS } from '../components/scrapbook/exportReady'
 import { editorReducer, initialState, makeBlankPage, FRESH_CROP } from '../components/scrapbook/editorState'
 
 // Printing is on when the deployment has turned it on (VITE_PEECHO_ENABLED).
@@ -207,7 +208,7 @@ export default function ScrapbookEditorPage() {
     onProgress({ done: 0, total: sheets.length })
     try {
       await document.fonts.ready
-      await warmBookPhotos(pages, encryptionKey)
+      await warmBookPhotos(pages, encryptionKey, PRINT_PENDING_TIMEOUT_MS)
       const [{ default: jsPDF }, { default: html2canvas }] = await libraries
       const pdf = createPrintPdf(jsPDF, format, { title })
       let thumbnail = null
@@ -222,6 +223,9 @@ export default function ScrapbookEditorPage() {
         height: frame.height,
         scale: ratio,
         isCancelled,
+        // Every photo on paper, or no print file: see MissingPhotosError.
+        waitMs: PRINT_PENDING_TIMEOUT_MS,
+        requireAllPhotos: true,
         onPage: async (pageCanvas, i) => {
           if (i === 0) thumbnail = await canvasThumbnail(pageCanvas, THUMBNAIL_WIDTH)
           pdf.addImage(await canvasToJpeg(pageCanvas, PRINT_JPEG_QUALITY))

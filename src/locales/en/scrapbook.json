@@ -214,6 +214,7 @@
     "tryAgain": "Try again",
     "creatingCheckout": "Setting up the checkout at Peecho…",
     "linkExpires": "The checkout link works until {{date}}.",
-    "checkoutFailed": "The print file is ready, but Peecho did not open a checkout for it. Please try again in a moment."
+    "checkoutFailed": "The print file is ready, but Peecho did not open a checkout for it. Please try again in a moment.",
+    "photosMissing": "A photo on page {{page}} could not be loaded, so no print file was made – a printed book should not have a gap where a photo belongs. Check your connection and try again."
   }
 }

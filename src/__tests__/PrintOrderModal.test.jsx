@@ -122,6 +122,14 @@ describe('PrintOrderModal', () => {
     expect(onRender).toHaveBeenCalledTimes(2)
   })
 
+  it('says which page lost a photo, and makes no print file', async () => {
+    const missing = Object.assign(new Error('missing'), { code: 'missing-photos', page: 1, count: 1 })
+    open({ onRender: vi.fn().mockRejectedValue(missing) })
+    prepare()
+    expect(await screen.findByRole('alert')).toHaveTextContent('A photo on page 1 could not be loaded')
+    expect(uploadPrintFile).not.toHaveBeenCalled()
+  })
+
   it('stops rendering and uploads nothing when cancelled', async () => {
     let finishRender
     let isCancelled

@@ -214,6 +214,7 @@
     "tryAgain": "Erneut versuchen",
     "creatingCheckout": "Die Kasse bei Peecho wird eingerichtet…",
     "linkExpires": "Der Link zur Kasse gilt bis {{date}}.",
-    "checkoutFailed": "Die Druckdatei ist fertig, aber Peecho hat keine Kasse dafür geöffnet. Bitte versuche es gleich noch einmal."
+    "checkoutFailed": "Die Druckdatei ist fertig, aber Peecho hat keine Kasse dafür geöffnet. Bitte versuche es gleich noch einmal.",
+    "photosMissing": "Ein Foto auf Seite {{page}} konnte nicht geladen werden, deshalb wurde keine Druckdatei erstellt – ein gedrucktes Buch soll keine Lücke haben, wo ein Foto hingehört. Prüfe deine Verbindung und versuche es erneut."
   }
 }

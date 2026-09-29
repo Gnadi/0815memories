@@ -7,7 +7,7 @@
  * on their export canvases, then hand the element to html2canvas.
  */
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
-import { waitForExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from './exportReady'
+import { waitForExportCanvases, unpaintedExportCanvases, EXPORT_PENDING_TIMEOUT_MS } from './exportReady'
 
 /**
  * Start fetching and decrypting every photo of the book before the first
@@ -62,6 +62,19 @@ async function captureElement(element, html2canvas, { width, height, scale }) {
 }
 
 /**
+ * A page that would have gone into the print file with a photo missing.
+ * `page` counts from 1, as the editor shows it.
+ */
+export class MissingPhotosError extends Error {
+  constructor(page, count) {
+    super(`${count} photo(s) on page ${page} could not be loaded`)
+    this.code = 'missing-photos'
+    this.page = page
+    this.count = count
+  }
+}
+
+/**
  * Capture pages 0 … count-1 in order and pass each to `onPage(canvas, index)`,
  * which is awaited before the next page is switched to — so a caller that
  * encodes and drops each capture holds one page in memory, not the book.
@@ -69,6 +82,10 @@ async function captureElement(element, html2canvas, { width, height, scale }) {
  * `switchPage(index)` must commit synchronously (flushSync), or html2canvas
  * reads whatever page was mounted before. Returns false when `isCancelled`
  * stopped it early.
+ *
+ * `waitMs` is how long a page may take to get its photos. With
+ * `requireAllPhotos`, a page still missing one after that throws
+ * MissingPhotosError instead of being captured without it.
  */
 export async function capturePages({
   count,
@@ -80,6 +97,8 @@ export async function capturePages({
   scale,
   onPage,
   isCancelled = () => false,
+  waitMs = EXPORT_PENDING_TIMEOUT_MS,
+  requireAllPhotos = false,
 }) {
   for (let index = 0; index < count; index++) {
     if (isCancelled()) return false
@@ -87,8 +106,10 @@ export async function capturePages({
     await threeFrames()
     // Frames alone are a guess; photos land on their canvas whenever their
     // decode finishes. Hold the capture until they actually have.
-    await waitForExportCanvases(getElement())
+    await waitForExportCanvases(getElement(), waitMs)
     if (isCancelled()) return false
+    const missing = requireAllPhotos ? unpaintedExportCanvases(getElement()) : 0
+    if (missing > 0) throw new MissingPhotosError(index + 1, missing)
     const canvas = await captureElement(getElement(), html2canvas, { width, height, scale })
     await onPage(canvas, index)
   }
