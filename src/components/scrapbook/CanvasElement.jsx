@@ -10,9 +10,9 @@ import useDecryptedMedia from '../media/useDecryptedMedia'
 import { drawImageCovered } from '../../utils/collageRenderer'
 // Same reasoning for glyphs: html2canvas places them with font metrics of its
 // own and gets the display face wrong, so the export paints the text itself.
-import { drawTextBlock, prepareExportCanvas } from '../../utils/canvasText'
+import { drawTextBlock, prepareExportCanvas, EXPORT_PIXEL_RATIO } from '../../utils/canvasText'
 // Marks a canvas the capture still has to wait for.
-import { EXPORT_PENDING_ATTR } from './exportReady'
+import { EXPORT_PENDING_ATTR, EXPORT_FAILED_ATTR } from './exportReady'
 // Zoom, pan and "whole photo" — the same crop on screen and in the export.
 import { effectiveScale, imageLayout, panBy } from './photoCrop'
 // Filters, corner rounding and a coloured frame — CSS on screen, the same
@@ -48,6 +48,9 @@ export default function CanvasElement({
   canvasScale,
   editable = true,
   exporting = false,
+  // The export canvases' backing-store ratio: the capture's own scale, which
+  // is higher for a print file than for the PDF download.
+  exportRatio = EXPORT_PIXEL_RATIO,
   cropping = false,
 }) {
   const { t } = useTranslation('scrapbook')
@@ -74,7 +77,7 @@ export default function CanvasElement({
 
   // Always decrypt the image URL so it's warm in the cache before export starts.
   // (EncryptedImage does the same internally; the shared cache avoids double-fetching.)
-  const { decryptedUrl } = useDecryptedMedia(
+  const { decryptedUrl, error: decryptError } = useDecryptedMedia(
     type === 'photo' ? element.url : null,
     'image/*'
   )
@@ -91,6 +94,14 @@ export default function CanvasElement({
     if (!exporting || type !== 'photo' || !exportCanvasRef.current) return
     const canvas = exportCanvasRef.current
     canvas.setAttribute(EXPORT_PENDING_ATTR, '')
+    canvas.removeAttribute(EXPORT_FAILED_ATTR)
+    // A photo that cannot be had says so, rather than passing for one that
+    // was painted: the print file refuses to go out with a hole in it.
+    if (decryptError) {
+      canvas.removeAttribute(EXPORT_PENDING_ATTR)
+      canvas.setAttribute(EXPORT_FAILED_ATTR, '')
+      return undefined
+    }
     if (!decryptedUrl) return undefined
     const cw = canvas.offsetWidth || width
     const ch = canvas.offsetHeight || height
@@ -98,7 +109,7 @@ export default function CanvasElement({
     const flipped = !!element.flipped
     // A backing store at the capture's own scale — at CSS resolution the PDF
     // would be upscaling every photo by two.
-    const ctx = prepareExportCanvas(canvas, cw, ch)
+    const ctx = prepareExportCanvas(canvas, cw, ch, exportRatio)
     const img = new Image()
     let cancelled = false
     img.onload = () => {
@@ -133,12 +144,14 @@ export default function CanvasElement({
     }
     // A photo that cannot be loaded must not hold the whole export hostage.
     img.onerror = () => {
-      if (!cancelled) canvas.removeAttribute(EXPORT_PENDING_ATTR)
+      if (cancelled) return
+      canvas.removeAttribute(EXPORT_PENDING_ATTR)
+      canvas.setAttribute(EXPORT_FAILED_ATTR, '')
     }
     img.src = decryptedUrl
     return () => { cancelled = true }
   }, [
-    exporting, type, decryptedUrl, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
+    exporting, exportRatio, type, decryptedUrl, decryptError, cropFit, cropScale, cropOffsetX, cropOffsetY, element.flipped, width, height,
     photoFilter, cornerRadius, borderWidth, borderColor, isPolaroidPhoto,
   ])
 
@@ -165,7 +178,7 @@ export default function CanvasElement({
     const boxW = width + overflowPad * 2
     const boxH = height + overflowPad * 2
     if (!boxW || !boxH) return
-    const ctx = prepareExportCanvas(canvas, boxW, boxH)
+    const ctx = prepareExportCanvas(canvas, boxW, boxH, exportRatio)
     ctx.clearRect(0, 0, boxW, boxH)
     drawTextBlock(ctx, {
       text: type === 'sticker' ? element.emoji || '' : element.text || '',
@@ -183,7 +196,7 @@ export default function CanvasElement({
       letterSpacing: type === 'text' && isDisplay ? fontSize * DISPLAY_LETTER_SPACING_EM : 0,
     })
   }, [
-    exporting, type, width, height, overflowPad, element.text, element.emoji,
+    exporting, exportRatio, type, width, height, overflowPad, element.text, element.emoji,
     stickerSize, fontSize, fontFamily, fontWeight, textColor, textAlign, lineHeight, isDisplay,
   ])
 

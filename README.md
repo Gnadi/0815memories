@@ -20,6 +20,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Create & evolve
 - **Recipe tree** — family recipes with version history, forks and photo logs across generations
 - **Digital scrapbook** — freeform drag-and-drop canvas with polaroid frames, stickers and text; export finished books as PDF
+- **Printed books** — order a scrapbook as a real printed book. Kaydo renders a print-ready PDF (A4 landscape at 300 dpi by default, front cover first, a back cover in the cover's colour, an even page count) and opens a checkout for it at [Peecho](https://www.peecho.com/), where the family picks the product, enters the address and pays Peecho directly. See [Printed books](#printed-books-peecho)
 - **Collages** — pick a template from the gallery, drop family photos into its shaped slots, restyle the frame and background, then download the image or post it to the feed. Preview, thumbnail and export all come from one Canvas 2D renderer, so what you see is what you get
 - **Highlight videos** — turn a year, a season or a run of memories into a short reel with a title card, Ken Burns moves and crossfades. It plays in the app anywhere; where the browser supports `MediaRecorder` it also downloads as a video file. Posting a reel to the feed is bounded by the same encrypted-upload cap as any other video (10 MB on the free Cloudinary plan) — the app says so with real numbers instead of failing the upload, and downloading works at any size
 - **Login page designer** — give your family's address its own front door, from starter templates to a custom photo welcome page
@@ -45,6 +46,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Because of that, uploads are bound by Cloudinary's **raw** file-size cap (10 MB on the free plan), not the far higher video cap. Files above the cap are rejected before upload with a message naming the size and the limit; raise `VITE_CLOUDINARY_MAX_UPLOAD_BYTES` after upgrading the plan
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated
+- **Printed books are the one deliberate exception for family photos:** a print shop can only print what it can read, so ordering a book creates an unencrypted PDF of it. The order dialog says so before anything is rendered. The file goes to Firebase Storage under `printFiles/{familyId}/…`; `storage.rules` lets only that family's admins write or read it, makes it write-once (the link Peecho holds cannot be pointed at other content), and closes the rest of the bucket. Peecho gets a private download link, and the `purgePrintFiles` Cloud Function deletes every print file after 30 days
 - Upload signatures from `api/cloudinary-sign` are handed out only to a family admin — the function asks Firestore, with the caller's own ID token, for the families that list them as an admin, so Firestore verifies the token and the rules decide — viewers never upload, and a signature is write access to the Cloudinary account
 - **Our Year** goes further than the rest of the app: instead of trusting the UI, `firestore.rules` decides who may read what. A partner's answers are unreadable until both have handed in, a sealed letter is unreadable until its open date (`request.time`), and a closed chapter can no longer be edited. Those guarantees are covered by emulator tests — `npm run test:rules`
 - **Nothing is readable without an identity.** A viewer signs in against a Cloud Function that checks the shared password server-side and issues a token carrying their family; `firestore.rules` gates every collection on that token. Until recently viewers had no Firebase session at all, which forced the family document — encryption key included — to be world-readable. See `docs/plan-a-zugriffskontrolle.md`
@@ -57,8 +59,9 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 - **React + Vite** with **vite-react-ssg** (the landing page is pre-rendered to static HTML)
 - **Tailwind CSS** — warm, cozy design system
-- **Firebase** — Auth, Firestore, Cloud Functions (viewer login, admin claims, push notifications), Cloud Messaging, Cloud Scheduler. Deploying functions requires the Blaze plan; all of them run in `europe-west3`
+- **Firebase** — Auth, Firestore, Cloud Functions (viewer login, admin claims, push notifications, print-file clean-up), Cloud Messaging, Cloud Scheduler, Storage (print files only). Deploying functions requires the Blaze plan; all of them run in `europe-west3`
 - **Cloudinary** — media storage (signed uploads via the `api/cloudinary-sign` Vercel function)
+- **Peecho** — printed books, through Peecho's hosted checkout (optional)
 - **Workbox** — PWA service worker
 - **i18next** — EN/DE localization
 - **Vitest** — test suite
@@ -72,7 +75,7 @@ npm install
 npm run dev:local
 ```
 
-That starts the Firebase emulators (Auth, Firestore, Functions; UI on
+That starts the Firebase emulators (Auth, Firestore, Functions, Storage; UI on
 http://127.0.0.1:4000), seeds a demo family and opens the app on
 http://localhost:5173. Needs Node 22 and Java 11+ for the Firestore emulator —
 or open the repository in GitHub Codespaces / a VS Code Dev Container
@@ -117,7 +120,7 @@ else does.
 the emulators up while restarting the dev server:
 
 ```bash
-npm run emulators          # Auth, Firestore and Functions emulators
+npm run emulators          # Auth, Firestore, Functions and Storage emulators
 npm run seed:emulator      # seed the demo family
 VITE_USE_EMULATOR=true npm run dev
 ```
@@ -130,10 +133,10 @@ VITE_USE_EMULATOR=true npm run dev
 | `npm run dev:local` | Emulators + demo data + dev server, no Firebase project needed |
 | `npm run build` | Production build incl. static pre-render of `/` |
 | `npm test` | Run the Vitest suite |
-| `npm run test:rules` | Firestore security-rule tests for "Our Year" (needs the emulator + Java) |
+| `npm run test:rules` | Firestore and Storage security-rule tests (needs the emulators + Java) |
 | `npm run test:e2e` | End-to-end smoke tests in Chromium against the seeded emulators (needs Java; Chromium via `npx playwright install chromium`, or `CHROMIUM_PATH`) |
 | `npm run lint` | ESLint |
-| `npm run emulators` | Firebase Auth + Firestore emulators |
+| `npm run emulators` | Firebase Auth, Firestore, Functions and Storage emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |
 
 ## Continuous integration
@@ -195,6 +198,77 @@ The deploy runs without `--force`: indexes are created and updated, but an
 index that exists in Firebase and is missing from `firestore.indexes.json` is
 only reported in the job log, never deleted. Removing an index stays a manual
 step in the Firebase console.
+
+## Printed books (Peecho)
+
+Scrapbooks can be ordered as printed books through [Peecho](https://www.peecho.com/),
+a print-on-demand network. The feature is off until `VITE_PEECHO_ENABLED=true`;
+without it there is no Print button in the editor.
+
+**How an order works.** Kaydo never takes the order or the money. In the
+scrapbook editor, **Print** opens a dialog that:
+
+1. Says what will be printed (page count, size) and that the print file is
+   unencrypted, before doing anything.
+2. Renders the book in the browser, the only place the photos can be decrypted.
+   The result is one PDF of single pages: the editor's first page as the front
+   cover, the others as the inside, a blank page when needed for an even page
+   count, and a plain back cover in the front cover's colour. Pages are
+   captured at 300 dpi (`src/utils/printBook.js`). The editor's 4:3 page is
+   centred on the print format, and its background fills the difference: 8.5 mm
+   either side on A4 landscape. Nothing is cropped.
+3. Uploads the PDF and a cover picture to Firebase Storage
+   (`src/utils/printUpload.js`).
+4. Calls the `createPrintCheckout` Cloud Function (`functions/peechoCheckout.js`).
+   It checks that the caller is an admin of the family and that the file is in
+   Storage, then creates a Peecho *product listing* for it through Peecho's API
+   (`POST /rest/v3/publication/create`) and returns a **secure checkout link**.
+   The link is private to whoever holds its token and expires after 7 days,
+   well before the file is deleted.
+5. Shows **Order at Peecho**, which opens that checkout in a new tab. There the
+   family chooses the product, enters the shipping address and pays Peecho;
+   Peecho prints and ships the book. Each order carries the print file's id as
+   its reference, so an order in the Peecho dashboard can be traced to its
+   folder in Storage.
+
+Because the customer pays Peecho directly, no family can run up a bill on the
+account behind this deployment. Prices are Peecho's plus the profit markup set
+in your Peecho account.
+
+**Setup**
+
+1. Create a Peecho account. Peecho has a **test environment**,
+   [test.www.peecho.com](https://test.www.peecho.com), where orders are free and
+   never shipped. Start there; it needs its own account and API key.
+2. In the Peecho dashboard, under **Settings → API**, fill in your company
+   details and copy the **Merchant API key**. Set your profit markup and payout
+   details in the account settings.
+3. Turn on Firebase Storage for the project (Firebase console → Storage → Get
+   started) and make sure `VITE_FIREBASE_STORAGE_BUCKET` is set.
+4. Store the key and deploy:
+   ```bash
+   firebase functions:secrets:set PEECHO_API_KEY   # paste the Merchant API key
+   firebase deploy --only storage
+   firebase deploy --only functions
+   ```
+   The functions deploy asks for `PEECHO_API_BASE`: enter
+   `https://test.www.peecho.com` for the test environment, or
+   `https://www.peecho.com` (the default) for real orders. To switch later,
+   change it in `functions/.env.<project-id>` (`PEECHO_API_BASE=…`), set the
+   secret to that environment's key, and deploy the functions again.
+   The Storage rules read the family document (cross-service rules) for an
+   admin whose claim has not arrived yet. If the CLI offers to grant Storage the
+   role it needs for that, accept.
+5. Set `VITE_PEECHO_ENABLED=true` in Vercel and redeploy. Optionally set
+   `VITE_PEECHO_PAGE_WIDTH_MM`/`_HEIGHT_MM` (default A4 landscape, 297 × 210)
+   and `VITE_PEECHO_CURRENCY` — see `.env.example`.
+6. Order a book end to end in the test environment, then switch to production.
+
+Print files are deleted after 30 days by `purgePrintFiles`
+(`PRINT_FILE_RETENTION_DAYS` in `functions/printFiles.js` and
+`src/utils/printBook.js`); the order dialog shows the family that number.
+`storage.rules` is not deployed by the Firestore workflow. Its tests run with
+the others in `npm run test:rules`, which also starts the Storage emulator.
 
 ## Dependency audit
 

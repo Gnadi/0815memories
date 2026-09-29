@@ -3,7 +3,7 @@
  *
  *   npm run dev:local
  *
- * Starts the Auth, Firestore and Functions emulators (with the emulator UI on
+ * Starts the Auth, Firestore, Functions and Storage emulators (with the emulator UI on
  * http://127.0.0.1:4000), seeds the demo family (scripts/seed-emulator.mjs),
  * then runs the Vite dev server against them. Ctrl+C stops everything; the
  * emulator data is thrown away and seeded afresh on the next start.
@@ -46,7 +46,7 @@ const child = spawn(
   'npx',
   [
     'firebase', 'emulators:exec',
-    '--only', 'auth,firestore,functions',
+    '--only', 'auth,firestore,functions,storage',
     '--project', 'demo-kaydo',
     '--ui',
     'node scripts/seed-emulator.mjs && npx vite',

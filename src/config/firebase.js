@@ -95,6 +95,26 @@ export function getMessagingInstance() {
   return messagingPromise
 }
 
+// Storage holds one thing: the unencrypted print file of a scrapbook an admin
+// is ordering from Peecho (see utils/printUpload.js). Everything else lives on
+// Cloudinary as ciphertext. Loaded on demand for the same reason as messaging —
+// only someone ordering a print ever needs it. Resolves to null when Firebase
+// is not configured.
+let storagePromise = null
+
+export function getStorageInstance() {
+  if (!app) return Promise.resolve(null)
+  if (!storagePromise) {
+    storagePromise = import('firebase/storage').then(({ getStorage, connectStorageEmulator }) => {
+      const storage = getStorage(app)
+      if (USE_EMULATOR) connectStorageEmulator(storage, '127.0.0.1', 9199)
+      return storage
+    })
+    storagePromise.catch(() => { storagePromise = null })
+  }
+  return storagePromise
+}
+
 /**
  * Drop every document this tab has cached, by replacing the Firestore instance.
  *

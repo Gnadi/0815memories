@@ -13,7 +13,7 @@ this file is the short version of both, plus what agents tend to get wrong.
 | `npm run lint` | ESLint — errors fail CI |
 | `npm test` | Vitest |
 | `npm run build` | production build incl. the pre-rendered landing page |
-| `npm run test:rules` | Firestore rules tests (needs Java) |
+| `npm run test:rules` | Firestore and Storage rules tests (needs Java) |
 | `npm run test:e2e` | Playwright against the emulators (needs Java and Chromium; set `CHROMIUM_PATH` to use an installed one) |
 
 Run lint, tests and build before every commit. Run `test:rules` for any
@@ -28,7 +28,11 @@ changes to sign-in, routing or the seed.
   `test:rules` script in `package.json`, or it never runs.
 - **Family content is encrypted client-side** with `src/utils/encryption.js`
   and `src/utils/encryptedUpload.js`. Never store new family content in
-  plaintext, never log decrypted content or keys.
+  plaintext, never log decrypted content or keys. The one deliberate
+  exception is the print file of a book ordered from Peecho (a print shop
+  must read it): Firebase Storage under `printFiles/`, kept to admins and
+  write-once by `storage.rules`, deleted after 30 days, and announced in the
+  order dialog before it is made.
 - **Every UI string exists in `src/locales/en/` and `src/locales/de/`** with
   the same keys (a test enforces it). New namespaces are registered in
   `src/i18n/`.

@@ -20,6 +20,7 @@ vi.mock('../context/AuthContext', () => ({
 import { decryptBlob } from '../utils/encryption'
 import useDecryptedMedia, {
   clearDecryptedMediaCache,
+  putDerivedMedia,
 } from '../components/media/useDecryptedMedia'
 import EncryptedImage from '../components/media/EncryptedImage'
 
@@ -218,6 +219,25 @@ describe('useDecryptedMedia', () => {
     // clearDecryptedMediaCache is the deliberate teardown (logout); LRU eviction
     // is what must respect the refcount. Nothing has evicted here, so no revoke.
     expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+  })
+
+  // The hook used to test the *decrypted* URL for being direct — and a
+  // decrypted URL is always blob:, so nothing was ever pinned. Whatever pushed
+  // the cache over budget revoked photos still on screen; printing a book warms
+  // every photo at once, and its cover came out missing.
+  it('keeps a displayed photo through an eviction, and lets it go once unmounted', async () => {
+    authState = { encryptionKey: FAKE_KEY, keyLoading: false }
+    const { result, unmount } = renderHook(() => useDecryptedMedia(ENCRYPTED_URL, 'image/*'))
+    await waitFor(() => expect(result.current.decryptedUrl).toBe('blob:decrypted-1'))
+
+    // Well over the 150 MB budget, and newer than the displayed photo, so the
+    // least-recently-used end of the cache is the photo itself.
+    act(() => { putDerivedMedia('big-1', { size: 200 * 1024 * 1024 }) })
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith('blob:decrypted-1')
+
+    unmount()
+    act(() => { putDerivedMedia('big-2', { size: 200 * 1024 * 1024 }) })
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:decrypted-1')
   })
 
   it('releases every object URL on logout', async () => {
