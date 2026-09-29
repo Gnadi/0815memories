@@ -157,5 +157,10 @@
       "tape": "Klebeband",
       "corners": "Ecken"
     }
+  },
+  "photoOrder": {
+    "hint": "Ziehe Fotos, um ihre Reihenfolge zu ändern. Das erste wird zuerst gezeigt.",
+    "tileLabel": "Foto {{position}} von {{count}}. Ziehen oder mit den Pfeiltasten verschieben.",
+    "remove": "Foto entfernen"
   }
 }

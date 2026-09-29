@@ -237,4 +237,19 @@ describe('useMediaUploader', () => {
     expect(result.current.images).toEqual([])
     expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
+
+  it('moves an image to the slot of another via moveImage', () => {
+    const initialImages = ['a', 'b', 'c'].map((id) => ({ id, url: `${id}.enc`, uploading: false }))
+    const { result } = renderHook(() => useMediaUploader('key', { initialImages }))
+
+    act(() => result.current.moveImage('a', 'c'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['b', 'c', 'a'])
+
+    act(() => result.current.moveImage('a', 'b'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['a', 'b', 'c'])
+
+    // Unknown ids leave the order alone rather than dropping a photo.
+    act(() => result.current.moveImage('a', 'gone'))
+    expect(result.current.images.map((img) => img.id)).toEqual(['a', 'b', 'c'])
+  })
 })

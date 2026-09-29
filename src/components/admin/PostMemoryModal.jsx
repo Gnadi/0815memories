@@ -6,15 +6,15 @@ import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
 import { decryptMemoryDoc } from '../../hooks/useMemories'
-import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import PolaroidBorderEditor from './PolaroidBorderEditor'
 import RichTextEditorLazy, { EditorSkeleton } from './RichTextEditorLazy'
 import { resolvePolaroidBorder } from '../home/polaroidBorder'
-import { thumbsFor, buildThumbs, buildTinyPreviews } from '../../utils/mediaThumbs'
+import { thumbsFor, buildThumbs, tinyPreviewsUpdate } from '../../utils/mediaThumbs'
 import { memoryFormToMomentDraft } from '../../utils/entryConversion'
 import EntryTypeSwitch from './EntryTypeSwitch'
+import SortablePhotoTiles from './SortablePhotoTiles'
 import {
   EMPTY_RICH_DOC,
   isRichDoc,
@@ -96,6 +96,7 @@ export default function PostMemoryModal({
     addImage,
     addVideo,
     removeImage,
+    moveImage,
     removeVideo,
     videoError,
     imageError,
@@ -245,7 +246,6 @@ export default function PostMemoryModal({
       const imageUrls = readyImages.map((img) => img.url)
       const readyVideos = videos.filter((v) => v.url)
       const thumbs = buildThumbs(readyImages)
-      const thumbsTiny = buildTinyPreviews(readyImages)
 
       const data = {
         ...form,
@@ -260,7 +260,7 @@ export default function PostMemoryModal({
         ...(thumbs ? { thumbs } : {}),
         // Same contract again for the blur-up previews, which are encrypted
         // data URLs carried on the document rather than uploaded assets.
-        ...(thumbsTiny ? { thumbsTiny } : {}),
+        ...tinyPreviewsUpdate(readyImages, memory?.id ? memory.images || [] : null),
         imageUrl: imageUrls[0] || '',
         date: Timestamp.fromDate(new Date(form.date)),
         voiceMemos,
@@ -318,38 +318,7 @@ export default function PostMemoryModal({
           {/* Multi-image upload */}
           <div>
             <label className="block text-sm font-medium text-bark mb-2">{t('postMemory.photos')}</label>
-            <div className="flex gap-3 flex-wrap">
-              {images.map((img) => (
-                <div key={img.id} className="relative w-20 h-20 flex-shrink-0">
-                  {img.preview?.startsWith('blob:') ? (
-                    <img
-                      src={img.preview}
-                      alt=""
-                      className="w-20 h-20 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <EncryptedImage
-                      src={img.preview}
-                      className="w-20 h-20 rounded-xl object-cover"
-                    />
-                  )}
-                  {img.uploading && (
-                    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                  {!img.uploading && (
-                    <button
-                      type="button"
-                      onClick={() => removeImage(img.id)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-bark rounded-full flex items-center justify-center text-white hover:bg-bark-light"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-
+            <SortablePhotoTiles images={images} onRemove={removeImage} onMove={moveImage}>
               {/* Add photo button */}
               <button
                 type="button"
@@ -375,7 +344,7 @@ export default function PostMemoryModal({
                 <Camera className="w-6 h-6 text-bark-muted" />
                 <span className="text-xs text-bark-muted text-center leading-tight">{t('postMemory.camera')}</span>
               </button>
-            </div>
+            </SortablePhotoTiles>
             {imageError && (
               <p className="text-xs text-kaydo mt-1">{imageError}</p>
             )}

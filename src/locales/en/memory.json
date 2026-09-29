@@ -157,5 +157,10 @@
       "tape": "Tape",
       "corners": "Corners"
     }
+  },
+  "photoOrder": {
+    "hint": "Drag photos to change their order. The first one is shown first.",
+    "tileLabel": "Photo {{position}} of {{count}}. Drag, or use the arrow keys, to move it.",
+    "remove": "Remove photo"
   }
 }
