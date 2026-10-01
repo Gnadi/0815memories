@@ -1,11 +1,13 @@
 import { memo, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag, Star } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTimeline } from '../hooks/useTimeline'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
+import MomentViewer from '../components/home/MomentViewer'
 import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
 
 const SEASONS = [
@@ -36,10 +38,14 @@ function formatOverlayDate(date) {
     .toUpperCase()
 }
 
-const TimelineCard = memo(function TimelineCard({ memory }) {
+const TimelineCard = memo(function TimelineCard({ memory, onOpenMoment }) {
   const navigate = useNavigate()
+  const { t } = useTranslation('timeline')
   const date = toDate(memory.date)
   const image = (memory.images && memory.images[0]) || memory.imageUrl
+  const isMoment = memory.kind === 'moment'
+  // A moment has a caption instead of a title and opens in the story viewer.
+  const title = isMoment ? memory.caption : memory.title
 
   return (
     <div className="relative flex gap-4 pb-8 group">
@@ -51,7 +57,7 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
 
       {/* Card */}
       <button
-        onClick={() => navigate(`/memory/${memory.id}`)}
+        onClick={() => (isMoment ? onOpenMoment(memory.id) : navigate(`/memory/${memory.id}`))}
         className="flex-1 bg-warm-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow text-left mb-1"
       >
         {/* Image */}
@@ -61,7 +67,7 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
               src={image}
               thumbSrc={thumbAt(memory, 0)}
               tinyPreview={tinyPreviewAt(memory, 0)}
-              alt={memory.title}
+              alt={title}
               className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
             />
             {/* Date overlay */}
@@ -80,10 +86,17 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
               {formatOverlayDate(date)}
             </p>
           )}
-          <h3 className="font-serif text-lg font-bold text-bark leading-snug mb-1">
-            {memory.title}
-          </h3>
-          {memory.content && (
+          {isMoment && (
+            <span className="inline-block text-[10px] font-bold tracking-widest uppercase text-kaydo mb-1">
+              {t('card.moment')}
+            </span>
+          )}
+          {title && (
+            <h3 className="font-serif text-lg font-bold text-bark leading-snug mb-1">
+              {title}
+            </h3>
+          )}
+          {!isMoment && memory.content && (
             <p className="text-sm text-bark-light line-clamp-2 leading-relaxed">
               {memory.content}
             </p>
@@ -134,6 +147,7 @@ export default function SmartTimelinePage() {
   const [selectedYear, setSelectedYear] = useState(null)
   const [selectedSeason, setSelectedSeason] = useState(null)
   const [showOnThisDay, setShowOnThisDay] = useState(false)
+  const [viewingMomentId, setViewingMomentId] = useState(null)
 
   // Each view queries its own date range — see hooks/useTimeline.js. This page
   // used to filter the home feed's newest 50 memories, which left every older
@@ -167,6 +181,13 @@ export default function SmartTimelinePage() {
     if (showOnThisDay || !selectedSeason) return memories
     return memories.filter((m) => getSeason(toDate(m.date)) === selectedSeason)
   }, [memories, selectedSeason, showOnThisDay])
+
+  // The story viewer pages through the moments of the current view, in order.
+  const visibleMoments = useMemo(
+    () => filteredMemories.filter((m) => m.kind === 'moment'),
+    [filteredMemories],
+  )
+  const viewingMomentIndex = visibleMoments.findIndex((m) => m.id === viewingMomentId)
 
   const today = new Date()
   const todayLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })
@@ -342,9 +363,18 @@ export default function SmartTimelinePage() {
         ) : (
           <div>
             {filteredMemories.map((memory) => (
-              <TimelineCard key={memory.id} memory={memory} />
+              <TimelineCard key={`${memory.kind || 'memory'}-${memory.id}`} memory={memory} onOpenMoment={setViewingMomentId} />
             ))}
           </div>
+        )}
+
+        {viewingMomentIndex >= 0 && (
+          <MomentViewer
+            moments={visibleMoments}
+            initialIndex={viewingMomentIndex}
+            onClose={() => setViewingMomentId(null)}
+            isAdmin={false}
+          />
         )}
         </main>
       </div>

@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { decryptMemory } from './useMemories'
+import { decryptMemory, decryptMoment } from './useMemories'
 import { devWarn } from '../utils/devLog'
 
 /**
@@ -29,6 +29,11 @@ import { devWarn } from '../utils/devLog'
  *
  * `date` and `familyId` are the two fields that are never encrypted, which is
  * what makes range queries possible at all.
+ *
+ * Moments share the timeline: every range above is asked of both collections
+ * and the answers are merged by date. A moment comes back marked
+ * `kind: 'moment'`, because it opens in the story viewer rather than on a
+ * detail page.
  */
 
 // Years counted in one parallel round, newest first. Older ones are found one
@@ -68,16 +73,16 @@ export function onThisDayRanges(reference, years) {
     .filter(({ start }) => start.getMonth() === month)
 }
 
-const familyMemories = (database, familyId) => [
-  collection(database, 'memories'),
+const familyMemories = (database, familyId, source = 'memories') => [
+  collection(database, source),
   where('familyId', '==', familyId),
 ]
 
 // Ordered newest first even where the order does not matter (a count): that
 // is the shape of the (familyId ASC, date DESC) index the feed already uses.
-function rangeQuery(database, familyId, start, end) {
+function rangeQuery(database, familyId, start, end, source = 'memories') {
   return query(
-    ...familyMemories(database, familyId),
+    ...familyMemories(database, familyId, source),
     where('date', '>=', Timestamp.fromDate(start)),
     where('date', '<', Timestamp.fromDate(end)),
     orderBy('date', 'desc'),
@@ -128,16 +133,39 @@ export async function fetchTimelineYears(database, familyId) {
   return years
 }
 
-/** The query for one year's memories, newest first. */
-export function yearQuery(database, familyId, year) {
-  return rangeQuery(database, familyId, ...yearRange(year))
+/**
+ * Every year this family has a moment in, newest first.
+ *
+ * Walked one read per year that has moments, rather than counted: moments only
+ * have the (familyId, date DESC) index, and a family has far fewer of them.
+ */
+export async function fetchMomentYears(database, familyId) {
+  const years = []
+  let before = null
+  for (;;) {
+    const older = await getDocs(query(
+      ...familyMemories(database, familyId, 'moments'),
+      ...(before === null ? [] : [where('date', '<', Timestamp.fromDate(yearRange(before)[0]))]),
+      orderBy('date', 'desc'),
+      limit(1),
+    ))
+    if (older.empty) break
+    before = yearOf(older)
+    years.push(before)
+  }
+  return years
 }
 
-/** Memories on `reference`'s month and day in any of `years`, newest first, undecrypted. */
-export async function fetchOnThisDay(database, familyId, years, reference = new Date()) {
+/** The query for one year's memories (or moments), newest first. */
+export function yearQuery(database, familyId, year, source = 'memories') {
+  return rangeQuery(database, familyId, ...yearRange(year), source)
+}
+
+/** Entries on `reference`'s month and day in any of `years`, newest first, undecrypted. */
+export async function fetchOnThisDay(database, familyId, years, reference = new Date(), source = 'memories') {
   const snapshots = await Promise.all(
     onThisDayRanges(reference, years).map(({ start, end }) =>
-      getDocs(rangeQuery(database, familyId, start, end)),
+      getDocs(rangeQuery(database, familyId, start, end, source)),
     ),
   )
   return snapshots
@@ -145,9 +173,16 @@ export async function fetchOnThisDay(database, familyId, years, reference = new 
     .sort((a, b) => b.date.toMillis() - a.date.toMillis())
 }
 
+const asMoment = (moment) => ({ ...moment, kind: 'moment' })
+
+// A moment just posted from this device has no server date yet; it is the newest.
+const millis = (entry) => entry.date?.toMillis?.() ?? Date.now()
+const newestFirst = (a, b) => millis(b) - millis(a)
+
 /**
  * @param {{ year: number|null, onThisDay: boolean }} view
- * @returns {{ years: number[], memories: object[], loading: boolean }}
+ * @returns {{ years: number[], memories: object[], loading: boolean }} `memories`
+ *   holds the moments too, each marked `kind: 'moment'`.
  */
 export function useTimeline(familyId, encryptionKey, { year, onThisDay }) {
   const [years, setYears] = useState({ familyId: null, list: [] })
@@ -156,8 +191,16 @@ export function useTimeline(familyId, encryptionKey, { year, onThisDay }) {
   useEffect(() => {
     if (!familyId || !db) return
     let cancelled = false
-    fetchTimelineYears(db, familyId)
-      .then((list) => { if (!cancelled) setYears({ familyId, list }) })
+    // A failing moments lookup must not take the memories' years with it.
+    const momentYears = fetchMomentYears(db, familyId).catch((err) => {
+      devWarn('Could not list the moment years:', err?.code)
+      return []
+    })
+    Promise.all([fetchTimelineYears(db, familyId), momentYears])
+      .then(([memoryList, momentList]) => {
+        const list = [...new Set([...memoryList, ...momentList])].sort((a, b) => b - a)
+        if (!cancelled) setYears({ familyId, list })
+      })
       .catch((err) => {
         devWarn('Could not list the timeline years:', err?.code, err?.message)
         if (!cancelled) setYears({ familyId, list: [] })
@@ -177,27 +220,53 @@ export function useTimeline(familyId, encryptionKey, { year, onThisDay }) {
   useEffect(() => {
     if (!viewKey || !db) return
     let cancelled = false
-    const deliver = async (docs) => {
-      const memories = await Promise.all(docs.map((d) => decryptMemory(encryptionKey, d)))
-      if (!cancelled) setView({ key: viewKey, memories })
+    const deliver = async (memoryDocs, momentDocs) => {
+      const [memories, moments] = await Promise.all([
+        Promise.all(memoryDocs.map((d) => decryptMemory(encryptionKey, d))),
+        Promise.all(momentDocs.map(async (d) => asMoment(await decryptMoment(encryptionKey, d)))),
+      ])
+      if (!cancelled) setView({ key: viewKey, memories: [...memories, ...moments].sort(newestFirst) })
     }
     const fail = (err) => {
       devWarn('Could not load the timeline:', err?.code, err?.message)
       if (!cancelled) setView({ key: viewKey, memories: [] })
     }
 
+    // Moments are an addition to the timeline: if their query fails, the
+    // memories still show.
+    const noMoments = (err) => {
+      devWarn('Could not load the timeline moments:', err?.code, err?.message)
+      return []
+    }
+
     if (onThisDay) {
-      fetchOnThisDay(db, familyId, years.list).then(deliver, fail)
+      Promise.all([
+        fetchOnThisDay(db, familyId, years.list),
+        fetchOnThisDay(db, familyId, years.list, new Date(), 'moments').catch(noMoments),
+      ]).then(([memoryDocs, momentDocs]) => deliver(memoryDocs, momentDocs), fail)
       return () => { cancelled = true }
     }
-    const unsubscribe = onSnapshot(
+
+    // Two live listeners; the page is delivered once both have answered.
+    let latest = { memories: null, moments: null }
+    const emit = () => {
+      if (latest.memories && latest.moments) deliver(latest.memories, latest.moments)
+    }
+    const docsOf = (snapshot) => snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+    const unsubscribeMemories = onSnapshot(
       yearQuery(db, familyId, year),
-      (snapshot) => deliver(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (snapshot) => { latest = { ...latest, memories: docsOf(snapshot) }; emit() },
       fail,
+    )
+    const unsubscribeMoments = onSnapshot(
+      yearQuery(db, familyId, year, 'moments'),
+      (snapshot) => { latest = { ...latest, moments: docsOf(snapshot) }; emit() },
+      (err) => { noMoments(err); latest = { ...latest, moments: [] }; emit() },
     )
     return () => {
       cancelled = true
-      unsubscribe()
+      unsubscribeMemories()
+      unsubscribeMoments()
     }
     // viewKey stands for familyId, year, onThisDay and the years list.
   }, [viewKey, encryptionKey]) // eslint-disable-line react-hooks/exhaustive-deps
