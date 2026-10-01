@@ -4,6 +4,7 @@
    fast-refresh "components-only export" rule does not apply here. */
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n, { ensureAppTranslations } from './i18n'
@@ -163,20 +164,26 @@ function RevealPage() {
   return null
 }
 
-// Vercel's analytics script is only served on Vercel deployments; on localhost,
-// the preview server, or any other host it 404s and logs a console error. Gate
-// it to real hosts so it stays silent locally (and in Lighthouse runs) while
-// still reporting from production.
+// Vercel's analytics and speed insights scripts are only served on Vercel
+// deployments; on localhost, the preview server, or any other host they 404
+// and log console errors. Gate them to real hosts so they stay silent locally
+// (and in Lighthouse runs) while still reporting from production.
 function SiteAnalytics() {
   // Decided once at first render. On the server (pre-render) there is no window,
-  // so it stays off; <Analytics /> emits no DOM either way, so there is no
-  // hydration mismatch. Reads the host lazily to keep it out of an effect.
+  // so it stays off; <Analytics /> and <SpeedInsights /> emit no DOM either way,
+  // so there is no hydration mismatch. Reads the host lazily to keep it out of
+  // an effect.
   const [enabled] = useState(() => {
     if (typeof window === 'undefined') return false
     const host = window.location.hostname
     return !(host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local'))
   })
-  return enabled ? <Analytics /> : null
+  return enabled ? (
+    <>
+      <Analytics />
+      <SpeedInsights />
+    </>
+  ) : null
 }
 
 // Handles push notification prompt + in-app foreground toast.
