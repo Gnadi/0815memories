@@ -11,7 +11,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const h = vi.hoisted(() => ({ dates: [], counts: 0, reads: 0, ascFails: false }))
 
 vi.mock('../config/firebase', () => ({ db: {} }))
-vi.mock('../hooks/useMemories', () => ({ decryptMemory: async (_key, data) => data }))
+vi.mock('../hooks/useMemories', () => ({
+  decryptMemory: async (_key, data) => data,
+  decryptMoment: async (_key, data) => data,
+}))
 vi.mock('firebase/firestore', () => {
   const stamp = (date) => ({ toDate: () => date, ms: date.getTime() })
   const run = (parts) => {
@@ -49,7 +52,7 @@ vi.mock('firebase/firestore', () => {
   }
 })
 
-import { fetchTimelineYears, COUNTED_YEARS } from '../hooks/useTimeline'
+import { fetchTimelineYears, fetchMomentYears, COUNTED_YEARS } from '../hooks/useTimeline'
 
 const on = (year, month = 5) => {
   const date = new Date(2000, 0, 1, 12)
@@ -92,5 +95,20 @@ describe('fetchTimelineYears', () => {
   it('has no years, and asks nothing more, for a family without memories', async () => {
     expect(await fetchTimelineYears({}, 'fam')).toEqual([])
     expect(h.counts).toBe(0)
+  })
+})
+
+describe('fetchMomentYears', () => {
+  it('walks back one read per year that has moments, without counting', async () => {
+    h.dates = [on(2025), on(2025, 8), on(2023), on(2019)]
+
+    expect(await fetchMomentYears({}, 'fam')).toEqual([2025, 2023, 2019])
+    // One per year found, and the empty read that ends the walk.
+    expect(h.reads).toBe(4)
+    expect(h.counts).toBe(0)
+  })
+
+  it('finds nothing in a family without moments', async () => {
+    expect(await fetchMomentYears({}, 'fam')).toEqual([])
   })
 })

@@ -35,5 +35,8 @@
     "year": "No memories found for {{year}}.",
     "generic": "No memories found.",
     "clearFilters": "Clear filters"
+  },
+  "card": {
+    "moment": "Moment"
   }
 }
