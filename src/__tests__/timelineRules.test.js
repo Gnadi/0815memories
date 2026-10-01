@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
 import { doc, getDocs, setDoc, Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
-import { fetchTimelineYears, fetchOnThisDay, yearQuery } from '../hooks/useTimeline'
+import { fetchTimelineYears, fetchMomentYears, fetchOnThisDay, yearQuery } from '../hooks/useTimeline'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -71,6 +71,13 @@ describe.skipIf(!EMULATOR)('Smart Timeline queries', () => {
       // Someone else's family, on the same day and in a year of its own.
       await put('other-apr16', OTHER_FAMILY, at(2020, 4, 16))
       await put('other-2017', OTHER_FAMILY, at(2017, 6, 1))
+
+      // Moments share the timeline's ranges.
+      const putMoment = (id, familyId, date) => setDoc(doc(db, 'moments', id), { familyId, date, caption: id })
+      await putMoment('m-apr16-2024', FAMILY, at(2024, 4, 16))
+      await putMoment('m-mar-2024', FAMILY, at(2024, 3, 2))
+      await putMoment('m-2022', FAMILY, at(2022, 8, 8))
+      await putMoment('m-other-2018', OTHER_FAMILY, at(2018, 4, 16))
     })
   })
 
@@ -104,6 +111,27 @@ describe.skipIf(!EMULATOR)('Smart Timeline queries', () => {
     const years = await fetchTimelineYears(db, FAMILY)
     const found = await fetchOnThisDay(db, FAMILY, years, new Date(2028, 1, 29, 9))
     expect(ids(found)).toEqual(['feb29-2016'])
+  })
+
+  describe('moments', () => {
+    it('lists the years with a moment, newest first', async () => {
+      expect(await fetchMomentYears(asViewer(), FAMILY)).toEqual([2024, 2022])
+    })
+
+    it('returns a year of moments in full, newest first, and not another family\'s', async () => {
+      const snap = await getDocs(yearQuery(asViewer(), FAMILY, 2024, 'moments'))
+      expect(snap.docs.map((d) => d.id)).toEqual(['m-apr16-2024', 'm-mar-2024'])
+    })
+
+    it('finds "On this day" among moments, and only that day', async () => {
+      const found = await fetchOnThisDay(asViewer(), FAMILY, [2024, 2022, 2018], new Date(2026, 3, 16, 9), 'moments')
+      expect(ids(found)).toEqual(['m-apr16-2024'])
+    })
+
+    it('stays inside the rules: another family cannot read them', async () => {
+      await assertFails(fetchMomentYears(asViewer(OTHER_FAMILY), FAMILY))
+      await assertFails(getDocs(yearQuery(asViewer(OTHER_FAMILY), FAMILY, 2024, 'moments')))
+    })
   })
 
   describe('with a mistyped year far behind the rest', () => {
