@@ -26,6 +26,7 @@
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "astronomy-engine": "^2.1.19",
     "dompurify": "^3.4.11",
     "file-saver": "^2.0.5",
