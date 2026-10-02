@@ -28,7 +28,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "astronomy-engine": "^2.1.19",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.16",
     "file-saver": "^2.0.5",
     "firebase": "^12.11.0",
     "firebase-admin": "^14.4.0",
