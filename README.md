@@ -322,6 +322,24 @@ The threshold is `AUDIT_LEVEL` in the workflow; lower it to `moderate` or
 `low` once everything above that is cleared. A one-off run at a different
 level can be started under Actions → npm audit → Run workflow.
 
+`package.json` carries three `overrides`, each for an advisory whose fix the
+package that pulls it in has not taken up yet:
+
+- `@grpc/grpc-js` → `^1.14.5`. `@firebase/firestore` asks for `~1.9.0`, which
+  has none of the fixes. Only Firestore's Node build uses gRPC — the browser
+  talks WebChannel — so what it affects is the rules tests and the build, and
+  both pass with it.
+- `basic-ftp` → `^6.2.3`. `firebase-tools` reaches it through `proxy-agent` →
+  `get-uri`, which asks for `^5`; it would only ever fetch a proxy
+  configuration over FTP.
+- `chokidar` → `^4`, for `firebase-tools` only. chokidar 3 depends on
+  `braces`, which has an open advisory and no fixed release; chokidar 4 has
+  dropped it. firebase-tools uses it to watch rules and function sources in
+  the emulators, which works the same with either.
+
+Remove each once the package that pulls it in depends on a fixed release
+itself.
+
 ## Access model
 
 - **Viewers** (family & friends): enter the shared family password — read-only, no account, no app install
