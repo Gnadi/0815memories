@@ -35,6 +35,23 @@ async function decryptRecipe(key, data) {
   return result
 }
 
+/**
+ * How many versions have grown from each family recipe, by root id — forks of
+ * forks included, as the evolution tree shows them.
+ *
+ * Counted from the lineage the subscription below already holds, since every
+ * fork carries its root's id. A count stored on the root would have to be kept
+ * right by every fork and every delete; RecipeCard used to read one that
+ * nothing wrote, so every card said 0.
+ */
+export function countForks(recipes) {
+  const counts = new Map()
+  for (const recipe of recipes) {
+    if (recipe.parentId && recipe.rootId) counts.set(recipe.rootId, (counts.get(recipe.rootId) ?? 0) + 1)
+  }
+  return counts
+}
+
 export function useRecipes(familyId, encryptionKey) {
   const [recipes, setRecipes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,7 +80,11 @@ export function useRecipes(familyId, encryptionKey) {
         // The query itself stays as-is deliberately: `where('parentId','==',null)`
         // would silently drop root recipes that have no parentId field at all.
         const roots = all.filter((r) => !r.parentId)
-        setRecipes(await Promise.all(roots.map((d) => decryptRecipe(encryptionKey, d))))
+        const forkCounts = countForks(all)
+        setRecipes(await Promise.all(roots.map(async (d) => ({
+          ...(await decryptRecipe(encryptionKey, d)),
+          forkCount: forkCounts.get(d.id) ?? 0,
+        }))))
         setLoading(false)
       },
       (err) => {
