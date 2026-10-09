@@ -1,9 +1,8 @@
 /**
  * The rich description is the first memory field that is not natively a string.
  *
- * encryptFields() skips non-strings silently, and memory documents are
- * world-readable (`allow read: if true`), so a document object reaching
- * Firestore unencrypted would leak the whole story without anything appearing
+ * encryptFields() skips non-strings silently, so a document object would reach
+ * Firestore unencrypted and leak the whole story without anything appearing
  * broken. These tests pin the contract that keeps that from happening:
  * `contentRich` is a string on the way out, and only the single-document read
  * path turns it back into a document.
@@ -15,7 +14,7 @@ import {
   MEMORY_WRITE_FIELDS,
   encryptMemoryData,
   decryptMemoryDoc,
-} from '../hooks/useMemories'
+} from '../services/memories'
 
 const DOC = {
   type: 'doc',

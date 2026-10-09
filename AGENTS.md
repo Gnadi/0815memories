@@ -33,10 +33,13 @@ changes to sign-in, routing or the seed.
   must read it): Firebase Storage under `printFiles/`, kept to admins and
   write-once by `storage.rules`, deleted after 30 days, and announced in the
   order dialog before it is made.
-- **Firestore calls go through `src/config/firestore.js`**, never
-  `firebase/firestore` directly (ESLint enforces it). That module is where
-  the demo (`/demo`, `src/demo/`) swaps Firestore for an in-memory database;
-  a Firestore function the app starts to use is added there and to
+- **Firestore is read and written in `src/services/`**, one module per area,
+  and hooks and pages call those (ESLint enforces it; the files that predate
+  the services are listed in `eslint.config.js`, and that list only shrinks).
+  Services reach Firestore through `src/config/firestore.js`, never
+  `firebase/firestore` directly. That module is where the demo (`/demo`,
+  `src/demo/`) swaps Firestore for an in-memory database; a Firestore
+  function the app starts to use is added there and to
   `src/demo/demoDatabase.js`, with a test. The demo family's content is
   fictional and stays that way.
 - **Every UI string exists in `src/locales/en/` and `src/locales/de/`** with

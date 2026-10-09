@@ -23,7 +23,7 @@ vi.mock('firebase/firestore', () => ({
   getDoc: (...a) => getDoc(...a),
 }))
 vi.mock('../config/firebase', () => ({ db: {} }))
-vi.mock('../hooks/useMemories', () => ({ MEMORY_WRITE_FIELDS: ['title'] }))
+vi.mock('../services/memories', () => ({ MEMORY_WRITE_FIELDS: ['title'] }))
 vi.mock('../utils/richText', () => ({
   collectRichMediaUrls: () => [],
   parseRichDoc: (v) => v,

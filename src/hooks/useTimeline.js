@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptMemory } from './useMemories'
+import { decryptMemory } from '../services/memories'
 import { devWarn } from '../utils/devLog'
 
 /**

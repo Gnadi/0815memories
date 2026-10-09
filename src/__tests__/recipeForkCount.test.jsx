@@ -17,7 +17,8 @@ vi.mock('firebase/firestore', () => ({
 }))
 vi.mock('../config/firebase', () => ({ db: {} }))
 
-import { countForks, useRecipes } from '../hooks/useRecipes'
+import { useRecipes } from '../hooks/useRecipes'
+import { countForks } from '../services/recipes'
 
 // Strudel → Mom's strudel → Emma's mini strudel; pancakes on their own.
 const lineage = [

@@ -2,11 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork } from 'lucide-react'
-import { getDoc, doc } from '../config/firestore'
-import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useRecipes } from '../hooks/useRecipes'
+import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { devError } from '../utils/devLog'
@@ -55,15 +54,8 @@ export default function CreateRecipePage() {
     if (!isFork || !id) return
     const load = async () => {
       try {
-        const snap = await getDoc(doc(db, 'recipes', id))
-        if (snap.exists()) {
-          let data = { id: snap.id, ...snap.data() }
-          if (data.familyId !== familyId) { setForkLoadError(t('form.forkLoadError')); setParentLoading(false); return }
-          if (encryptionKey) {
-            const { decryptFields, decryptJSON } = await import('../utils/encryption')
-            data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
-            if (typeof data.ingredients === 'string') data.ingredients = await decryptJSON(encryptionKey, data.ingredients)
-          }
+        const data = await getRecipe(familyId, encryptionKey, id)
+        if (data) {
           setParent(data)
           setIngredients(
             (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))

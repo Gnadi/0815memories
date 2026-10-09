@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ChefHat, GitFork } from 'lucide-react'
-import { getDoc, doc } from '../config/firestore'
-import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
+import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
@@ -37,15 +36,8 @@ export default function RecipeVersionDetailPage() {
     if (!versionId) return
     const load = async () => {
       try {
-        const snap = await getDoc(doc(db, 'recipes', versionId))
-        if (snap.exists()) {
-          let data = { id: snap.id, ...snap.data() }
-          if (data.familyId !== familyId) { setLoadError(t('version.notFound')); setLoading(false); return }
-          if (encryptionKey) {
-            const { decryptFields, decryptJSON } = await import('../utils/encryption')
-            data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
-            if (typeof data.ingredients === 'string') data.ingredients = await decryptJSON(encryptionKey, data.ingredients)
-          }
+        const data = await getRecipe(familyId, encryptionKey, versionId)
+        if (data) {
           setRecipe(data)
         } else {
           setLoadError(t('version.notFound'))

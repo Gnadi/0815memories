@@ -117,7 +117,8 @@ The functions are deployed by hand for now (README, *Getting started*).
 | `main.jsx`, `App.jsx` | entry point, routes, route guards, lazy loading |
 | `pages/` | one component per route |
 | `components/<feature>/` | components of one feature (`scrapbook/`, `ouryear/`, …) |
-| `hooks/` | Firestore subscriptions and data access per feature (`useMemories`, …) |
+| `services/` | Firestore reads and writes per area, with their encryption (`memories.js`, …) — see below |
+| `hooks/` | React state on top of the services: live lists, writers (`useMemories`, …) |
 | `utils/` | encryption, uploads, rendering (canvas, PDF, video), slug handling |
 | `context/AuthContext.jsx` | session, role, family, encryption key |
 | `config/` | the Firebase and Cloudinary clients; emulator switch; `firestore.js`, the one door to Firestore |
@@ -126,6 +127,23 @@ The functions are deployed by hand for now (README, *Getting started*).
 | `locales/{en,de}/`, `i18n/` | translations; public namespaces load eagerly, the rest lazily |
 | `sw.js` | the service worker (Workbox, `injectManifest`) |
 | `__tests__/` | unit tests, rules tests (`*Rules.test.js`) |
+
+### Services
+
+`src/services/` is where the app reads and writes Firestore, one module per
+area: the collection, the queries, which fields are encrypted and how, and the
+shape of what is written (`familyId`, timestamps). Hooks hold the React state
+on top of it, and pages load single documents through it (`getRecipe`,
+`getScrapbook`, …), so a list and a page decrypt a document the same way.
+Lists subscribe through `subscribeDecrypted` (`services/decrypted.js`), which
+delivers only the newest snapshot's documents: decrypting is asynchronous, and
+an older snapshot must not overwrite a newer one.
+
+Services reach Firestore through `config/firestore.js`, so the demo needs
+nothing of its own here. ESLint refuses `config/firestore` imports outside
+`src/services/` (`Timestamp` excepted); the files that predate the services
+are listed in `eslint.config.js` and move over area by area. So far memories,
+moments, recipes, scrapbooks, collages and highlights have.
 
 Build and delivery details that affect many changes:
 

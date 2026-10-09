@@ -9,7 +9,7 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, decryptBlob } from './encryption'
-import { MEMORY_WRITE_FIELDS } from '../hooks/useMemories'
+import { MEMORY_WRITE_FIELDS } from '../services/memories'
 import { collectRichMediaUrls, parseRichDoc } from './richText'
 
 /**

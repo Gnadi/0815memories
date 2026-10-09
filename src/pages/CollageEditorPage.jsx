@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useReducer, useRef, useMemo, lazy, Su
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { X, Share2, Loader2, MoreVertical, Download, Trash2, LayoutGrid, Square, BookHeart } from 'lucide-react'
-import { doc as firestoreDoc, getDoc, Timestamp } from '../config/firestore'
+import { Timestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { useCollageWriter, decryptCollage } from '../hooks/useCollages'
+import { useCollageWriter } from '../hooks/useCollages'
 import { useMemoryWriter } from '../hooks/useMemories'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
+import { getCollage } from '../services/collages'
 import CollageCanvas from '../components/collage/CollageCanvas'
 import CollageSlotActionBar from '../components/collage/CollageSlotActionBar'
 import TemplateStrip from '../components/collage/TemplateStrip'
@@ -134,16 +135,14 @@ export default function CollageEditorPage() {
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
     let cancelled = false
-    getDoc(firestoreDoc(db, 'collages', id))
-      .then(async (snap) => {
+    getCollage(familyId, encryptionKey, id)
+      .then((data) => {
         if (cancelled) return
-        if (!snap.exists() || snap.data().familyId !== familyId) {
+        if (!data) {
           setLoadError(t('errors.notFound'))
           setLoading(false)
           return
         }
-        const data = await decryptCollage(encryptionKey, { id: snap.id, ...snap.data() })
-        if (cancelled) return
         dispatch({
           type: 'LOAD',
           doc: data.doc || makeCollageDoc(getTemplate()),

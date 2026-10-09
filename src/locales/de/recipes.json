@@ -101,7 +101,6 @@
     "newRecipe": "Neues Rezept",
     "forkOf": "Fork von \"{{title}}\"",
     "forkTitle": "Fork: \"{{title}}\"",
-    "forkLoadError": "Rezept nicht gefunden.",
     "forkOriginalNotFound": "Originalrezept nicht gefunden.",
     "forkLoadFailed": "Rezept konnte nicht geladen werden. Bitte geh zurück und versuche es erneut.",
     "forkingFrom": "Fork von:",

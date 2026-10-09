@@ -1,56 +1,6 @@
 import { useState, useEffect } from 'react'
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  getDocs,
-  getDoc,
-  doc,
-  addDoc,
-  writeBatch,
-  serverTimestamp,
-  where,
-} from '../config/firestore'
 import { db } from '../config/firebase'
-import { encryptFields, decryptFields, encryptJSON, decryptJSON } from '../utils/encryption'
-
-const ENCRYPTED_TEXT_FIELDS = ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author']
-
-async function encryptRecipe(key, data) {
-  if (!key) return data
-  const result = await encryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
-  if (result.ingredients != null && Array.isArray(result.ingredients)) {
-    result.ingredients = await encryptJSON(key, result.ingredients)
-  }
-  return result
-}
-
-async function decryptRecipe(key, data) {
-  if (!key) return data
-  const result = await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
-  if (result.ingredients != null && typeof result.ingredients === 'string') {
-    result.ingredients = await decryptJSON(key, result.ingredients)
-  }
-  return result
-}
-
-/**
- * How many versions have grown from each family recipe, by root id — forks of
- * forks included, as the evolution tree shows them.
- *
- * Counted from the lineage the subscription below already holds, since every
- * fork carries its root's id. A count stored on the root would have to be kept
- * right by every fork and every delete; RecipeCard used to read one that
- * nothing wrote, so every card said 0.
- */
-export function countForks(recipes) {
-  const counts = new Map()
-  for (const recipe of recipes) {
-    if (recipe.parentId && recipe.rootId) counts.set(recipe.rootId, (counts.get(recipe.rootId) ?? 0) + 1)
-  }
-  return counts
-}
+import { addRecipe, deleteRecipe, getRecipeLineage, subscribeRecipes } from '../services/recipes'
 
 export function useRecipes(familyId, encryptionKey) {
   const [recipes, setRecipes] = useState([])
@@ -62,66 +12,21 @@ export function useRecipes(familyId, encryptionKey) {
       return
     }
 
-    // Query all recipes for the family, filter root recipes client-side.
-    // Avoids a composite index requirement for rootId == null.
-    const q = query(
-      collection(db, 'recipes'),
-      where('familyId', '==', familyId),
-      orderBy('createdAt', 'desc')
-    )
-
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
-        const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        // Filter before decrypting, not after. Root recipes have no parentId;
-        // every fork used to be decrypted in full — 7 fields including the
-        // ingredients JSON — only to be thrown away on the next line.
-        // The query itself stays as-is deliberately: `where('parentId','==',null)`
-        // would silently drop root recipes that have no parentId field at all.
-        const roots = all.filter((r) => !r.parentId)
-        const forkCounts = countForks(all)
-        setRecipes(await Promise.all(roots.map(async (d) => ({
-          ...(await decryptRecipe(encryptionKey, d)),
-          forkCount: forkCounts.get(d.id) ?? 0,
-        }))))
-        setLoading(false)
-      },
-      (err) => {
-        if (import.meta.env.DEV) console.error('useRecipes snapshot error:', err)
-        setLoading(false)
-      }
-    )
-
-    return unsubscribe
+    return subscribeRecipes(familyId, encryptionKey, (list) => {
+      setRecipes(list)
+      setLoading(false)
+    }, (err) => {
+      if (import.meta.env.DEV) console.error('useRecipes snapshot error:', err)
+      setLoading(false)
+    })
   }, [familyId, encryptionKey])
 
-  const addRecipe = async (data) => {
-    const encrypted = await encryptRecipe(encryptionKey, data)
-    return await addDoc(collection(db, 'recipes'), {
-      ...encrypted,
-      familyId,
-      createdAt: serverTimestamp(),
-    })
+  return {
+    recipes,
+    loading,
+    addRecipe: (data) => addRecipe(familyId, encryptionKey, data),
+    deleteRecipe: (id) => deleteRecipe(familyId, id),
   }
-
-  const deleteRecipe = async (id) => {
-    const batch = writeBatch(db)
-    // Cascade-delete all forks in this lineage, scoped to this family
-    const forksSnap = await getDocs(
-      query(
-        collection(db, 'recipes'),
-        where('familyId', '==', familyId),
-        where('rootId', '==', id)
-      )
-    )
-    forksSnap.docs.forEach((d) => batch.delete(d.ref))
-    // Delete the root itself
-    batch.delete(doc(db, 'recipes', id))
-    await batch.commit()
-  }
-
-  return { recipes, loading, addRecipe, deleteRecipe }
 }
 
 export function useRecipeLineage(rootId, familyId, encryptionKey) {
@@ -134,38 +39,12 @@ export function useRecipeLineage(rootId, familyId, encryptionKey) {
       return
     }
 
-    const fetchLineage = async () => {
-      try {
-        // Fetch the root recipe
-        const rootSnap = await getDoc(doc(db, 'recipes', rootId))
-        let rootDoc = rootSnap.exists() ? { id: rootSnap.id, ...rootSnap.data() } : null
-        // Verify familyId
-        if (rootDoc && rootDoc.familyId !== familyId) rootDoc = null
-        if (rootDoc) rootDoc = await decryptRecipe(encryptionKey, rootDoc)
-
-        // Fetch all forks in this lineage, scoped to same family.
-        const forksQuery = query(
-          collection(db, 'recipes'),
-          where('familyId', '==', familyId),
-          where('rootId', '==', rootId)
-        )
-        const forksSnap = await getDocs(forksQuery)
-        const forks = await Promise.all(
-          forksSnap.docs.map(async (d) => decryptRecipe(encryptionKey, { id: d.id, ...d.data() }))
-        )
-
-        // Merge root + forks, sort by year
-        const all = rootDoc ? [rootDoc, ...forks] : forks
-        all.sort((a, b) => (a.year || 0) - (b.year || 0))
-        setVersions(all)
-      } catch (err) {
+    getRecipeLineage(familyId, encryptionKey, rootId)
+      .then(setVersions)
+      .catch((err) => {
         if (import.meta.env.DEV) console.error('useRecipeLineage error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchLineage()
+      })
+      .finally(() => setLoading(false))
   }, [rootId, familyId, encryptionKey])
 
   return { versions, loading }

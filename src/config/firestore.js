@@ -2,9 +2,9 @@
  * Every Firestore call the app makes, through one module, so that the demo
  * can answer them instead of Firebase.
  *
- * Kaydo has no service layer: hooks, pages and components query Firestore
- * directly, so this is the one place all of those queries pass. Outside the
- * demo each export is the SDK's own function, called as it is. In a demo tab
+ * The queries live in src/services/, and in the files that predate it, which
+ * eslint.config.js lists; all of them pass through here. Outside the demo each
+ * export is the SDK's own function, called as it is. In a demo tab
  * (demo/demoMode.js) they go to the in-memory database demo/index.js installs
  * here — see demo/demoDatabase.js.
  *
