@@ -42,10 +42,10 @@
          member's launch of "/" would look logged out. Each pre-rendered page
          carries the path it was built for (data-prerendered, stamped in
          vite.config.js): when that is not the URL, or it is "/" and a session
-         is stored, hide the page behind the same cream the loading shell uses;
-         the app uncovers it once the real page has rendered
-         (src/utils/prehydrationCover.js). A page served its own HTML, like
-         /terms, paints straight away.
+         is stored or the tab is in the demo (src/demo/demoMode.js), hide the
+         page behind the same cream the loading shell uses; the app uncovers it
+         once the real page has rendered (src/utils/prehydrationCover.js). A
+         page served its own HTML, like /terms, paints straight away.
          The timeout is the failsafe for a bundle that never runs: without it a
          broken deploy would leave the visitor on a blank page. Once the bundle
          has started (src/main.jsx sets __KAYDO_BOOTED__) the app owns the cover
@@ -61,7 +61,8 @@
         var cover = location.pathname !== builtFor
         if (!cover && builtFor === '/') {
           try {
-            cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId'))
+            cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId') ||
+              sessionStorage.getItem('kaydo_demo'))
           } catch (e) { /* storage blocked — show the page as normal */ }
         }
         if (!cover) return

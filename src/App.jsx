@@ -21,6 +21,7 @@ import { devError } from './utils/devLog'
 import { getSubdomainSlug } from './utils/familySlug'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
+import { enterDemo, exitDemo } from './demo/demoMode'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -66,6 +67,8 @@ const HighlightEditorPage = lazyPage(() => import('./pages/HighlightEditorPage')
 const OurYearPage = lazyPage(() => import('./pages/OurYearPage'))
 const OurYearSetupPage = lazyPage(() => import('./pages/OurYearSetupPage'))
 const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
+// Part of the demo, so loaded only in a demo tab.
+const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 
 // What "/" resolves to, in priority order:
 //
@@ -84,7 +87,7 @@ const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 // (the .kaydo-restoring class, cleared below once this route has decided).
 export function RootRoute() {
   const navigate = useNavigate()
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, isDemo } = useAuth()
   // 'unknown'   — pre-hydration, storage not read yet (renders the landing page,
   //               matching the pre-rendered HTML byte for byte)
   // 'restoring' — a session is stored; hold a blank shell until auth confirms it
@@ -99,13 +102,16 @@ export function RootRoute() {
   const [status, setStatus] = useState('unknown')
 
   useEffect(() => {
-    const session = hasStoredSession()
+    // A demo tab counts as signed in: it holds back the landing page, whose
+    // signup form has no business with the demo's made-up family, and goes on
+    // to the demo's home.
+    const session = hasStoredSession() || isDemo
     // Reading client-only storage after hydration is what this effect is for.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus(session ? 'restoring' : 'public')
     // Nothing to wait for — send subdomain visitors on immediately, as before.
     if (!session && getSubdomainSlug()) navigate('/login', { replace: true })
-  }, [navigate])
+  }, [navigate, isDemo])
 
   useEffect(() => {
     if (status === 'unknown') return
@@ -150,6 +156,37 @@ function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
 }
 
+// /demo — opens the demo family in this tab (src/demo/). A hard navigation, so
+// the app starts over on the demo's own database instead of switching under
+// whatever was running.
+function DemoEntry() {
+  useEffect(() => {
+    enterDemo('/home')
+  }, [])
+  return <PageLoader />
+}
+
+// Signing in, signing up and redeeming an invite are for a real family, so a
+// demo tab leaves the demo first — the same address again, loaded without it.
+function OutsideDemo({ children }) {
+  const { isDemo } = useAuth()
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    if (isDemo) exitDemo(pathname + search)
+  }, [isDemo, pathname, search])
+  return isDemo ? <PageLoader /> : children
+}
+
+function DemoBannerSlot() {
+  const { isDemo } = useAuth()
+  if (!isDemo) return null
+  return (
+    <Suspense fallback={null}>
+      <DemoBanner />
+    </Suspense>
+  )
+}
+
 // Lifts index.html's pre-hydration cover on every path but "/", which RootRoute
 // handles because it has its own decision to make first. It renders inside the
 // same <Suspense> as the page, so its effect runs only once the page itself has
@@ -189,7 +226,9 @@ function SiteAnalytics() {
 // Handles push notification prompt + in-app foreground toast.
 // Must be inside AuthProvider to access familyId.
 function AppNotifications() {
-  const { familyId, isAuthenticated } = useAuth()
+  const { familyId, isAuthenticated: signedIn, isDemo } = useAuth()
+  // A demo tab has no Firebase, so nothing to register for push or hear from.
+  const isAuthenticated = signedIn && !isDemo
   const { t } = useTranslation('common')
   const [toast, setToast] = useState(null)
 
@@ -274,6 +313,7 @@ function Layout() {
     <I18nextProvider i18n={i18n}>
       <AuthProvider>
         <HtmlLangSync />
+        <DemoBannerSlot />
         <Suspense fallback={<PageLoader />}>
           <Outlet />
           <RevealPage />
@@ -306,10 +346,11 @@ export const routes = [
     errorElement: <RouteErrorScreen />,
     children: [
       { index: true, element: <RootRoute /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'family/:slug', element: <LoginPage /> },
-      { path: 'signup', element: <SignupPage /> },
-      { path: 'invite', element: <InviteRedeemPage /> },
+      { path: 'login', element: <OutsideDemo><LoginPage /></OutsideDemo> },
+      { path: 'family/:slug', element: <OutsideDemo><LoginPage /></OutsideDemo> },
+      { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },
+      { path: 'invite', element: <OutsideDemo><InviteRedeemPage /></OutsideDemo> },
+      { path: 'demo', element: <DemoEntry /> },
 
       // Public legal / informational pages (linked from the footer).
       { path: 'terms', element: <LegalPage docKey="terms" /> },

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from '../../config/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
@@ -16,7 +16,7 @@ import ManageAdminsPanel from './ManageAdminsPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
-  const { familyId } = useAuth()
+  const { familyId, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const navigate = useNavigate()
   const [newPassword, setNewPassword] = useState('')
@@ -62,6 +62,12 @@ export default function SettingsPanel() {
     }
     if (!familyId) {
       setMessage(t('password.noFamily'))
+      return
+    }
+    // The hash is the setSharedPassword function's to write, and there are no
+    // viewers to let in.
+    if (isDemo) {
+      setMessage(t('demo:unavailable'))
       return
     }
 

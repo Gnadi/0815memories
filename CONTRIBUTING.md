@@ -29,6 +29,9 @@ http://localhost:5173. The sign-ins are in the README under *Getting started*.
 You never need access to the hosted service or its Firebase project, and you
 should not test against it: it holds real families' data.
 
+To look at a change without the emulators, `npm run dev` and open `/demo`:
+the demo family runs entirely in the browser, with no Java and no `.env`.
+
 ## Before you open a pull request
 
 Run what CI runs:
@@ -66,6 +69,12 @@ A few rules the codebase depends on:
   `src/__tests__/*Rules.test.js`. A new rules test file must also be added to
   the `test:rules` script in `package.json`, or it never runs. A query that
   needs a composite index adds it to `firestore.indexes.json`.
+- **Firestore is reached through `src/config/firestore.js`.** It is where
+  the demo swaps Firestore for its in-browser database (`src/demo/`), and
+  ESLint refuses `firebase/firestore` imports anywhere else in `src/`. A
+  Firestore function the app starts to use goes into that module and into
+  `src/demo/demoDatabase.js`, with a test in
+  `src/__tests__/demoDatabase.test.js`.
 - **Cloud Functions are v2 and run in `europe-west3`**, set once at the top
   of `functions/index.js`. Logic worth testing lives in its own module
   (`functions/viewerLogin.js`, `functions/slugs.js`, …) so the tests can

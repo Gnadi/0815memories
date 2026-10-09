@@ -42,6 +42,21 @@ export default defineConfig([
     },
   },
   {
+    // Firestore is reached through src/config/firestore.js, the one module the
+    // demo switches to its in-browser database. A direct import of the SDK
+    // would go around it, and the demo would break on that feature.
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/config/firestore.js', 'src/config/firebase.js', 'src/demo/**', 'src/__tests__/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'firebase/firestore',
+          message: 'Import from src/config/firestore.js, which demo mode switches to its in-browser database.',
+        }],
+      }],
+    },
+  },
+  {
     // The service worker runs in the ServiceWorkerGlobalScope, not the window —
     // so `self`, `clients`, `registration`, etc. are service-worker globals.
     files: ['src/sw.js'],

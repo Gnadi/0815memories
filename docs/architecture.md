@@ -118,7 +118,8 @@ The functions are deployed by hand for now (README, *Getting started*).
 | `hooks/` | Firestore subscriptions and data access per feature (`useMemories`, …) |
 | `utils/` | encryption, uploads, rendering (canvas, PDF, video), slug handling |
 | `context/AuthContext.jsx` | session, role, family, encryption key |
-| `config/` | the Firebase and Cloudinary clients; emulator switch |
+| `config/` | the Firebase and Cloudinary clients; emulator switch; `firestore.js`, the one door to Firestore |
+| `demo/` | the demo family: flag, in-memory database, content, banner |
 | `constants/` | shared constants, some mirrored in `firestore.rules` |
 | `locales/{en,de}/`, `i18n/` | translations; public namespaces load eagerly, the rest lazily |
 | `sw.js` | the service worker (Workbox, `injectManifest`) |
@@ -135,6 +136,37 @@ Build and delivery details that affect many changes:
 - **Hosting** is Vercel (`vercel.json`): the SPA rewrite, cache headers,
   security headers, and `api/` as serverless functions.
 
+## The demo
+
+`/demo` opens a demo family in the current tab, without an account and
+without a server. It is the real app running on different data, so it is
+built at the two seams everything already passes through:
+
+- **The flag.** `src/demo/demoMode.js` keeps it in sessionStorage, so it
+  belongs to one tab. Entering and leaving are hard navigations, because the
+  flag is read once per page load. In a demo tab `config/firebase.js` does
+  not start Firebase at all: no restored session, no listener, no push, and
+  every callable reads as not configured. `utils/authStorage.js` neither reads
+  nor writes the stored session, which belongs to whoever is signed in
+  outside the demo.
+- **Firestore.** Every Firestore call in `src/` goes through
+  `src/config/firestore.js` (ESLint refuses direct `firebase/firestore`
+  imports). Outside the demo it is the SDK; in a demo tab it answers from
+  `src/demo/demoDatabase.js`, an in-memory implementation of the part of the
+  Firestore API the app uses, including the read rules a visitor can see
+  from the outside: the Vault's and Our Year's time locks.
+- **The session.** `AuthContext` loads `src/demo/index.js`, which installs
+  the database, filled by `src/demo/demoFamily.js` with the family in the
+  interface language, and signs in its owner as an admin. The family has no
+  encryption key, so the app runs in plaintext mode and shows the pictures in
+  `public/demo-media/` as they are. Dates are counted from the moment the
+  demo starts, so the family never ages.
+
+Uploads in the demo become object URLs that live as long as the tab
+(`utils/encryptedUpload.js`). What needs a server says so instead: the viewer
+password, invite links, the print order, push and feedback. The demo is
+lazy-loaded; only the flag and `config/firestore.js` are in the shell.
+
 ## Tests
 
 | Kind | Where | Run with |
@@ -145,4 +177,5 @@ Build and delivery details that affect many changes:
 
 The rules and E2E tests run against the Firebase emulators. The E2E tests use
 the demo family from `scripts/seed-emulator.mjs`, the same data
-`npm run dev:local` starts with.
+`npm run dev:local` starts with — except `e2e/demo.e2e.js`, which walks the
+in-browser demo and needs no emulator.

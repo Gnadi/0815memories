@@ -1,4 +1,4 @@
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, deleteDoc, serverTimestamp } from '../config/firestore'
 import i18n from '../i18n'
 import { devWarn } from './devLog'
 import { getMessagingInstance, auth, db } from '../config/firebase'

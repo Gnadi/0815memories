@@ -11,6 +11,7 @@
  * Reads look in localStorage first and fall back to sessionStorage, so a
  * session written either way is found again on the next visit.
  */
+import { isDemoMode } from '../demo/demoMode'
 
 // Everything that makes up a session. Cleared together on logout.
 //
@@ -25,8 +26,12 @@ const PERSIST_KEY = 'fh_persist'
 
 // Storage throws in Safari private mode and when a browser blocks site data;
 // a session that cannot be remembered is worth less than a crashed app.
+//
+// A demo tab reads and writes none of it (demo/demoMode.js). What is stored
+// belongs to whoever is signed in in this browser outside the demo: the demo
+// would overwrite it with its made-up family, or pick it up in place of its own.
 const attempt = (fn, fallback = null) => {
-  if (typeof window === 'undefined') return fallback
+  if (typeof window === 'undefined' || isDemoMode()) return fallback
   try {
     return fn()
   } catch {

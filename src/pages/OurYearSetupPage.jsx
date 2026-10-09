@@ -8,7 +8,7 @@ import {
   setDoc,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { Check, Copy, Loader2, UserPlus, X } from 'lucide-react'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'

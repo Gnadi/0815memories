@@ -9,7 +9,7 @@ import {
   runTransaction,
   startAfter,
   where,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptText, encryptText } from './encryption'
 import { devError } from './devLog'

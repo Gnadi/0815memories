@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, serverTimestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { buildFeedbackDocument } from '../constants/feedback'
 

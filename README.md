@@ -2,7 +2,7 @@
 
 A private, encrypted family memory platform — your family's own corner of the internet. Every family claims its own address (`yourname.kaydo.app`) and gets a warm, ad-free space for photos, stories, recipes and letters across generations.
 
-**Live demo:** [the-bennetts.kaydo.app](https://the-bennetts.kaydo.app) · **Website:** [kaydo.app](https://kaydo.app)
+**Live demo:** [kaydo.app/demo](https://kaydo.app/demo) — a demo family that lives in your browser, no account needed · **Website:** [kaydo.app](https://kaydo.app)
 
 ## Features
 
@@ -67,6 +67,17 @@ A private, encrypted family memory platform — your family's own corner of the 
 - **Vitest** — test suite
 
 ## Getting started
+
+### Just look around
+
+```bash
+npm install
+npm run dev
+```
+
+Then open http://localhost:5173/demo. That is the demo family from the
+website: it lives entirely in the browser tab — no Firebase, no Java, no
+`.env` — and starts afresh on every reload. See [The demo family](#the-demo-family).
 
 ### Run it locally — no accounts needed
 
@@ -138,6 +149,25 @@ VITE_USE_EMULATOR=true npm run dev
 | `npm run lint` | ESLint |
 | `npm run emulators` | Firebase Auth, Firestore, Functions and Storage emulators |
 | `npm run seed:emulator` | Seed demo data into the emulator |
+
+## The demo family
+
+`/demo` opens a family that exists only in the visitor's browser tab: the
+Bennetts in English, the Bergers in German, with memories, moments, journals,
+a recipe tree, the Vault, scrapbooks, collages, highlight reels and an Our
+Year chapter waiting for the visitor's answers. Nothing is sent anywhere and
+nothing needs setting up — there is no demo account, no password and no demo
+data in Firebase.
+
+It is the real app, not a copy of it. A demo tab never starts Firebase;
+every Firestore call goes through `src/config/firestore.js`, which hands it to
+an in-memory database (`src/demo/demoDatabase.js`) filled with the family
+from `src/demo/demoFamily.js`. Pictures added in the demo stay in the tab as
+object URLs. What only a server can do — the viewer password, invite links,
+ordering a printed book, push notifications, feedback — says so instead of
+pretending. The pictures in `public/demo-media/` are drawn by
+`scripts/generate-demo-media.mjs`; replace them with WebP files of the same
+names to show photos instead. More in `docs/architecture.md`.
 
 ## Continuous integration
 
@@ -291,6 +321,24 @@ npm audit fix --force   # the rest, with breaking upgrades — test the app afte
 The threshold is `AUDIT_LEVEL` in the workflow; lower it to `moderate` or
 `low` once everything above that is cleared. A one-off run at a different
 level can be started under Actions → npm audit → Run workflow.
+
+`package.json` carries three `overrides`, each for an advisory whose fix the
+package that pulls it in has not taken up yet:
+
+- `@grpc/grpc-js` → `^1.14.5`. `@firebase/firestore` asks for `~1.9.0`, which
+  has none of the fixes. Only Firestore's Node build uses gRPC — the browser
+  talks WebChannel — so what it affects is the rules tests and the build, and
+  both pass with it.
+- `basic-ftp` → `^6.2.3`. `firebase-tools` reaches it through `proxy-agent` →
+  `get-uri`, which asks for `^5`; it would only ever fetch a proxy
+  configuration over FTP.
+- `chokidar` → `^4`, for `firebase-tools` only. chokidar 3 depends on
+  `braces`, which has an open advisory and no fixed release; chokidar 4 has
+  dropped it. firebase-tools uses it to watch rules and function sources in
+  the emulators, which works the same with either.
+
+Remove each once the package that pulls it in depends on a fixed release
+itself.
 
 ## Access model
 

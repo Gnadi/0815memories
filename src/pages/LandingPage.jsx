@@ -222,16 +222,15 @@ export default function LandingPage() {
             firebaseReady={firebaseReady}
           />
 
-          {/* Secondary CTA — see a real family space before claiming one */}
-          <a
-            href="https://the-bennetts.kaydo.app"
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Secondary CTA — look around a family space before claiming one:
+              the demo family, which lives entirely in the browser (src/demo/). */}
+          <Link
+            to="/demo"
             className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-bark-muted text-bark text-sm font-semibold hover:border-bark transition-colors"
           >
             {t('hero.demoCta')}
             <span aria-hidden="true">&rarr;</span>
-          </a>
+          </Link>
         </div>
 
         {/* Right — real app screenshot */}
@@ -859,14 +858,12 @@ export default function LandingPage() {
             >
               {t('cta.getStarted')}
             </button>
-            <a
-              href="https://the-bennetts.kaydo.app"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/demo"
               className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
               {t('hero.demoCta')}
-            </a>
+            </Link>
             <a
               href="https://github.com/Gnadi/0815memories"
               target="_blank"

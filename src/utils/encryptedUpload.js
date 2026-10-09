@@ -3,6 +3,7 @@ import { createThumbnail, createTinyPreview } from './imageThumbnail'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 import { fetchUploadSignature } from './uploadSignature'
+import { isDemoMode } from '../demo/demoMode'
 
 // Thrown before anything is encrypted or sent when the file cannot possibly fit
 // under Cloudinary's raw-resource cap. Callers match on `code` rather than
@@ -23,6 +24,12 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
   if (blob.size > MAX_PLAINTEXT_BYTES) {
     throw uploadTooLargeError(blob.size, MAX_PLAINTEXT_BYTES)
   }
+
+  // The demo keeps what is added to it in this tab (demo/demoMode.js): an
+  // object URL, which the media components show as it is (isDirectUrl in
+  // useDecryptedMedia) and which goes with the tab like the rest of the demo.
+  // Nothing is encrypted — the demo family has no key — and nothing is sent.
+  if (isDemoMode()) return { url: URL.createObjectURL(blob), publicId: '' }
 
   // 1. Encrypt
   const encryptedBuffer = await encryptBlob(encryptionKey, blob)

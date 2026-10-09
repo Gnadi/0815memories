@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MessageSquareHeart } from 'lucide-react'
+import { isDemoMode } from '../demo/demoMode'
 
 // Lazy: the form sits behind a button most sessions never press, and it is
 // mounted on every signed-in screen through the sidebar and the mobile header.
@@ -19,6 +20,10 @@ const FeedbackModal = lazy(() => import('./FeedbackModal'))
 export default function FeedbackLauncher({ variant = 'sidebar' }) {
   const { t } = useTranslation('feedback')
   const [open, setOpen] = useState(false)
+
+  // Feedback is written for a family member to the real Firestore; a note left
+  // in the demo would go nowhere, so the demo does not ask for one.
+  if (isDemoMode()) return null
 
   const button = variant === 'icon' ? (
     <button

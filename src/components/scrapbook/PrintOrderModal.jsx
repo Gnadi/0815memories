@@ -9,6 +9,7 @@ import {
 import { uploadPrintFile } from '../../utils/printUpload'
 import { createPrintCheckout } from '../../utils/printCheckout'
 import { devError } from '../../utils/devLog'
+import { isDemoMode } from '../../demo/demoMode'
 
 /**
  * "Print" — order the scrapbook as a printed book from Peecho.
@@ -28,6 +29,10 @@ import { devError } from '../../utils/devLog'
  */
 export default function PrintOrderModal({ familyId, title, sheets, onRender, onClose }) {
   const { t, i18n } = useTranslation('scrapbook')
+  // The demo shows what ordering involves and stops before anything is made:
+  // the print file needs Firebase Storage and the checkout a Cloud Function,
+  // and neither has anything to do with a family that lives in one tab.
+  const isDemo = isDemoMode()
   const config = useMemo(() => printConfig(), [])
   // 'intro' | 'rendering' | 'uploading' | 'checkout' | 'ready' | 'error'
   const [phase, setPhase] = useState('intro')
@@ -176,6 +181,13 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
                 </p>
                 <p className="mt-1">{t('print.privacyBody', { days: PRINT_FILE_RETENTION_DAYS })}</p>
               </div>
+
+              {isDemo && (
+                <p className="px-3 py-2 rounded-xl bg-cream text-bark flex gap-2">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-kaydo" />
+                  <span>{t('demo:printUnavailable')}</span>
+                </p>
+              )}
             </>
           )}
 
@@ -258,7 +270,11 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
             </button>
           )}
           {phase === 'intro' && (
-            <button onClick={handlePrepare} className="btn-kaydo flex items-center gap-2 text-sm">
+            <button
+              onClick={handlePrepare}
+              disabled={isDemo}
+              className="btn-kaydo flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <Printer className="w-4 h-4" />
               {t('print.prepare')}
             </button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useReducer, useRef, useMemo, lazy, Su
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { X, Share2, Loader2, MoreVertical, Download, Trash2, LayoutGrid, Square, BookHeart } from 'lucide-react'
-import { doc as firestoreDoc, getDoc, Timestamp } from 'firebase/firestore'
+import { doc as firestoreDoc, getDoc, Timestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useCollageWriter, decryptCollage } from '../hooks/useCollages'

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc } from '../config/firestore'
 import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'

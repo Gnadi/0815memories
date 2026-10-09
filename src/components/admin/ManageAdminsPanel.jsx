@@ -12,7 +12,7 @@ import {
   arrayRemove,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore'
+} from '../../config/firestore'
 import { useTranslation } from 'react-i18next'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
@@ -20,7 +20,7 @@ import { Shield, Plus, Trash2, Loader2, User, Copy, Check, Link as LinkIcon } fr
 import { generateInviteToken, INVITE_TTL_MS, buildInviteUrl } from '../../utils/inviteToken'
 
 export default function ManageAdminsPanel() {
-  const { familyId, user } = useAuth()
+  const { familyId, user, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const [ownerUid, setOwnerUid] = useState(null)
   const [adminUids, setAdminUids] = useState([])
@@ -90,6 +90,11 @@ export default function ManageAdminsPanel() {
     setGeneratedLink('')
     setCopied(false)
     if (!familyId || !user) return
+    // An invite link is only good for signing up to a real family.
+    if (isDemo) {
+      setError(t('demo:unavailable'))
+      return
+    }
     setGenerating(true)
     try {
       const token = generateInviteToken()
