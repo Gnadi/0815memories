@@ -53,7 +53,9 @@ allowlist. `familySlugs/{slug}` keeps slugs unique.
 
 Each family has one AES-256-GCM key, generated in the browser at signup and
 stored as a JWK in the family document (`encryptionKeyJwk`). Only members can
-read that document. `src/utils/encryption.js` encrypts text fields, JSON and
+read that document, and nobody can change the key in it: the rules refuse an
+update that adds, replaces or removes it (`keepsEncryptionKey()`), since that
+would make everything encrypted with the old key unreadable. `src/utils/encryption.js` encrypts text fields, JSON and
 blobs; `src/utils/encryptedUpload.js` encrypts files and uploads them to
 Cloudinary as `raw` resources. `src/components/media/` decrypts media for
 display (`useDecryptedMedia`, `EncryptedImage`, …).
@@ -71,7 +73,7 @@ family.
 
 | Collection | Holds | Written by |
 | --- | --- | --- |
-| `families/{id}` | name, slug, admins, key, login-page design | admins |
+| `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design | admins |
 | `families/{id}/secrets/auth` | bcrypt hash of the shared password | `setSharedPassword` function only |
 | `families/{id}/admins`, `/invites` | admin metadata, co-admin invites | admins |
 | `familyPublic/{id}` | the public login-page subset | `mirrorFamilyPublic` function only |

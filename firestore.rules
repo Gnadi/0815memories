@@ -117,6 +117,16 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
+    // The family's AES key. The family's content is encrypted with it, so a
+    // write that replaced or removed it would leave all of that unreadable for
+    // every member at once — whether by a bug, by two devices racing, or by a
+    // hijacked admin account. It is written with the family and never again.
+    // A family from before encryption has none and gets none this way: giving
+    // it one would be a migration of its own, rules included.
+    function keepsEncryptionKey() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['encryptionKeyJwk']);
+    }
+
     // Families — readable by the family only. The password check that used to
     // need a public read now happens in the viewerLogin Cloud Function.
     // Updates fall into one of four explicit paths; everything else is denied.
@@ -149,6 +159,7 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
                     && loginCustomOk()
+                    && keepsEncryptionKey()
                     && (
                       // Path A: existing admin edits regular fields; adminUids unchanged.
                       (

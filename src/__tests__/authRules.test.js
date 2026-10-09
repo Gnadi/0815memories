@@ -20,6 +20,8 @@
  *   4. The login page still works without a token, via familyPublic.
  *   5. A push token belongs to a family, and no client ever reads one back.
  *   6. Pending invites cannot be enumerated, because the id *is* the credential.
+ *   7. The encryption key, once written with the family, is never replaced or
+ *      removed — that would make everything the family stored unreadable.
  *
  * Run with:  npm run test:rules
  * (Skipped by default — `npm test` stays emulator-free.)
@@ -38,6 +40,7 @@ import {
   query,
   setDoc,
   deleteDoc,
+  deleteField,
   updateDoc,
   where,
   writeBatch,
@@ -522,6 +525,82 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       const db = asAdmin('uid-admin-2', OTHER_FAMILY)
       await assertSucceeds(updateDoc(doc(db, name, 'theirs'), { title: 'still theirs' }))
       await assertFails(updateDoc(doc(db, name, 'theirs'), { familyId: FAMILY, title: 'Injected' }))
+    })
+  })
+
+  // ── 9. The encryption key ─────────────────────────────────────────────────
+  //
+  // The family's content is encrypted with it, so replacing or removing it
+  // leaves all of that unreadable for everyone. Any admin could, on any of the
+  // update paths, and so could a bug or two devices racing.
+
+  describe('the encryption key', () => {
+    const KEY = { k: 'the-secret-key', kty: 'oct' }
+    const family = (db, id = FAMILY) => doc(db, 'families', id)
+
+    it('stays put while an admin edits the family', async () => {
+      const db = asAdmin(ADMIN, FAMILY)
+      await assertSucceeds(updateDoc(family(db), { familyName: 'The Miller Family' }))
+      await assertSucceeds(setDoc(family(db), { loginPageMode: 'classic' }, { merge: true }))
+      // Writing back the key the family already has changes nothing.
+      await assertSucceeds(updateDoc(family(db), { encryptionKeyJwk: KEY }))
+    })
+
+    it('cannot be replaced', async () => {
+      await assertFails(updateDoc(family(asAdmin(ADMIN, FAMILY)), {
+        encryptionKeyJwk: { k: 'a-new-key', kty: 'oct' },
+      }))
+    })
+
+    it('cannot be removed, as a field or by rewriting the document without it', async () => {
+      const db = asAdmin(ADMIN, FAMILY)
+      await assertFails(updateDoc(family(db), { encryptionKeyJwk: deleteField() }))
+      await assertFails(setDoc(family(db), {
+        adminUid: ADMIN,
+        adminUids: [ADMIN],
+        familyName: 'The Millers',
+        familySlug: 'the-millers',
+      }))
+    })
+
+    it('cannot ride along with a change to the admins', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await updateDoc(family(ctx.firestore()), { adminUids: [ADMIN, 'uid-admin-b'] })
+        await setDoc(family(ctx.firestore(), 'family-old'), {
+          adminUid: 'uid-old-owner',
+          encryptionKeyJwk: KEY,
+        })
+      })
+      const db = asAdmin(ADMIN, FAMILY)
+      const newKey = { k: 'a-new-key', kty: 'oct' }
+      // Removing an admin.
+      await assertFails(updateDoc(family(db), { adminUids: [ADMIN], encryptionKeyJwk: newKey }))
+      await assertSucceeds(updateDoc(family(db), { adminUids: [ADMIN] }))
+      // The owner's one-time move to adminUids.
+      const owner = asClaimlessAdmin('uid-old-owner')
+      await assertFails(updateDoc(family(owner, 'family-old'), { adminUids: ['uid-old-owner'], encryptionKeyJwk: newKey }))
+      await assertSucceeds(updateDoc(family(owner, 'family-old'), { adminUids: ['uid-old-owner'] }))
+    })
+
+    it('is not handed to a family from before encryption', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(family(ctx.firestore(), 'family-plain'), {
+          adminUid: ADMIN,
+          adminUids: [ADMIN],
+          familyName: 'The Plains',
+        })
+      })
+      await assertFails(updateDoc(family(asAdmin(ADMIN, 'family-plain'), 'family-plain'), { encryptionKeyJwk: KEY }))
+    })
+
+    it('is still written with a new family', async () => {
+      await assertSucceeds(setDoc(family(asClaimlessAdmin('uid-new-owner'), 'family-new'), {
+        adminUid: 'uid-new-owner',
+        adminUids: ['uid-new-owner'],
+        familyName: 'The Newcomers',
+        familySlug: 'the-newcomers',
+        encryptionKeyJwk: KEY,
+      }))
     })
   })
 })
