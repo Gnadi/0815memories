@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, User } from 'lucide-react'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from '../../config/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import EncryptedImage from '../media/EncryptedImage'

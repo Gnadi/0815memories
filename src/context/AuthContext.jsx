@@ -5,7 +5,7 @@ import {
   signInWithCustomToken,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
-import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from 'firebase/firestore'
+import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from '../config/firestore'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
 import { generateSlug, isSlugAvailable } from '../utils/familySlug'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'

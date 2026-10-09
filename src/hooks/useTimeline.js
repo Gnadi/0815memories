@@ -9,7 +9,7 @@ import {
   getDocs,
   getCountFromServer,
   Timestamp,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptMemory } from './useMemories'
 import { devWarn } from '../utils/devLog'

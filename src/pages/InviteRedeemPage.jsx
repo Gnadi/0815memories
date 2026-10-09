@@ -8,7 +8,7 @@ import {
   writeBatch,
   serverTimestamp,
   arrayUnion,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { auth, db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'

@@ -13,7 +13,7 @@ import {
   arrayUnion,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { db } from '../config/firebase'
 import { devError } from '../utils/devLog'
 import { encryptText, decryptText, encryptJSON, decryptJSON } from '../utils/encryption'

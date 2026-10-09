@@ -42,6 +42,20 @@ export default defineConfig([
     },
   },
   {
+    // Firestore is reached through src/config/firestore.js, the one module
+    // every query passes. A direct import of the SDK would go around it.
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/config/firestore.js', 'src/config/firebase.js', 'src/__tests__/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'firebase/firestore',
+          message: 'Import from src/config/firestore.js, the one module every Firestore call goes through.',
+        }],
+      }],
+    },
+  },
+  {
     // The service worker runs in the ServiceWorkerGlobalScope, not the window —
     // so `self`, `clients`, `registration`, etc. are service-worker globals.
     files: ['src/sw.js'],

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc } from '../../config/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { runNasExport } from '../../utils/nasExport'

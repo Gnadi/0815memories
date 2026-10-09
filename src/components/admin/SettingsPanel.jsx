@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from '../../config/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Plus, Image as ImageIcon, Mic, Video, Camera } from 'lucide-react'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from '../../config/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'

@@ -6,7 +6,7 @@ import {
   getDocs,
   doc,
   getDoc,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, decryptBlob } from './encryption'
 import { MEMORY_WRITE_FIELDS } from '../hooks/useMemories'

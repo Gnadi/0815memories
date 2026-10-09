@@ -12,7 +12,7 @@ import {
   where,
   limit,
   writeBatch,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { auth, db } from '../config/firebase'
 import { encryptFields, decryptFields, decryptStringArray } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'

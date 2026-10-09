@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { serverTimestamp } from 'firebase/firestore'
+import { serverTimestamp } from '../config/firestore'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {

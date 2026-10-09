@@ -10,7 +10,7 @@ import {
   deleteDoc,
   serverTimestamp,
   where,
-} from 'firebase/firestore'
+} from '../config/firestore'
 import { db } from '../config/firebase'
 import { encryptText, decryptText, encryptJSON, decryptJSON } from '../utils/encryption'
 

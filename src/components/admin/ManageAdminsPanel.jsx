@@ -12,7 +12,7 @@ import {
   arrayRemove,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore'
+} from '../../config/firestore'
 import { useTranslation } from 'react-i18next'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
