@@ -1,0 +1,9 @@
+{
+  "banner": {
+    "text": "Du erkundest eine Demo-Familie. Alles bleibt in diesem Tab und beginnt beim Neuladen von vorn.",
+    "cta": "Eigene Familie gründen",
+    "exit": "Demo beenden"
+  },
+  "unavailable": "In der Demo nicht möglich: Dafür braucht es Kaydos Server, und die Demo läuft ganz in deinem Browser.",
+  "printUnavailable": "Die Demo bestellt nichts. In deiner eigenen Familie geht das Buch an dieser Stelle an die Druckerei."
+}

@@ -16,7 +16,7 @@ import ManageAdminsPanel from './ManageAdminsPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
-  const { familyId } = useAuth()
+  const { familyId, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const navigate = useNavigate()
   const [newPassword, setNewPassword] = useState('')
@@ -62,6 +62,12 @@ export default function SettingsPanel() {
     }
     if (!familyId) {
       setMessage(t('password.noFamily'))
+      return
+    }
+    // The hash is the setSharedPassword function's to write, and there are no
+    // viewers to let in.
+    if (isDemo) {
+      setMessage(t('demo:unavailable'))
       return
     }
 

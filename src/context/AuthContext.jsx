@@ -16,8 +16,13 @@ import {
 } from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
 import { removeFCMToken } from '../utils/notifications'
+import { isDemoMode, exitDemo } from '../demo/demoMode'
 
 const AuthContext = createContext(null)
+
+// Read once per page load, as everything else of the demo reads it: entering
+// and leaving it are hard navigations (demo/demoMode.js).
+const DEMO = isDemoMode()
 
 /**
  * An error whose message is meant for the person reading the screen.
@@ -176,6 +181,28 @@ export function AuthProvider({ children }) {
   }, [applyClaims])
 
   useEffect(() => {
+    if (DEMO) {
+      // The demo family (demo/index.js): an admin session made up in the
+      // browser, over a database that lives in this tab. The family is only set
+      // once that database is installed, so nothing queries ahead of it.
+      let cancelled = false
+      import('../demo')
+        .then(({ startDemo }) => startDemo())
+        .then((session) => {
+          if (cancelled) return
+          setUser(session.user)
+          setRole('admin')
+          setFamilyId(session.familyId)
+        })
+        .catch((err) => devWarn('Could not start the demo:', err))
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+
     if (!auth) {
       setLoading(false)
       return
@@ -472,6 +499,13 @@ export function AuthProvider({ children }) {
   }, [pollForFamilyClaim])
 
   const logout = useCallback(async () => {
+    // The demo has no Firebase session, token or cache to clear: leaving it is
+    // a fresh start of the tab outside the demo.
+    if (DEMO) {
+      exitDemo('/')
+      return
+    }
+
     // Before signing out, while the rules still accept the write: a shared
     // device should stop receiving this family's notifications.
     await removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err))
@@ -521,6 +555,7 @@ export function AuthProvider({ children }) {
     isViewer,
     isAdmin,
     isAuthenticated,
+    isDemo: DEMO,
     familyId,
     encryptionKey,
     memoryCardStyle,

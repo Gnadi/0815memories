@@ -164,4 +164,19 @@ describe('PrintOrderModal', () => {
     fireEvent.click(document.querySelector('.bg-black\\/50'))
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('shows the demo what ordering involves and makes nothing', () => {
+    window.sessionStorage.setItem('kaydo_demo', '1')
+    try {
+      const { onRender } = open()
+      expect(screen.getByText(/The demo does not order anything/)).toBeInTheDocument()
+      const button = screen.getByRole('button', { name: 'Prepare print file' })
+      expect(button).toBeDisabled()
+      fireEvent.click(button)
+      expect(onRender).not.toHaveBeenCalled()
+      expect(uploadPrintFile).not.toHaveBeenCalled()
+    } finally {
+      window.sessionStorage.removeItem('kaydo_demo')
+    }
+  })
 })

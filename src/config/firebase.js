@@ -8,6 +8,7 @@ import {
   terminate,
 } from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
+import { isDemoMode } from '../demo/demoMode'
 
 // Dev-only: route Auth + Firestore to the local Firebase Emulator Suite.
 // Strictly gated so production never connects to an emulator.
@@ -40,6 +41,13 @@ function createFirestore() {
   return instance
 }
 
+// A demo tab never starts Firebase (demo/demoMode.js). Nothing restores a
+// session someone left signed in, nothing listens, nothing registers for push,
+// and every callable reads as not configured. `db` is only a marker, so the
+// hooks that test it go ahead and query — through config/firestore.js, which
+// answers from the demo's database.
+const DEMO_DB = Object.freeze({ type: 'demo' })
+
 try {
   const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -50,7 +58,9 @@ try {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
   }
 
-  if (firebaseConfig.apiKey) {
+  if (isDemoMode()) {
+    db = DEMO_DB
+  } else if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig)
     auth = getAuth(app)
     db = createFirestore()
@@ -66,7 +76,7 @@ try {
     }
 
   } else if (import.meta.env.DEV) {
-    console.warn('Firebase env vars not set — app running in demo mode')
+    console.warn('Firebase env vars not set — running without Firebase; the demo family at /demo still works')
   }
 } catch (e) {
   if (import.meta.env.DEV) console.error('Firebase initialization failed:', e)
@@ -124,7 +134,7 @@ export function getStorageInstance() {
  * every module reading it after this sees the new instance.
  */
 export async function resetFirestore() {
-  if (!db) return
+  if (!db || !app) return
   await terminate(db).catch(() => {})
   db = createFirestore()
 }

@@ -42,15 +42,16 @@ export default defineConfig([
     },
   },
   {
-    // Firestore is reached through src/config/firestore.js, the one module
-    // every query passes. A direct import of the SDK would go around it.
+    // Firestore is reached through src/config/firestore.js, the one module the
+    // demo switches to its in-browser database. A direct import of the SDK
+    // would go around it, and the demo would break on that feature.
     files: ['src/**/*.{js,jsx}'],
-    ignores: ['src/config/firestore.js', 'src/config/firebase.js', 'src/__tests__/**'],
+    ignores: ['src/config/firestore.js', 'src/config/firebase.js', 'src/demo/**', 'src/__tests__/**'],
     rules: {
       'no-restricted-imports': ['error', {
         paths: [{
           name: 'firebase/firestore',
-          message: 'Import from src/config/firestore.js, the one module every Firestore call goes through.',
+          message: 'Import from src/config/firestore.js, which demo mode switches to its in-browser database.',
         }],
       }],
     },

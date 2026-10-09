@@ -12,7 +12,7 @@ import { devError } from '../../utils/devLog'
  * that must be viewable without decryption.
  */
 export default function UploadWidget({ onUpload, currentUrl, unencrypted = false }) {
-  const { encryptionKey } = useAuth()
+  const { encryptionKey, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(currentUrl || '')
@@ -27,7 +27,8 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
     setUploading(true)
 
     try {
-      if (unencrypted) {
+      // The demo uploads nothing; encryptAndUpload keeps the file in the tab.
+      if (unencrypted && !isDemo) {
         // Plain Cloudinary upload (no encryption)
         const { timestamp, signature, folder, apiKey } = await fetchUploadSignature()
 
