@@ -10,6 +10,8 @@ import {
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, decryptBlob } from './encryption'
 import { MEMORY_WRITE_FIELDS } from '../services/memories'
+import { KID_ENCRYPTED_FIELDS } from '../services/kids'
+import { JOURNAL_ENCRYPTED_FIELDS } from '../services/journals'
 import { collectRichMediaUrls, parseRichDoc } from './richText'
 
 /**
@@ -198,8 +200,8 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
   if (!encryptionKey) return data
   const fieldMap = {
     memories: MEMORY_WRITE_FIELDS,
-    journals: ['content'],
-    children: ['name'],
+    journals: JOURNAL_ENCRYPTED_FIELDS,
+    children: KID_ENCRYPTED_FIELDS,
     blackbox: ['title', 'message'],
     recipes: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'],
     scrapbooks: ['title'],

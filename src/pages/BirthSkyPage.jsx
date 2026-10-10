@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, FileDown, Send, Loader2, Check, Lock } from 'lucide-react'
-import { Timestamp, deleteField } from '../config/firestore'
+import { Timestamp } from '../config/firestore'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useMemoryWriter } from '../hooks/useMemories'
@@ -142,8 +142,9 @@ export default function BirthSkyPage() {
     setSaveState('saving')
     try {
       await updateKid(kid.id, {
-        birthTime: form.birthTime || deleteField(),
-        birthPlace: form.birthPlace || deleteField(),
+        // null clears what is no longer known (services/kids.js).
+        birthTime: form.birthTime || null,
+        birthPlace: form.birthPlace || null,
         skyStyle: form.skyStyle,
       })
       setSaveState('saved')

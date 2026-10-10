@@ -18,6 +18,9 @@ import { getFamilyDocument, subscribeDecrypted } from '../services/decrypted'
 import { addRecipe, getRecipe, subscribeRecipes } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
+import { addKid, subscribeKids, updateKid } from '../services/kids'
+import { addJournal, subscribeJournals } from '../services/journals'
+import { Timestamp } from '../config/firestore'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -166,5 +169,48 @@ describe('one decryption for the list and the page', () => {
 
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+})
+
+describe('kids and journals', () => {
+  const stored = async (collectionName) =>
+    (await fs.getDocs(fs.collection(null, collectionName))).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+  it('kids: the birth place goes in as an object, encrypted, and comes back as one', async () => {
+    const birthPlace = { name: 'Linz', country: 'AT', lat: 48.31, lon: 14.29, tz: 'Europe/Vienna' }
+    await addKid(FAMILY, key, { name: 'Emma', birthTime: '04:17', birthPlace })
+
+    const [raw] = await stored('children')
+    for (const field of ['name', 'birthTime', 'birthPlace']) expect(typeof raw[field]).toBe('string')
+    expect(raw.name).not.toBe('Emma')
+    expect(raw.birthPlace).not.toContain('Linz')
+
+    const [kid] = await firstDelivery((onData, onError) => subscribeKids(FAMILY, key, onData, onError))
+    expect(kid).toMatchObject({ id: raw.id, name: 'Emma', birthTime: '04:17', birthPlace })
+  })
+
+  it('kids: null clears a birth time or place', async () => {
+    await addKid(FAMILY, key, { name: 'Leo', birthTime: '09:30', birthPlace: { name: 'Graz' } })
+    const [{ id }] = await stored('children')
+
+    await updateKid(key, id, { birthTime: null, birthPlace: null, skyStyle: 'kaydo' })
+
+    const [raw] = await stored('children')
+    expect(raw).not.toHaveProperty('birthTime')
+    expect(raw).not.toHaveProperty('birthPlace')
+    expect(raw.skyStyle).toBe('kaydo')
+  })
+
+  it("journals: one child's entries, their content encrypted", async () => {
+    const date = (iso) => Timestamp.fromDate(new Date(iso))
+    await addJournal(FAMILY, 'kid-a', key, { title: 'First tooth', content: 'At dinner', date: date('2024-10-18') })
+    await addJournal(FAMILY, 'kid-b', key, { title: 'First bike', content: 'No wheels', date: date('2024-07-12') })
+
+    const raw = await stored('journals')
+    expect(raw.map((d) => d.content)).not.toContain('At dinner')
+
+    const entries = await firstDelivery((onData, onError) =>
+      subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
+    expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
   })
 })

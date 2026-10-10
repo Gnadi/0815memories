@@ -151,7 +151,8 @@ Services reach Firestore through `config/firestore.js`, so the demo needs
 nothing of its own here. ESLint refuses `config/firestore` imports outside
 `src/services/` (`Timestamp` excepted); the files that predate the services
 are listed in `eslint.config.js` and move over area by area. So far memories,
-moments, recipes, scrapbooks, collages and highlights have.
+moments, recipes, scrapbooks, collages, highlights, the kids and their
+journals have.
 
 Build and delivery details that affect many changes:
 
