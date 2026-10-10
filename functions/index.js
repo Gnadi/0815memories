@@ -212,19 +212,30 @@ export const purgePrintFiles = onSchedule(
 // The Cloudinary account's API key and secret, the same pair the upload
 // signing on Vercel uses (api/cloudinary-sign.js), held in Secret Manager:
 // `firebase functions:secrets:set CLOUDINARY_API_KEY`, then the same for
-// CLOUDINARY_API_SECRET. The cloud name is asked for on the first deploy.
+// CLOUDINARY_API_SECRET. The cloud name is asked for on the next deploy.
 const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
 const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
+// Empty by default, or the emulator, which cannot ask, loads no function at
+// all. Empty means not set up: nothing is deleted until it is.
 const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
+  default: '',
   description: 'The Cloudinary cloud name, as in VITE_CLOUDINARY_CLOUD_NAME',
 })
 
-const cloudinary = () => ({
-  cloudName: CLOUDINARY_CLOUD_NAME.value(),
-  apiKey: CLOUDINARY_API_KEY.value(),
-  apiSecret: CLOUDINARY_API_SECRET.value(),
-  fetch,
-})
+/** The Admin API's credentials, or null while they are not all set. */
+function cloudinary() {
+  const config = {
+    cloudName: CLOUDINARY_CLOUD_NAME.value(),
+    apiKey: CLOUDINARY_API_KEY.value(),
+    apiSecret: CLOUDINARY_API_SECRET.value(),
+    fetch,
+  }
+  if (config.cloudName && config.apiKey && config.apiSecret) return config
+  // The trash and the deletion records keep everything until then, so
+  // nothing is lost by waiting — but nothing gets deleted either.
+  console.error('[purge] Cloudinary is not set up (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET); nothing is deleted')
+  return null
+}
 
 // Files are checked by downloading them (purge.js), so a run gets the memory
 // for a few large ones at once, and the time for many.
@@ -237,13 +248,13 @@ const PURGE_OPTIONS = {
 // A minute short of the timeout, so a run stops between two steps.
 const deadline = () => Date.now() + (PURGE_OPTIONS.timeoutSeconds - 60) * 1000
 
-function familyDeletionDeps(stopAt) {
+function familyDeletionDeps(config, stopAt) {
   return {
     db: getFirestore(),
     auth: getAuth(),
     bucket: getStorage().bucket(),
     fetchBytes: downloader(fetch),
-    cloudinary: cloudinary(),
+    cloudinary: config,
     deadline: stopAt,
   }
 }
@@ -257,10 +268,12 @@ export const purgeTrash = onSchedule(
   { ...PURGE_OPTIONS, schedule: 'every 60 minutes', timeZone: ANNIVERSARY_TIMEZONE },
   async () => {
     const stopAt = deadline()
+    const config = cloudinary()
+    if (!config) return
     const totals = await purgeDue({
       db: getFirestore(),
       fetchBytes: downloader(fetch),
-      cloudinary: cloudinary(),
+      cloudinary: config,
       deadline: stopAt,
       log: (...args) => console.warn('[purge]', ...args),
     })
@@ -270,7 +283,7 @@ export const purgeTrash = onSchedule(
 
     const deletions = await getFirestore().collection(DELETIONS).get()
     for (const doc of deletions.docs) {
-      const done = await runFamilyDeletion(doc.data(), familyDeletionDeps(stopAt)).catch((err) => {
+      const done = await runFamilyDeletion(doc.data(), familyDeletionDeps(config, stopAt)).catch((err) => {
         console.error('[family-deletion] failed', doc.id, err)
         return false
       })
@@ -304,8 +317,9 @@ export const onFamilyDeletion = onDocumentCreated(
   { ...PURGE_OPTIONS, document: `${DELETIONS}/{familyId}` },
   async (event) => {
     const record = event.data?.data()
-    if (!record) return
-    const done = await runFamilyDeletion(record, familyDeletionDeps(deadline()))
+    const config = cloudinary()
+    if (!record || !config) return
+    const done = await runFamilyDeletion(record, familyDeletionDeps(config, deadline()))
     console.log(`[family-deletion] ${event.params.familyId} ${done ? 'done' : 'continues in purgeTrash'}`)
   },
 )

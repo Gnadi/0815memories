@@ -119,7 +119,7 @@ else does.
    - Enable Email/Password authentication
    - Create a Firestore database and deploy `firestore.rules`
    - Deploy the Cloud Functions with `firebase deploy --only functions` (needs the Blaze plan). Viewer login is one of them, so the app is not fully usable without this step
-   - The functions that empty the trash and delete families also delete files on Cloudinary, so they need its API key and secret, the same pair as step 4: `firebase functions:secrets:set CLOUDINARY_API_KEY`, then `CLOUDINARY_API_SECRET`. The deploy asks for `CLOUDINARY_CLOUD_NAME`
+   - The functions that empty the trash and delete families also delete files on Cloudinary, so they need its API key and secret, the same pair as step 4: `firebase functions:secrets:set CLOUDINARY_API_KEY`, then `CLOUDINARY_API_SECRET`. The deploy asks for `CLOUDINARY_CLOUD_NAME`. Until all three are set, nothing is deleted on the server: the trash and deleted families wait
    - Push notifications additionally need a Web Push certificate: Firebase Console → Cloud Messaging → Web Push certificates, then `VITE_FIREBASE_VAPID_KEY`. See `docs/plan-notifications.md` for how the pieces fit together
 
 4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`). The function signs uploads only for a signed-in family admin, which it checks by asking Firestore in the project named in `VITE_FIREBASE_PROJECT_ID` (or `FIREBASE_PROJECT_ID`) as the caller — no service account and no dependencies, so it runs on any Node version Vercel is set to.
