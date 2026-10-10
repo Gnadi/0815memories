@@ -53,6 +53,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - The login page's design is served from `familyPublic/{familyId}`, a mirror written by a Cloud Function from a fixed allowlist, so the public surface of a family cannot grow by accident
 - A family's address (`<slug>.kaydo.app`) is unique on the server, not just in the signup form: the same function keeps a `familySlugs` registry and publishes a slug to `familyPublic` only for the family holding it, so a new family cannot take over an existing family's login page by copying its slug
 - App feedback is the one collection written *unencrypted* on purpose: it is addressed to whoever runs Kaydo, and ciphertext would make every bug report unreadable to the person who has to act on it. The form says so on screen, `firestore.rules` pins the document to the shape in `src/constants/feedback.js`, and nothing in the app can read the collection back
+- The key is written once, with the family. `firestore.rules` refuse any later write that replaces or removes it, so no admin account — and no bug or race between two devices — can leave the family's content unreadable for everyone
 - **Honest limitation:** the per-family encryption key is stored in the family's Firestore document. It is no longer public — only the family can read it — but it is still readable server-side, so Kaydo is *not* zero-knowledge. Deriving the key from the shared password is the path to that, and the price is that a forgotten password means the data is gone
 
 ## Tech stack

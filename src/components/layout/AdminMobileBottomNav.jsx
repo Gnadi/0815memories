@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Home, BookHeart, Plus, Lock, Camera, BookMarked, CalendarHeart, LayoutGrid, Film, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useMemoryWriter } from '../../hooks/useMemories'
-import { useScrapbookWriter } from '../../hooks/useScrapbooks'
 import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
 import { devError } from '../../utils/devLog'
 
@@ -41,10 +39,14 @@ export default function AdminMobileBottomNav() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
 
-  // Writer-only: this nav is mounted on every route, so subscribing here would
-  // duplicate the page's own memory and scrapbook listeners.
-  const { addMemory } = useMemoryWriter(isAdmin ? familyId : null, encryptionKey)
-  const { addScrapbook } = useScrapbookWriter(isAdmin ? familyId : null, encryptionKey)
+  // The writers load on first use, for the reason PostEntryModal does: a
+  // static import brought the memory and scrapbook services, Firestore queries
+  // and encryption included, into the startup bundle for a button most visits
+  // never press.
+  const addMemory = async (memory) => {
+    const { addMemory: add } = await import('../../services/memories')
+    return add(familyId, encryptionKey, memory)
+  }
 
   // Hide on public/auth pages and on the full-screen editors
   if (!isAdmin) return null
@@ -70,7 +72,8 @@ export default function AdminMobileBottomNav() {
     if (!familyId) { alert(t('createSheet.notAuthenticated')); return }
     setCreating(true)
     try {
-      const id = await addScrapbook({
+      const { addScrapbook } = await import('../../services/scrapbooks')
+      const id = await addScrapbook(familyId, encryptionKey, {
         title: t('createSheet.defaultScrapbookTitle'),
         coverImageUrl: null,
         pages: [makeCoverPage()],

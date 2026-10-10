@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { flushSync } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { doc, getDoc } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useScrapbookWriter } from '../hooks/useScrapbooks'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
+import { getScrapbook } from '../services/scrapbooks'
 import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
 import PhotoBar from '../components/scrapbook/PhotoBar'
@@ -79,21 +79,13 @@ export default function ScrapbookEditorPage() {
   // Load scrapbook once on mount
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
-    getDoc(doc(db, 'scrapbooks', id)).then(async (snap) => {
-      if (!snap.exists()) { setLoadError(t('errors.notFound')); setLoading(false); return }
-      const raw = snap.data()
-      if (raw.familyId !== familyId) { setLoadError(t('errors.notFound')); setLoading(false); return }
-      let nextTitle = raw.title || 'My Scrapbook'
-      let nextPages = raw.pages || [makeBlankPage()]
-      if (encryptionKey) {
-        const { decryptText, decryptJSON } = await import('../utils/encryption')
-        if (typeof nextTitle === 'string') nextTitle = await decryptText(encryptionKey, nextTitle)
-        if (typeof nextPages === 'string') nextPages = await decryptJSON(encryptionKey, nextPages)
-      }
+    getScrapbook(familyId, encryptionKey, id).then((book) => {
+      if (!book) { setLoadError(t('errors.notFound')); setLoading(false); return }
+      const nextTitle = book.title || 'My Scrapbook'
       // Migration: pages without an explicit `customizable` flag predate the
       // photobook redesign and should default to customizable so existing
       // freely-placed photos remain draggable/resizable.
-      nextPages = nextPages.map((p) => (
+      const nextPages = (book.pages || [makeBlankPage()]).map((p) => (
         Object.prototype.hasOwnProperty.call(p, 'customizable')
           ? p
           : { ...p, customizable: true }
@@ -102,7 +94,7 @@ export default function ScrapbookEditorPage() {
       // Backfill for books last saved before the page count was stored next to
       // the encrypted pages. The overview can't derive it without decrypting
       // the whole book; here the pages are decrypted anyway.
-      if (raw.pageCount !== nextPages.length) {
+      if (book.pageCount !== nextPages.length) {
         updateScrapbook(id, { pageCount: nextPages.length }).catch(() => {})
       }
       setLoading(false)

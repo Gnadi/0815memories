@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { X, Loader2, Download, Trash2, Share2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
-import { doc as firestoreDoc, getDoc, Timestamp } from '../config/firestore'
+import { Timestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { useHighlightWriter, decryptHighlight } from '../hooks/useHighlights'
+import { useHighlightWriter } from '../hooks/useHighlights'
 import { useMemoryWriter } from '../hooks/useMemories'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
+import { getHighlight } from '../services/highlights'
 import ReelPlayer from '../components/highlight/ReelPlayer'
 import PhotoBar from '../components/scrapbook/PhotoBar'
 import EncryptedImage from '../components/media/EncryptedImage'
@@ -66,16 +67,14 @@ export default function HighlightEditorPage() {
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
     let cancelled = false
-    getDoc(firestoreDoc(db, 'highlights', id))
-      .then(async (snap) => {
+    getHighlight(familyId, encryptionKey, id)
+      .then((data) => {
         if (cancelled) return
-        if (!snap.exists() || snap.data().familyId !== familyId) {
+        if (!data) {
           setLoadError(t('errors.notFound'))
           setLoading(false)
           return
         }
-        const data = await decryptHighlight(encryptionKey, { id: snap.id, ...snap.data() })
-        if (cancelled) return
         setDoc(data.doc || makeHighlightDoc())
         setTitle(data.title || '')
         setLoading(false)

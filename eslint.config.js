@@ -57,6 +57,58 @@ export default defineConfig([
     },
   },
   {
+    // src/services/ reads and writes Firestore; hooks, pages and components
+    // ask it. The files listed here predate it and still query Firestore
+    // themselves. Each area moves over in a change of its own, and the list
+    // only shrinks. Timestamp is a value that dates are converted with, not a
+    // query, so it stays importable everywhere.
+    //
+    // This block replaces the one above for the files it covers, so it repeats
+    // its rule.
+    files: ['src/**/*.{js,jsx}'],
+    ignores: [
+      'src/config/**',
+      'src/services/**',
+      'src/demo/**',
+      'src/__tests__/**',
+      // Not in src/services/ yet:
+      'src/context/AuthContext.jsx',
+      'src/hooks/useBlackBox.js',
+      'src/hooks/useFeedback.js',
+      'src/hooks/useJournals.js',
+      'src/hooks/useKids.js',
+      'src/hooks/useOurYear.js',
+      'src/hooks/useTimeline.js',
+      'src/components/admin/ManageAdminsPanel.jsx',
+      'src/components/admin/NasExportButton.jsx',
+      'src/components/admin/SettingsPanel.jsx',
+      'src/pages/BirthSkyPage.jsx',
+      'src/pages/InviteRedeemPage.jsx',
+      'src/pages/LoginDesignerPage.jsx',
+      'src/pages/LoginPage.jsx',
+      'src/pages/OurYearChapterPage.jsx',
+      'src/pages/OurYearSetupPage.jsx',
+      'src/utils/blackboxMigration.js',
+      'src/utils/familySlug.js',
+      'src/utils/nasExport.js',
+      'src/utils/notifications.js',
+      'src/utils/thumbnailMigration.js',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'firebase/firestore',
+          message: 'Import from src/config/firestore.js, which demo mode switches to its in-browser database.',
+        }],
+        patterns: [{
+          regex: '(^|/)config/firestore(\\.js)?$',
+          allowImportNames: ['Timestamp'],
+          message: 'Read and write Firestore through src/services/ — see docs/architecture.md.',
+        }],
+      }],
+    },
+  },
+  {
     // The service worker runs in the ServiceWorkerGlobalScope, not the window —
     // so `self`, `clients`, `registration`, etc. are service-worker globals.
     files: ['src/sw.js'],

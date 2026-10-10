@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const h = vi.hoisted(() => ({ dates: [], counts: 0, reads: 0, ascFails: false }))
 
 vi.mock('../config/firebase', () => ({ db: {} }))
-vi.mock('../hooks/useMemories', () => ({ decryptMemory: async (_key, data) => data }))
+vi.mock('../services/memories', () => ({ decryptMemory: async (_key, data) => data }))
 vi.mock('firebase/firestore', () => {
   const stamp = (date) => ({ toDate: () => date, ms: date.getTime() })
   const run = (parts) => {
