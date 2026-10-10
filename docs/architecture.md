@@ -39,8 +39,9 @@ anything the client can edit:
   `families/{id}/secrets/auth`, with rate limiting, and returns a custom token
   with `role: 'viewer'`. Viewers can read and never write.
 
-On the client, `src/context/AuthContext.jsx` works out the role, the family
-and the encryption key. `ProtectedRoute` in `src/App.jsx` guards routes:
+On the client, `src/context/AuthContext.jsx` works out the role and the
+family, and `useFamilyKey` next to it the encryption key, from the family
+document. `ProtectedRoute` in `src/App.jsx` guards routes:
 `protect()` admits any member, `protectAdmin()` admins only.
 
 A family is addressed by its slug: `<slug>.kaydo.app` in production and
@@ -66,7 +67,7 @@ README's *Security & encryption* section spells out that limit.
 Every family has a key: the rules refuse to create a family without one
 (`hasEncryptionKey()`), and Kaydo no longer opens a family from before
 encryption. When the key does not come — the family document has none, the
-browser cannot import it, or the document cannot be read — `AuthContext`
+browser cannot import it, or the document cannot be read — `useFamilyKey`
 reports why (`keyError`) and `ProtectedRoute` shows that instead of the app.
 The encryption helpers back this up: writing without a key throws, except in
 the demo, whose family is the only one without one. The emulator seed is
@@ -128,7 +129,7 @@ The functions are deployed by hand for now (README, *Getting started*).
 | `services/` | Firestore reads and writes per area, with their encryption (`memories.js`, …) — see below |
 | `hooks/` | React state on top of the services: live lists, writers (`useMemories`, …) |
 | `utils/` | encryption, uploads, rendering (canvas, PDF, video), slug handling |
-| `context/AuthContext.jsx` | session, role, family, encryption key |
+| `context/` | the session: `AuthContext.jsx` (sign-in, role, family), `useFamilyKey.js` (the key, from the family document) |
 | `config/` | the Firebase and Cloudinary clients; emulator switch; `firestore.js`, the one door to Firestore |
 | `demo/` | the demo family: flag, in-memory database, content, banner |
 | `constants/` | shared constants, some mirrored in `firestore.rules` |
