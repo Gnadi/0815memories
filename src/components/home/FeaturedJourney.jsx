@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
-import { timeAgo } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
@@ -155,6 +155,7 @@ function SlideArrow({ side, label, onClick }) {
 function FeaturedSlide({ memory }) {
   const navigate = useNavigate()
   const { t } = useTranslation('home')
+  const { timeAgo } = useDateFormat()
 
   return (
     <div

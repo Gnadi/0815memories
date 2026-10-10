@@ -3,10 +3,10 @@ import { User, BookOpen, Sparkles, ChevronRight, Plus } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function KidJournalCard({ kid, journalCount, onViewArchive, onViewSky, onEdit, onDelete }) {
-  const { t } = useTranslation('journal')
+  const { t, i18n } = useTranslation('journal')
   const birthdate = kid.birthdate?.toDate ? kid.birthdate.toDate() : new Date(kid.birthdate)
   const age = Math.floor((new Date() - birthdate) / (365.25 * 24 * 60 * 60 * 1000))
-  const formattedBirth = birthdate.toLocaleDateString('en-US', {
+  const formattedBirth = birthdate.toLocaleDateString(i18n.language, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -35,13 +35,13 @@ export default function KidJournalCard({ kid, journalCount, onViewArchive, onVie
             onClick={onEdit}
             className="text-bark-muted hover:text-bark text-xs underline underline-offset-2"
           >
-            Edit
+            {t('common:buttons.edit')}
           </button>
           <button
             onClick={onDelete}
             className="text-red-400 hover:text-red-600 text-xs underline underline-offset-2"
           >
-            Delete
+            {t('common:buttons.delete')}
           </button>
         </div>
       </div>

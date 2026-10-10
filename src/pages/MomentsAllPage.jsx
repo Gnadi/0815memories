@@ -6,11 +6,12 @@ import { useAllMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
 import MomentViewer from '../components/home/MomentViewer'
 import PostEntryModal from '../components/admin/PostEntryModal'
-import { formatRelativeDate } from '../utils/helpers'
+import { useDateFormat } from '../hooks/useDateFormat'
 import EncryptedImage from '../components/media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
 
 const MomentCard = memo(function MomentCard({ moment, onOpen }) {
+  const { formatRelativeDate } = useDateFormat()
   return (
     <button
       onClick={onOpen}

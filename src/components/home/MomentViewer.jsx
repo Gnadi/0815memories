@@ -10,7 +10,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { timeAgo } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import { useAuth } from '../../context/AuthContext'
 import CrossfadeImage, { FADE_MS } from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
@@ -60,6 +60,7 @@ function itemAtOffset(moments, momentIndex, mediaIndex, steps) {
 
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const { t } = useTranslation('home')
+  const { timeAgo } = useDateFormat()
   const { encryptionKey } = useAuth()
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)

@@ -97,5 +97,8 @@
     "failed": "Upload failed. Please try again.",
     "tooLarge": "This file is {{size}} — the limit is {{limit}} per file. Please use a shorter or more compressed clip.",
     "videoTooLong": "Video must be {{seconds}} seconds or shorter."
+  },
+  "time": {
+    "justNow": "Just now"
   }
 }
