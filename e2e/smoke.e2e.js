@@ -16,14 +16,34 @@ async function signIn(page, password = ADMIN_PASSWORD) {
   await visible(page, 'button[type="submit"]').click()
 }
 
+// Pages the test is navigating away from, until the next one has replaced them.
+const leaving = new WeakSet()
+
 // Uncaught exceptions and console errors, collected for the whole test.
+//
+// Except from a page the test is leaving. Leaving cancels whatever that page
+// still had in flight — the seeded family's pictures are fetched and decrypted
+// like real ones — and the app logs each cancelled fetch as a failure. That is
+// the test moving on, not the app failing. Everything the next page does is
+// counted again from the moment it replaces the old one.
 function collectErrors(page) {
   const errors = []
-  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) leaving.delete(page)
+  })
+  page.on('pageerror', (err) => {
+    if (!leaving.has(page)) errors.push(`pageerror: ${err.message}`)
+  })
   page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`)
+    if (msg.type() === 'error' && !leaving.has(page)) errors.push(`console: ${msg.text()}`)
   })
   return errors
+}
+
+// page.goto, from a page whose errors collectErrors is collecting.
+async function goTo(page, path) {
+  leaving.add(page)
+  await page.goto(path)
 }
 
 test('the landing page renders', async ({ page }) => {
@@ -62,7 +82,7 @@ test('an admin signs in and every section opens', async ({ page }) => {
   ]
   for (const [path, heading] of sections) {
     await test.step(path, async () => {
-      await page.goto(path)
+      await goTo(page, path)
       await expect(page).toHaveURL(new RegExp(`${path}$`))
       await expect(page.getByRole('heading', { name: heading }).first()).toBeVisible()
     })
