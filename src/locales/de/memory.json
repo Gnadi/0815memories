@@ -4,7 +4,7 @@
     "backToHome": "Zurück zur Startseite",
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "deleteConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+    "deleteConfirm": "Diese Erinnerung in den Papierkorb verschieben? Dort kannst du sie {{days}} Tage lang wiederherstellen."
   },
   "hero": {
     "viewFullscreen": "Vollbild ansehen"

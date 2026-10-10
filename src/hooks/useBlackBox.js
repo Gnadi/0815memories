@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { db } from '../config/firebase'
 import {
   addBox,
-  deleteBox,
   getBoxContent,
   setUnlockDate,
   subscribeBoxes,
   updateBox,
 } from '../services/blackbox'
+import { moveToTrash } from '../services/trash'
 
 // A capsule is two documents, the card's metadata and the sealed letter — see
 // services/blackbox.js.
@@ -70,7 +70,7 @@ export function useBlackBox(familyId, encryptionKey) {
     loading,
     addBox: (box) => addBox(familyId, encryptionKey, box),
     updateBox: (id, updates) => updateBox(encryptionKey, id, updates),
-    deleteBox: (id) => deleteBox(id),
+    deleteBox: (id) => moveToTrash(encryptionKey, 'blackbox', id),
     fetchContent,
     checkIn,
   }

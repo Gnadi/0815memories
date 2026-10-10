@@ -9,9 +9,10 @@ import { useJournals } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
 import EncryptedAudio from '../components/media/EncryptedAudio'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function JournalDetailPage() {
-  const { t } = useTranslation('journal')
+  const { t, i18n } = useTranslation('journal')
   const { childId, entryId } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
@@ -29,12 +30,12 @@ export default function JournalDetailPage() {
 
   const emotion = EMOTIONS.find((e) => e.key === entry?.emotion) || EMOTIONS[1]
   const date = entry?.date?.toDate ? entry.date.toDate() : entry?.date ? new Date(entry.date) : null
-  const formattedDate = date?.toLocaleDateString('en-US', {
+  const formattedDate = date?.toLocaleDateString(i18n.language, {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 
   const handleDelete = () => {
-    if (confirm(t('detail.deleteLetterConfirm'))) {
+    if (confirm(t('detail.deleteLetterConfirm', { days: TRASH_DAYS }))) {
       deleteJournal(entryId)
       navigate(`/journal/${childId}`)
     }

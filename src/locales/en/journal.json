@@ -9,7 +9,7 @@
       "body": "Add a child to start writing their journal.",
       "addFirstChild": "Add Your First Child"
     },
-    "deleteChildConfirm": "Delete {{name}}? This will permanently remove the child and cannot be undone."
+    "deleteChildConfirm": "Move {{name}} to the trash, with the whole journal? You can restore both there for {{days}} days."
   },
   "card": {
     "born": "Born {{date}}",
@@ -36,7 +36,7 @@
       "bodyFallback": "your child",
       "writeFirst": "Write First Letter"
     },
-    "deleteLetterConfirm": "Delete this letter permanently?",
+    "deleteLetterConfirm": "Move this letter to the trash? You can restore it there for {{days}} days.",
     "skyOfBirth": "Sky of birth"
   },
   "entryCard": {
@@ -61,7 +61,7 @@
   },
   "detail": {
     "voiceNote": "Voice note {{index}}",
-    "deleteLetterConfirm": "Delete this letter permanently?"
+    "deleteLetterConfirm": "Move this letter to the trash? You can restore it there for {{days}} days."
   },
   "kidModal": {
     "editTitle": "Edit Child",

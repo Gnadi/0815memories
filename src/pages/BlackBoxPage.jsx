@@ -8,6 +8,7 @@ import { useKids } from '../hooks/useKids'
 import BlackBoxCard from '../components/blackbox/BlackBoxCard'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function BlackBoxPage() {
   const { t } = useTranslation('blackbox')
@@ -82,7 +83,7 @@ export default function BlackBoxPage() {
               box={box}
               kidName={box.childId ? kidMap[box.childId]?.name : null}
               onDelete={() => {
-                if (confirm(t('confirmDelete'))) {
+                if (confirm(t('confirmDelete', { days: TRASH_DAYS }))) {
                   deleteBox(box.id)
                 }
               }}

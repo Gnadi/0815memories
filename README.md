@@ -55,6 +55,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - App feedback is the one collection written *unencrypted* on purpose: it is addressed to whoever runs Kaydo, and ciphertext would make every bug report unreadable to the person who has to act on it. The form says so on screen, `firestore.rules` pins the document to the shape in `src/constants/feedback.js`, and nothing in the app can read the collection back
 - The key is written once, with the family. `firestore.rules` refuse any later write that replaces or removes it, so no admin account — and no bug or race between two devices — can leave the family's content unreadable for everyone
 - No family is without a key: the rules refuse to create one that has none, and when a family's key is missing or cannot be loaded, the app says so instead of opening — it used to open anyway and write new content unencrypted
+- **Deleting:** what a family deletes waits 30 days in its trash, then the `purgeTrash` Cloud Function deletes it for good, with the files only it used; a family's owner can delete the whole family, accounts included. A list of files to delete comes from a client, so the server deletes a file only once it has made sure it is that family's: by the family's own upload folder, or, for files from before those folders, by decrypting it with the family's key and throwing the result away unread. That check is the one place the server uses the key
 - **Honest limitation:** the per-family encryption key is stored in the family's Firestore document. It is no longer public — only the family can read it — but it is still readable server-side, so Kaydo is *not* zero-knowledge. Deriving the key from the shared password is the path to that, and the price is that a forgotten password means the data is gone
 
 ## Tech stack
@@ -118,6 +119,7 @@ else does.
    - Enable Email/Password authentication
    - Create a Firestore database and deploy `firestore.rules`
    - Deploy the Cloud Functions with `firebase deploy --only functions` (needs the Blaze plan). Viewer login is one of them, so the app is not fully usable without this step
+   - The functions that empty the trash and delete families also delete files on Cloudinary, so they need its API key and secret, the same pair as step 4: `firebase functions:secrets:set CLOUDINARY_API_KEY`, then `CLOUDINARY_API_SECRET`. The deploy asks for `CLOUDINARY_CLOUD_NAME`. Until all three are set, nothing is deleted on the server: the trash and deleted families wait
    - Push notifications additionally need a Web Push certificate: Firebase Console → Cloud Messaging → Web Push certificates, then `VITE_FIREBASE_VAPID_KEY`. See `docs/plan-notifications.md` for how the pieces fit together
 
 4. Set up Cloudinary and put the API key/secret into your Vercel project (server-side env vars for `api/cloudinary-sign.js`). The function signs uploads only for a signed-in family admin, which it checks by asking Firestore in the project named in `VITE_FIREBASE_PROJECT_ID` (or `FIREBASE_PROJECT_ID`) as the caller — no service account and no dependencies, so it runs on any Node version Vercel is set to.

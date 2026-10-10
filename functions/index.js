@@ -2,7 +2,8 @@
  * Firebase Cloud Functions — Kaydo
  *
  * Push notifications (this file's first half) and access control (the second),
- * with the daily clean-up of printed-book files between them.
+ * with the clean-ups between them: printed-book files, the trash, and deleted
+ * families.
  * Everything runs in europe-west3, set once at the top: setGlobalOptions only
  * reaches v2 functions, and only those defined after the call.
  *
@@ -25,11 +26,13 @@ import { defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
+import { downloader, purgeDue } from './purge.js'
+import { DELETIONS, DeletionError, runFamilyDeletion, startFamilyDeletion } from './familyDeletion.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
@@ -201,6 +204,126 @@ export const purgePrintFiles = onSchedule(
   },
 )
 
+// ---------------------------------------------------------------------------
+// The trash and deleted families — see functions/purge.js and
+// functions/familyDeletion.js
+// ---------------------------------------------------------------------------
+
+// The Cloudinary account's API key and secret, the same pair the upload
+// signing on Vercel uses (api/cloudinary-sign.js), held in Secret Manager:
+// `firebase functions:secrets:set CLOUDINARY_API_KEY`, then the same for
+// CLOUDINARY_API_SECRET. The cloud name is asked for on the next deploy.
+const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
+const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
+// Empty by default, or the emulator, which cannot ask, loads no function at
+// all. Empty means not set up: nothing is deleted until it is.
+const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
+  default: '',
+  description: 'The Cloudinary cloud name, as in VITE_CLOUDINARY_CLOUD_NAME',
+})
+
+/** The Admin API's credentials, or null while they are not all set. */
+function cloudinary() {
+  const config = {
+    cloudName: CLOUDINARY_CLOUD_NAME.value(),
+    apiKey: CLOUDINARY_API_KEY.value(),
+    apiSecret: CLOUDINARY_API_SECRET.value(),
+    fetch,
+  }
+  if (config.cloudName && config.apiKey && config.apiSecret) return config
+  // The trash and the deletion records keep everything until then, so
+  // nothing is lost by waiting — but nothing gets deleted either.
+  console.error('[purge] Cloudinary is not set up (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET); nothing is deleted')
+  return null
+}
+
+// Files are checked by downloading them (purge.js), so a run gets the memory
+// for a few large ones at once, and the time for many.
+const PURGE_OPTIONS = {
+  timeoutSeconds: 540,
+  memory: '1GiB',
+  secrets: [CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET],
+}
+
+// A minute short of the timeout, so a run stops between two steps.
+const deadline = () => Date.now() + (PURGE_OPTIONS.timeoutSeconds - 60) * 1000
+
+function familyDeletionDeps(config, stopAt) {
+  return {
+    db: getFirestore(),
+    auth: getAuth(),
+    bucket: getStorage().bucket(),
+    fetchBytes: downloader(fetch),
+    cloudinary: config,
+    deadline: stopAt,
+  }
+}
+
+/**
+ * Every hour: the trash entries whose 30 days are up or that were deleted for
+ * good, the files deletion requests ask for, and any family deletion an
+ * earlier run did not finish.
+ */
+export const purgeTrash = onSchedule(
+  { ...PURGE_OPTIONS, schedule: 'every 60 minutes', timeZone: ANNIVERSARY_TIMEZONE },
+  async () => {
+    const stopAt = deadline()
+    const config = cloudinary()
+    if (!config) return
+    const totals = await purgeDue({
+      db: getFirestore(),
+      fetchBytes: downloader(fetch),
+      cloudinary: config,
+      deadline: stopAt,
+      log: (...args) => console.warn('[purge]', ...args),
+    })
+    console.log(
+      `[purge] entries=${totals.entries} requests=${totals.requests} files=${totals.files} refused=${totals.refused} failed=${totals.failed}`,
+    )
+
+    const deletions = await getFirestore().collection(DELETIONS).get()
+    for (const doc of deletions.docs) {
+      const done = await runFamilyDeletion(doc.data(), familyDeletionDeps(config, stopAt)).catch((err) => {
+        console.error('[family-deletion] failed', doc.id, err)
+        return false
+      })
+      console.log(`[family-deletion] ${doc.id} ${done ? 'done' : 'continues'}`)
+    }
+  },
+)
+
+/**
+ * The owner deletes the family. What cannot wait happens here, before the
+ * answer: nobody can sign in to it any more, and its key leaves the family
+ * document. The rest is onFamilyDeletion's.
+ */
+export const deleteFamily = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+  try {
+    await startFamilyDeletion(
+      { db: getFirestore(), auth: getAuth(), deleteField: () => FieldValue.delete() },
+      request.auth?.uid,
+      request.data?.familyId,
+    )
+    return { ok: true }
+  } catch (error) {
+    if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
+    console.error('[family-deletion] could not start', error)
+    throw new HttpsError('internal', 'Could not delete the family')
+  }
+})
+
+/** Works through a family's deletion as soon as it is asked for. */
+export const onFamilyDeletion = onDocumentCreated(
+  { ...PURGE_OPTIONS, document: `${DELETIONS}/{familyId}` },
+  async (event) => {
+    const record = event.data?.data()
+    const config = cloudinary()
+    if (!record || !config) return
+    const done = await runFamilyDeletion(record, familyDeletionDeps(config, deadline()))
+    console.log(`[family-deletion] ${event.params.familyId} ${done ? 'done' : 'continues in purgeTrash'}`)
+  },
+)
+
 // The merchant API key from Peecho's dashboard (Settings > API), held in
 // Secret Manager: `firebase functions:secrets:set PEECHO_API_KEY`.
 const PEECHO_API_KEY = defineSecret('PEECHO_API_KEY')
@@ -274,7 +397,8 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
   const after = event.data?.after
   const publicRef = db.doc(`familyPublic/${familyId}`)
 
-  if (!after?.exists) {
+  // Gone, or on its way out (functions/familyDeletion.js): no login page.
+  if (!after?.exists || after.data()?.deletionRequestedAt) {
     await publicRef.delete().catch(() => {})
     await releaseFamilySlug(db, familyId, before?.familySlug).catch(() => {})
     return

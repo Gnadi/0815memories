@@ -45,7 +45,7 @@
     "more": "Weitere Optionen",
     "download": "Bild herunterladen",
     "delete": "Löschen",
-    "confirmDelete": "Diese Collage löschen? Das lässt sich nicht rückgängig machen.",
+    "confirmDelete": "Diese Collage in den Papierkorb verschieben? Dort kannst du sie {{days}} Tage lang wiederherstellen.",
     "titleLabel": "Titel",
     "addPhotoToSlot": "Hier ein Foto einfügen",
     "selectPhoto": "Dieses Foto auswählen",
@@ -90,7 +90,7 @@
     "moveLater": "Nach hinten",
     "removeShot": "Aus dem Reel entfernen",
     "pickHint": "Tippe ein Foto an, um es ins Reel zu legen",
-    "confirmDelete": "Dieses Highlight-Video löschen? Das lässt sich nicht rückgängig machen.",
+    "confirmDelete": "Dieses Highlight-Video in den Papierkorb verschieben? Dort kannst du es {{days}} Tage lang wiederherstellen.",
     "themes": {
       "warm": "Warm",
       "cream": "Creme",

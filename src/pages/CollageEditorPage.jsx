@@ -19,6 +19,7 @@ import { applyTemplate, getTemplate, makeCollageDoc } from '../components/collag
 import { exportCollage } from '../utils/collageRenderer'
 import { encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { devError } from '../utils/devLog'
+import { TRASH_DAYS } from '../services/trash'
 
 // Lazy: the memory form (and its rich-text editor) is only needed once the
 // user asks to turn the collage into a memory.
@@ -316,7 +317,7 @@ export default function CollageEditorPage() {
 
   const handleDelete = async () => {
     setMenuOpen(false)
-    if (!window.confirm(t('editor.confirmDelete'))) return
+    if (!window.confirm(t('editor.confirmDelete', { days: TRASH_DAYS }))) return
     try {
       await deleteCollage(id)
       navigate('/collages')

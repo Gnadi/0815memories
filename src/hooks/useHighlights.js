@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
 import {
   addHighlight,
-  deleteHighlight,
   subscribeHighlights,
   updateHighlight,
 } from '../services/highlights'
+import { moveToTrash } from '../services/trash'
 
 export function useHighlightWriter(familyId, encryptionKey) {
   return {
     addHighlight: (data) => addHighlight(familyId, encryptionKey, data),
     updateHighlight: (id, data) => updateHighlight(encryptionKey, id, data),
-    deleteHighlight: (id) => deleteHighlight(id),
+    deleteHighlight: (id) => moveToTrash(encryptionKey, 'highlights', id),
   }
 }
 

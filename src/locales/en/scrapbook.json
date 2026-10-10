@@ -18,7 +18,7 @@
   "card": {
     "page_one": "{{count}} page",
     "page_other": "{{count}} pages",
-    "deleteConfirm": "Delete \"{{title}}\"? This cannot be undone."
+    "deleteConfirm": "Move \"{{title}}\" to the trash? You can restore it there for {{days}} days."
   },
   "editor": {
     "backToScrapbooks": "Back to Scrapbooks",

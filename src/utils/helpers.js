@@ -10,43 +10,54 @@ export function isOnThisDay(date, referenceDate = new Date()) {
   return d.getMonth() === referenceDate.getMonth() && d.getDate() === referenceDate.getDate()
 }
 
-export function formatDate(date) {
-  if (!date) return ''
-  const d = date.toDate ? date.toDate() : new Date(date)
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+// The three formatters below take the reader's language as `locale` (that is,
+// i18n.language). Components get them through hooks/useDateFormat.js, which
+// passes it in; they used to format in 'en-US' for everyone.
+
+const toDate = (date) => (date?.toDate ? date.toDate() : new Date(date))
+
+// Intl writes "yesterday" and "vor 3 Tagen" for the middle of a sentence; these
+// labels stand on their own.
+const capitalize = (text, locale) => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1)
+
+// Calendar days, not elapsed ones: a moment from 23:00 is "yesterday" at 08:00
+// the next morning, though it is not 24 hours old. Rounding absorbs the 23- and
+// 25-hour days of the clock changes.
+function calendarDaysBetween(earlier, later) {
+  const start = new Date(earlier.getFullYear(), earlier.getMonth(), earlier.getDate())
+  const end = new Date(later.getFullYear(), later.getMonth(), later.getDate())
+  return Math.round((end - start) / 86400000)
 }
 
-export function formatRelativeDate(date) {
+/** "October 10, 2026", "10. Oktober 2026". */
+export function formatDate(date, locale) {
   if (!date) return ''
-  const d = date.toDate ? date.toDate() : new Date(date)
-  const now = new Date()
-  const diffMs = now - d
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays} days ago`
-  return formatDate(date)
+  return toDate(date).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export function timeAgo(date) {
+/** "Today", "Yesterday", "3 days ago" within a week; the date after that. */
+export function formatRelativeDate(date, locale, { now = new Date() } = {}) {
   if (!date) return ''
-  const d = date.toDate ? date.toDate() : new Date(date)
-  const now = new Date()
-  const diffMs = now - d
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  const days = calendarDaysBetween(toDate(date), now)
+  if (days < 0 || days >= 7) return formatDate(date, locale)
+  return capitalize(new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-days, 'day'), locale)
+}
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} minutes ago`
-  if (diffHours < 24) return `${diffHours} hours ago`
-  if (diffDays === 1) return 'Yesterday'
-  return formatDate(date)
+/**
+ * "5 minutes ago", "3 hours ago", "Yesterday"; the date after that. Under a
+ * minute it is `justNow`, a translated label, since Intl only has "now".
+ */
+export function timeAgo(date, locale, { now = new Date(), justNow } = {}) {
+  if (!date) return ''
+  const d = toDate(date)
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const minutes = Math.floor((now - d) / 60000)
+  if (minutes < 1) return justNow ?? capitalize(relative.format(0, 'second'), locale)
+  if (minutes < 60) return capitalize(relative.format(-minutes, 'minute'), locale)
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return capitalize(relative.format(-hours, 'hour'), locale)
+  if (calendarDaysBetween(d, now) === 1) return capitalize(relative.format(-1, 'day'), locale)
+  return formatDate(d, locale)
 }
 
 // Characters no common filesystem takes. Control characters go too — hence the

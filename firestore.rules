@@ -98,6 +98,32 @@ service cloud.firestore {
       return request.resource.data.familyId == resource.data.familyId;
     }
 
+    // ── The trash ─────────────────────────────────────────────────────────
+    //
+    // Deleting moves a document to trash/<collection>__<id> instead of removing
+    // it, and restoring moves it back (src/services/trash.js). The rules hold
+    // both moves to the same document, byte for byte: `data` is exactly what
+    // was stored, encrypted fields and all. So the trash is no way around a
+    // collection's own rules — a capsule comes back with the unlock date it
+    // went in with.
+    //
+    // Both checks read documents. A batch gets twenty such reads, which is
+    // why trash.js moves five documents per batch.
+    function trashable(coll) {
+      return coll in ['memories', 'moments', 'journals', 'children', 'recipes',
+                      'scrapbooks', 'collages', 'highlights', 'blackbox'];
+    }
+
+    // Is this create the restore of trash/<coll>__<id>, exactly as it went in?
+    // The entry goes in the same batch, so nothing can be restored twice.
+    function restoredFromTrash(coll, id) {
+      let entry = /databases/$(database)/documents/trash/$(coll + '__' + id);
+      return exists(entry)
+        && !existsAfter(entry)
+        && get(entry).data.data == request.resource.data
+        && isFamilyAdmin(get(entry).data.familyId);
+    }
+
     // Shape limits for the login-page customization fields. They are mirrored
     // to familyPublic, which is world-readable and served to every login-page
     // visitor, so cap the sizes
@@ -332,6 +358,7 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && memoryContentOk();
+      allow create: if restoredFromTrash('memories', memoryId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -351,6 +378,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('moments', momentId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -387,6 +415,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('children', childId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -405,6 +434,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('journals', journalId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -440,6 +470,9 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && !exists(/databases/$(database)/documents/blackboxContent/$(boxId));
+      // Back from the trash, though, over its own letter: with the date it went
+      // in with, which is what restoredFromTrash() checks.
+      allow create: if restoredFromTrash('blackbox', boxId);
       // The unlock date may only ever move further away. That is what makes the
       // legacy check-in safe to expose — a capsule's deadline can be pushed
       // back indefinitely by someone who is still here, and nobody can pull a
@@ -498,6 +531,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('scrapbooks', scrapbookId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -516,6 +550,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('collages', collageId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -536,6 +571,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('highlights', highlightId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
@@ -554,6 +590,7 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId);
+      allow create: if restoredFromTrash('recipes', recipeId);
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && request.resource.data.familyId == resource.data.familyId
@@ -720,6 +757,67 @@ service cloud.firestore {
       // reading early is not, which is the property that matters.
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', []);
+    }
+
+    // The trash (see trashable() above). Admins see it; viewers do not, as
+    // they never see a deletion. The purgeTrash function empties it through the
+    // Admin SDK: 30 days after deletedAt, or once `purgeNow` is set.
+    match /trash/{entryId} {
+      allow read: if request.auth != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId);
+      // A document moving in: the same document, under its own family, gone
+      // from its collection in the same batch.
+      allow create: if request.auth != null
+                    && trashable(request.resource.data.collection)
+                    && request.resource.data.docId is string
+                    && entryId == request.resource.data.collection + '__' + request.resource.data.docId
+                    && request.resource.data.familyId is string
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.resource.data.data
+                         == get(/databases/$(database)/documents/$(request.resource.data.collection)/$(request.resource.data.docId)).data
+                    && request.resource.data.data.familyId == request.resource.data.familyId
+                    && !existsAfter(/databases/$(database)/documents/$(request.resource.data.collection)/$(request.resource.data.docId))
+                    && request.resource.data.group is string
+                    && request.resource.data.media is list
+                    && request.resource.data.media.size() <= 500
+                    && request.resource.data.deletedAt == request.time
+                    && request.resource.data.deletedBy == request.auth.uid
+                    && request.resource.data.keys().hasOnly(
+                         ['familyId', 'collection', 'docId', 'data', 'group', 'media', 'deletedAt', 'deletedBy']);
+      // "Delete for good" is the only change an entry takes.
+      allow update: if request.auth != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['purgeNow'])
+                    && request.resource.data.purgeNow == true;
+      // Only by restoring: the document is back where it was, as it was.
+      allow delete: if request.auth != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && getAfter(/databases/$(database)/documents/$(resource.data.collection)/$(resource.data.docId)).data
+                         == resource.data.data;
+    }
+
+    // Files to delete for something that does not go through the trash: an Our
+    // Year chapter, which only its two partners may read and the trash would
+    // show to every admin. The purgeTrash function deletes each file once it
+    // has made sure it is this family's. Nobody reads these back.
+    match /mediaDeletions/{requestId} {
+      allow create: if request.auth != null
+                    && request.resource.data.familyId is string
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && request.resource.data.media is list
+                    && request.resource.data.media.size() > 0
+                    && request.resource.data.media.size() <= 50
+                    && request.resource.data.requestedAt == request.time
+                    && request.resource.data.requestedBy == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['familyId', 'media', 'requestedAt', 'requestedBy']);
+      allow read, update, delete: if false;
+    }
+
+    // A family being deleted, worked through by the deleteFamily functions. It
+    // holds the family key until the last file is gone, so no client touches it.
+    match /familyDeletions/{familyId} {
+      allow read, write: if false;
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.

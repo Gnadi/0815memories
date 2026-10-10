@@ -49,8 +49,9 @@ export function useFamilyKey(familyId, user, refreshClaims) {
   // right from the same render that sets the family id, with no gap to lose.
   const [keyReadyFor, setKeyReadyFor] = useState(null)
   // Why the key will not come, as { familyId, reason }: 'missing' (the family
-  // document has none), 'unreadable' (this browser cannot import it) or
-  // 'unavailable' (the document could not be read). Each of these used to open
+  // document has none), 'unreadable' (this browser cannot import it),
+  // 'unavailable' (the document could not be read) or 'deleted' (its owner
+  // deleted the family, and the key left with that). Each of these used to open
   // the app without a key — a document without one counted as a family from
   // before encryption, which Kaydo no longer supports — and from then on every
   // write stored family content in plaintext. ProtectedRoute shows the reason
@@ -120,6 +121,13 @@ export function useFamilyKey(familyId, user, refreshClaims) {
         async (data) => {
           if (cancelled || !data) return
           attempt = 0
+
+          // Whether or not the key is already here: a family on its way out
+          // shows nothing more (functions/familyDeletion.js).
+          if (data.deletionRequestedAt) {
+            failKey('deleted')
+            return
+          }
 
           const style = normalizeCardStyle(data.memoryCardStyle)
           setMemoryCardStyle(style)

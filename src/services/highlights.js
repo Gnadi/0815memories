@@ -7,7 +7,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   orderBy,
   query,
@@ -69,8 +68,4 @@ export async function updateHighlight(key, id, data) {
     ...encrypted,
     updatedAt: serverTimestamp(),
   })
-}
-
-export async function deleteHighlight(id) {
-  await deleteDoc(doc(db, HIGHLIGHTS, id))
 }

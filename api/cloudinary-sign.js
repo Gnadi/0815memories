@@ -34,9 +34,20 @@ function uidOf(idToken) {
   }
 }
 
+// Firestore's auto-ids, and the hand-picked ids of seed data. Anything else
+// stays out of a folder name.
+const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
+
+/** The family id at the end of a document name, `…/documents/families/<id>`. */
+function familyIdOf(name) {
+  const id = typeof name === 'string' ? name.split('/').pop() : ''
+  return FAMILY_ID.test(id) ? id : null
+}
+
 /**
- * 'admin', 'not-admin', 'bad-token' (Firestore refused the token), or
- * 'unavailable' (Firestore could not be asked — never read as a yes).
+ * { status, familyId }: status is 'admin', 'not-admin', 'bad-token' (Firestore
+ * refused the token), or 'unavailable' (Firestore could not be asked — never
+ * read as a yes). familyId comes with 'admin'.
  *
  * Two lookups, the two shapes of a family document, as at sign-in: `adminUids`,
  * then the oldest families' lone `adminUid`. Only document names come back — the
@@ -63,14 +74,30 @@ async function adminStatus(idToken, uid) {
         },
       }),
     }).catch(() => null)
-    if (!response) return 'unavailable'
-    if (response.status === 401) return 'bad-token'
-    if (!response.ok) return 'unavailable'
+    if (!response) return { status: 'unavailable' }
+    if (response.status === 401) return { status: 'bad-token' }
+    if (!response.ok) return { status: 'unavailable' }
     const rows = await response.json().catch(() => null)
-    if (!Array.isArray(rows)) return 'unavailable'
-    if (rows.some((row) => row.document)) return 'admin'
+    if (!Array.isArray(rows)) return { status: 'unavailable' }
+    const row = rows.find((r) => r.document)
+    if (row) return { status: 'admin', familyId: familyIdOf(row.document.name) }
   }
-  return 'not-admin'
+  return { status: 'not-admin' }
+}
+
+/**
+ * Each family uploads into a folder of its own, kaydo/f/<familyId>/. The name is
+ * what lets the purge function (functions/purge.js) tell this family's files
+ * from another's without downloading them, before it deletes any. Files from
+ * before the folders sit in kaydo/encrypted and kaydo/; the purge checks those
+ * against the family key instead.
+ */
+function folderFor(familyId, { isRaw, isVideoClip, resourceType }) {
+  const kind = isRaw ? 'encrypted' : isVideoClip ? 'videos' : resourceType === 'video' ? 'audio' : 'public'
+  if (!familyId) {
+    return isRaw ? 'kaydo/encrypted' : isVideoClip ? 'kaydo/videos' : resourceType === 'video' ? 'kaydo/audio' : 'kaydo'
+  }
+  return `kaydo/f/${familyId}/${kind}`
 }
 
 export default async function handler(req, res) {
@@ -91,7 +118,7 @@ export default async function handler(req, res) {
     return
   }
 
-  const status = await adminStatus(bearer, uid)
+  const { status, familyId } = await adminStatus(bearer, uid)
   if (status === 'bad-token') {
     res.status(401).json({ error: 'Sign in first' })
     return
@@ -109,7 +136,7 @@ export default async function handler(req, res) {
   const isVideoClip = type === 'video_clip'
   const isRaw = req.query?.resource_type === 'raw'
   const resourceType = isRaw ? 'raw' : (isVideoClip || req.query?.resource_type === 'video') ? 'video' : 'image'
-  const folder = isRaw ? 'kaydo/encrypted' : isVideoClip ? 'kaydo/videos' : resourceType === 'video' ? 'kaydo/audio' : 'kaydo'
+  const folder = folderFor(familyId, { isRaw, isVideoClip, resourceType })
   const timestamp = Math.round(Date.now() / 1000)
 
   const signature = createHash('sha1')

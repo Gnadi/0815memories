@@ -54,6 +54,16 @@ describe('useFamilyKey', () => {
     expect(result.current).toMatchObject({ encryptionKey: null, keyLoading: true, keyError: 'missing' })
   })
 
+  it('closes the app on a family its owner deleted, key or no key', async () => {
+    const { result } = render()
+    await act(async () => { await next({ encryptionKeyJwk: { kty: 'oct', k: 'a' } }) })
+    expect(result.current.keyError).toBeNull()
+
+    // functions/familyDeletion.js takes the key off and marks the family.
+    await act(async () => { await next({ deletionRequestedAt: new Date() }) })
+    expect(result.current.keyError).toBe('deleted')
+  })
+
   it("drops one family's key the moment the session moves to another", async () => {
     const { result, rerender } = render('fam-a')
     await act(async () => { await next({ encryptionKeyJwk: { kty: 'oct', k: 'a' } }) })

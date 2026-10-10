@@ -10,13 +10,14 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { timeAgo } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import { useAuth } from '../../context/AuthContext'
 import CrossfadeImage, { FADE_MS } from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import useMediaQuery from '../../hooks/useMediaQuery'
+import { TRASH_DAYS } from '../../services/trash'
 
 // Build a unified media list from a moment's images and videos.
 //
@@ -60,6 +61,7 @@ function itemAtOffset(moments, momentIndex, mediaIndex, steps) {
 
 export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, onEdit, onDelete }) {
   const { t } = useTranslation('home')
+  const { timeAgo } = useDateFormat()
   const { encryptionKey } = useAuth()
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
@@ -329,7 +331,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   const handleDelete = () => {
     setShowMenu(false)
-    if (window.confirm(t('moment.deleteConfirm'))) {
+    if (window.confirm(t('moment.deleteConfirm', { days: TRASH_DAYS }))) {
       onDelete?.(moment.id)
       onClose()
     }

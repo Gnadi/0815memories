@@ -12,6 +12,7 @@ import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import PostEntryModal from '../components/admin/PostEntryModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { useAuth } from '../context/AuthContext'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -33,7 +34,7 @@ export default function HomePage() {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm(t('deleteMemoryConfirm'))) {
+    if (window.confirm(t('deleteMemoryConfirm', { days: TRASH_DAYS }))) {
       await deleteMemory(id)
     }
   }

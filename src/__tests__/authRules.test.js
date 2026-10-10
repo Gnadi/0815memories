@@ -480,6 +480,20 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(batch.commit())
     })
 
+    // What deleteOwnAccount in services/account.js does, through removeAdmin,
+    // before it deletes the account itself.
+    it('lets an admin leave on their own, though not the owner', async () => {
+      await assertSucceeds(redeem(asClaimlessAdmin(NEWBIE)))
+      const leaving = asClaimlessAdmin(NEWBIE)
+      await assertSucceeds(getDocs(query(
+        collection(leaving, 'families', FAMILY, 'invites'), where('createdBy', '==', NEWBIE), where('used', '==', false),
+      )))
+      await assertSucceeds(deleteDoc(doc(leaving, 'families', FAMILY, 'admins', NEWBIE)))
+      await assertSucceeds(updateDoc(doc(leaving, 'families', FAMILY), { adminUids: arrayRemove(NEWBIE) }))
+
+      await assertFails(updateDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY), { adminUids: arrayRemove(ADMIN) }))
+    })
+
     it('cannot be minted or listed on a claim the family document no longer backs', async () => {
       // A removed admin keeps their claim in the ID token they hold for up to
       // an hour. Minting or listing invites would turn that into a way back in.

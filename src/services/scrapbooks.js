@@ -5,7 +5,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   orderBy,
   query,
@@ -84,8 +83,4 @@ export async function updateScrapbook(key, id, data) {
     ...encrypted,
     updatedAt: serverTimestamp(),
   })
-}
-
-export async function deleteScrapbook(id) {
-  await deleteDoc(doc(db, SCRAPBOOKS, id))
 }

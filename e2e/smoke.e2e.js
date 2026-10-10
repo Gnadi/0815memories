@@ -91,6 +91,40 @@ test('an admin signs in and every section opens', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
+// The trash, through the real rules: they let a document out and back in
+// only as the same bytes, so this is where the client and the rules have to
+// agree about what those are.
+test("an admin's deleted memory waits in the trash, and comes back", async ({ page }) => {
+  const errors = collectErrors(page)
+  const title = 'Sunday in the Garden'
+  // The feed's card shows the memory by its words; the title is on its page.
+  const card = () => page.getByText('Leo planted his first tomatoes')
+
+  await signIn(page)
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 })
+  leaving.add(page)
+  await card().first().click()
+  await expect(page).toHaveURL(/\/memory\//)
+  await expect(page.getByText(title).first()).toBeVisible()
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  leaving.add(page)
+  await page.getByRole('button', { name: 'Delete' }).click()
+  await expect(page).toHaveURL(/\/home$/)
+  await expect(page.getByText('Summer at Monterey Bay').first()).toBeVisible()
+  await expect(card()).toHaveCount(0)
+
+  await goTo(page, '/settings/trash')
+  await expect(page.getByText(title)).toBeVisible()
+  await page.getByRole('button', { name: 'Restore' }).click()
+  await expect(page.getByText('The trash is empty.')).toBeVisible()
+
+  await goTo(page, '/home')
+  await expect(card().first()).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 // Viewers have no account: the viewerLogin Cloud Function checks the shared
 // family password and hands out a token for the family. So this runs through
 // the Functions emulator as well as Firestore and Auth.

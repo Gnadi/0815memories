@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
-import { addKid, deleteKid, subscribeKids, updateKid } from '../services/kids'
+import { addKid, subscribeKids, updateKid } from '../services/kids'
+import { moveToTrash } from '../services/trash'
 
 export function useKids(familyId, encryptionKey) {
   const [kids, setKids] = useState([])
@@ -26,6 +27,6 @@ export function useKids(familyId, encryptionKey) {
     loading,
     addKid: (kid) => addKid(familyId, encryptionKey, kid),
     updateKid: (id, updates) => updateKid(encryptionKey, id, updates),
-    deleteKid: (id) => deleteKid(id),
+    deleteKid: (id) => moveToTrash(encryptionKey, 'children', id),
   }
 }

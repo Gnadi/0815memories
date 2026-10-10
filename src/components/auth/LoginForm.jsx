@@ -1,5 +1,8 @@
+import { lazy, Suspense, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
+
+const PasswordResetForm = lazy(() => import('./PasswordResetForm'))
 
 export function SetupBanner() {
   const { t } = useTranslation('auth')
@@ -22,12 +25,26 @@ export default function LoginForm({
   showAdminLogin, email, setEmail, password, setPassword,
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
   error, loading, handleSubmit, tone = 'light', autoFocusPassword = false,
+  allowPasswordReset = false,
 }) {
   const { t } = useTranslation('auth')
+  const [resetting, setResetting] = useState(false)
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
   const subtleClass = tone === 'dark' ? 'text-cream/80' : 'text-bark-light'
+
+  // Only admins have a password of their own to forget; the family password
+  // for guests is the admins' to share again.
+  const canReset = showAdminLogin && allowPasswordReset
+  if (resetting && canReset) {
+    return (
+      <Suspense fallback={<div className="h-48" aria-busy="true" />}>
+        <PasswordResetForm initialEmail={email} onBack={() => setResetting(false)} tone={tone} />
+      </Suspense>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Admin email field */}
@@ -77,7 +94,7 @@ export default function LoginForm({
       </div>
 
       {/* Stay logged in */}
-      <div className="flex items-center">
+      <div className="flex items-center justify-between gap-3">
         <label className={`flex items-center gap-2 text-sm ${subtleClass} cursor-pointer`}>
           <input
             type="checkbox"
@@ -87,6 +104,15 @@ export default function LoginForm({
           />
           {t('login.form.stayLoggedIn')}
         </label>
+        {canReset && (
+          <button
+            type="button"
+            onClick={() => setResetting(true)}
+            className={`text-sm font-medium underline underline-offset-2 ${subtleClass}`}
+          >
+            {t('login.forgotPassword')}
+          </button>
+        )}
       </div>
 
       {/* Error message */}
