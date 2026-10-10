@@ -1,5 +1,5 @@
-import { doc, setDoc, deleteDoc, serverTimestamp } from '../config/firestore'
 import i18n from '../i18n'
+import { removeDeviceToken, saveDeviceToken } from '../services/pushTokens'
 import { devWarn } from './devLog'
 import { getMessagingInstance, auth, db } from '../config/firebase'
 
@@ -74,21 +74,16 @@ export async function requestAndSaveFCMToken(familyId) {
   if (!token) return null
 
   const id = await tokenDocId(token)
-  await setDoc(
-    doc(db, 'fcmTokens', id),
-    {
-      familyId,
-      token,
-      // The server composes the notification text, so it has to know which
-      // language this device reads.
-      lang: i18n.resolvedLanguage || i18n.language || 'de',
-      // Whoever is signed in here. The triggers use it to skip the device that
-      // created the memory in the first place.
-      uid: auth?.currentUser?.uid || null,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  )
+  await saveDeviceToken(id, {
+    familyId,
+    token,
+    // The server composes the notification text, so it has to know which
+    // language this device reads.
+    lang: i18n.resolvedLanguage || i18n.language || 'de',
+    // Whoever is signed in here. The triggers use it to skip the device that
+    // created the memory in the first place.
+    uid: auth?.currentUser?.uid || null,
+  })
 
   try {
     localStorage.setItem(TOKEN_ID_KEY, id)
@@ -123,7 +118,7 @@ export async function removeFCMToken() {
   }
 
   if (!id || !db) return
-  await deleteDoc(doc(db, 'fcmTokens', id)).catch((err) => devWarn('token cleanup failed:', err))
+  await removeDeviceToken(id).catch((err) => devWarn('token cleanup failed:', err))
 }
 
 /**

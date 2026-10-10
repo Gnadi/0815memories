@@ -40,6 +40,14 @@
     "message": "An unexpected error occurred. Reloading the page usually fixes it — your memories are safe.",
     "reload": "Reload page"
   },
+  "familyKey": {
+    "title": "Your family can't be opened",
+    "missing": "This family has no encryption key, and Kaydo only opens encrypted families.",
+    "unreadable": "This browser can't load your family's encryption key. Please try an up-to-date browser.",
+    "unavailable": "Your family couldn't be loaded. Check your connection and try again.",
+    "retry": "Try again",
+    "signOut": "Sign out"
+  },
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",

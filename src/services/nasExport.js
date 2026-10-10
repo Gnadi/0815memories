@@ -8,9 +8,17 @@ import {
   getDoc,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptFields, decryptJSON, decryptBlob } from './encryption'
-import { MEMORY_WRITE_FIELDS } from '../services/memories'
-import { collectRichMediaUrls, parseRichDoc } from './richText'
+import { decryptBlob } from '../utils/encryption'
+import { decryptMemoryDoc } from './memories'
+import { decryptKid } from './kids'
+import { decryptJournal } from './journals'
+import { decryptBoxContent, decryptBoxMetadata } from './blackbox'
+import { decryptRecipe } from './recipes'
+import { decryptScrapbook } from './scrapbooks'
+import { decryptCollage } from './collages'
+import { decryptHighlight } from './highlights'
+import { decryptChapter, decryptEntry, decryptLetter, decryptRitual } from './ourYear'
+import { collectRichMediaUrls } from '../utils/richText'
 
 /**
  * Recursively convert Firestore Timestamps to ISO strings.
@@ -128,10 +136,10 @@ function collectMediaUrls(data, prefix) {
         addArrayUrls(doc.doc?.shots?.filter((s) => s?.url), doc.id, 'shot')
         break
       case 'ourYearChapters':
-        // keepsakes: one photo slot per chapter, alongside song/quote/moment.
-        for (const keepsake of Object.values(doc.keepsakes ?? {})) {
-          addUrl(keepsake?.url, doc.id, 'keepsake')
-        }
+        // keepsakes: one photo per chapter, alongside song, quote and moment.
+        // It is `photoUrl` (emptyKeepsakes in utils/ourYear.js); this looked
+        // for a `url` inside each keepsake instead and never found one.
+        addUrl(doc.keepsakes?.photoUrl, doc.id, 'keepsake')
         break
     }
   }
@@ -188,56 +196,30 @@ async function downloadMedia(mediaEntries, onProgress, signal, encKey, concurren
   return { results, failed }
 }
 
-/**
- * Run a full NAS export: fetch all data, download media, build ZIP, trigger download.
- */
-/**
- * Decrypt all text fields for exported data collections.
- */
+// Each collection is decrypted by its own service, exactly as the app reads
+// it. The export used to keep its own list of every area's encrypted fields,
+// and the lists drifted: a child's birth time and place, and Our Year's
+// occasion, went into the archive as ciphertext.
+const DECRYPTORS = {
+  memories: decryptMemoryDoc,
+  journals: decryptJournal,
+  children: decryptKid,
+  blackbox: decryptBoxMetadata,
+  recipes: decryptRecipe,
+  scrapbooks: decryptScrapbook,
+  collages: decryptCollage,
+  highlights: decryptHighlight,
+  ourYearRituals: decryptRitual,
+  ourYearChapters: decryptChapter,
+  ourYearEntries: decryptEntry,
+  // A letter still sealed is only a marker here, with nothing to decrypt.
+  ourYearLetters: (key, letter) => (letter.sealed ? letter : decryptLetter(key, letter)),
+}
+
 async function decryptCollectionData(data, collectionName, encryptionKey) {
-  if (!encryptionKey) return data
-  const fieldMap = {
-    memories: MEMORY_WRITE_FIELDS,
-    journals: ['content'],
-    children: ['name'],
-    blackbox: ['title', 'message'],
-    recipes: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'],
-    scrapbooks: ['title'],
-    collages: ['title'],
-    highlights: ['title'],
-    ourYearRituals: [],
-    ourYearChapters: ['title'],
-    ourYearEntries: [],
-    ourYearLetters: [],
-  }
-  // Fields holding an encrypted JSON blob rather than a string, per collection.
-  const jsonFieldMap = {
-    recipes: ['ingredients'],
-    scrapbooks: ['pages'],
-    collages: ['doc'],
-    highlights: ['doc'],
-    ourYearRituals: ['partners'],
-    ourYearChapters: ['quizQuestions', 'quizReactions', 'keepsakes'],
-    ourYearEntries: ['answers'],
-    ourYearLetters: ['sections'],
-  }
-  const fields = fieldMap[collectionName]
-  if (!fields) return data
-  const jsonFields = jsonFieldMap[collectionName] ?? []
-  return Promise.all(data.map(async (item) => {
-    let decrypted = await decryptFields(encryptionKey, item, fields)
-    for (const field of jsonFields) {
-      if (typeof decrypted[field] === 'string') {
-        decrypted[field] = await decryptJSON(encryptionKey, decrypted[field])
-      }
-    }
-    // The rich description is decrypted by the field list above; parse it so the
-    // export writes a readable document and collectMediaUrls can walk it.
-    if (collectionName === 'memories' && decrypted.contentRich != null) {
-      decrypted.contentRich = parseRichDoc(decrypted.contentRich)
-    }
-    return decrypted
-  }))
+  const decrypt = DECRYPTORS[collectionName]
+  if (!encryptionKey || !decrypt) return data
+  return Promise.all(data.map((item) => decrypt(encryptionKey, item)))
 }
 
 /**
@@ -257,7 +239,7 @@ async function attachCapsuleContents(capsules, encryptionKey) {
       const snap = await getDoc(doc(db, 'blackboxContent', capsule.id))
       if (!snap.exists()) return { ...capsule, sealed: false }
       const raw = serializeTimestamps(snap.data())
-      const [content] = await decryptCollectionData([raw], 'blackbox', encryptionKey)
+      const content = await decryptBoxContent(encryptionKey, raw)
       const { familyId: _dropped, ...letter } = content
       return { ...capsule, ...letter, sealed: false }
     } catch {
@@ -333,6 +315,9 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
   return { rituals: decRituals, chapters: decChapters, entries: decEntries, letters: decLetters }
 }
 
+/**
+ * Run a full NAS export: fetch all data, download media, build ZIP, trigger download.
+ */
 export async function runNasExport({ familyId, familyName, uid, encryptionKey, onProgress, signal }) {
   if (!familyId || !db) throw new Error('Not authenticated')
 

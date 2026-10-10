@@ -1,14 +1,14 @@
-import { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   updateProfile, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
   signInWithCustomToken,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
-import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from '../config/firestore'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
-import { generateSlug, isSlugAvailable } from '../utils/familySlug'
-import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
+import { generateSlug } from '../utils/familySlug'
+import { backfillAdminUids, createFamily, findAdminFamilies, isSlugAvailable } from '../services/family'
+import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import {
@@ -17,6 +17,7 @@ import {
 import { devWarn } from '../utils/devLog'
 import { removeFCMToken } from '../utils/notifications'
 import { isDemoMode, exitDemo } from '../demo/demoMode'
+import { useFamilyKey } from './useFamilyKey'
 
 const AuthContext = createContext(null)
 
@@ -40,15 +41,6 @@ function userFacingError(message) {
   return err
 }
 
-// Backoff for re-reading the family document after the listener errors, in ms.
-// Front-loaded because the two errors worth retrying — the auth token not yet
-// on the Firestore stream, and an admin claim the trigger has not written —
-// both clear within about a second.
-const KEY_RETRY_DELAYS = [300, 800, 2000, 5000, 10000]
-
-const VALID_CARD_STYLES = ['modern', 'classic', 'polaroid']
-const normalizeCardStyle = (value) => (VALID_CARD_STYLES.includes(value) ? value : 'modern')
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user — admin *or* viewer
   // The role comes from the ID token, never from the client.
@@ -63,70 +55,28 @@ export function AuthProvider({ children }) {
   // trigger has not written yet.
   const [role, setRole] = useState(null)
   const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
-  const [encryptionKey, setEncryptionKey] = useState(null)
-  // The family whose key question is settled — answered with a key, or answered
-  // with "this family predates encryption". Anything else is still loading.
-  //
-  // This used to be a `keyLoading` boolean that the loader effect switched on.
-  // An effect runs after the commit, so between the render that learned the
-  // family id and the effect that followed it, the app said: no key, and none
-  // on the way. ProtectedRoute opened on that frame and every encrypted photo
-  // in it resolved to its raw Cloudinary URL — the exact state
-  // useDecryptedMedia reads as "this asset predates encryption".
-  //
-  // On a first login that frame is guaranteed: nothing is in localStorage yet,
-  // so the flag could only start false. Deriving it instead means the answer is
-  // right from the same render that sets the family id, with no gap to lose.
-  const [keyReadyFor, setKeyReadyFor] = useState(null)
-  // Remembered so the first frame picks the same card component the family doc
-  // will confirm. Guessing 'modern' and correcting later swaps the component
-  // type and remounts every card, and with it every image.
-  const [memoryCardStyle, setMemoryCardStyle] = useState(() =>
-    normalizeCardStyle(readStored('fh_cardStyle'))
-  )
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
-
-  // No family means nothing to load a key for — the landing and login pages.
-  const keyLoading = !!familyId && keyReadyFor !== familyId
-
-  // Family whose key is already imported. Guards against re-importing on every
-  // auth-object change: importEncryptionKey() mints a new CryptoKey each call,
-  // and that identity sits in the dependency array of every Firestore listener
-  // and every media decrypt effect in the app.
-  const keyLoadedForRef = useRef(null)
 
   // Defined before the effects that depend on it: the dependency array is read
   // during render, so a `const` declared further down would be in its TDZ.
   const resolveFamilyId = useCallback(async (uid, preferredId = null) => {
-    // Primary lookup: multi-admin shape.
-    const byAdmins = await getDocs(
-      query(collection(db, 'families'), where('adminUids', 'array-contains', uid))
-    )
-    let snapshot = byAdmins
-    // Fallback for families that haven't been lazily migrated yet (no adminUids field).
-    if (snapshot.empty) {
-      snapshot = await getDocs(
-        query(collection(db, 'families'), where('adminUid', '==', uid))
-      )
-    }
-    if (snapshot.empty) return null
+    const families = await findAdminFamilies(uid)
+    if (families.length === 0) return null
     // Someone can be an admin of more than one family. Which one the session
     // bound to used to be whichever document Firestore listed first — which
     // could differ from the family the token's claim names, and so from what
     // onAuthStateChanged had just set. The claim's family wins, then the one
     // they own.
-    const familyDoc =
-      snapshot.docs.find((d) => d.id === preferredId) ??
-      snapshot.docs.find((d) => d.data().adminUid === uid) ??
-      snapshot.docs[0]
-    const id = familyDoc.id
-    const data = familyDoc.data()
+    const { id, data } =
+      families.find((f) => f.id === preferredId) ??
+      families.find((f) => f.data.adminUid === uid) ??
+      families[0]
     // Lazy migration: if the owner logs in before the family has an `adminUids`
     // array, backfill it now so subsequent rule checks use the new shape.
     if (data.adminUid === uid && !Array.isArray(data.adminUids)) {
       try {
-        await updateDoc(doc(db, 'families', id), { adminUids: [uid] })
+        await backfillAdminUids(id, uid)
       } catch (err) {
         if (import.meta.env.DEV) console.error('Lazy adminUids migration failed:', err)
       }
@@ -180,6 +130,12 @@ export function AuthProvider({ children }) {
     }
   }, [applyClaims])
 
+  // The key and the card style, from the family document — see useFamilyKey.
+  const refreshClaims = useCallback((firebaseUser) => applyClaims(firebaseUser, { force: true }), [applyClaims])
+  const {
+    encryptionKey, keyLoading, keyError, memoryCardStyle, adoptKey, forgetKey,
+  } = useFamilyKey(familyId, user, refreshClaims)
+
   useEffect(() => {
     if (DEMO) {
       // The demo family (demo/index.js): an admin session made up in the
@@ -229,128 +185,6 @@ export function AuthProvider({ children }) {
 
     return unsubscribe
   }, [resolveFamilyId, applyClaims])
-
-  // One live subscription to the family document, serving both the encryption
-  // key and the card style.
-  //
-  // This used to be a getDoc for the key plus a separate onSnapshot for the
-  // style — two reads of the same document, with the getDoc sitting on the
-  // critical path before ProtectedRoute would open.
-  //
-  // Depending on user re-subscribes when Firebase Auth is restored after the
-  // initial mount, which fixes the race where familyId was set from localStorage
-  // before the auth token was ready and the first Firestore read failed silently.
-  useEffect(() => {
-    if (!familyId || !db) return
-
-    // Only a genuine family switch invalidates the key we hold.
-    if (keyLoadedForRef.current !== null && keyLoadedForRef.current !== familyId) {
-      setEncryptionKey(null)
-      keyLoadedForRef.current = null
-      setKeyReadyFor(null)
-    }
-
-    // Re-close the gate whenever this runs without a key in hand. It matters on
-    // the path below where the read is abandoned: that leaves the gate open
-    // with no key, and a later auth event is the one chance to try again.
-    if (keyLoadedForRef.current !== familyId) setKeyReadyFor(null)
-
-    let cancelled = false
-    let unsub = null
-    let retryTimer = null
-    let attempt = 0
-
-    // Stop gating the app on this read. Separate from keyLoadedForRef, which
-    // says we actually got an answer from the document: abandoning the read
-    // opens the gate without one, and marking it loaded there would stop any
-    // later attempt from ever importing the key.
-    const openGate = () => {
-      if (!cancelled) setKeyReadyFor(familyId)
-    }
-
-    const subscribe = () => {
-      unsub = onSnapshot(
-        doc(db, 'families', familyId),
-        async (snap) => {
-          if (cancelled || !snap.exists()) return
-          attempt = 0
-          const data = snap.data()
-
-          const style = normalizeCardStyle(data.memoryCardStyle)
-          setMemoryCardStyle(style)
-          writeStored('fh_cardStyle', style)
-
-          // Import once per family. importEncryptionKey() mints a new CryptoKey on
-          // every call, and that identity sits in the dependency array of every
-          // Firestore listener and every media decrypt effect in the app — so
-          // re-importing on each snapshot would restart all of them.
-          if (keyLoadedForRef.current !== familyId) {
-            try {
-              if (data.encryptionKeyJwk) {
-                const key = await importEncryptionKey(data.encryptionKeyJwk)
-                if (cancelled) return
-                setEncryptionKey(key)
-              }
-            } catch (err) {
-              if (import.meta.env.DEV) console.error('Failed to import encryption key:', err)
-            }
-            // Resolved either way: a family doc without a key is a family that
-            // predates encryption, which is a valid end state, not a failure,
-            // and a JWK this browser cannot import will not import on a retry.
-            keyLoadedForRef.current = familyId
-            openGate()
-          }
-        },
-        (err) => {
-          if (cancelled) return
-          devWarn('Failed to load family document:', err?.code, err?.message)
-          unsub?.()
-          unsub = null
-
-          // A Firestore listener that errors is finished — it does not retry a
-          // permission-denied stream on its own, so somebody has to.
-          //
-          // And permission-denied is the likely error here. The rules answer on
-          // the ID token, which reaches the Firestore stream a moment after
-          // sign-in returns; an invited admin has it worse still, because their
-          // role claim is written by a trigger that has not run yet, so the
-          // rules fall back to reading adminUids and that read races the write
-          // that put them there. Both clear on their own within a second or two.
-          //
-          // Giving up after one attempt is what made a first login look broken:
-          // the session held no key, nothing said one was coming, and in that
-          // state every encrypted photo resolved to its raw ciphertext URL.
-          // Nothing re-subscribed, because neither familyId nor user changed
-          // again, so it stayed that way until the page was reloaded.
-          if (attempt >= KEY_RETRY_DELAYS.length) {
-            // Out of retries. Open the gate so the app is usable rather than
-            // stuck behind ProtectedRoute's spinner — useDecryptedMedia knows
-            // not to hand out ciphertext just because no key arrived.
-            openGate()
-            return
-          }
-          const delay = KEY_RETRY_DELAYS[attempt++]
-          retryTimer = setTimeout(async () => {
-            if (cancelled) return
-            // Force a fresh ID token before trying again: a claim written after
-            // we subscribed is exactly what changes the answer, and nothing
-            // picks it up otherwise.
-            await applyClaims(user, { force: true }).catch(() => {})
-            if (cancelled) return
-            subscribe()
-          }, delay)
-        },
-      )
-    }
-
-    subscribe()
-
-    return () => {
-      cancelled = true
-      clearTimeout(retryTimer)
-      unsub?.()
-    }
-  }, [familyId, user, applyClaims])
 
   // Explicitly bind the session to a family without going through a lookup.
   // Used right after invite redemption, where the new admin's UID has just been
@@ -474,29 +308,17 @@ export function AuthProvider({ children }) {
 
     // Generate a per-family encryption key
     const { key, jwk } = await generateEncryptionKey()
-    setEncryptionKey(key)
 
     // Create the family document with the encryption key
-    const familyRef = await addDoc(collection(db, 'families'), {
-      adminUid: result.user.uid,
-      adminUids: [result.user.uid],
-      familyName: name,
-      familySlug: slug,
-      encryptionKeyJwk: jwk,
-      createdAt: serverTimestamp(),
-    })
-    // The key was just generated locally — no need for the loader effect to
-    // fetch and re-import it, which would hand every consumer a fresh identity.
-    // Settling in the same batch as the family id keeps keyLoading false
-    // throughout: there is nothing to wait for.
-    keyLoadedForRef.current = familyRef.id
-    setKeyReadyFor(familyRef.id)
-    setFamilyId(familyRef.id)
-    writeStored('fh_familyId', familyRef.id)
+    const newFamilyId = await createFamily({ uid: result.user.uid, name, slug, encryptionKeyJwk: jwk })
+    // The key was just generated here, so there is nothing to load.
+    adoptKey(newFamilyId, key)
+    setFamilyId(newFamilyId)
+    writeStored('fh_familyId', newFamilyId)
     // Not awaited: the app is usable immediately via the adminUids rule path,
     // and the claim only has to arrive before that path is retired.
     pollForFamilyClaim(result.user)
-  }, [pollForFamilyClaim])
+  }, [pollForFamilyClaim, adoptKey])
 
   const logout = useCallback(async () => {
     // The demo has no Firebase session, token or cache to clear: leaving it is
@@ -524,12 +346,9 @@ export function AuthProvider({ children }) {
         if (import.meta.env.DEV) console.warn('Could not reset auth persistence:', err)
       }
     }
-    keyLoadedForRef.current = null
     setRole(null)
     setFamilyId(null)
-    setEncryptionKey(null)
-    setKeyReadyFor(null)
-    setMemoryCardStyle('modern')
+    forgetKey()
     // Decrypted media outlives the session otherwise: the object URLs stay
     // resolvable for as long as the tab is open.
     clearDecryptedMediaCache()
@@ -540,7 +359,7 @@ export function AuthProvider({ children }) {
     // Firestore keeps documents in memory past their listeners (config/firebase);
     // the family document among them carries the key. A fresh instance holds none.
     await resetFirestore()
-  }, [user])
+  }, [user, forgetKey])
 
   // A viewer holds a Firebase session too now, so presence of `user` no longer
   // says anything about privilege — only the role claim does.
@@ -561,6 +380,7 @@ export function AuthProvider({ children }) {
     memoryCardStyle,
     loading,
     keyLoading,
+    keyError,
     firebaseReady,
     loginAsViewer,
     loginAsAdmin,
@@ -569,7 +389,7 @@ export function AuthProvider({ children }) {
     setActiveFamilyId,
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
-    memoryCardStyle, loading, keyLoading, firebaseReady,
+    memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
     loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
   ])
 

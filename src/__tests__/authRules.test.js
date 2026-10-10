@@ -602,5 +602,22 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         encryptionKeyJwk: KEY,
       }))
     })
+
+    it('must come with a new family', async () => {
+      const db = asClaimlessAdmin('uid-new-owner')
+      const newFamily = (encryptionKeyJwk) => setDoc(family(db, 'family-new'), {
+        adminUid: 'uid-new-owner',
+        adminUids: ['uid-new-owner'],
+        familyName: 'The Newcomers',
+        familySlug: 'the-newcomers',
+        ...(encryptionKeyJwk === undefined ? {} : { encryptionKeyJwk }),
+      })
+      await assertFails(newFamily(undefined))
+      await assertFails(newFamily(null))
+      await assertFails(newFamily('the-secret-key'))
+      await assertFails(newFamily({ kty: 'oct' }))
+      await assertFails(newFamily({ k: 'the-secret-key', kty: 'RSA' }))
+      await assertSucceeds(newFamily(KEY))
+    })
   })
 })

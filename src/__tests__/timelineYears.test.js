@@ -49,7 +49,7 @@ vi.mock('firebase/firestore', () => {
   }
 })
 
-import { fetchTimelineYears, COUNTED_YEARS } from '../hooks/useTimeline'
+import { fetchTimelineYears, COUNTED_YEARS } from '../services/timeline'
 
 const on = (year, month = 5) => {
   const date = new Date(2000, 0, 1, 12)

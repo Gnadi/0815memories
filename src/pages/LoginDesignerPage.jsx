@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc, setDoc } from '../config/firestore'
+import { getFamily, updateFamily } from '../services/family'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -56,9 +56,8 @@ export default function LoginDesignerPage() {
 
   useEffect(() => {
     if (!familyId || !db) return
-    getDoc(doc(db, 'families', familyId)).then((snap) => {
-      if (snap.exists()) {
-        const data = snap.data()
+    getFamily(familyId).then((data) => {
+      if (data) {
         const storedMode = MODES.includes(data.loginPageMode) ? data.loginPageMode : 'classic'
         setMode(storedMode)
         if (data.loginTheme && typeof data.loginTheme === 'object') {
@@ -89,17 +88,13 @@ export default function LoginDesignerPage() {
     if (!familyId || saving || saveBlocked) return
     setSaving(true)
     try {
-      await setDoc(
-        doc(db, 'families', familyId),
-        {
-          loginPageMode: mode,
-          loginTheme: theme,
-          loginCustomHtml: html,
-          loginCustomCss: css,
-          loginCard,
-        },
-        { merge: true }
-      )
+      await updateFamily(familyId, {
+        loginPageMode: mode,
+        loginTheme: theme,
+        loginCustomHtml: html,
+        loginCustomCss: css,
+        loginCard,
+      })
       flashMessage(t('loginDesigner.saved'))
     } catch {
       flashMessage(t('loginDesigner.saveFailed'))
@@ -113,7 +108,7 @@ export default function LoginDesignerPage() {
     if (!window.confirm(t('loginDesigner.resetConfirm'))) return
     setSaving(true)
     try {
-      await setDoc(doc(db, 'families', familyId), { loginPageMode: 'classic' }, { merge: true })
+      await updateFamily(familyId, { loginPageMode: 'classic' })
       setMode('classic')
       flashMessage(t('loginDesigner.saved'))
     } catch {

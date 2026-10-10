@@ -10,11 +10,11 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptBlob, encryptText } from './encryption'
-import { createThumbnail, createTinyPreview } from './imageThumbnail'
-import { encryptAndUpload } from './encryptedUpload'
-import { needsThumbs, needsTinyPreviews } from './mediaThumbs'
-import { devError } from './devLog'
+import { decryptBlob, encryptText } from '../utils/encryption'
+import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
+import { encryptAndUpload } from '../utils/encryptedUpload'
+import { needsThumbs, needsTinyPreviews } from '../utils/mediaThumbs'
+import { devError } from '../utils/devLog'
 
 // Collections whose documents carry an `images` array.
 export const MIGRATABLE_COLLECTIONS = ['memories', 'moments']

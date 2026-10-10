@@ -11,8 +11,8 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptText, encryptText } from './encryption'
-import { devError } from './devLog'
+import { decryptText, encryptText } from '../utils/encryption'
+import { devError } from '../utils/devLog'
 
 /**
  * Bring old Black Box capsules up to the shape the current code expects. Two
@@ -35,7 +35,7 @@ import { devError } from './devLog'
  * read is a capsule nobody can repair. That is why the metadata read rule keeps
  * no time condition.
  *
- * Modelled on utils/thumbnailMigration.js, including the property that makes
+ * Modelled on services/thumbnailMigration.js, including the property that makes
  * that one resumable: nothing records how far a run got. A rescan re-derives the
  * remaining work, because a field that decrypts is a field already done, and a
  * capsule with no inline payload is a capsule already split.

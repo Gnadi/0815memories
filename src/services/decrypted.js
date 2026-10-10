@@ -40,6 +40,34 @@ export function subscribeDecrypted(source, decrypt, onData, onError) {
 }
 
 /**
+ * subscribeDecrypted for a single document: `onData` gets it decrypted, or null
+ * while it does not exist, and again only the newest snapshot's.
+ */
+export function subscribeDecryptedDocument(ref, decrypt, onData, onError) {
+  let latest = 0
+  let active = true
+  const unsubscribe = onSnapshot(
+    ref,
+    async (snapshot) => {
+      const seq = ++latest
+      try {
+        const result = snapshot.exists() ? await decrypt({ id: snapshot.id, ...snapshot.data() }) : null
+        if (active && seq === latest) onData(result)
+      } catch (err) {
+        if (active && seq === latest) onError?.(err)
+      }
+    },
+    (err) => {
+      if (active) onError?.(err)
+    },
+  )
+  return () => {
+    active = false
+    unsubscribe()
+  }
+}
+
+/**
  * One of the family's documents, decrypted — or null when it does not exist or
  * belongs to another family. The rules refuse to read another family's
  * documents anyway; the pages checked it themselves before this, and still do

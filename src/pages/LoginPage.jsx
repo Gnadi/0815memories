@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
-import { doc, getDoc } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Shield, X } from 'lucide-react'
@@ -12,7 +11,8 @@ import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
 import { themeToStyles, themeDecorationEmojis, themeText } from '../utils/loginTheme'
 import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
-import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
+import { getSubdomainSlug } from '../utils/familySlug'
+import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
 
 function toResolvedFamily(data) {
   if (!data) return null
@@ -135,10 +135,10 @@ export default function LoginPage() {
       setResolving(false)
       return
     }
-    getDoc(doc(db, 'familyPublic', urlFamilyId))
-      .then((snap) => {
-        if (snap.exists()) {
-          const resolved = toResolvedFamily(snap.data())
+    getFamilyPublic(urlFamilyId)
+      .then((data) => {
+        if (data) {
+          const resolved = toResolvedFamily(data)
           setResolvedFamily(resolved)
           writeCachedFamily(urlFamilyId, resolved)
         }

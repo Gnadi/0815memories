@@ -30,14 +30,13 @@ function withPageCount(data) {
 }
 
 async function encryptScrapbook(key, data) {
-  if (!key) return data
   const result = { ...data }
   if (result.title != null) result.title = await encryptText(key, result.title)
   if (result.pages != null) result.pages = await encryptJSON(key, result.pages)
   return result
 }
 
-async function decryptScrapbook(key, data, { withPages = true } = {}) {
+export async function decryptScrapbook(key, data, { withPages = true } = {}) {
   if (!key) return data
   const result = { ...data }
   if (typeof result.title === 'string') result.title = await decryptText(key, result.title)

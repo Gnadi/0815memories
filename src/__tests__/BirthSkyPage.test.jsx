@@ -6,7 +6,6 @@ import BirthSkyPage from '../pages/BirthSkyPage'
 vi.mock('../config/firebase', () => ({ db: null, auth: null, messaging: null }))
 vi.mock('firebase/firestore', () => ({
   Timestamp: { now: vi.fn(), fromDate: vi.fn() },
-  deleteField: () => 'DELETE_FIELD',
 }))
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ isAdmin: true, familyId: 'test-family', encryptionKey: null, isAuthenticated: true }),
@@ -83,7 +82,8 @@ describe('BirthSkyPage', () => {
     fireEvent.change(screen.getByLabelText('Time of birth'), { target: { value: '' } })
     fireEvent.click(screen.getByText('Save details'))
     await waitFor(() => expect(mockUpdateKid).toHaveBeenCalledTimes(1))
-    expect(mockUpdateKid.mock.calls[0][1].birthTime).toBe('DELETE_FIELD')
+    // null, which services/kids.js turns into a deleted field.
+    expect(mockUpdateKid.mock.calls[0][1].birthTime).toBeNull()
   })
 
   it('goes back to the journal list for an unknown child', () => {

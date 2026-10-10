@@ -14,10 +14,16 @@ vi.mock('../config/firebase', () => ({ db: {}, auth: null }))
 import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
-import { getFamilyDocument, subscribeDecrypted } from '../services/decrypted'
+import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
 import { addRecipe, getRecipe, subscribeRecipes } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
+import { addKid, subscribeKids, updateKid } from '../services/kids'
+import { addJournal, subscribeJournals } from '../services/journals'
+import { Timestamp } from '../config/firestore'
+import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
+import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
+import { redeemInvite } from '../services/invites'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -109,6 +115,40 @@ describe('subscribeDecrypted', () => {
   })
 })
 
+describe('subscribeDecryptedDocument', () => {
+  const note = (id) => fs.doc(null, 'notes', id)
+
+  it('hands over the document, decrypted, and null while there is none', async () => {
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('c'), async (d) => d.text.toUpperCase(), (v) => seen.push(v))
+    await settle()
+    await fs.setDoc(note('c'), { familyId: FAMILY, text: 'third' })
+    await settle()
+    stop()
+    expect(seen).toEqual([null, 'THIRD'])
+  })
+
+  it('delivers the newest snapshot only, when an older one decrypts slower', async () => {
+    const finish = []
+    const decrypt = (d) => new Promise((resolve) => finish.push(() => resolve(d.text)))
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('a'), decrypt, (v) => seen.push(v))
+
+    await settle()
+    await fs.updateDoc(note('a'), { text: 'edited' })
+    await settle()
+    expect(finish).toHaveLength(2)
+
+    // The newer snapshot finishes first; the older one must not follow it.
+    finish[1]()
+    await settle()
+    finish[0]()
+    await settle()
+    stop()
+    expect(seen).toEqual(['edited'])
+  })
+})
+
 describe('getFamilyDocument', () => {
   const asIs = async (data) => data
 
@@ -166,5 +206,113 @@ describe('one decryption for the list and the page', () => {
 
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+})
+
+describe('kids and journals', () => {
+  const stored = async (collectionName) =>
+    (await fs.getDocs(fs.collection(null, collectionName))).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+  it('kids: the birth place goes in as an object, encrypted, and comes back as one', async () => {
+    const birthPlace = { name: 'Linz', country: 'AT', lat: 48.31, lon: 14.29, tz: 'Europe/Vienna' }
+    await addKid(FAMILY, key, { name: 'Emma', birthTime: '04:17', birthPlace })
+
+    const [raw] = await stored('children')
+    for (const field of ['name', 'birthTime', 'birthPlace']) expect(typeof raw[field]).toBe('string')
+    expect(raw.name).not.toBe('Emma')
+    expect(raw.birthPlace).not.toContain('Linz')
+
+    const [kid] = await firstDelivery((onData, onError) => subscribeKids(FAMILY, key, onData, onError))
+    expect(kid).toMatchObject({ id: raw.id, name: 'Emma', birthTime: '04:17', birthPlace })
+  })
+
+  it('kids: null clears a birth time or place', async () => {
+    await addKid(FAMILY, key, { name: 'Leo', birthTime: '09:30', birthPlace: { name: 'Graz' } })
+    const [{ id }] = await stored('children')
+
+    await updateKid(key, id, { birthTime: null, birthPlace: null, skyStyle: 'kaydo' })
+
+    const [raw] = await stored('children')
+    expect(raw).not.toHaveProperty('birthTime')
+    expect(raw).not.toHaveProperty('birthPlace')
+    expect(raw.skyStyle).toBe('kaydo')
+  })
+
+  it("journals: one child's entries, their content encrypted", async () => {
+    const date = (iso) => Timestamp.fromDate(new Date(iso))
+    await addJournal(FAMILY, 'kid-a', key, { title: 'First tooth', content: 'At dinner', date: date('2024-10-18') })
+    await addJournal(FAMILY, 'kid-b', key, { title: 'First bike', content: 'No wheels', date: date('2024-07-12') })
+
+    const raw = await stored('journals')
+    expect(raw.map((d) => d.content)).not.toContain('At dinner')
+
+    const entries = await firstDelivery((onData, onError) =>
+      subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
+    expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+})
+
+describe('the family', () => {
+  beforeEach(async () => {
+    await fs.setDoc(fs.doc(null, 'families', 'fam-new'), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+    await fs.setDoc(fs.doc(null, 'families', 'fam-old'), { adminUid: 'uid-c' })
+    await fs.setDoc(fs.doc(null, 'familyPublic', 'fam-new'), { familySlug: 'the-millers', familyName: 'The Millers' })
+  })
+
+  it('finds the families someone is an admin of, the oldest ones by their owner', async () => {
+    await expect(findAdminFamilies('uid-b')).resolves.toEqual([
+      { id: 'fam-new', data: { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] } },
+    ])
+    await expect(findAdminFamilies('uid-c')).resolves.toEqual([{ id: 'fam-old', data: { adminUid: 'uid-c' } }])
+    await expect(findAdminFamilies('uid-nobody')).resolves.toEqual([])
+  })
+
+  it('looks an address up in the public copy, and keeps it free for its own family only', async () => {
+    await expect(resolveFamilyBySlug('the-millers')).resolves.toMatchObject({ id: 'fam-new', familyName: 'The Millers' })
+    await expect(resolveFamilyBySlug('nobody')).resolves.toBeNull()
+    await expect(isSlugAvailable('the-millers')).resolves.toBe(false)
+    await expect(isSlugAvailable('the-millers', 'fam-new')).resolves.toBe(true)
+    await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
+  })
+})
+
+describe('admins and invites', () => {
+  const family = () => fs.doc(null, 'families', 'fam')
+  const invite = (token) => fs.doc(null, 'families', 'fam', 'invites', token)
+
+  beforeEach(async () => {
+    await fs.setDoc(family(), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+  })
+
+  it('offers only the invites still open, the newest first', async () => {
+    const used = await createInvite('fam', 'uid-a')
+    const expired = await createInvite('fam', 'uid-a')
+    const open = await createInvite('fam', 'uid-a')
+    await fs.updateDoc(invite(used), { used: true })
+    await fs.updateDoc(invite(expired), { expiresAt: Timestamp.fromMillis(Date.now() - 1000) })
+
+    const invites = await firstDelivery((onData, onError) => subscribeOpenInvites('fam', onData, onError))
+    expect(invites.map((i) => i.id)).toEqual([open])
+  })
+
+  it('removes an admin together with the invites they minted', async () => {
+    const theirs = await createInvite('fam', 'uid-b')
+    await fs.setDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'), { email: 'b@example.com' })
+
+    await removeAdmin('fam', 'uid-b', [theirs])
+
+    expect((await fs.getDoc(invite(theirs))).exists()).toBe(false)
+    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'))).exists()).toBe(false)
+    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a'])
+  })
+
+  it('redeems an invite: spent, the new admin listed, and in adminUids', async () => {
+    const token = await createInvite('fam', 'uid-a')
+    await redeemInvite('fam', token, { uid: 'uid-new', email: 'new@example.com' })
+
+    expect((await fs.getDoc(invite(token))).data()).toMatchObject({ used: true, redeemedBy: 'uid-new' })
+    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-new'))).data())
+      .toMatchObject({ email: 'new@example.com', viaInvite: token })
+    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a', 'uid-b', 'uid-new'])
   })
 })

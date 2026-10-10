@@ -22,7 +22,6 @@ import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 const HIGHLIGHTS = 'highlights'
 
 async function encryptHighlight(key, data) {
-  if (!key) return data
   const result = { ...data }
   if (result.title != null) result.title = await encryptText(key, result.title)
   if (result.doc != null) result.doc = await encryptJSON(key, result.doc)

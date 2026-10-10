@@ -2,8 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { webcrypto } from 'node:crypto'
 
 vi.mock('../utils/devLog', () => ({ devWarn: vi.fn(), devError: vi.fn() }))
+vi.mock('../demo/demoMode', () => ({ isDemoMode: vi.fn(() => false) }))
 
 import { devWarn } from '../utils/devLog'
+import { isDemoMode } from '../demo/demoMode'
 import {
   generateEncryptionKey,
   importEncryptionKey,
@@ -15,6 +17,7 @@ import {
   decryptJSON,
   encryptBlob,
   decryptBlob,
+  MISSING_KEY,
 } from '../utils/encryption'
 
 // jsdom doesn't provide a functional crypto.subtle — graft Node's webcrypto on
@@ -28,6 +31,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  isDemoMode.mockReturnValue(false)
 })
 
 describe('encryption helpers', () => {
@@ -88,10 +92,27 @@ describe('encryption helpers', () => {
     expect(decrypted.location).toBe('Paris')
   })
 
-  it('returns the object unchanged when key is null', async () => {
+  // Every family but the demo's has a key, so a missing one is one that did not
+  // load. Writing on used to store the plaintext.
+  it('refuses to encrypt without a key', async () => {
+    const obj = { title: 'plain' }
+    await expect(encryptFields(null, obj, ['title'])).rejects.toMatchObject({ code: MISSING_KEY })
+    await expect(encryptText(undefined, 'plain')).rejects.toMatchObject({ code: MISSING_KEY })
+    await expect(encryptJSON(null, ['plain'])).rejects.toMatchObject({ code: MISSING_KEY })
+    await expect(encryptBlob(null, new Blob(['plain']))).rejects.toMatchObject({ code: MISSING_KEY })
+    // Reading without a key leaves the data as it is: there is nothing to
+    // decrypt it with, and nothing is written.
+    expect(await decryptFields(null, obj, ['title'])).toBe(obj)
+  })
+
+  it('writes as it is in the demo, whose family has no key', async () => {
+    isDemoMode.mockReturnValue(true)
     const obj = { title: 'plain' }
     expect(await encryptFields(null, obj, ['title'])).toBe(obj)
-    expect(await decryptFields(null, obj, ['title'])).toBe(obj)
+    expect(await encryptText(null, 'plain')).toBe('plain')
+    expect(await encryptJSON(null, ['plain'])).toEqual(['plain'])
+    // The demo keeps its uploads in the tab, so a file has no such way out.
+    await expect(encryptBlob(null, new Blob(['plain']))).rejects.toMatchObject({ code: MISSING_KEY })
   })
 
   // The Black Box was stored in plaintext for the life of the feature because

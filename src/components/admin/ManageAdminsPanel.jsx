@@ -1,23 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  onSnapshot,
-  query,
-  where,
-  arrayRemove,
-  serverTimestamp,
-  Timestamp,
-} from '../../config/firestore'
 import { useTranslation } from 'react-i18next'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Shield, Plus, Trash2, Loader2, User, Copy, Check, Link as LinkIcon } from 'lucide-react'
-import { generateInviteToken, INVITE_TTL_MS, buildInviteUrl } from '../../utils/inviteToken'
+import { buildInviteUrl } from '../../utils/inviteToken'
+import { getFamily } from '../../services/family'
+import {
+  createInvite, removeAdmin, revokeInvite, subscribeAdmins, subscribeOpenInvites,
+} from '../../services/admins'
 
 export default function ManageAdminsPanel() {
   const { familyId, user, isDemo } = useAuth()
@@ -38,9 +28,8 @@ export default function ManageAdminsPanel() {
 
   const loadFamily = useCallback(async () => {
     if (!familyId || !db) return
-    const snap = await getDoc(doc(db, 'families', familyId))
-    if (!snap.exists()) return
-    const data = snap.data()
+    const data = await getFamily(familyId)
+    if (!data) return
     setOwnerUid(data.adminUid || null)
     setAdminUids(Array.isArray(data.adminUids)
       ? data.adminUids
@@ -53,35 +42,18 @@ export default function ManageAdminsPanel() {
 
   useEffect(() => {
     if (!familyId || !db) return
-    const ref = collection(db, 'families', familyId, 'admins')
-    const unsub = onSnapshot(ref, (snap) => {
+    return subscribeAdmins(familyId, (admins) => {
       const map = {}
-      snap.forEach((d) => { map[d.id] = d.data() })
+      for (const { uid, ...entry } of admins) map[uid] = entry
       setAdminMeta(map)
       setLoading(false)
     }, () => setLoading(false))
-    return unsub
   }, [familyId])
 
   // Live list of unredeemed, unexpired invites.
   useEffect(() => {
     if (!familyId || !db) return
-    const ref = collection(db, 'families', familyId, 'invites')
-    const q = query(ref, where('used', '==', false))
-    const unsub = onSnapshot(q, (snap) => {
-      const now = Date.now()
-      const rows = []
-      snap.forEach((d) => {
-        const data = d.data()
-        const expiresAt = data.expiresAt?.toMillis?.() ?? 0
-        if (expiresAt > now) {
-          rows.push({ id: d.id, ...data, expiresAtMs: expiresAt })
-        }
-      })
-      rows.sort((a, b) => b.expiresAtMs - a.expiresAtMs)
-      setPendingInvites(rows)
-    })
-    return unsub
+    return subscribeOpenInvites(familyId, setPendingInvites)
   }, [familyId])
 
   const handleGenerate = async () => {
@@ -97,16 +69,7 @@ export default function ManageAdminsPanel() {
     }
     setGenerating(true)
     try {
-      const token = generateInviteToken()
-      const expiresAt = Timestamp.fromMillis(Date.now() + INVITE_TTL_MS)
-      await setDoc(doc(db, 'families', familyId, 'invites', token), {
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        expiresAt,
-        used: false,
-        redeemedBy: null,
-        redeemedAt: null,
-      })
+      const token = await createInvite(familyId, user.uid)
       setGeneratedLink(buildInviteUrl(familyId, token))
     } catch (err) {
       setError(err.message || t('admins.generateFailed'))
@@ -139,7 +102,7 @@ export default function ManageAdminsPanel() {
     setNotice('')
     setRevokingToken(token)
     try {
-      await deleteDoc(doc(db, 'families', familyId, 'invites', token))
+      await revokeInvite(familyId, token)
       setNotice(t('admins.revoked'))
       setTimeout(() => setNotice(''), 4000)
     } catch (err) {
@@ -157,20 +120,11 @@ export default function ManageAdminsPanel() {
     setNotice('')
     setRemovingUid(targetUid)
     try {
-      // Pending invites they minted first. The link is the credential, and
-      // they still hold it: left pending, any one of them lets them straight
-      // back in.
-      await Promise.all(
-        pendingInvites
-          .filter((invite) => invite.createdBy === targetUid)
-          .map((invite) => deleteDoc(doc(db, 'families', familyId, 'invites', invite.id))),
-      )
-      // Then two client-side writes; the rules enforce ownership preservation
-      // (Path D: owner stays in the array; non-admins cannot mutate adminUids).
-      await deleteDoc(doc(db, 'families', familyId, 'admins', targetUid))
-      await updateDoc(doc(db, 'families', familyId), {
-        adminUids: arrayRemove(targetUid),
-      })
+      // With the invites they minted, which would let them straight back in.
+      const theirInvites = pendingInvites
+        .filter((invite) => invite.createdBy === targetUid)
+        .map((invite) => invite.id)
+      await removeAdmin(familyId, targetUid, theirInvites)
       await loadFamily()
       setNotice(t('admins.removed'))
       setTimeout(() => setNotice(''), 4000)

@@ -72,9 +72,9 @@ A few rules the codebase depends on:
 - **Firestore is read and written in `src/services/`**, one module per
   area: its queries, its encryption and the shape of what it writes. Hooks
   and pages call the services, and ESLint refuses Firestore imports anywhere
-  else (the files from before the services are listed in `eslint.config.js`
-  until their area moves over). A list subscribes through
-  `subscribeDecrypted`, a page loads its document through the area's `get…`.
+  else, and the field helpers of `src/utils/encryption.js` too. A list
+  subscribes through `subscribeDecrypted`, a page loads its document through
+  the area's `get…`.
 - **Services reach Firestore through `src/config/firestore.js`.** It is where
   the demo swaps Firestore for its in-browser database (`src/demo/`), and
   ESLint refuses `firebase/firestore` imports anywhere else in `src/`. A
