@@ -72,7 +72,6 @@ export default defineConfig([
       'src/demo/**',
       'src/__tests__/**',
       // Not in src/services/ yet:
-      'src/utils/nasExport.js',
     ],
     rules: {
       'no-restricted-imports': ['error', {

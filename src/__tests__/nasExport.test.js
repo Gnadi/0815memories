@@ -63,7 +63,7 @@ vi.mock('jszip', () => {
   return { default: FakeZip }
 })
 
-import { runNasExport } from '../utils/nasExport'
+import { runNasExport } from '../services/nasExport'
 
 const FAMILY = 'fam1'
 const UID = 'uid-a'

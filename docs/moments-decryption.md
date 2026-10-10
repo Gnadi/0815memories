@@ -47,7 +47,7 @@ if (Array.isArray(result.thumbsTiny)) {
 ```
 
 `useMoments` and `useAllMoments` handed the snapshot straight to the view with
-no decrypt step at all — they did not even take the key. `utils/nasExport.js:376`
+no decrypt step at all — they did not even take the key. `services/nasExport.js:376`
 still records the assumption in one line: *"moments have no encrypted text
 fields."* They have one, and nobody had told the read path.
 

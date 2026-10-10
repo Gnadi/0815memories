@@ -8,17 +8,17 @@ import {
   getDoc,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptBlob } from './encryption'
-import { decryptMemoryDoc } from '../services/memories'
-import { decryptKid } from '../services/kids'
-import { decryptJournal } from '../services/journals'
-import { decryptBoxContent, decryptBoxMetadata } from '../services/blackbox'
-import { decryptRecipe } from '../services/recipes'
-import { decryptScrapbook } from '../services/scrapbooks'
-import { decryptCollage } from '../services/collages'
-import { decryptHighlight } from '../services/highlights'
-import { decryptChapter, decryptEntry, decryptLetter, decryptRitual } from '../services/ourYear'
-import { collectRichMediaUrls } from './richText'
+import { decryptBlob } from '../utils/encryption'
+import { decryptMemoryDoc } from './memories'
+import { decryptKid } from './kids'
+import { decryptJournal } from './journals'
+import { decryptBoxContent, decryptBoxMetadata } from './blackbox'
+import { decryptRecipe } from './recipes'
+import { decryptScrapbook } from './scrapbooks'
+import { decryptCollage } from './collages'
+import { decryptHighlight } from './highlights'
+import { decryptChapter, decryptEntry, decryptLetter, decryptRitual } from './ourYear'
+import { collectRichMediaUrls } from '../utils/richText'
 
 /**
  * Recursively convert Firestore Timestamps to ISO strings.

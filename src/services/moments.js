@@ -2,7 +2,7 @@
  * Moments: the quick entries next to the memories.
  *
  * They keep their text in clear: caption, category, location and label are not
- * encrypted, and utils/nasExport.js says so in a line of its own.
+ * encrypted, and services/nasExport.js says so in a line of its own.
  */
 import {
   addDoc,
