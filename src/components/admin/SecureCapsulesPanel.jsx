@@ -5,13 +5,13 @@ import { useAuth } from '../../context/AuthContext'
 import {
   scanBlackboxEncryption,
   migrateBlackboxEncryption,
-} from '../../utils/blackboxMigration'
+} from '../../services/blackboxMigration'
 import { devError } from '../../utils/devLog'
 
 /**
  * One-off (but resumable) pass that encrypts Black Box capsules sealed while the
  * hook's field list named a field the create page never wrote — see
- * utils/blackboxMigration.js.
+ * services/blackboxMigration.js.
  *
  * Unlike OptimizePhotosPanel, this one hides itself when there is nothing to do,
  * and shows a warning tone when there is: a family with plaintext capsules is

@@ -36,7 +36,7 @@ import {
   scanBlackboxEncryption,
   migrateBlackboxDocument,
   migrateBlackboxEncryption,
-} from '../utils/blackboxMigration'
+} from '../services/blackboxMigration'
 
 const KEY = { fake: 'key' }
 

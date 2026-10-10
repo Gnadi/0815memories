@@ -11,8 +11,8 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptText, encryptText } from './encryption'
-import { devError } from './devLog'
+import { decryptText, encryptText } from '../utils/encryption'
+import { devError } from '../utils/devLog'
 
 /**
  * Bring old Black Box capsules up to the shape the current code expects. Two

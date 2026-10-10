@@ -73,7 +73,6 @@ export default defineConfig([
       'src/__tests__/**',
       // Not in src/services/ yet:
       'src/context/AuthContext.jsx',
-      'src/hooks/useBlackBox.js',
       'src/hooks/useFeedback.js',
       'src/hooks/useOurYear.js',
       'src/hooks/useTimeline.js',
@@ -85,7 +84,6 @@ export default defineConfig([
       'src/pages/LoginPage.jsx',
       'src/pages/OurYearChapterPage.jsx',
       'src/pages/OurYearSetupPage.jsx',
-      'src/utils/blackboxMigration.js',
       'src/utils/familySlug.js',
       'src/utils/nasExport.js',
       'src/utils/notifications.js',
