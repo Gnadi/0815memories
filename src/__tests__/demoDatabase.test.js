@@ -174,6 +174,31 @@ describe('demo database: writes', () => {
       .rejects.toMatchObject({ code: 'invalid-argument' })
   })
 
+  // JSON.parse, because an object literal's __proto__ sets its prototype
+  // instead of making a field of that name.
+  it('refuses reserved field names, however they are written', async () => {
+    const fs = setup([['notes/a', { title: 'A', meta: { tag: 't' } }]])
+    const ref = fs.doc(DB, 'notes', 'a')
+    const proto = () => JSON.parse('{"__proto__": {"polluted": true}}')
+    const writes = [
+      () => fs.setDoc(ref, proto()),
+      () => fs.setDoc(ref, proto(), { merge: true }),
+      () => fs.setDoc(ref, { meta: proto() }, { merge: true }),
+      () => fs.setDoc(ref, { meta: { constructor: { prototype: { polluted: true } } } }, { merge: true }),
+      () => fs.addDoc(fs.collection(DB, 'notes'), { meta: proto() }),
+      () => fs.updateDoc(ref, { '__proto__.polluted': true }),
+      () => fs.updateDoc(ref, { 'constructor.prototype.polluted': true }),
+      () => fs.updateDoc(ref, 'meta.__name__', 'x'),
+    ]
+    for (const write of writes) {
+      await expect(write()).rejects.toMatchObject({ code: 'invalid-argument' })
+    }
+    expect({}.polluted).toBeUndefined()
+    expect((await fs.getDoc(ref)).data()).toEqual({ title: 'A', meta: { tag: 't' } })
+    await fs.updateDoc(ref, { 'meta.constructed': true })
+    expect((await fs.getDoc(ref)).get('meta')).toEqual({ tag: 't', constructed: true })
+  })
+
   it('hands every reader its own copy', async () => {
     const fs = setup([['memories/a', { images: ['/a.webp'] }]])
     const ref = fs.doc(DB, 'memories', 'a')
