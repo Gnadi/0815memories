@@ -34,8 +34,9 @@ changes to sign-in, routing or the seed.
   write-once by `storage.rules`, deleted after 30 days, and announced in the
   order dialog before it is made.
 - **Firestore is read and written in `src/services/`**, one module per area,
-  and hooks and pages call those (ESLint enforces it; the files that predate
-  the services are listed in `eslint.config.js`, and that list only shrinks).
+  and hooks and pages call those. A service also says which fields of its
+  documents are encrypted, so the field helpers of `src/utils/encryption.js`
+  are used there and nowhere else. ESLint enforces both.
   Services reach Firestore through `src/config/firestore.js`, never
   `firebase/firestore` directly. That module is where the demo (`/demo`,
   `src/demo/`) swaps Firestore for an in-memory database; a Firestore

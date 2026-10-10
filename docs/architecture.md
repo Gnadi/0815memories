@@ -150,11 +150,12 @@ an older snapshot must not overwrite a newer one.
 
 Services reach Firestore through `config/firestore.js`, so the demo needs
 nothing of its own here. ESLint refuses `config/firestore` imports outside
-`src/services/` (`Timestamp` excepted); the files that predate the services
-are listed in `eslint.config.js` and move over area by area. So far memories,
-moments, recipes, scrapbooks, collages, highlights, the kids and their
-journals, the Vault, Our Year, the timeline, feedback, the family document
-and its admins and invites have.
+`src/services/` (`Timestamp` excepted), and the field helpers of
+`utils/encryption.js` (`encryptFields`, `encryptJSON`, `decryptText`, …): which
+fields of a document are encrypted is said in its service and nowhere else.
+The NAS export decrypts through the services for the same reason
+(`services/nasExport.js`). The one exception is the blur-up preview, which
+`utils/encryptedUpload.js` encrypts as it makes it.
 
 Build and delivery details that affect many changes:
 

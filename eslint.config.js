@@ -58,21 +58,19 @@ export default defineConfig([
   },
   {
     // src/services/ reads and writes Firestore; hooks, pages and components
-    // ask it. The files listed here predate it and still query Firestore
-    // themselves. Each area moves over in a change of its own, and the list
-    // only shrinks. Timestamp is a value that dates are converted with, not a
-    // query, so it stays importable everywhere.
+    // ask it. Timestamp is a value that dates are converted with, not a query,
+    // so it stays importable everywhere.
+    //
+    // A service also says which fields of what it stores are encrypted, so the
+    // field helpers of utils/encryption.js stay there too. A field encrypted
+    // anywhere else can be written differently from how it is read, or not
+    // encrypted at all: the Black Box went out in plaintext that way, and the
+    // NAS export decrypted from its own, outdated list.
     //
     // This block replaces the one above for the files it covers, so it repeats
     // its rule.
     files: ['src/**/*.{js,jsx}'],
-    ignores: [
-      'src/config/**',
-      'src/services/**',
-      'src/demo/**',
-      'src/__tests__/**',
-      // Not in src/services/ yet:
-    ],
+    ignores: ['src/config/**', 'src/services/**', 'src/demo/**', 'src/__tests__/**'],
     rules: {
       'no-restricted-imports': ['error', {
         paths: [{
@@ -83,6 +81,13 @@ export default defineConfig([
           regex: '(^|/)config/firestore(\\.js)?$',
           allowImportNames: ['Timestamp'],
           message: 'Read and write Firestore through src/services/ — see docs/architecture.md.',
+        }, {
+          regex: '(^|/)encryption(\\.js)?$',
+          importNames: [
+            'encryptFields', 'decryptFields', 'encryptJSON', 'decryptJSON',
+            'encryptText', 'decryptText', 'decryptStringArray',
+          ],
+          message: "Encrypt and decrypt a document's fields in its service in src/services/, which says which of them are encrypted.",
         }],
       }],
     },

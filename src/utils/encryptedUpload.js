@@ -1,3 +1,6 @@
+// The blur-up preview is stored on the document (thumbsTiny), but it is made
+// here, from the picture being uploaded, so it is encrypted here as well.
+// eslint-disable-next-line no-restricted-imports
 import { encryptBlob, encryptText } from './encryption'
 import { createThumbnail, createTinyPreview } from './imageThumbnail'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
