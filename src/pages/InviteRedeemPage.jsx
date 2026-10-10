@@ -5,7 +5,7 @@ import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase
 import { auth } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { getFamilyPublic } from '../services/family'
-import { getInvite, redeemInvite } from '../services/admins'
+import { getInvite, redeemInvite } from '../services/invites'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
@@ -113,7 +113,7 @@ export default function InviteRedeemPage() {
         try { await updateProfile(credential.user, { displayName }) } catch { /* non-fatal */ }
       }
 
-      // 2. Redeem the invite in one batch — see services/admins.js.
+      // 2. Redeem the invite in one batch — see services/invites.js.
       await redeemInvite(familyId, token, { uid: newUid, email: email.trim().toLowerCase() })
       createdUser = null
 

@@ -22,7 +22,8 @@ import { addKid, subscribeKids, updateKid } from '../services/kids'
 import { addJournal, subscribeJournals } from '../services/journals'
 import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
-import { createInvite, redeemInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
+import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
+import { redeemInvite } from '../services/invites'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
