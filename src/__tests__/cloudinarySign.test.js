@@ -89,7 +89,7 @@ describe('api/cloudinary-sign', () => {
     const res = await call({ authorization: `Bearer ${bearer}`, query: { resource_type: 'raw' } })
 
     expect(res.statusCode).toBe(200)
-    expect(res.body).toMatchObject({ folder: 'kaydo/encrypted', apiKey: 'key', resourceType: 'raw' })
+    expect(res.body).toMatchObject({ folder: 'kaydo/f/fam/encrypted', apiKey: 'key', resourceType: 'raw' })
     expect(res.body.signature).toMatch(/^[0-9a-f]{40}$/)
     expect(res.headers['Cache-Control']).toBe('no-store')
 
@@ -102,6 +102,27 @@ describe('api/cloudinary-sign', () => {
       field: { fieldPath: 'adminUids' }, op: 'ARRAY_CONTAINS', value: { stringValue: 'admin' },
     })
     expect(queryOf().select.fields).toEqual([{ fieldPath: '__name__' }])
+  })
+
+  // The purge function deletes a family's files by this folder, so it is the
+  // server's to choose: the signature covers it, and the caller cannot pick
+  // another family's.
+  it("signs into the caller's own family folder, whatever they ask for", async () => {
+    firestore.mockResolvedValue(found())
+    const bearer = `Bearer ${token('admin')}`
+    expect((await call({ authorization: bearer })).body.folder).toBe('kaydo/f/fam/public')
+    expect((await call({ authorization: bearer, query: { folder: 'kaydo/f/other/encrypted', resource_type: 'raw' } })).body.folder)
+      .toBe('kaydo/f/fam/encrypted')
+  })
+
+  it('keeps the old folders for a family id that does not belong in a path', async () => {
+    firestore.mockResolvedValueOnce({
+      ok: true, status: 200,
+      json: async () => [{ document: { name: 'projects/p/databases/(default)/documents/families/f a.b' } }],
+    })
+    const res = await call({ authorization: `Bearer ${token('admin')}`, query: { resource_type: 'raw' } })
+    expect(res.statusCode).toBe(200)
+    expect(res.body.folder).toBe('kaydo/encrypted')
   })
 
   it('finds the owner of a family from before adminUids', async () => {
