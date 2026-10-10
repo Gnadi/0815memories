@@ -73,8 +73,6 @@ export default defineConfig([
       'src/__tests__/**',
       // Not in src/services/ yet:
       'src/context/AuthContext.jsx',
-      'src/hooks/useFeedback.js',
-      'src/hooks/useTimeline.js',
       'src/components/admin/ManageAdminsPanel.jsx',
       'src/components/admin/NasExportButton.jsx',
       'src/components/admin/SettingsPanel.jsx',
