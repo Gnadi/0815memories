@@ -45,6 +45,7 @@
     "missing": "Diese Familie hat keinen Schlüssel, und Kaydo öffnet nur verschlüsselte Familien.",
     "unreadable": "Dieser Browser kann den Schlüssel deiner Familie nicht laden. Versuche es bitte mit einem aktuellen Browser.",
     "unavailable": "Deine Familie konnte nicht geladen werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "deleted": "Diese Familie wurde gelöscht, mit allem, was darin war.",
     "retry": "Erneut versuchen",
     "signOut": "Abmelden"
   },

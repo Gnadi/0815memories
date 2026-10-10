@@ -222,6 +222,26 @@
         "tooManyRequests": "Zu viele Versuche. Bitte versuch es später noch einmal.",
         "generic": "Dein Passwort konnte nicht geändert werden. Bitte versuch es noch einmal."
       }
+    },
+    "deleteAccount": {
+      "title": "Dein Konto löschen",
+      "description": "Du verlässt die Familie, und dein Konto wird gelöscht. Was du gepostet hast, bleibt in der Familie; wem die Familie gehört, kann es löschen.",
+      "password": "Dein Passwort zur Bestätigung",
+      "submit": "Mein Konto löschen",
+      "confirm": "Dein Konto löschen und die Familie verlassen? Das lässt sich nicht rückgängig machen."
+    },
+    "deleteFamily": {
+      "title": "Die Familie löschen",
+      "description": "Löscht alles in der Familie – Erinnerungen, Momente, Tagebücher, Rezepte, Fotobücher, Zeitkapseln, Fotos und Videos – mit den Konten aller Admins und dem Zugang für Gäste. Ab der Bestätigung kann sich niemand mehr anmelden; der Rest ist innerhalb weniger Stunden gelöscht. Das lässt sich nicht rückgängig machen, exportiere also vorher, wenn du eine Kopie behalten willst.",
+      "typeName": "Gib zur Bestätigung den Namen der Familie ein: {{name}}",
+      "password": "Dein Passwort zur Bestätigung",
+      "submit": "Familie endgültig löschen",
+      "confirm": "Die ganze Familie endgültig löschen? Das lässt sich nicht rückgängig machen."
+    },
+    "errors": {
+      "wrongPassword": "Das Passwort stimmt nicht.",
+      "tooManyRequests": "Zu viele Versuche. Bitte versuch es später noch einmal.",
+      "generic": "Das hat nicht geklappt. Bitte versuch es noch einmal."
     }
   },
   "trash": {

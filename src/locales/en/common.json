@@ -45,6 +45,7 @@
     "missing": "This family has no encryption key, and Kaydo only opens encrypted families.",
     "unreadable": "This browser can't load your family's encryption key. Please try an up-to-date browser.",
     "unavailable": "Your family couldn't be loaded. Check your connection and try again.",
+    "deleted": "This family has been deleted, along with everything in it.",
     "retry": "Try again",
     "signOut": "Sign out"
   },

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mail } from 'lucide-react'
-import { requestPasswordReset } from '../../services/account'
+import { requestPasswordReset } from '../../services/passwordReset'
 
 /**
  * "Forgot password?" for admins: Firebase emails a link to set a new one. The
