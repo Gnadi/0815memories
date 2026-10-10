@@ -1,6 +1,3 @@
-import { collection, query, where, getDocs } from '../config/firestore'
-import { db } from '../config/firebase'
-
 /**
  * Generate a URL-safe slug from a family name.
  * "The Millers" → "the-millers"
@@ -45,49 +42,4 @@ export function getSubdomainSlug() {
   if (!subdomain || subdomain === 'www') return null
 
   return subdomain
-}
-
-/**
- * Look up a family by its slug.
- *
- * Reads `familyPublic`, not `families`. The two carry the same slug, but only
- * `familyPublic` is world-readable — and it is written by a Cloud Function from
- * a fixed allowlist, so it cannot carry the encryption key or the password hash
- * however the private document grows. Callers here are unauthenticated by
- * definition: this is the login page and the signup form.
- *
- * Returns { id, ...publicFields } or null.
- */
-export async function resolveFamilyBySlug(slug) {
-  if (!db || !slug) return null
-
-  const q = query(collection(db, 'familyPublic'), where('familySlug', '==', slug))
-  const snapshot = await getDocs(q)
-
-  if (snapshot.empty) return null
-
-  const doc = snapshot.docs[0]
-  return { id: doc.id, ...doc.data() }
-}
-
-/**
- * Check if a slug is available (not already taken by another family).
- *
- * Runs during signup, before the account exists, so it has to work without a
- * token — hence `familyPublic` again.
- */
-export async function isSlugAvailable(slug, excludeFamilyId = null) {
-  if (!db || !slug) return false
-
-  const q = query(collection(db, 'familyPublic'), where('familySlug', '==', slug))
-  const snapshot = await getDocs(q)
-
-  if (snapshot.empty) return true
-
-  // If we're excluding a specific family (for edits), check if the match is that family
-  if (excludeFamilyId) {
-    return snapshot.docs.every((doc) => doc.id === excludeFamilyId)
-  }
-
-  return false
 }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc } from '../../config/firestore'
 import { db } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { runNasExport } from '../../utils/nasExport'
+import { getFamily } from '../../services/family'
 import { HardDrive, X } from 'lucide-react'
 
 export default function NasExportButton() {
@@ -19,8 +19,8 @@ export default function NasExportButton() {
 
   useEffect(() => {
     if (!familyId || !db) return
-    getDoc(doc(db, 'families', familyId)).then((snap) => {
-      if (snap.exists()) setFamilyName(snap.data().familyName || '')
+    getFamily(familyId).then((family) => {
+      if (family) setFamilyName(family.familyName || '')
     })
   }, [familyId])
 

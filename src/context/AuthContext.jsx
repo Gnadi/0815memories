@@ -5,9 +5,11 @@ import {
   signInWithCustomToken,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
-import { doc, addDoc, collection, query, where, getDocs, serverTimestamp, updateDoc, onSnapshot } from '../config/firestore'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
-import { generateSlug, isSlugAvailable } from '../utils/familySlug'
+import { generateSlug } from '../utils/familySlug'
+import {
+  backfillAdminUids, createFamily, findAdminFamilies, isSlugAvailable, subscribeFamily,
+} from '../services/family'
 import { generateEncryptionKey, importEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
@@ -108,34 +110,22 @@ export function AuthProvider({ children }) {
   // Defined before the effects that depend on it: the dependency array is read
   // during render, so a `const` declared further down would be in its TDZ.
   const resolveFamilyId = useCallback(async (uid, preferredId = null) => {
-    // Primary lookup: multi-admin shape.
-    const byAdmins = await getDocs(
-      query(collection(db, 'families'), where('adminUids', 'array-contains', uid))
-    )
-    let snapshot = byAdmins
-    // Fallback for families that haven't been lazily migrated yet (no adminUids field).
-    if (snapshot.empty) {
-      snapshot = await getDocs(
-        query(collection(db, 'families'), where('adminUid', '==', uid))
-      )
-    }
-    if (snapshot.empty) return null
+    const families = await findAdminFamilies(uid)
+    if (families.length === 0) return null
     // Someone can be an admin of more than one family. Which one the session
     // bound to used to be whichever document Firestore listed first — which
     // could differ from the family the token's claim names, and so from what
     // onAuthStateChanged had just set. The claim's family wins, then the one
     // they own.
-    const familyDoc =
-      snapshot.docs.find((d) => d.id === preferredId) ??
-      snapshot.docs.find((d) => d.data().adminUid === uid) ??
-      snapshot.docs[0]
-    const id = familyDoc.id
-    const data = familyDoc.data()
+    const { id, data } =
+      families.find((f) => f.id === preferredId) ??
+      families.find((f) => f.data.adminUid === uid) ??
+      families[0]
     // Lazy migration: if the owner logs in before the family has an `adminUids`
     // array, backfill it now so subsequent rule checks use the new shape.
     if (data.adminUid === uid && !Array.isArray(data.adminUids)) {
       try {
-        await updateDoc(doc(db, 'families', id), { adminUids: [uid] })
+        await backfillAdminUids(id, uid)
       } catch (err) {
         if (import.meta.env.DEV) console.error('Lazy adminUids migration failed:', err)
       }
@@ -281,12 +271,11 @@ export function AuthProvider({ children }) {
     }
 
     const subscribe = () => {
-      unsub = onSnapshot(
-        doc(db, 'families', familyId),
-        async (snap) => {
-          if (cancelled || !snap.exists()) return
+      unsub = subscribeFamily(
+        familyId,
+        async (data) => {
+          if (cancelled || !data) return
           attempt = 0
-          const data = snap.data()
 
           const style = normalizeCardStyle(data.memoryCardStyle)
           setMemoryCardStyle(style)
@@ -498,22 +487,15 @@ export function AuthProvider({ children }) {
     setEncryptionKey(key)
 
     // Create the family document with the encryption key
-    const familyRef = await addDoc(collection(db, 'families'), {
-      adminUid: result.user.uid,
-      adminUids: [result.user.uid],
-      familyName: name,
-      familySlug: slug,
-      encryptionKeyJwk: jwk,
-      createdAt: serverTimestamp(),
-    })
+    const newFamilyId = await createFamily({ uid: result.user.uid, name, slug, encryptionKeyJwk: jwk })
     // The key was just generated locally — no need for the loader effect to
     // fetch and re-import it, which would hand every consumer a fresh identity.
     // Settling in the same batch as the family id keeps keyLoading false
     // throughout: there is nothing to wait for.
-    keyLoadedForRef.current = familyRef.id
-    setKeyReadyFor(familyRef.id)
-    setFamilyId(familyRef.id)
-    writeStored('fh_familyId', familyRef.id)
+    keyLoadedForRef.current = newFamilyId
+    setKeyReadyFor(newFamilyId)
+    setFamilyId(newFamilyId)
+    writeStored('fh_familyId', newFamilyId)
     // Not awaited: the app is usable immediately via the adminUids rule path,
     // and the claim only has to arrive before that path is retired.
     pollForFamilyClaim(result.user)

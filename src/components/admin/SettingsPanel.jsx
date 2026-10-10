@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { doc, setDoc, getDoc } from '../../config/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
-import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
+import { generateSlug } from '../../utils/familySlug'
+import { getFamily, isSlugAvailable, updateFamily } from '../../services/family'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
@@ -38,9 +38,8 @@ export default function SettingsPanel() {
   useEffect(() => {
     if (!familyId || !db) return
     async function loadFamily() {
-      const familyDoc = await getDoc(doc(db, 'families', familyId))
-      if (familyDoc.exists()) {
-        const data = familyDoc.data()
+      const data = await getFamily(familyId)
+      if (data) {
         setFamilyName(data.familyName || '')
         setFamilySlug(data.familySlug || '')
         setLoginHeaderImage(data.loginHeaderImage || '')
@@ -117,11 +116,7 @@ export default function SettingsPanel() {
         return
       }
 
-      await setDoc(
-        doc(db, 'families', familyId),
-        { familyName, familySlug: newSlug },
-        { merge: true }
-      )
+      await updateFamily(familyId, { familyName, familySlug: newSlug })
       setFamilySlug(newSlug)
       setMessage(t('familyName.updated'))
       setTimeout(() => setMessage(''), 3000)
@@ -158,11 +153,7 @@ export default function SettingsPanel() {
     const previous = memoryCardStyle
     setMemoryCardStyle(style)
     try {
-      await setDoc(
-        doc(db, 'families', familyId),
-        { memoryCardStyle: style },
-        { merge: true }
-      )
+      await updateFamily(familyId, { memoryCardStyle: style })
       const messages = {
         classic: t('cardStyle.switchedClassic'),
         polaroid: t('cardStyle.switchedPolaroid'),
@@ -181,11 +172,7 @@ export default function SettingsPanel() {
   const handleLoginImageUpload = async (url, publicId) => {
     if (!familyId) return
     try {
-      await setDoc(
-        doc(db, 'families', familyId),
-        { loginHeaderImage: url, loginHeaderImagePublicId: publicId },
-        { merge: true }
-      )
+      await updateFamily(familyId, { loginHeaderImage: url, loginHeaderImagePublicId: publicId })
       setLoginHeaderImage(url)
       setMessage(url ? t('loginImage.updated') : t('loginImage.removed'))
       setTimeout(() => setMessage(''), 3000)

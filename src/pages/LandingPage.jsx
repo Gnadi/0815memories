@@ -36,7 +36,8 @@ import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
-import { generateSlug, isSlugAvailable } from '../utils/familySlug'
+import { generateSlug } from '../utils/familySlug'
+import { isSlugAvailable } from '../services/family'
 import usePWAInstall from '../hooks/usePWAInstall'
 
 function OctocatIcon({ className }) {

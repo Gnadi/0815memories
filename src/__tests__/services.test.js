@@ -21,6 +21,7 @@ import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
 import { addJournal, subscribeJournals } from '../services/journals'
 import { Timestamp } from '../config/firestore'
+import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -246,5 +247,29 @@ describe('kids and journals', () => {
     const entries = await firstDelivery((onData, onError) =>
       subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
     expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+})
+
+describe('the family', () => {
+  beforeEach(async () => {
+    await fs.setDoc(fs.doc(null, 'families', 'fam-new'), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+    await fs.setDoc(fs.doc(null, 'families', 'fam-old'), { adminUid: 'uid-c' })
+    await fs.setDoc(fs.doc(null, 'familyPublic', 'fam-new'), { familySlug: 'the-millers', familyName: 'The Millers' })
+  })
+
+  it('finds the families someone is an admin of, the oldest ones by their owner', async () => {
+    await expect(findAdminFamilies('uid-b')).resolves.toEqual([
+      { id: 'fam-new', data: { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] } },
+    ])
+    await expect(findAdminFamilies('uid-c')).resolves.toEqual([{ id: 'fam-old', data: { adminUid: 'uid-c' } }])
+    await expect(findAdminFamilies('uid-nobody')).resolves.toEqual([])
+  })
+
+  it('looks an address up in the public copy, and keeps it free for its own family only', async () => {
+    await expect(resolveFamilyBySlug('the-millers')).resolves.toMatchObject({ id: 'fam-new', familyName: 'The Millers' })
+    await expect(resolveFamilyBySlug('nobody')).resolves.toBeNull()
+    await expect(isSlugAvailable('the-millers')).resolves.toBe(false)
+    await expect(isSlugAvailable('the-millers', 'fam-new')).resolves.toBe(true)
+    await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
   })
 })
