@@ -34,7 +34,7 @@ The wait is bytes and placement, not AES. Below, in the order they cost.
 `tinyPreview` is the blur-up placeholder: a ~20px WebP that travels inside the
 Firestore document as base64 ciphertext, so it costs no request. It is written
 by the shared upload path (`utils/encryptedUpload.js:99-105`) and by the shared
-backfill (`utils/thumbnailMigration.js:125-135`) — both of which run for moments
+backfill (`services/thumbnailMigration.js:125-135`) — both of which run for moments
 exactly as they do for memories, and both of which **encrypt it**.
 
 Only memories decrypted it again. `decryptMemory` does

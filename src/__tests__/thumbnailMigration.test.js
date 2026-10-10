@@ -29,7 +29,7 @@ import {
   commitThumbs,
   migrateDocument,
   migrateThumbnails,
-} from '../utils/thumbnailMigration'
+} from '../services/thumbnailMigration'
 
 const KEY = { fake: 'key' }
 

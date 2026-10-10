@@ -83,7 +83,6 @@ export default defineConfig([
       'src/utils/familySlug.js',
       'src/utils/nasExport.js',
       'src/utils/notifications.js',
-      'src/utils/thumbnailMigration.js',
     ],
     rules: {
       'no-restricted-imports': ['error', {
