@@ -74,7 +74,6 @@ export default defineConfig([
       // Not in src/services/ yet:
       'src/context/AuthContext.jsx',
       'src/hooks/useFeedback.js',
-      'src/hooks/useOurYear.js',
       'src/hooks/useTimeline.js',
       'src/components/admin/ManageAdminsPanel.jsx',
       'src/components/admin/NasExportButton.jsx',
@@ -82,7 +81,6 @@ export default defineConfig([
       'src/pages/InviteRedeemPage.jsx',
       'src/pages/LoginDesignerPage.jsx',
       'src/pages/LoginPage.jsx',
-      'src/pages/OurYearChapterPage.jsx',
       'src/pages/OurYearSetupPage.jsx',
       'src/utils/familySlug.js',
       'src/utils/nasExport.js',

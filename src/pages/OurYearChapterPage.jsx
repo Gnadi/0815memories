@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { serverTimestamp } from '../config/firestore'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -42,7 +41,7 @@ export default function OurYearChapterPage() {
   const uid = user?.uid ?? null
 
   const { ritual } = useOurYearRitual(familyId, uid, encryptionKey)
-  const { chapter, loading, missing, updateChapter } = useOurYearChapter(chapterId, encryptionKey)
+  const { chapter, loading, missing, updateChapter, closeChapter } = useOurYearChapter(chapterId, encryptionKey)
   const { deleteChapter } = useOurYearChapters(null, null, encryptionKey)
 
   const [step, setStep] = useState('reflection')
@@ -70,7 +69,7 @@ export default function OurYearChapterPage() {
   }
 
   const handleClose = async () => {
-    await updateChapter({ status: 'closed', closedAt: serverTimestamp() })
+    await closeChapter()
     setStep('summary')
   }
 

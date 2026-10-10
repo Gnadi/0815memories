@@ -14,7 +14,7 @@ vi.mock('../config/firebase', () => ({ db: {}, auth: null }))
 import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
-import { getFamilyDocument, subscribeDecrypted } from '../services/decrypted'
+import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
 import { addRecipe, getRecipe, subscribeRecipes } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
@@ -109,6 +109,40 @@ describe('subscribeDecrypted', () => {
       subscribeDecrypted(notes(), async () => { throw new Error('bad ciphertext') }, () => {}, resolve)
     })
     expect(error.message).toBe('bad ciphertext')
+  })
+})
+
+describe('subscribeDecryptedDocument', () => {
+  const note = (id) => fs.doc(null, 'notes', id)
+
+  it('hands over the document, decrypted, and null while there is none', async () => {
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('c'), async (d) => d.text.toUpperCase(), (v) => seen.push(v))
+    await settle()
+    await fs.setDoc(note('c'), { familyId: FAMILY, text: 'third' })
+    await settle()
+    stop()
+    expect(seen).toEqual([null, 'THIRD'])
+  })
+
+  it('delivers the newest snapshot only, when an older one decrypts slower', async () => {
+    const finish = []
+    const decrypt = (d) => new Promise((resolve) => finish.push(() => resolve(d.text)))
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('a'), decrypt, (v) => seen.push(v))
+
+    await settle()
+    await fs.updateDoc(note('a'), { text: 'edited' })
+    await settle()
+    expect(finish).toHaveLength(2)
+
+    // The newer snapshot finishes first; the older one must not follow it.
+    finish[1]()
+    await settle()
+    finish[0]()
+    await settle()
+    stop()
+    expect(seen).toEqual(['edited'])
   })
 })
 
