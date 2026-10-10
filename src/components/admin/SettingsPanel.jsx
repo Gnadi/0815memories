@@ -13,6 +13,7 @@ import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
 import SecureCapsulesPanel from './SecureCapsulesPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
+import AccountPanel from './AccountPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
@@ -392,6 +393,8 @@ export default function SettingsPanel() {
           field list named a field the create page never wrote. Renders nothing
           for families with no affected capsules. */}
       <SecureCapsulesPanel />
+
+      <AccountPanel />
     </div>
   )
 }

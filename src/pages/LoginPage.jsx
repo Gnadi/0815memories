@@ -205,6 +205,7 @@ export default function LoginPage() {
     showAdminLogin, email, setEmail, password, setPassword,
     showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
     error, loading, handleSubmit,
+    allowPasswordReset: true,
   }
 
   const resolvedFamilyName = resolvedFamily?.name || null

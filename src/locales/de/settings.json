@@ -203,5 +203,25 @@
     "previewAlt": "Vorschau",
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
     "uploadFailed": "Upload fehlgeschlagen"
+  },
+  "account": {
+    "title": "Dein Konto",
+    "signedInAs": "Angemeldet als {{email}}",
+    "password": {
+      "title": "Dein Passwort ändern",
+      "description": "Das Passwort, mit dem du dich als Admin anmeldest, nicht das Familienpasswort für Gäste. Deine anderen Geräte müssen sich danach neu anmelden.",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort (mindestens {{min}} Zeichen)",
+      "repeat": "Neues Passwort wiederholen",
+      "submit": "Passwort ändern",
+      "changed": "Dein Passwort wurde geändert.",
+      "errors": {
+        "wrongCurrent": "Dein aktuelles Passwort stimmt nicht.",
+        "tooShort": "Das neue Passwort muss mindestens {{min}} Zeichen lang sein.",
+        "mismatch": "Die neuen Passwörter stimmen nicht überein.",
+        "tooManyRequests": "Zu viele Versuche. Bitte versuch es später noch einmal.",
+        "generic": "Dein Passwort konnte nicht geändert werden. Bitte versuch es noch einmal."
+      }
+    }
   }
 }

@@ -203,5 +203,25 @@
     "previewAlt": "Preview",
     "clickToUpload": "Click to upload a photo",
     "uploadFailed": "Upload failed"
+  },
+  "account": {
+    "title": "Your account",
+    "signedInAs": "Signed in as {{email}}",
+    "password": {
+      "title": "Change your password",
+      "description": "The password you sign in with as an admin, not the family password for guests. Your other devices will have to sign in again.",
+      "current": "Current password",
+      "new": "New password (at least {{min}} characters)",
+      "repeat": "Repeat the new password",
+      "submit": "Change password",
+      "changed": "Your password has been changed.",
+      "errors": {
+        "wrongCurrent": "Your current password is not correct.",
+        "tooShort": "The new password must be at least {{min}} characters long.",
+        "mismatch": "The new passwords do not match.",
+        "tooManyRequests": "Too many attempts. Please try again later.",
+        "generic": "Your password could not be changed. Please try again."
+      }
+    }
   }
 }
