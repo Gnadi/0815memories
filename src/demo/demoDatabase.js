@@ -49,6 +49,19 @@ const DELETE = Symbol('delete')
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype
 
+// Firestore refuses field names of the form __name__, and so does this
+// database, so a write that would fail there fails here. It refuses
+// `constructor` too, which Firestore allows and the app does not use: with
+// `__proto__` it is the name a write could take to reach a prototype instead
+// of the document, and isPlainObject was all that stood in the way. Every
+// place a field name is written spells out the two comparisons, the form in
+// which CodeQL recognises the check (js/prototype-pollution-utility).
+const RESERVED_FIELD_NAME = /^__.*__$/
+
+function reservedField(name, path) {
+  return firestoreError('invalid-argument', `Field name "${name}" is reserved (field ${path})`)
+}
+
 // A stored value, copied. Firestore hands every reader its own copy, and a
 // component that mutates what it was given must not change the database.
 function copy(value) {
@@ -83,6 +96,9 @@ function toStored(value, current, path) {
   if (isPlainObject(value)) {
     const out = {}
     for (const [key, item] of Object.entries(value)) {
+      if (key === '__proto__' || key === 'constructor' || RESERVED_FIELD_NAME.test(key)) {
+        throw reservedField(key, `${path}.${key}`)
+      }
       const stored = toStored(item, undefined, `${path}.${key}`)
       if (stored !== DELETE) out[key] = stored
     }
@@ -476,6 +492,9 @@ export function createDemoDatabase({ documents = [], uid }) {
   // into the maps already there.
   function mergeInto(existing, patch, path) {
     for (const [key, value] of Object.entries(patch)) {
+      if (key === '__proto__' || key === 'constructor' || RESERVED_FIELD_NAME.test(key)) {
+        throw reservedField(key, `${path}.${key}`)
+      }
       if (isPlainObject(value)) {
         if (!isPlainObject(existing[key])) existing[key] = {}
         mergeInto(existing[key], value, `${path}.${key}`)
@@ -499,6 +518,11 @@ export function createDemoDatabase({ documents = [], uid }) {
       // update(): keys are field paths, so 'keepsakes.song' reaches into a map.
       for (const [fieldPath, value] of Object.entries(fields)) {
         const keys = fieldPath.split('.')
+        for (const key of keys) {
+          if (key === '__proto__' || key === 'constructor' || RESERVED_FIELD_NAME.test(key)) {
+            throw reservedField(key, fieldPath)
+          }
+        }
         let node = next
         for (const key of keys.slice(0, -1)) {
           if (!isPlainObject(node[key])) node[key] = {}
