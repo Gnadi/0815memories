@@ -17,6 +17,7 @@ import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import useMediaQuery from '../../hooks/useMediaQuery'
+import { TRASH_DAYS } from '../../services/trash'
 
 // Build a unified media list from a moment's images and videos.
 //
@@ -330,7 +331,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   const handleDelete = () => {
     setShowMenu(false)
-    if (window.confirm(t('moment.deleteConfirm'))) {
+    if (window.confirm(t('moment.deleteConfirm', { days: TRASH_DAYS }))) {
       onDelete?.(moment.id)
       onClose()
     }

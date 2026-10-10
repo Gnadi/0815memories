@@ -46,6 +46,7 @@ const MemoryDetailPage = lazyPage(() => import('./pages/MemoryDetailPage'))
 const MomentsAllPage = lazyPage(() => import('./pages/MomentsAllPage'))
 const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
 const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
+const TrashPage = lazyPage(() => import('./pages/TrashPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
 const JournalArchivePage = lazyPage(() => import('./pages/JournalArchivePage'))
 const BirthSkyPage = lazyPage(() => import('./pages/BirthSkyPage'))
@@ -363,6 +364,7 @@ export const routes = [
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
       { path: 'settings', element: protectAdmin(<SettingsPage />) },
       { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },
+      { path: 'settings/trash', element: protectAdmin(<TrashPage />) },
       { path: 'journal', element: protectAdmin(<KidsJournalPage />) },
       { path: 'journal/:childId', element: protectAdmin(<JournalArchivePage />) },
       { path: 'journal/:childId/sky', element: protectAdmin(<BirthSkyPage />) },

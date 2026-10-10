@@ -7,7 +7,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   limit,
   orderBy,
@@ -33,7 +32,7 @@ const MOMENTS = 'moments'
  * The same field, the same call, the same reasoning as decryptMemory — ~700
  * bytes each, and it replaces a spinner with the photo's own colours.
  */
-async function decryptMoment(key, data) {
+export async function decryptMoment(key, data) {
   if (!key || !Array.isArray(data.thumbsTiny)) return data
   return { ...data, thumbsTiny: await decryptStringArray(key, data.thumbsTiny) }
 }
@@ -59,8 +58,4 @@ export async function addMoment(familyId, moment) {
 
 export async function updateMoment(id, updates) {
   await updateDoc(doc(db, MOMENTS, id), updates)
-}
-
-export async function deleteMoment(id) {
-  await deleteDoc(doc(db, MOMENTS, id))
 }

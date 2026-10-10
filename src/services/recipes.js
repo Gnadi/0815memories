@@ -5,13 +5,11 @@
 import {
   addDoc,
   collection,
-  doc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
   where,
-  writeBatch,
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, encryptFields, encryptJSON } from '../utils/encryption'
@@ -84,7 +82,8 @@ export function getRecipe(familyId, key, id) {
   return getFamilyDocument(RECIPES, id, familyId, (data) => decryptRecipe(key, data))
 }
 
-function forksOf(familyId, rootId) {
+/** The versions grown from a recipe, which go to the trash with it. */
+export function forksOf(familyId, rootId) {
   return query(collection(db, RECIPES), where('familyId', '==', familyId), where('rootId', '==', rootId))
 }
 
@@ -108,13 +107,4 @@ export async function addRecipe(familyId, key, data) {
     familyId,
     createdAt: serverTimestamp(),
   })
-}
-
-/** A family recipe, with every version grown from it. */
-export async function deleteRecipe(familyId, id) {
-  const batch = writeBatch(db)
-  const forksSnap = await getDocs(forksOf(familyId, id))
-  forksSnap.docs.forEach((d) => batch.delete(d.ref))
-  batch.delete(doc(db, RECIPES, id))
-  await batch.commit()
 }

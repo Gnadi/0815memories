@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
 import {
   addScrapbook,
-  deleteScrapbook,
   subscribeScrapbooks,
   updateScrapbook,
 } from '../services/scrapbooks'
+import { moveToTrash } from '../services/trash'
 
 /**
  * Write operations only — no Firestore subscription. See useMemoryWriter for
@@ -15,7 +15,7 @@ export function useScrapbookWriter(familyId, encryptionKey) {
   return {
     addScrapbook: (data) => addScrapbook(familyId, encryptionKey, data),
     updateScrapbook: (id, data) => updateScrapbook(encryptionKey, id, data),
-    deleteScrapbook: (id) => deleteScrapbook(id),
+    deleteScrapbook: (id) => moveToTrash(encryptionKey, 'scrapbooks', id),
   }
 }
 

@@ -223,5 +223,39 @@
         "generic": "Your password could not be changed. Please try again."
       }
     }
+  },
+  "trash": {
+    "title": "Trash",
+    "teaser": "What you delete stays here for {{days}} days. You can bring it back until then.",
+    "open": "Open the trash",
+    "back": "Back to settings",
+    "description": "What your family deleted stays here for {{days}} days. After that, it is deleted for good, together with its photos, videos and voice notes.",
+    "empty": "The trash is empty.",
+    "loadFailed": "The trash couldn't be loaded. Check your connection and try again.",
+    "untitled": "Untitled",
+    "deletedOn": "Deleted on {{date}}",
+    "purgedOn": "deleted for good on {{date}}",
+    "restore": "Restore",
+    "deleteForever": "Delete for good",
+    "deleteForeverConfirm": "Delete \"{{title}}\" for good? Its photos, videos and voice notes are deleted too, and it cannot be brought back.",
+    "restoreFailed": "It couldn't be restored. Please try again.",
+    "deleteFailed": "It couldn't be deleted. Please try again.",
+    "kinds": {
+      "memories": "Memory",
+      "moments": "Moment",
+      "journals": "Journal entry",
+      "children": "Child",
+      "recipes": "Recipe",
+      "scrapbooks": "Scrapbook",
+      "collages": "Collage",
+      "highlights": "Highlight video",
+      "blackbox": "Time capsule"
+    },
+    "more": {
+      "children_one": "with {{count}} journal entry",
+      "children_other": "with {{count}} journal entries",
+      "recipes_one": "with {{count}} version",
+      "recipes_other": "with {{count}} versions"
+    }
   }
 }

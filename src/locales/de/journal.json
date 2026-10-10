@@ -9,7 +9,7 @@
       "body": "Füge ein Kind hinzu, um mit seinem Tagebuch zu beginnen.",
       "addFirstChild": "Dein erstes Kind hinzufügen"
     },
-    "deleteChildConfirm": "{{name}} löschen? Damit wird das Kind dauerhaft entfernt und kann nicht wiederhergestellt werden."
+    "deleteChildConfirm": "{{name}} mit dem ganzen Tagebuch in den Papierkorb verschieben? Dort kannst du beides {{days}} Tage lang wiederherstellen."
   },
   "card": {
     "born": "Geboren am {{date}}",
@@ -36,7 +36,7 @@
       "bodyFallback": "dein Kind",
       "writeFirst": "Ersten Brief schreiben"
     },
-    "deleteLetterConfirm": "Diesen Brief endgültig löschen?",
+    "deleteLetterConfirm": "Diesen Brief in den Papierkorb verschieben? Dort kannst du ihn {{days}} Tage lang wiederherstellen.",
     "skyOfBirth": "Himmel der Geburt"
   },
   "entryCard": {
@@ -61,7 +61,7 @@
   },
   "detail": {
     "voiceNote": "Sprachnotiz {{index}}",
-    "deleteLetterConfirm": "Diesen Brief endgültig löschen?"
+    "deleteLetterConfirm": "Diesen Brief in den Papierkorb verschieben? Dort kannst du ihn {{days}} Tage lang wiederherstellen."
   },
   "kidModal": {
     "editTitle": "Kind bearbeiten",

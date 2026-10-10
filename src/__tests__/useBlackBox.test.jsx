@@ -14,6 +14,7 @@ import { webcrypto } from 'node:crypto'
 import { renderHook, act } from '@testing-library/react'
 
 const batchSet = vi.fn()
+const batchDelete = vi.fn()
 const batchCommit = vi.fn(async () => {})
 const updateDoc = vi.fn(async () => {})
 const deleteDoc = vi.fn(async () => {})
@@ -33,11 +34,11 @@ vi.mock('firebase/firestore', () => ({
   getDoc: (...args) => getDoc(...args),
   updateDoc: (...args) => updateDoc(...args),
   deleteDoc: (...args) => deleteDoc(...args),
-  writeBatch: vi.fn(() => ({ set: batchSet, commit: batchCommit })),
+  writeBatch: vi.fn(() => ({ set: batchSet, delete: batchDelete, commit: batchCommit })),
   serverTimestamp: vi.fn(() => 'SERVER_TS'),
   Timestamp: { fromDate: (d) => ({ __ts: d.toISOString(), toDate: () => d }) },
 }))
-vi.mock('../config/firebase', () => ({ db: {} }))
+vi.mock('../config/firebase', () => ({ db: {}, auth: { currentUser: { uid: 'admin-1' } } }))
 vi.mock('../utils/devLog', () => ({ devWarn: vi.fn(), devError: vi.fn() }))
 
 import { generateEncryptionKey, decryptText } from '../utils/encryption'
@@ -244,16 +245,24 @@ describe('useBlackBox checkIn', () => {
 })
 
 describe('useBlackBox deleteBox', () => {
-  it('removes both halves, content first', async () => {
+  // Deleting a capsule used to delete its letter first, then the capsule. It
+  // goes to the trash now, and without its letter, which nobody may read
+  // before the date: the letter stays where it is, sealed, until the capsule
+  // comes back to it or the trash is emptied on the server.
+  it('moves the capsule to the trash and leaves its letter sealed in place', async () => {
     const { key } = await generateEncryptionKey()
+    const metadata = { familyId: 'fam1', title: 'ciphertext', triggerType: 'specificDate' }
+    getDoc.mockResolvedValueOnce({ exists: () => true, data: () => metadata })
     const { result } = renderHook(() => useBlackBox('fam1', key))
 
     await act(async () => { await result.current.deleteBox('b1') })
 
-    expect(deleteDoc.mock.calls.map(([ref]) => ref.name)).toEqual([
-      'blackboxContent',
-      'blackbox',
-    ])
+    expect(batchSet).toHaveBeenCalledWith(
+      { name: 'trash', id: 'blackbox__b1' },
+      expect.objectContaining({ familyId: 'fam1', collection: 'blackbox', docId: 'b1', data: metadata }),
+    )
+    expect(batchDelete.mock.calls.map(([ref]) => ref)).toEqual([{ name: 'blackbox', id: 'b1' }])
+    expect(deleteDoc).not.toHaveBeenCalled()
   })
 })
 

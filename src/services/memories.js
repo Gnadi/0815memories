@@ -5,7 +5,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   limit,
   orderBy,
@@ -121,10 +120,6 @@ export async function addMemory(familyId, key, memory) {
 export async function updateMemory(key, id, updates) {
   const encrypted = await encryptMemoryData(key, updates)
   await updateDoc(doc(db, MEMORIES, id), encrypted)
-}
-
-export async function deleteMemory(id) {
-  await deleteDoc(doc(db, MEMORIES, id))
 }
 
 // Turning a memory into a moment and back. The two live in separate

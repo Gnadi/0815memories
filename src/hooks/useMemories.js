@@ -4,11 +4,11 @@ import {
   addMemory,
   convertMemoryToMoment,
   convertMomentToMemory,
-  deleteMemory,
   subscribeMemories,
   updateMemory,
 } from '../services/memories'
-import { addMoment, deleteMoment, subscribeMoments, updateMoment } from '../services/moments'
+import { addMoment, subscribeMoments, updateMoment } from '../services/moments'
+import { moveToTrash } from '../services/trash'
 
 const DEFAULT_MEMORIES_LIMIT = 50
 const DEFAULT_MOMENTS_LIMIT = 10
@@ -25,7 +25,7 @@ export function useMemoryWriter(familyId, encryptionKey) {
   return {
     addMemory: (memory) => addMemory(familyId, encryptionKey, memory),
     updateMemory: (id, updates) => updateMemory(encryptionKey, id, updates),
-    deleteMemory: (id) => deleteMemory(id),
+    deleteMemory: (id) => moveToTrash(encryptionKey, 'memories', id),
   }
 }
 
@@ -107,6 +107,7 @@ export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_L
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
   const { addMoment } = useMomentWriter(familyId)
 
+  const deleteMoment = (id) => moveToTrash(encryptionKey, 'moments', id)
   return { moments, loading, error, addMoment, updateMoment, deleteMoment }
 }
 
@@ -115,5 +116,6 @@ const DEFAULT_ALL_MOMENTS_LIMIT = 200
 export function useAllMoments(familyId, encryptionKey, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
 
+  const deleteMoment = (id) => moveToTrash(encryptionKey, 'moments', id)
   return { moments, loading, error, updateMoment, deleteMoment }
 }

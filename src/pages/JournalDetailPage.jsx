@@ -9,6 +9,7 @@ import { useJournals } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
 import EncryptedAudio from '../components/media/EncryptedAudio'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function JournalDetailPage() {
   const { t, i18n } = useTranslation('journal')
@@ -34,7 +35,7 @@ export default function JournalDetailPage() {
   })
 
   const handleDelete = () => {
-    if (confirm(t('detail.deleteLetterConfirm'))) {
+    if (confirm(t('detail.deleteLetterConfirm', { days: TRASH_DAYS }))) {
       deleteJournal(entryId)
       navigate(`/journal/${childId}`)
     }

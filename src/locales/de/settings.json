@@ -223,5 +223,39 @@
         "generic": "Dein Passwort konnte nicht geändert werden. Bitte versuch es noch einmal."
       }
     }
+  },
+  "trash": {
+    "title": "Papierkorb",
+    "teaser": "Was du löschst, bleibt {{days}} Tage hier. Bis dahin kannst du es zurückholen.",
+    "open": "Papierkorb öffnen",
+    "back": "Zurück zu den Einstellungen",
+    "description": "Was deine Familie gelöscht hat, bleibt {{days}} Tage hier. Danach wird es endgültig gelöscht, mit seinen Fotos, Videos und Sprachnachrichten.",
+    "empty": "Der Papierkorb ist leer.",
+    "loadFailed": "Der Papierkorb konnte nicht geladen werden. Prüf deine Verbindung und versuch es noch einmal.",
+    "untitled": "Ohne Titel",
+    "deletedOn": "Gelöscht am {{date}}",
+    "purgedOn": "endgültig gelöscht am {{date}}",
+    "restore": "Wiederherstellen",
+    "deleteForever": "Endgültig löschen",
+    "deleteForeverConfirm": "„{{title}}“ endgültig löschen? Fotos, Videos und Sprachnachrichten werden mitgelöscht, und es lässt sich nicht mehr zurückholen.",
+    "restoreFailed": "Das ließ sich nicht wiederherstellen. Bitte versuch es noch einmal.",
+    "deleteFailed": "Das ließ sich nicht löschen. Bitte versuch es noch einmal.",
+    "kinds": {
+      "memories": "Erinnerung",
+      "moments": "Moment",
+      "journals": "Tagebucheintrag",
+      "children": "Kind",
+      "recipes": "Rezept",
+      "scrapbooks": "Fotobuch",
+      "collages": "Collage",
+      "highlights": "Highlight-Video",
+      "blackbox": "Zeitkapsel"
+    },
+    "more": {
+      "children_one": "mit {{count}} Tagebucheintrag",
+      "children_other": "mit {{count}} Tagebucheinträgen",
+      "recipes_one": "mit {{count}} Variante",
+      "recipes_other": "mit {{count}} Varianten"
+    }
   }
 }

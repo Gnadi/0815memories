@@ -2,6 +2,7 @@ import { BookOpen, Trash2, Edit2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import EncryptedImage from '../media/EncryptedImage'
+import { TRASH_DAYS } from '../../services/trash'
 
 export default function ScrapbookCard({ scrapbook, onDelete }) {
   const { t } = useTranslation('scrapbook')
@@ -19,7 +20,7 @@ export default function ScrapbookCard({ scrapbook, onDelete }) {
 
   const handleDelete = (e) => {
     e.stopPropagation()
-    if (confirm(t('card.deleteConfirm', { title: scrapbook.title }))) {
+    if (confirm(t('card.deleteConfirm', { title: scrapbook.title, days: TRASH_DAYS }))) {
       onDelete(scrapbook.id)
     }
   }

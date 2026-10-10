@@ -10,6 +10,7 @@ import { useMemoryWriter } from '../hooks/useMemories'
 import { getMemory } from '../services/memories'
 import { parseRichDoc } from '../utils/richText'
 import { devError } from '../utils/devLog'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
@@ -51,7 +52,7 @@ export default function MemoryDetailPage() {
 
   const handleDelete = async () => {
     setShowMenu(false)
-    if (!window.confirm(t('detail.deleteConfirm'))) return
+    if (!window.confirm(t('detail.deleteConfirm', { days: TRASH_DAYS }))) return
     await deleteMemory(id)
     navigate('/home')
   }
@@ -122,6 +123,7 @@ export default function MemoryDetailPage() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((v) => !v)}
+                aria-label={t('common:actions.openMenu')}
                 className="text-bark-light hover:text-kaydo"
               >
                 <MoreVertical className="w-5 h-5" />

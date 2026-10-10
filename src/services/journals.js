@@ -4,7 +4,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   orderBy,
   query,
@@ -62,8 +61,4 @@ export async function addJournal(familyId, childId, key, entry) {
 export async function updateJournal(key, id, updates) {
   const encrypted = await encryptFields(key, updates, JOURNAL_ENCRYPTED_FIELDS)
   await updateDoc(doc(db, JOURNALS, id), encrypted)
-}
-
-export async function deleteJournal(id) {
-  await deleteDoc(doc(db, JOURNALS, id))
 }

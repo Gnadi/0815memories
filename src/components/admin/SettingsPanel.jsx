@@ -5,7 +5,7 @@ import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
-import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
+import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette, Trash2 } from 'lucide-react'
 import { generateSlug } from '../../utils/familySlug'
 import { getFamily, isSlugAvailable, updateFamily } from '../../services/family'
 import UploadWidget from './UploadWidget'
@@ -14,6 +14,7 @@ import OptimizePhotosPanel from './OptimizePhotosPanel'
 import SecureCapsulesPanel from './SecureCapsulesPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 import AccountPanel from './AccountPanel'
+import { TRASH_DAYS } from '../../services/trash'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 export default function SettingsPanel() {
@@ -384,6 +385,27 @@ export default function SettingsPanel() {
           {t('export.description')}
         </p>
         <NasExportButton />
+      </div>
+
+      {/* Trash */}
+      <div className="mt-6 pt-6 border-t border-cream-dark">
+        <label className="block text-sm font-medium text-bark mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <Trash2 className="w-4 h-4" />
+            {t('trash.title')}
+          </div>
+        </label>
+        <p className="text-xs text-bark-muted mb-3">
+          {t('trash.teaser', { days: TRASH_DAYS })}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/settings/trash')}
+          className="btn-kaydo flex items-center gap-1.5 text-sm px-4"
+        >
+          <Trash2 className="w-4 h-4" />
+          {t('trash.open')}
+        </button>
       </div>
 
       {/* One-off thumbnail migration for photos predating thumbnails */}

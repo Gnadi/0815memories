@@ -14,7 +14,7 @@
     "body": "Erstelle deine erste zeitgesteuerte Nachricht — ein Geschenk für die Zukunft.",
     "cta": "Versiegle deine erste Nachricht"
   },
-  "confirmDelete": "Diese versiegelte Nachricht endgültig löschen? Das kann nicht rückgängig gemacht werden.",
+  "confirmDelete": "Diese versiegelte Nachricht in den Papierkorb verschieben? Dort kannst du sie {{days}} Tage lang wiederherstellen, versiegelt wie jetzt.",
   "create": {
     "headerTitle": "Einen Moment bewahren",
     "subtitle": "Erstelle ein digitales Erbstück, das versiegelt bleibt, bis der perfekte Moment in der Zukunft gekommen ist.",

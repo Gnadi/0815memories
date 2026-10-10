@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
 import {
   addJournal,
-  deleteJournal,
   subscribeAllJournals,
   subscribeJournals,
   updateJournal,
 } from '../services/journals'
+import { moveToTrash } from '../services/trash'
 
 export function useJournals(familyId, childId, encryptionKey) {
   const [journals, setJournals] = useState([])
@@ -32,7 +32,7 @@ export function useJournals(familyId, childId, encryptionKey) {
     loading,
     addJournal: (entry) => addJournal(familyId, childId, encryptionKey, entry),
     updateJournal: (id, updates) => updateJournal(encryptionKey, id, updates),
-    deleteJournal: (id) => deleteJournal(id),
+    deleteJournal: (id) => moveToTrash(encryptionKey, 'journals', id),
   }
 }
 

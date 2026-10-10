@@ -18,7 +18,7 @@
   "card": {
     "page_one": "{{count}} Seite",
     "page_other": "{{count}} Seiten",
-    "deleteConfirm": "„{{title}}“ löschen? Das kann nicht rückgängig gemacht werden."
+    "deleteConfirm": "„{{title}}“ in den Papierkorb verschieben? Dort kannst du es {{days}} Tage lang wiederherstellen."
   },
   "editor": {
     "backToScrapbooks": "Zurück zu den Sammelalben",
