@@ -64,8 +64,8 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null)
   const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
   const [encryptionKey, setEncryptionKey] = useState(null)
-  // The family whose key question is settled — answered with a key, or answered
-  // with "this family predates encryption". Anything else is still loading.
+  // The family whose key is in hand — or, in the demo, whose family has none to
+  // wait for. Anything else is still loading, unless keyProblem says otherwise.
   //
   // This used to be a `keyLoading` boolean that the loader effect switched on.
   // An effect runs after the commit, so between the render that learned the
@@ -78,6 +78,14 @@ export function AuthProvider({ children }) {
   // so the flag could only start false. Deriving it instead means the answer is
   // right from the same render that sets the family id, with no gap to lose.
   const [keyReadyFor, setKeyReadyFor] = useState(null)
+  // Why the key will not come, as { familyId, reason }: 'missing' (the family
+  // document has none), 'unreadable' (this browser cannot import it) or
+  // 'unavailable' (the document could not be read). Each of these used to open
+  // the app without a key — a document without one counted as a family from
+  // before encryption, which Kaydo no longer supports — and from then on every
+  // write stored family content in plaintext. ProtectedRoute shows the reason
+  // instead of the app.
+  const [keyProblem, setKeyProblem] = useState(null)
   // Remembered so the first frame picks the same card component the family doc
   // will confirm. Guessing 'modern' and correcting later swaps the component
   // type and remounts every card, and with it every image.
@@ -89,6 +97,7 @@ export function AuthProvider({ children }) {
 
   // No family means nothing to load a key for — the landing and login pages.
   const keyLoading = !!familyId && keyReadyFor !== familyId
+  const keyError = familyId && keyProblem?.familyId === familyId ? keyProblem.reason : null
 
   // Family whose key is already imported. Guards against re-importing on every
   // auth-object change: importEncryptionKey() mints a new CryptoKey each call,
@@ -250,22 +259,25 @@ export function AuthProvider({ children }) {
       setKeyReadyFor(null)
     }
 
-    // Re-close the gate whenever this runs without a key in hand. It matters on
-    // the path below where the read is abandoned: that leaves the gate open
-    // with no key, and a later auth event is the one chance to try again.
-    if (keyLoadedForRef.current !== familyId) setKeyReadyFor(null)
+    // Re-close the gate, and forget why an earlier attempt failed, whenever this
+    // runs without a key in hand. After the read below has been given up, a
+    // later auth event is the one chance to try again.
+    if (keyLoadedForRef.current !== familyId) {
+      setKeyReadyFor(null)
+      setKeyProblem(null)
+    }
 
     let cancelled = false
     let unsub = null
     let retryTimer = null
     let attempt = 0
 
-    // Stop gating the app on this read. Separate from keyLoadedForRef, which
-    // says we actually got an answer from the document: abandoning the read
-    // opens the gate without one, and marking it loaded there would stop any
-    // later attempt from ever importing the key.
     const openGate = () => {
       if (!cancelled) setKeyReadyFor(familyId)
+    }
+
+    const failKey = (reason) => {
+      if (!cancelled) setKeyProblem({ familyId, reason })
     }
 
     const subscribe = () => {
@@ -285,18 +297,27 @@ export function AuthProvider({ children }) {
           // Firestore listener and every media decrypt effect in the app — so
           // re-importing on each snapshot would restart all of them.
           if (keyLoadedForRef.current !== familyId) {
-            try {
-              if (data.encryptionKeyJwk) {
-                const key = await importEncryptionKey(data.encryptionKeyJwk)
-                if (cancelled) return
-                setEncryptionKey(key)
+            if (!data.encryptionKeyJwk) {
+              // The demo family is the only one without a key, and it needs
+              // none (demo/). Every other family has had one since signup.
+              if (DEMO) {
+                keyLoadedForRef.current = familyId
+                openGate()
+              } else {
+                failKey('missing')
               }
+              return
+            }
+            let key
+            try {
+              key = await importEncryptionKey(data.encryptionKeyJwk)
             } catch (err) {
               if (import.meta.env.DEV) console.error('Failed to import encryption key:', err)
+              failKey('unreadable')
+              return
             }
-            // Resolved either way: a family doc without a key is a family that
-            // predates encryption, which is a valid end state, not a failure,
-            // and a JWK this browser cannot import will not import on a retry.
+            if (cancelled) return
+            setEncryptionKey(key)
             keyLoadedForRef.current = familyId
             openGate()
           }
@@ -323,10 +344,10 @@ export function AuthProvider({ children }) {
           // Nothing re-subscribed, because neither familyId nor user changed
           // again, so it stayed that way until the page was reloaded.
           if (attempt >= KEY_RETRY_DELAYS.length) {
-            // Out of retries. Open the gate so the app is usable rather than
-            // stuck behind ProtectedRoute's spinner — useDecryptedMedia knows
-            // not to hand out ciphertext just because no key arrived.
-            openGate()
+            // Out of retries. This used to open the app anyway, keyless, so it
+            // would not sit behind ProtectedRoute's spinner — and every write
+            // from then on went out in plaintext. Say so instead.
+            failKey('unavailable')
             return
           }
           const delay = KEY_RETRY_DELAYS[attempt++]
@@ -529,6 +550,7 @@ export function AuthProvider({ children }) {
     setFamilyId(null)
     setEncryptionKey(null)
     setKeyReadyFor(null)
+    setKeyProblem(null)
     setMemoryCardStyle('modern')
     // Decrypted media outlives the session otherwise: the object URLs stay
     // resolvable for as long as the tab is open.
@@ -561,6 +583,7 @@ export function AuthProvider({ children }) {
     memoryCardStyle,
     loading,
     keyLoading,
+    keyError,
     firebaseReady,
     loginAsViewer,
     loginAsAdmin,
@@ -569,7 +592,7 @@ export function AuthProvider({ children }) {
     setActiveFamilyId,
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
-    memoryCardStyle, loading, keyLoading, firebaseReady,
+    memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
     loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
   ])
 

@@ -121,10 +121,17 @@ service cloud.firestore {
     // write that replaced or removed it would leave all of that unreadable for
     // every member at once — whether by a bug, by two devices racing, or by a
     // hijacked admin account. It is written with the family and never again.
-    // A family from before encryption has none and gets none this way: giving
-    // it one would be a migration of its own, rules included.
     function keepsEncryptionKey() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['encryptionKeyJwk']);
+    }
+
+    // ...and a family cannot be created without it. Kaydo no longer opens a
+    // family that has none (AuthContext), and nothing can add one later. The
+    // shape is that of the JWK generateEncryptionKey() exports.
+    function hasEncryptionKey() {
+      return request.resource.data.encryptionKeyJwk is map
+          && request.resource.data.encryptionKeyJwk.kty == 'oct'
+          && request.resource.data.encryptionKeyJwk.k is string;
     }
 
     // Families — readable by the family only. The password check that used to
@@ -155,6 +162,7 @@ service cloud.firestore {
                     && request.resource.data.adminUid == request.auth.uid
                     && (!('adminUids' in request.resource.data)
                         || request.resource.data.adminUids == [request.auth.uid])
+                    && hasEncryptionKey()
                     && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid

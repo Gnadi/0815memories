@@ -22,7 +22,6 @@ const RECIPES = 'recipes'
 const ENCRYPTED_TEXT_FIELDS = ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author']
 
 async function encryptRecipe(key, data) {
-  if (!key) return data
   const result = await encryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
   if (Array.isArray(result.ingredients)) {
     result.ingredients = await encryptJSON(key, result.ingredients)

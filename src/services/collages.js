@@ -21,7 +21,6 @@ import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 const COLLAGES = 'collages'
 
 async function encryptCollage(key, data) {
-  if (!key) return data
   const result = { ...data }
   if (result.title != null) result.title = await encryptText(key, result.title)
   if (result.doc != null) result.doc = await encryptJSON(key, result.doc)

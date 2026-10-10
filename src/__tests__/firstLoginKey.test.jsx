@@ -94,6 +94,7 @@ vi.mock('../utils/decryptPool', () => ({
 }))
 
 const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { importEncryptionKey } = await import('../utils/encryption')
 const { default: EncryptedImage } = await import('../components/media/EncryptedImage')
 
 const PHOTO = 'https://res.cloudinary.com/demo/raw/upload/kaydo/encrypted/a.dat'
@@ -103,7 +104,7 @@ const PHOTO = 'https://res.cloudinary.com/demo/raw/upload/kaydo/encrypted/a.dat'
 let renderedSrcs = []
 
 function Probe({ onLogin }) {
-  const { familyId, encryptionKey, keyLoading, loginAsViewer } = useAuth()
+  const { familyId, encryptionKey, keyLoading, keyError, loginAsViewer } = useAuth()
   onLogin(loginAsViewer)
 
   const ref = useRef(null)
@@ -115,7 +116,12 @@ function Probe({ onLogin }) {
   })
 
   return (
-    <div data-key={String(!!encryptionKey)} data-loading={String(keyLoading)} ref={ref}>
+    <div
+      data-key={String(!!encryptionKey)}
+      data-loading={String(keyLoading)}
+      data-error={keyError ?? ''}
+      ref={ref}
+    >
       {familyId ? <EncryptedImage src={PHOTO} alt="photo" /> : null}
     </div>
   )
@@ -208,25 +214,25 @@ describe('first login', () => {
     expect(renderedSrcs).not.toContain(PHOTO)
   })
 
-  it('gives up gracefully, and still takes the key if a later auth event gets through', async () => {
+  it('says so when it gives up, and still takes the key if a later auth event gets through', async () => {
     vi.useFakeTimers()
     const { container } = await signIn()
 
-    // Every retry denied. The gate has to open eventually — a permanent
-    // spinner is not a better answer than a usable app with no key.
+    // Every retry denied. This used to open the app without a key, and every
+    // write from then on stored family content in plaintext.
     for (let i = 0; i < 6; i++) {
       await act(async () => {
         snapshotError({ code: 'permission-denied', message: 'denied' })
         await vi.advanceTimersByTimeAsync(20000)
       })
     }
-    expect(container.firstChild.getAttribute('data-loading')).toBe('false')
+    expect(container.firstChild.getAttribute('data-error')).toBe('unavailable')
+    expect(container.firstChild.getAttribute('data-loading')).toBe('true')
     expect(container.firstChild.getAttribute('data-key')).toBe('false')
     expect(renderedSrcs).not.toContain(PHOTO)
 
-    // Abandoning the read must not be recorded as "this family's key is
-    // loaded", or the re-subscribe a later auth event triggers would skip the
-    // import and the session would stay keyless for good.
+    // Giving up must not be recorded as "this family's key is loaded", or the
+    // re-subscribe a later auth event triggers would skip the import.
     const before = subscribeCount
     await act(async () => {
       currentUser = { ...currentUser }
@@ -234,7 +240,8 @@ describe('first login', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     expect(subscribeCount).toBeGreaterThan(before)
-    // And the gate closes again while that attempt is in flight.
+    // That attempt starts afresh, without the old failure.
+    expect(container.firstChild.getAttribute('data-error')).toBe('')
     expect(container.firstChild.getAttribute('data-loading')).toBe('true')
 
     await act(async () => {
@@ -242,20 +249,35 @@ describe('first login', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     expect(container.firstChild.getAttribute('data-key')).toBe('true')
+    expect(container.firstChild.getAttribute('data-loading')).toBe('false')
     vi.useRealTimers()
   })
 
-  it('settles a family document that has no key at all, so the app is not stuck', async () => {
+  // Kaydo no longer opens a family from before encryption: without a key,
+  // everything written to it would be stored in plaintext.
+  it('refuses a family document that has no key', async () => {
     const { container } = await signIn()
     await act(async () => {
       snapshotNext({ exists: () => true, data: () => ({}) })
     })
     await waitFor(() =>
-      expect(container.firstChild.getAttribute('data-loading')).toBe('false')
+      expect(container.firstChild.getAttribute('data-error')).toBe('missing')
     )
+    expect(container.firstChild.getAttribute('data-loading')).toBe('true')
     expect(container.firstChild.getAttribute('data-key')).toBe('false')
-    // A family predating encryption is a real end state — but a /raw/upload/
-    // URL is ciphertext by construction, so it still never reaches the element.
     expect(renderedSrcs).not.toContain(PHOTO)
+  })
+
+  it('reports a key this browser cannot import', async () => {
+    importEncryptionKey.mockRejectedValueOnce(new Error('DataError'))
+    const { container } = await signIn()
+    await act(async () => {
+      snapshotNext({ exists: () => true, data: () => ({ encryptionKeyJwk: { kty: 'oct' } }) })
+    })
+    await waitFor(() =>
+      expect(container.firstChild.getAttribute('data-error')).toBe('unreadable')
+    )
+    expect(container.firstChild.getAttribute('data-loading')).toBe('true')
+    expect(container.firstChild.getAttribute('data-key')).toBe('false')
   })
 })

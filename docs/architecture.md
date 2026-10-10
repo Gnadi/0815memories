@@ -61,8 +61,16 @@ Cloudinary as `raw` resources. `src/components/media/` decrypts media for
 display (`useDecryptedMedia`, `EncryptedImage`, …).
 
 Because the key lives in Firestore, Kaydo is **not** zero-knowledge; the
-README's *Security & encryption* section spells out that limit. A family
-document without a key (such as the emulator seed) runs in plaintext mode.
+README's *Security & encryption* section spells out that limit.
+
+Every family has a key: the rules refuse to create a family without one
+(`hasEncryptionKey()`), and Kaydo no longer opens a family from before
+encryption. When the key does not come — the family document has none, the
+browser cannot import it, or the document cannot be read — `AuthContext`
+reports why (`keyError`) and `ProtectedRoute` shows that instead of the app.
+The encryption helpers back this up: writing without a key throws, except in
+the demo, whose family is the only one without one. The emulator seed is
+encrypted like any other family, pictures included.
 
 ## Data model
 
@@ -178,9 +186,9 @@ built at the two seams everything already passes through:
 - **The session.** `AuthContext` loads `src/demo/index.js`, which installs
   the database, filled by `src/demo/demoFamily.js` with the family in the
   interface language, and signs in its owner as an admin. The family has no
-  encryption key, so the app runs in plaintext mode and shows the pictures in
-  `public/demo-media/` as they are. Dates are counted from the moment the
-  demo starts, so the family never ages.
+  encryption key, the only one allowed to, so the app writes its content as
+  it is and shows the pictures in `public/demo-media/` as they are. Dates
+  are counted from the moment the demo starts, so the family never ages.
 
 Uploads in the demo become object URLs that live as long as the tab
 (`utils/encryptedUpload.js`). What needs a server says so instead: the viewer

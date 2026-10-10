@@ -4,10 +4,31 @@
  */
 
 import { devWarn } from './devLog'
+import { isDemoMode } from '../demo/demoMode'
 
 const ALGO = 'AES-GCM'
 const KEY_LENGTH = 256
 const IV_LENGTH = 12 // bytes
+
+// The `code` of the error thrown below, so it can be told from a failed encryption.
+export const MISSING_KEY = 'encryption/missing-key'
+
+function missingKeyError() {
+  const err = new Error('The family key is not loaded, so nothing can be encrypted')
+  err.code = MISSING_KEY
+  return err
+}
+
+// Whether to write a value as it is. Only the demo family has no key: its
+// content is made up and never leaves the tab (demo/demoMode.js). Every other
+// family has had one since signup, so a missing key is one that did not load,
+// and going on would store family content in plaintext. That used to be what
+// happened, silently; now it throws.
+function writesWithoutKey(key) {
+  if (key) return false
+  if (isDemoMode()) return true
+  throw missingKeyError()
+}
 
 // ── Key management ──────────────────────────────────────────────────
 
@@ -81,6 +102,7 @@ function base64ToArrayBuffer(base64) {
 
 export async function encryptText(key, plaintext) {
   if (!plaintext && plaintext !== '') return plaintext
+  if (writesWithoutKey(key)) return plaintext
   const encoded = encoder.encode(plaintext)
   const encrypted = await encryptBuffer(key, encoded)
   return arrayBufferToBase64(encrypted)
@@ -133,6 +155,9 @@ export async function decryptText(key, ciphertext) {
 // ── Blob encrypt / decrypt ──────────────────────────────────────────
 
 export async function encryptBlob(key, blob) {
+  // No demo case: the demo keeps its uploads in the tab and never gets here
+  // (utils/encryptedUpload.js).
+  if (!key) throw missingKeyError()
   const arrayBuffer = await blob.arrayBuffer()
   return encryptBuffer(key, arrayBuffer)
 }
@@ -157,7 +182,7 @@ export async function decryptBlob(key, encryptedArrayBuffer, mimeType = 'applica
  * `warnMissing` and hear about it in development. Keep it off for updates.
  */
 export async function encryptFields(key, obj, fields, { warnMissing = false } = {}) {
-  if (!key) return obj
+  if (writesWithoutKey(key)) return obj
   const result = { ...obj }
   for (const field of fields) {
     if (result[field] != null && typeof result[field] === 'string') {
@@ -210,7 +235,7 @@ export async function decryptFields(key, obj, fields) {
  * Used for complex fields like ingredients arrays or scrapbook elements.
  */
 export async function encryptJSON(key, value) {
-  if (!key || value == null) return value
+  if (value == null || writesWithoutKey(key)) return value
   return encryptText(key, JSON.stringify(value))
 }
 

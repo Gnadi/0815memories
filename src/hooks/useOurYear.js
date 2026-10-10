@@ -45,7 +45,6 @@ const revealedField = (kind) => (kind === 'quiz' ? 'quizRevealedAt' : 'reflectio
 // ---------------------------------------------------------------------------
 
 async function encryptRitual(key, data) {
-  if (!key) return data
   const out = { ...data }
   if (out.partners != null) out.partners = await encryptJSON(key, out.partners)
   if (out.occasionLabel != null) out.occasionLabel = await encryptText(key, out.occasionLabel)
@@ -62,7 +61,6 @@ async function decryptRitual(key, data) {
 }
 
 async function encryptChapter(key, data) {
-  if (!key) return data
   const out = { ...data }
   if (out.title != null) out.title = await encryptText(key, out.title)
   if (out.quizQuestions != null) out.quizQuestions = await encryptJSON(key, out.quizQuestions)
@@ -375,7 +373,7 @@ export function useOurYearEntries(chapter, kind, uid, encryptionKey) {
         participantUids,
         authorUid: uid,
         kind,
-        answers: encryptionKey ? await encryptJSON(encryptionKey, answers) : answers,
+        answers: await encryptJSON(encryptionKey, answers),
         submitted,
         updatedAt: serverTimestamp(),
       }
@@ -493,7 +491,7 @@ export function useOurYearLetter(chapter, encryptionKey) {
         familyId: chapter.familyId,
         chapterId,
         participantUids: chapter.participantUids,
-        sections: encryptionKey ? await encryptJSON(encryptionKey, sections) : sections,
+        sections: await encryptJSON(encryptionKey, sections),
         updatedAt: serverTimestamp(),
       }
       if (!letter) {
@@ -528,7 +526,7 @@ export function useOurYearLetter(chapter, encryptionKey) {
         familyId: chapter.familyId,
         chapterId,
         participantUids: chapter.participantUids,
-        sections: encryptionKey ? await encryptJSON(encryptionKey, sections) : sections,
+        sections: await encryptJSON(encryptionKey, sections),
         updatedAt: serverTimestamp(),
       }
       if (!letter) {

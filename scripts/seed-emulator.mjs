@@ -1,10 +1,10 @@
 /**
  * Seed the Firebase Emulator with realistic sample data for screenshots.
  *
- * The seeded family intentionally has NO `encryptionKeyJwk`, so the app runs in
- * plaintext mode (see src/utils/encryption.js + src/components/media/useDecryptedMedia.js):
- * every content field and media URL is read as-is. That lets us write plain text
- * and point media at local placeholder images under public/seed-media/.
+ * The seeded family has an encryption key, as every family has: Kaydo opens no
+ * family without one (src/context/AuthContext.jsx). Its content is encrypted
+ * the way the app writes it, pictures included — see "Encryption" below. The
+ * pictures are placeholders generated under public/seed-media/.
  *
  * Run order:
  *   1) npx firebase-tools emulators:start   (Auth:9099, Firestore:8080)
@@ -13,7 +13,7 @@
  *
  * Login for the seeded admin:  demo@kaydo.app / demo123456
  */
-import { mkdir, writeFile, access } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, access } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
@@ -56,6 +56,59 @@ const FAMILY_SLUG = 'the-bennetts'
 
 const ts = (isoDate) => Timestamp.fromDate(new Date(isoDate))
 
+// ── Encryption ───────────────────────────────────────────────────────────────
+// As src/utils/encryption.js does it: AES-256-GCM, a random 12-byte IV in front
+// of the ciphertext, text as base64. Node cannot import that module (the app's
+// imports are extension-less), so it is mirrored here, and so are the fields
+// each area encrypts. A field encrypted here that the app does not decrypt
+// shows up as base64, so a change to one of the app's lists belongs here too.
+const { subtle } = globalThis.crypto
+const familyKey = await subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+
+async function encryptBytes(bytes) {
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, familyKey, bytes))
+  const out = new Uint8Array(iv.length + ciphertext.length)
+  out.set(iv)
+  out.set(ciphertext, iv.length)
+  return out
+}
+
+async function encryptText(text) {
+  return Buffer.from(await encryptBytes(new TextEncoder().encode(text))).toString('base64')
+}
+
+// What each collection encrypts, as its service or hook does. Moments keep
+// their text in clear (src/services/moments.js), as does every field not
+// listed.
+const ENCRYPTED = {
+  memories: { text: ['title', 'content', 'quote', 'location', 'authorName', 'category'] },
+  children: { text: ['name', 'birthTime', 'birthPlace'] },
+  journals: { text: ['content'] },
+  recipes: { text: ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'], json: ['ingredients'] },
+  scrapbooks: { text: ['title'], json: ['pages'] },
+  blackbox: { text: ['title'] },
+  blackboxContent: { text: ['message'] },
+  collages: { text: ['title'], json: ['doc'] },
+  highlights: { text: ['title'], json: ['doc'] },
+  ourYearRituals: { text: ['occasionLabel'], json: ['partners'] },
+  ourYearChapters: { text: ['title'], json: ['quizQuestions', 'quizReactions', 'keepsakes'] },
+  ourYearEntries: { json: ['answers'] },
+  ourYearLetters: { json: ['sections'] },
+}
+
+async function encrypted(collection, data) {
+  const { text = [], json = [] } = ENCRYPTED[collection]
+  const out = { ...data }
+  for (const field of text) {
+    if (typeof out[field] === 'string') out[field] = await encryptText(out[field])
+  }
+  for (const field of json) {
+    if (out[field] != null) out[field] = await encryptText(JSON.stringify(out[field]))
+  }
+  return out
+}
+
 // ── Placeholder media ────────────────────────────────────────────────────────
 // Generated locally with `sharp` (no network, license-clean): a soft two-tone
 // gradient with a warm light spot + emoji glyph so each photo slot reads as a
@@ -84,7 +137,11 @@ const MEDIA = [
   { file: 'ouryear-2.jpg', a: '#8FA9C4', b: '#EFE4D6', glyph: '🚶', w: 1000, h: 700 },
 ]
 
-const url = (file) => `/seed-media/${file}`
+// Every picture the app stores is encrypted (utils/encryptedUpload.js), so the
+// documents point at encrypted copies, made afresh on every run: each run makes
+// a new key.
+const ENCRYPTED_MEDIA_DIR = join(SEED_MEDIA_DIR, 'encrypted')
+const url = (file) => `/seed-media/encrypted/${file}.dat`
 
 async function exists(p) {
   try { await access(p); return true } catch { return false }
@@ -122,6 +179,11 @@ async function generateMedia() {
     await writeFile(dest, buf)
     console.log(`  ✎ ${m.file} (${buf.length} bytes)`)
   }
+  await mkdir(ENCRYPTED_MEDIA_DIR, { recursive: true })
+  for (const m of MEDIA) {
+    const plain = await readFile(join(SEED_MEDIA_DIR, m.file))
+    await writeFile(join(ENCRYPTED_MEDIA_DIR, `${m.file}.dat`), await encryptBytes(plain))
+  }
 }
 
 // ── Helpers to clear + add documents ─────────────────────────────────────────
@@ -139,7 +201,7 @@ async function main() {
   console.log('② Resetting emulator data …')
   for (const c of [
     'families', 'memories', 'moments', 'recipes', 'children', 'journals', 'scrapbooks', 'blackbox',
-    'collages', 'highlights',
+    'blackboxContent', 'collages', 'highlights',
     'ourYearRituals', 'ourYearChapters', 'ourYearEntries', 'ourYearLetters',
     // Written by the Cloud Functions. A slug still registered to the family
     // of a previous seed would keep the new one off its login page.
@@ -168,13 +230,14 @@ async function main() {
   })
   const partnerUid = partner.uid
 
-  console.log('④ Creating family (plaintext — no encryptionKeyJwk) …')
+  console.log('④ Creating family …')
   const familyRef = await db.collection('families').add({
     adminUid: uid,
     adminUids: [uid, partnerUid],
     familyName: FAMILY_NAME,
     familySlug: FAMILY_SLUG,
     memoryCardStyle: 'modern',
+    encryptionKeyJwk: await subtle.exportKey('jwk', familyKey),
     createdAt: ts('2023-01-01'),
   })
   const familyId = familyRef.id
@@ -215,7 +278,9 @@ async function main() {
     },
   ]
   for (const m of memories) {
-    await db.collection('memories').add({ ...m, imageUrl: m.images[0], familyId, createdAt: Timestamp.now() })
+    await db.collection('memories').add(
+      await encrypted('memories', { ...m, imageUrl: m.images[0], familyId, createdAt: Timestamp.now() }),
+    )
   }
 
   console.log('⑥ Seeding moments …')
@@ -233,15 +298,15 @@ async function main() {
   console.log('⑦ Seeding children …')
   // Deterministic ids so the screenshot capture script can deep-link reliably.
   const emmaRef = db.collection('children').doc('child-emma')
-  await emmaRef.set({
+  await emmaRef.set(await encrypted('children', {
     name: 'Emma', birthdate: ts('2018-04-22'), profilePhoto: url('kid-emma.jpg'),
     familyId, createdAt: ts('2023-01-02'),
-  })
+  }))
   const leoRef = db.collection('children').doc('child-leo')
-  await leoRef.set({
+  await leoRef.set(await encrypted('children', {
     name: 'Leo', birthdate: ts('2020-09-10'), profilePhoto: url('kid-leo.jpg'),
     familyId, createdAt: ts('2023-01-03'),
-  })
+  }))
 
   console.log('⑧ Seeding journal entries …')
   const journals = [
@@ -256,12 +321,12 @@ async function main() {
       photos: [url('garden.jpg')], date: ts('2024-07-12') },
   ]
   for (const j of journals) {
-    await db.collection('journals').add({ ...j, familyId, createdAt: Timestamp.now() })
+    await db.collection('journals').add(await encrypted('journals', { ...j, familyId, createdAt: Timestamp.now() }))
   }
 
   console.log('⑨ Seeding recipe tree (root + 2 forks) …')
   const rootRef = db.collection('recipes').doc('recipe-root')
-  await rootRef.set({
+  await rootRef.set(await encrypted('recipes', {
     title: "Grandma Rose's Apple Pie", author: 'Grandma Rose', year: 1978,
     description: 'The pie that started every Thanksgiving for four decades.',
     instructions: 'Peel and slice the apples. Toss with sugar and cinnamon. Fill the crust, dot with butter, and bake at 190°C for 50 minutes.',
@@ -274,9 +339,9 @@ async function main() {
     ],
     parentId: null, rootId: null, image: url('pie.jpg'),
     familyId, createdAt: ts('2023-02-01'),
-  })
+  }))
   const rootId = rootRef.id
-  const fork1 = await db.collection('recipes').add({
+  const fork1 = await db.collection('recipes').add(await encrypted('recipes', {
     title: "Mom's Apple Pie", author: 'Sarah', year: 2005,
     description: 'Sarah added a caramel drizzle and swapped in a touch of nutmeg.',
     instructions: 'Follow the original, then drizzle warm caramel over the top crust before serving.',
@@ -294,8 +359,8 @@ async function main() {
     ],
     parentId: rootId, rootId, image: url('pie.jpg'),
     familyId, createdAt: ts('2023-02-02'),
-  })
-  await db.collection('recipes').add({
+  }))
+  await db.collection('recipes').add(await encrypted('recipes', {
     title: "Emma's Mini Pies", author: 'Emma & Sarah', year: 2024,
     description: 'Hand-sized pies for little bakers — same filling, tiny crusts.',
     instructions: 'Use a muffin tin. Press in crust circles, fill, top with a pastry star, and bake 25 minutes.',
@@ -309,7 +374,7 @@ async function main() {
     changes: [{ type: 'MODIFIED', ingredient: 'Format', description: 'Single-serving mini pies.' }],
     parentId: fork1.id, rootId, image: url('cookies.jpg'),
     familyId, createdAt: ts('2024-03-15'),
-  })
+  }))
 
   console.log('⑩ Seeding scrapbook …')
   const scrapbookPages = [
@@ -336,10 +401,10 @@ async function main() {
       ],
     },
   ]
-  await db.collection('scrapbooks').doc('scrapbook-year').set({
+  await db.collection('scrapbooks').doc('scrapbook-year').set(await encrypted('scrapbooks', {
     title: 'Our Family Year', pages: scrapbookPages,
     familyId, createdAt: ts('2024-01-10'), updatedAt: ts('2024-12-20'),
-  })
+  }))
 
   console.log('⑪ Seeding black box messages …')
   const blackbox = [
@@ -353,10 +418,16 @@ async function main() {
       content: 'We are so proud of you. This is just the beginning.',
       unlockDate: ts('2036-06-15') },
   ]
-  for (const b of blackbox) {
-    await db.collection('blackbox').add({
-      ...b, photos: [], isSealed: true, sealedAt: Timestamp.now(), familyId, createdAt: Timestamp.now(),
-    })
+  // Two documents per capsule, as useBlackBox writes them: the card's metadata,
+  // and the letter, which the rules hold back until the date.
+  for (const { content, ...capsule } of blackbox) {
+    const ref = db.collection('blackbox').doc()
+    await ref.set(await encrypted('blackbox', {
+      ...capsule, isSealed: true, sealedAt: Timestamp.now(), familyId, createdAt: Timestamp.now(),
+    }))
+    await db.collection('blackboxContent').doc(ref.id).set(await encrypted('blackboxContent', {
+      message: content, photos: [], videos: [], voiceNote: null, familyId,
+    }))
   }
 
   console.log('⑫ Seeding collages & highlight videos …')
@@ -396,7 +467,7 @@ async function main() {
     },
   ]
   for (const c of collages) {
-    await db.collection('collages').doc(c.id).set({
+    await db.collection('collages').doc(c.id).set(await encrypted('collages', {
       title: c.title,
       templateId: c.templateId,
       doc: {
@@ -404,7 +475,7 @@ async function main() {
         background: null, border: { ...collageBorder }, slots: c.slots,
       },
       familyId, createdAt: c.createdAt, updatedAt: c.createdAt,
-    })
+    }))
   }
 
   // A reel document is the recipe, not a rendered file: shot list, per-shot
@@ -432,7 +503,7 @@ async function main() {
     },
   ]
   for (const h of highlights) {
-    await db.collection('highlights').doc(h.id).set({
+    await db.collection('highlights').doc(h.id).set(await encrypted('highlights', {
       title: h.title,
       doc: {
         aspect: h.aspect, theme: h.theme, transitionMs: 600,
@@ -440,7 +511,7 @@ async function main() {
         shots: h.files.map(reelShot),
       },
       familyId, createdAt: h.createdAt, updatedAt: h.createdAt,
-    })
+    }))
   }
 
   console.log('⑬ Seeding "Our Year" …')
@@ -451,7 +522,7 @@ async function main() {
     .set({ email: PARTNER_EMAIL, addedAt: ts('2023-01-01') })
 
   const participantUids = [uid, partnerUid]
-  const ritualRef = await db.collection('ourYearRituals').add({
+  const ritualRef = await db.collection('ourYearRituals').add(await encrypted('ourYearRituals', {
     familyId,
     participantUids,
     partners: [
@@ -466,7 +537,7 @@ async function main() {
     createdBy: uid,
     createdAt: ts('2024-05-12'),
     updatedAt: ts('2024-05-12'),
-  })
+  }))
 
   const chapters = [
     {
@@ -541,7 +612,7 @@ async function main() {
   for (const c of chapters) {
     const { letter, ...chapter } = c
     const revealedAt = c.closedAt
-    await db.collection('ourYearChapters').doc(c.id).set({
+    await db.collection('ourYearChapters').doc(c.id).set(await encrypted('ourYearChapters', {
       familyId,
       ritualId: ritualRef.id,
       participantUids,
@@ -570,9 +641,9 @@ async function main() {
       createdBy: uid,
       createdAt: chapter.periodEnd,
       updatedAt: chapter.closedAt,
-    })
+    }))
 
-    await db.collection('ourYearLetters').doc(c.id).set({
+    await db.collection('ourYearLetters').doc(c.id).set(await encrypted('ourYearLetters', {
       familyId,
       chapterId: c.id,
       participantUids,
@@ -584,14 +655,14 @@ async function main() {
       ...letter,
       createdAt: c.closedAt,
       updatedAt: c.closedAt,
-    })
+    }))
 
     // Answers only for the most recent chapter — enough to demo the reveal.
     for (const [kind, source] of [['reflection', reflectionAnswers], ['quiz', quizAnswers]]) {
       const perChapter = source[c.id]
       if (!perChapter) continue
       for (const author of participantUids) {
-        await db.collection('ourYearEntries').doc(`${c.id}_${kind}_${author}`).set({
+        await db.collection('ourYearEntries').doc(`${c.id}_${kind}_${author}`).set(await encrypted('ourYearEntries', {
           familyId,
           chapterId: c.id,
           participantUids,
@@ -603,7 +674,7 @@ async function main() {
           revealed: true,
           createdAt: c.closedAt,
           updatedAt: c.closedAt,
-        })
+        }))
       }
     }
   }

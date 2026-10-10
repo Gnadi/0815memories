@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import FamilyKeyError from './FamilyKeyError'
 
 /**
  * @param adminOnly  for routes whose collections firestore.rules gates on
@@ -9,7 +10,13 @@ import { useAuth } from '../../context/AuthContext'
  *   effect for exactly this; those stay as belt-and-braces.
  */
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, loading, familyId, keyLoading, isAdmin } = useAuth()
+  const { isAuthenticated, loading, familyId, keyLoading, keyError, isAdmin } = useAuth()
+
+  // The key will not come. The app used to open without it, and then wrote
+  // family content in plaintext.
+  if (!loading && isAuthenticated && keyError) {
+    return <FamilyKeyError reason={keyError} />
+  }
 
   // Show spinner while Firebase auth initialises OR while the encryption key is
   // being fetched for an authenticated session. The key-loading gate prevents any

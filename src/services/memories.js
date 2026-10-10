@@ -84,7 +84,6 @@ export async function encryptMemoryData(key, data) {
   if (data?.contentRich != null && typeof data.contentRich !== 'string') {
     throw new Error('contentRich must be a JSON string before encryption')
   }
-  if (!key) return data
   return encryptFields(key, data, MEMORY_WRITE_FIELDS)
 }
 
