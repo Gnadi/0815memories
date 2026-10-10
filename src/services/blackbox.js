@@ -59,11 +59,19 @@ function splitCapsule(box) {
   }
 }
 
+export function decryptBoxMetadata(key, data) {
+  return decryptFields(key, data, METADATA_ENCRYPTED_FIELDS)
+}
+
+export function decryptBoxContent(key, data) {
+  return decryptFields(key, data, CONTENT_ENCRYPTED_FIELDS)
+}
+
 /** The family's capsules, newest first: their metadata, never their letters. */
 export function subscribeBoxes(familyId, key, onData, onError) {
   return subscribeDecrypted(
     query(collection(db, BLACKBOX), where('familyId', '==', familyId), orderBy('createdAt', 'desc')),
-    (docs) => Promise.all(docs.map((d) => decryptFields(key, d, METADATA_ENCRYPTED_FIELDS))),
+    (docs) => Promise.all(docs.map((d) => decryptBoxMetadata(key, d))),
     onData,
     onError,
   )
@@ -107,7 +115,7 @@ export async function getBoxContent(key, box) {
   try {
     const snap = await getDoc(doc(db, BLACKBOX_CONTENT, box.id))
     if (snap.exists()) {
-      return decryptFields(key, snap.data(), CONTENT_ENCRYPTED_FIELDS)
+      return decryptBoxContent(key, snap.data())
     }
   } catch (err) {
     // A sealed capsule denies the read. Nothing to report — the caller shows

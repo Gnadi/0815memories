@@ -30,15 +30,6 @@ export const CHAPTERS = 'ourYearChapters'
 export const ENTRIES = 'ourYearEntries'
 export const LETTERS = 'ourYearLetters'
 
-// What each collection encrypts — the text fields, and the fields holding an
-// encrypted JSON value. The NAS export reads them from here.
-export const OUR_YEAR_ENCRYPTED_FIELDS = {
-  [RITUALS]: { text: ['occasionLabel'], json: ['partners'] },
-  [CHAPTERS]: { text: ['title'], json: ['quizQuestions', 'quizReactions', 'keepsakes'] },
-  [ENTRIES]: { text: [], json: ['answers'] },
-  [LETTERS]: { text: [], json: ['sections'] },
-}
-
 /** Deterministic id, so a person can only ever have one entry per chapter and part. */
 export function entryId(chapterId, kind, uid) {
   return `${chapterId}_${kind}_${uid}`
@@ -58,7 +49,7 @@ async function encryptRitual(key, data) {
   return out
 }
 
-async function decryptRitual(key, data) {
+export async function decryptRitual(key, data) {
   if (!key) return data
   const out = { ...data }
   if (typeof out.partners === 'string') out.partners = await decryptJSON(key, out.partners)
@@ -76,7 +67,7 @@ async function encryptChapter(key, data) {
   return out
 }
 
-async function decryptChapter(key, data) {
+export async function decryptChapter(key, data) {
   const out = { ...data }
   if (key) {
     if (typeof out.title === 'string') out.title = await decryptText(key, out.title)
@@ -90,14 +81,14 @@ async function decryptChapter(key, data) {
   return out
 }
 
-async function decryptEntry(key, data) {
+export async function decryptEntry(key, data) {
   const out = { ...data }
   if (key && typeof out.answers === 'string') out.answers = await decryptJSON(key, out.answers)
   if (!out.answers || typeof out.answers !== 'object') out.answers = {}
   return out
 }
 
-async function decryptLetter(key, data) {
+export async function decryptLetter(key, data) {
   const out = { ...data }
   if (key && typeof out.sections === 'string') out.sections = await decryptJSON(key, out.sections)
   if (!out.sections || typeof out.sections !== 'object') out.sections = {}

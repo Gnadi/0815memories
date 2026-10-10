@@ -23,16 +23,24 @@ vi.mock('firebase/firestore', () => ({
   getDoc: (...a) => getDoc(...a),
 }))
 vi.mock('../config/firebase', () => ({ db: {} }))
-vi.mock('../services/memories', () => ({ MEMORY_WRITE_FIELDS: ['title'] }))
+vi.mock('../services/memories', () => ({ decryptMemoryDoc: async (_k, d) => ({ ...d }) }))
 vi.mock('../utils/richText', () => ({
   collectRichMediaUrls: () => [],
   parseRichDoc: (v) => v,
 }))
-// Identity crypto: these tests are about what is collected and written, not
-// about the cipher — encryption.test.js covers that.
+// Stand-in crypto: these tests are about what is collected and written, not
+// about the cipher — encryption.test.js covers that. A value marked 'enc:' is
+// "ciphertext", and comes back without the mark only through a decrypt that
+// was asked for that field; everything else passes through.
+const unmark = (v) => (typeof v === 'string' && v.startsWith('enc:') ? v.slice(4) : v)
 vi.mock('../utils/encryption', () => ({
-  decryptFields: vi.fn(async (_k, obj) => ({ ...obj })),
-  decryptJSON: vi.fn(async (_k, v) => (typeof v === 'string' ? JSON.parse(v) : v)),
+  decryptFields: vi.fn(async (_k, obj, fields) => {
+    const out = { ...obj }
+    for (const field of fields) out[field] = unmark(out[field])
+    return out
+  }),
+  decryptText: vi.fn(async (_k, v) => unmark(v)),
+  decryptJSON: vi.fn(async (_k, v) => (typeof v === 'string' ? JSON.parse(unmark(v)) : v)),
   decryptBlob: vi.fn(async () => new Blob(['plain'])),
 }))
 vi.mock('file-saver', () => ({ saveAs: vi.fn() }))
@@ -312,5 +320,46 @@ describe('what must never be in the archive', () => {
     const family = data('family.json')
     expect(family).not.toHaveProperty('encryptionKeyJwk')
     expect(JSON.stringify(family)).not.toContain('SECRET')
+  })
+})
+
+// The export used to keep its own list of each area's encrypted fields, and
+// the lists fell behind the app's. It decrypts through the services now.
+describe('decrypted the way the app decrypts', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) }))
+  })
+
+  it("exports a child's birth time and place readable", async () => {
+    respond({
+      collections: {
+        children: [{
+          id: 'kid-1', familyId: FAMILY, name: 'enc:Emma',
+          birthTime: 'enc:04:17', birthPlace: 'enc:{"name":"Linz"}',
+        }],
+      },
+    })
+    await run()
+
+    expect(data('children.json')[0]).toMatchObject({
+      name: 'Emma', birthTime: '04:17', birthPlace: { name: 'Linz' },
+    })
+  })
+
+  it("exports Our Year's occasion readable", async () => {
+    respond({
+      collections: {
+        ourYearRituals: [{
+          id: 'r1', familyId: FAMILY, participantUids: [UID],
+          occasionLabel: 'enc:The day we met', partners: 'enc:[{"name":"Lena"}]',
+        }],
+        ourYearChapters: [],
+        ourYearEntries: [],
+      },
+    })
+    await run()
+
+    const [ritual] = json(Object.keys(zipFiles).find((k) => k.endsWith('our-year/rituals.json')))
+    expect(ritual).toMatchObject({ occasionLabel: 'The day we met', partners: [{ name: 'Lena' }] })
   })
 })

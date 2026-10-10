@@ -20,7 +20,9 @@ const JOURNALS = 'journals'
 
 export const JOURNAL_ENCRYPTED_FIELDS = ['content']
 
-const decryptJournal = (key, data) => decryptFields(key, data, JOURNAL_ENCRYPTED_FIELDS)
+export function decryptJournal(key, data) {
+  return decryptFields(key, data, JOURNAL_ENCRYPTED_FIELDS)
+}
 
 /** One child's entries. */
 export function subscribeJournals(familyId, childId, key, onData, onError) {

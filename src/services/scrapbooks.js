@@ -36,7 +36,7 @@ async function encryptScrapbook(key, data) {
   return result
 }
 
-async function decryptScrapbook(key, data, { withPages = true } = {}) {
+export async function decryptScrapbook(key, data, { withPages = true } = {}) {
   if (!key) return data
   const result = { ...data }
   if (typeof result.title === 'string') result.title = await decryptText(key, result.title)

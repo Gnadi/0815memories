@@ -29,7 +29,7 @@ async function encryptRecipe(key, data) {
   return result
 }
 
-async function decryptRecipe(key, data) {
+export async function decryptRecipe(key, data) {
   if (!key) return data
   const result = await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
   if (typeof result.ingredients === 'string') {
