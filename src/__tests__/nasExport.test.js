@@ -241,7 +241,7 @@ describe('Our Year, which belongs to two people rather than the family', () => {
         ourYearRituals: [{ id: 'r1', familyId: FAMILY, participantUids: [UID, 'uid-b'] }],
         ourYearChapters: [{
           id: 'ch1', familyId: FAMILY, ritualId: 'r1', participantUids: [UID, 'uid-b'],
-          keepsakes: JSON.stringify({ photo: { url: 'https://cdn/keep.enc' } }),
+          keepsakes: JSON.stringify({ photoUrl: 'https://cdn/keep.enc', quote: '' }),
         }],
         ourYearEntries: [{ id: 'ch1_reflection_' + UID, chapterId: 'ch1', authorUid: UID }],
       },
@@ -282,7 +282,7 @@ describe('Our Year, which belongs to two people rather than the family', () => {
         ourYearRituals: [{ id: 'r1', familyId: FAMILY, participantUids: [UID] }],
         ourYearChapters: [{
           id: 'ch1', familyId: FAMILY, ritualId: 'r1', participantUids: [UID],
-          keepsakes: JSON.stringify({ photo: { url: 'https://cdn/keep.enc' } }),
+          keepsakes: JSON.stringify({ photoUrl: 'https://cdn/keep.enc', quote: '' }),
         }],
         ourYearEntries: [],
       },

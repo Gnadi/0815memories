@@ -136,10 +136,10 @@ function collectMediaUrls(data, prefix) {
         addArrayUrls(doc.doc?.shots?.filter((s) => s?.url), doc.id, 'shot')
         break
       case 'ourYearChapters':
-        // keepsakes: one photo slot per chapter, alongside song/quote/moment.
-        for (const keepsake of Object.values(doc.keepsakes ?? {})) {
-          addUrl(keepsake?.url, doc.id, 'keepsake')
-        }
+        // keepsakes: one photo per chapter, alongside song, quote and moment.
+        // It is `photoUrl` (emptyKeepsakes in utils/ourYear.js); this looked
+        // for a `url` inside each keepsake instead and never found one.
+        addUrl(doc.keepsakes?.photoUrl, doc.id, 'keepsake')
         break
     }
   }
