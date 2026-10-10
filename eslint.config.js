@@ -72,9 +72,6 @@ export default defineConfig([
       'src/demo/**',
       'src/__tests__/**',
       // Not in src/services/ yet:
-      'src/components/admin/ManageAdminsPanel.jsx',
-      'src/pages/InviteRedeemPage.jsx',
-      'src/pages/OurYearSetupPage.jsx',
       'src/utils/nasExport.js',
       'src/utils/notifications.js',
     ],

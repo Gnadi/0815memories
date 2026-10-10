@@ -2,15 +2,10 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
-import {
-  doc,
-  getDoc,
-  writeBatch,
-  serverTimestamp,
-  arrayUnion,
-} from '../config/firestore'
-import { auth, db } from '../config/firebase'
+import { auth } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
+import { getFamilyPublic } from '../services/family'
+import { getInvite, redeemInvite } from '../services/admins'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
@@ -53,21 +48,20 @@ export default function InviteRedeemPage() {
       try {
         // familyPublic, not families: the invitee has no account yet, so this
         // read happens without a token.
-        const familySnap = await getDoc(doc(db, 'familyPublic', familyId))
+        const family = await getFamilyPublic(familyId)
         if (cancelled) return
-        if (!familySnap.exists()) {
+        if (!family) {
           setValidationError(t('invite.errors.familyNotFound'))
           return
         }
-        setFamilyName(familySnap.data().familyName || t('invite.fallbackFamilyName'))
+        setFamilyName(family.familyName || t('invite.fallbackFamilyName'))
 
-        const inviteSnap = await getDoc(doc(db, 'families', familyId, 'invites', token))
+        const data = await getInvite(familyId, token)
         if (cancelled) return
-        if (!inviteSnap.exists()) {
+        if (!data) {
           setValidationError(t('invite.errors.invalidOrRevoked'))
           return
         }
-        const data = inviteSnap.data()
         if (data.used) {
           setValidationError(t('invite.errors.alreadyUsed'))
           return
@@ -119,26 +113,8 @@ export default function InviteRedeemPage() {
         try { await updateProfile(credential.user, { displayName }) } catch { /* non-fatal */ }
       }
 
-      // 2. One batch: consume the invite, self-create admins/{newUid} with the
-      //    invite as proof, and join the family's adminUids. The rules accept
-      //    each of these only together with the other two. As three separate
-      //    writes, the spent invite stayed behind as proof that a removed admin
-      //    could replay to let themselves back in.
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'families', familyId, 'invites', token), {
-        used: true,
-        redeemedBy: newUid,
-        redeemedAt: serverTimestamp(),
-      })
-      batch.set(doc(db, 'families', familyId, 'admins', newUid), {
-        email: email.trim().toLowerCase(),
-        viaInvite: token,
-        addedAt: serverTimestamp(),
-      })
-      batch.update(doc(db, 'families', familyId), {
-        adminUids: arrayUnion(newUid),
-      })
-      await batch.commit()
+      // 2. Redeem the invite in one batch — see services/admins.js.
+      await redeemInvite(familyId, token, { uid: newUid, email: email.trim().toLowerCase() })
       createdUser = null
 
       // Bind the session to this family explicitly. The onAuthStateChanged

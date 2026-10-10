@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  serverTimestamp,
-  Timestamp,
-} from '../config/firestore'
 import { Check, Copy, Loader2, UserPlus, X } from 'lucide-react'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { devError } from '../utils/devLog'
-import { buildInviteUrl, generateInviteToken, INVITE_TTL_MS } from '../utils/inviteToken'
+import { buildInviteUrl } from '../utils/inviteToken'
+import { createInvite, subscribeAdmins } from '../services/admins'
 import { participantName } from '../utils/ourYear'
 import { useOurYearRitual } from '../hooks/useOurYear'
 import Sidebar from '../components/layout/Sidebar'
@@ -60,18 +53,11 @@ export default function OurYearSetupPage() {
   // The other admin accounts of this family — the pool the partner comes from.
   useEffect(() => {
     if (!familyId || !db) return
-    const unsubscribe = onSnapshot(
-      collection(db, 'families', familyId, 'admins'),
-      (snapshot) => {
-        setAdmins(
-          snapshot.docs
-            .map((d) => ({ uid: d.id, ...d.data() }))
-            .filter((a) => a.uid !== uid),
-        )
-      },
+    return subscribeAdmins(
+      familyId,
+      (admins) => setAdmins(admins.filter((a) => a.uid !== uid)),
       (err) => devError('Failed to load family admins:', err),
     )
-    return unsubscribe
   }, [familyId, uid])
 
   // Editing an existing ritual: take its values once.
@@ -97,15 +83,7 @@ export default function OurYearSetupPage() {
     setError('')
     setInviting(true)
     try {
-      const token = generateInviteToken()
-      await setDoc(doc(db, 'families', familyId, 'invites', token), {
-        createdBy: uid,
-        createdAt: serverTimestamp(),
-        expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_MS),
-        used: false,
-        redeemedBy: null,
-        redeemedAt: null,
-      })
+      const token = await createInvite(familyId, uid)
       setInviteLink(buildInviteUrl(familyId, token))
     } catch (err) {
       devError('Our Year invite failed:', err)

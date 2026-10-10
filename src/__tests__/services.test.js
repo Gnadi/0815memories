@@ -22,6 +22,7 @@ import { addKid, subscribeKids, updateKid } from '../services/kids'
 import { addJournal, subscribeJournals } from '../services/journals'
 import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
+import { createInvite, redeemInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -271,5 +272,46 @@ describe('the family', () => {
     await expect(isSlugAvailable('the-millers')).resolves.toBe(false)
     await expect(isSlugAvailable('the-millers', 'fam-new')).resolves.toBe(true)
     await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
+  })
+})
+
+describe('admins and invites', () => {
+  const family = () => fs.doc(null, 'families', 'fam')
+  const invite = (token) => fs.doc(null, 'families', 'fam', 'invites', token)
+
+  beforeEach(async () => {
+    await fs.setDoc(family(), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+  })
+
+  it('offers only the invites still open, the newest first', async () => {
+    const used = await createInvite('fam', 'uid-a')
+    const expired = await createInvite('fam', 'uid-a')
+    const open = await createInvite('fam', 'uid-a')
+    await fs.updateDoc(invite(used), { used: true })
+    await fs.updateDoc(invite(expired), { expiresAt: Timestamp.fromMillis(Date.now() - 1000) })
+
+    const invites = await firstDelivery((onData, onError) => subscribeOpenInvites('fam', onData, onError))
+    expect(invites.map((i) => i.id)).toEqual([open])
+  })
+
+  it('removes an admin together with the invites they minted', async () => {
+    const theirs = await createInvite('fam', 'uid-b')
+    await fs.setDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'), { email: 'b@example.com' })
+
+    await removeAdmin('fam', 'uid-b', [theirs])
+
+    expect((await fs.getDoc(invite(theirs))).exists()).toBe(false)
+    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'))).exists()).toBe(false)
+    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a'])
+  })
+
+  it('redeems an invite: spent, the new admin listed, and in adminUids', async () => {
+    const token = await createInvite('fam', 'uid-a')
+    await redeemInvite('fam', token, { uid: 'uid-new', email: 'new@example.com' })
+
+    expect((await fs.getDoc(invite(token))).data()).toMatchObject({ used: true, redeemedBy: 'uid-new' })
+    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-new'))).data())
+      .toMatchObject({ email: 'new@example.com', viaInvite: token })
+    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a', 'uid-b', 'uid-new'])
   })
 })
