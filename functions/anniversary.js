@@ -39,7 +39,7 @@ export function zoneOffsetMs(utcMs, timeZone) {
 }
 
 /** The UTC instant of a wall-clock time in `timeZone`. */
-function zonedTimeToUtc(y, m, d, hh, mm, ss, ms, timeZone) {
+export function zonedTimeToUtc(y, m, d, hh, mm, ss, ms, timeZone) {
   const wall = Date.UTC(y, m - 1, d, hh, mm, ss, ms)
   // Two passes: the first uses the offset at the wrong instant, which is only
   // wrong on the two days a year when the offset changes mid-day. The second
@@ -50,7 +50,7 @@ function zonedTimeToUtc(y, m, d, hh, mm, ss, ms, timeZone) {
 }
 
 /** The calendar date in `timeZone` at the given instant. */
-function zonedDateParts(now, timeZone) {
+export function zonedDateParts(now, timeZone) {
   const p = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
       .formatToParts(now)

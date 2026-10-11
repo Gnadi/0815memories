@@ -33,7 +33,7 @@ const MOMENTS = 'moments'
  * The same field, the same call, the same reasoning as decryptMemory — ~700
  * bytes each, and it replaces a spinner with the photo's own colours.
  */
-async function decryptMoment(key, data) {
+export async function decryptMoment(key, data) {
   if (!key || !Array.isArray(data.thumbsTiny)) return data
   return { ...data, thumbsTiny: await decryptStringArray(key, data.thumbsTiny) }
 }

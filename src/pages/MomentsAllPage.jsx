@@ -9,6 +9,8 @@ import PostEntryModal from '../components/admin/PostEntryModal'
 import { formatRelativeDate } from '../utils/helpers'
 import EncryptedImage from '../components/media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
+import { useBestOfs } from '../hooks/useBestOf'
+import BestOfRow from '../components/bestof/BestOfRow'
 
 const MomentCard = memo(function MomentCard({ moment, onOpen }) {
   return (
@@ -51,6 +53,7 @@ export default function MomentsAllPage() {
   const { t } = useTranslation('home')
   const { familyId, isAdmin, encryptionKey } = useAuth()
   const { moments, loading, updateMoment, deleteMoment } = useAllMoments(familyId, encryptionKey)
+  const { bestOfs } = useBestOfs(familyId, encryptionKey)
   const [viewingMomentIndex, setViewingMomentIndex] = useState(null)
   const [editingMoment, setEditingMoment] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -97,6 +100,8 @@ export default function MomentsAllPage() {
         </button>
         <h1 className="text-lg font-bold text-bark">{t('momentsPage.title')}</h1>
       </div>
+
+      <BestOfRow bestOfs={bestOfs} onOpen={(month) => navigate(`/best-of/${month}`)} />
 
       {/* Grid */}
       {moments.length === 0 ? (

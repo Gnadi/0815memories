@@ -9,6 +9,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Share
 - **Memory feed** — rich memory cards with photos, videos, voice memos, stories and quotes
 - **Daily Moments** — story circles for quick everyday snapshots
+- **Monthly best-of** — on the 1st, a story of last month in the moments row and a push to say it is there: the month's photos with camera moves, albums as animated collages, its clips, themes and how many there were, awards like *place of the month* and *busiest day*, and music synthesized in the browser. It is chosen from what the family wrote — featured memories, places, days — never by analysing the photos. See `docs/best-of.md`
 - **Smart timeline** — memories grouped by season, with "on this day" lookbacks
 
 ### Preserve
@@ -37,7 +38,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 ### Everyday
 - **Feedback** — anyone in the family, viewer or admin, can send a note about the app itself from the sidebar or the mobile header: a rating, a category and a few words. It lands in the `feedback` collection, which the client may only append to — never read back, edit or delete
 - **Two access levels** — viewers enter with one shared family password (no account needed); admins sign in via Firebase Auth. Invite co-admins with secure invite links
-- **PWA** — installable on any phone or desktop, instant loads via service-worker precache, push notifications for new memories, anniversary reminders
+- **PWA** — installable on any phone or desktop, instant loads via service-worker precache, push notifications for new memories, anniversary reminders and the monthly best-of
 - **Bilingual** — full English and German UI (i18next)
 
 ## Security & encryption
@@ -46,6 +47,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Because of that, uploads are bound by Cloudinary's **raw** file-size cap (10 MB on the free plan), not the far higher video cap. Files above the cap are rejected before upload with a message naming the size and the limit; raise `VITE_CLOUDINARY_MAX_UPLOAD_BYTES` after upgrading the plan
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated
+- The **monthly best-of** analyses no photo, anywhere: it is put together in the browser from what the family wrote about its entries, stored encrypted, and its music is synthesized on the device rather than downloaded. The server's part, the push on the 1st, only counts photo URLs per family and month — see `docs/best-of.md`
 - **Printed books are the one deliberate exception for family photos:** a print shop can only print what it can read, so ordering a book creates an unencrypted PDF of it. The order dialog says so before anything is rendered. The file goes to Firebase Storage under `printFiles/{familyId}/…`; `storage.rules` lets only that family's admins write or read it, makes it write-once (the link Peecho holds cannot be pointed at other content), and closes the rest of the bucket. Peecho gets a private download link, and the `purgePrintFiles` Cloud Function deletes every print file after 30 days
 - Upload signatures from `api/cloudinary-sign` are handed out only to a family admin — the function asks Firestore, with the caller's own ID token, for the families that list them as an admin, so Firestore verifies the token and the rules decide — viewers never upload, and a signature is write access to the Cloudinary account
 - **Our Year** goes further than the rest of the app: instead of trusting the UI, `firestore.rules` decides who may read what. A partner's answers are unreadable until both have handed in, a sealed letter is unreadable until its open date (`request.time`), and a closed chapter can no longer be edited. Those guarantees are covered by emulator tests — `npm run test:rules`
@@ -61,7 +63,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 
 - **React + Vite** with **vite-react-ssg** (the landing page is pre-rendered to static HTML)
 - **Tailwind CSS** — warm, cozy design system
-- **Firebase** — Auth, Firestore, Cloud Functions (viewer login, admin claims, push notifications, print-file clean-up), Cloud Messaging, Cloud Scheduler, Storage (print files only). Deploying functions requires the Blaze plan; all of them run in `europe-west3`
+- **Firebase** — Auth, Firestore, Cloud Functions (viewer login, admin claims, push notifications, the monthly best-of push, print-file clean-up), Cloud Messaging, Cloud Scheduler, Storage (print files only). Deploying functions requires the Blaze plan; all of them run in `europe-west3`
 - **Cloudinary** — media storage (signed uploads via the `api/cloudinary-sign` Vercel function)
 - **Peecho** — printed books, through Peecho's hosted checkout (optional)
 - **Workbox** — PWA service worker

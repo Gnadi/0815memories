@@ -545,6 +545,47 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // The monthly best-of (src/services/bestOf.js) — the story of a month,
+    // made in the browser, because only the family can decrypt its photos.
+    // Shared with the whole family, viewers included, like the feed it is made
+    // of; made by an admin's device, like everything else written here.
+    //
+    // One document per family and month: the id has to be `<familyId>_<month>`,
+    // so two devices making the same month write one document, and no family
+    // can file one under another's name. The story lives in `doc`, encrypted
+    // as a single string, and nothing else may ride along: the fields are
+    // listed, and `doc` must not start the way plaintext JSON does — the same
+    // backstop memoryContentOk() is for `contentRich`.
+    function bestOfOk(bestOfId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['familyId', 'month', 'version', 'doc', 'createdByUid', 'createdAt'])
+        && d.familyId is string
+        && d.month is string
+        && d.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+        && bestOfId == d.familyId + '_' + d.month
+        && d.doc is string
+        && d.doc.size() > 0
+        && d.doc.size() <= 900000
+        && d.doc[0:1] != '{'
+        && d.doc[0:1] != '[';
+    }
+
+    match /bestOf/{bestOfId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow create: if request.auth != null
+                    && request.resource.data.familyId is string
+                    && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && bestOfOk(bestOfId);
+      // Made again: a later version of the story, or a month that changed.
+      allow update: if request.auth != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && familyUnchanged()
+                    && bestOfOk(bestOfId);
+      allow delete: if request.auth != null
+                    && isFamilyAdmin(resource.data.familyId);
+    }
+
     // Recipes — admin only (version-controlled family recipes)
     match /recipes/{recipeId} {
       allow read: if request.auth != null

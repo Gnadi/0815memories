@@ -24,6 +24,7 @@ import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
 import { redeemInvite } from '../services/invites'
+import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOfs } from '../services/bestOf'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -249,6 +250,54 @@ describe('kids and journals', () => {
     const entries = await firstDelivery((onData, onError) =>
       subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
     expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+})
+
+describe('best-of', () => {
+  const bestOf = (month) => ({
+    version: 1,
+    month,
+    cover: { url: 'cover.enc' },
+    slides: [{ kind: 'award', award: 'place', place: 'Zell am See', media: { url: 'lake.enc' } }],
+  })
+
+  it('stores the story encrypted, one document per month, and gives it back', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+    // Made again — two admins' devices at once, say — it replaces, not adds.
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+
+    const raw = (await fs.getDocs(fs.collection(null, 'bestOf'))).docs.map((d) => ({ id: d.id, ...d.data() }))
+    expect(raw).toHaveLength(1)
+    expect(raw[0]).toMatchObject({ id: `${FAMILY}_2026-09`, familyId: FAMILY, month: '2026-09', version: 1 })
+    expect(typeof raw[0].doc).toBe('string')
+    expect(raw[0].doc).not.toContain('Zell am See')
+
+    await expect(getBestOf(FAMILY, key, '2026-09')).resolves.toMatchObject({ doc: bestOf('2026-09') })
+    await expect(getBestOf(FAMILY, key, '2026-08')).resolves.toBeNull()
+    await expect(getBestOf(OTHER, key, '2026-09')).resolves.toBeNull()
+  })
+
+  it('lists the newest month first', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-08'))
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+    await saveBestOf(OTHER, key, bestOf('2026-10'))
+
+    const list = await firstDelivery((onData, onError) => subscribeBestOfs(FAMILY, key, onData, onError))
+    expect(list.map((b) => b.month)).toEqual(['2026-09', '2026-08'])
+    expect(list[0].doc.slides[0].place).toBe('Zell am See')
+  })
+
+  it("reads one month's memories and moments, decrypted, and nothing around it", async () => {
+    const at = (iso) => Timestamp.fromDate(new Date(iso))
+    await addMemory(FAMILY, key, { title: 'Lake day', images: ['a.enc'], date: at('2026-09-03T12:00:00') })
+    await addMemory(FAMILY, key, { title: 'Too early', images: ['b.enc'], date: at('2026-08-31T23:00:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm1'), { familyId: FAMILY, caption: 'Slide', date: at('2026-09-30T23:30:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm2'), { familyId: FAMILY, caption: 'Too late', date: at('2026-10-01T00:00:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm3'), { familyId: OTHER, caption: 'Not ours', date: at('2026-09-10T12:00:00') })
+
+    const { memories, moments } = await getMonthEntries(FAMILY, key, '2026-09')
+    expect(memories.map((m) => m.title)).toEqual(['Lake day'])
+    expect(moments.map((m) => m.caption)).toEqual(['Slide'])
   })
 })
 

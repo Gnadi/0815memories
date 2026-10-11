@@ -44,6 +44,7 @@ const LegalPage = lazyPage(() => import('./pages/LegalPage'))
 const HomePage = lazyPage(() => import('./pages/HomePage'))
 const MemoryDetailPage = lazyPage(() => import('./pages/MemoryDetailPage'))
 const MomentsAllPage = lazyPage(() => import('./pages/MomentsAllPage'))
+const BestOfPage = lazyPage(() => import('./pages/BestOfPage'))
 const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
 const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
@@ -360,6 +361,9 @@ export const routes = [
       { path: 'home', element: protect(<HomePage />) },
       { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
       { path: 'moments', element: protect(<MomentsAllPage />) },
+      // The monthly best-of — where its push on the 1st leads. The whole
+      // family's, like the moments it is made of.
+      { path: 'best-of/:month', element: protect(<BestOfPage />) },
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
       { path: 'settings', element: protectAdmin(<SettingsPage />) },
       { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },

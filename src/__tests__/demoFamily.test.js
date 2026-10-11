@@ -83,6 +83,18 @@ describe('demo family', () => {
     expect(memories.filter((m) => m.featured)).toHaveLength(1)
   })
 
+  it('keeps the treehouse its newest memory on any day of the month', async () => {
+    // The home page opens on it. Last month's memories, there for the best-of,
+    // must stay older than it, also on the first of a month after a short one.
+    for (const now of [new Date(2027, 2, 1, 9), new Date(2026, 9, 1, 9), new Date(2026, 4, 1, 9), new Date(2026, 9, 31, 23)]) {
+      const { documents, visitor } = buildDemoFamily({ language: 'en', now })
+      const db = createDemoDatabase({ documents, uid: visitor.uid })
+      const q = db.query(db.collection(DB, 'memories'), db.where('familyId', '==', DEMO_FAMILY_ID))
+      const memories = (await db.getDocs(q)).docs.map((d) => d.data()).sort((a, b) => b.date.toDate() - a.date.toDate())
+      expect(memories[0].title, now.toDateString()).toBe('The treehouse is finished')
+    }
+  })
+
   it('has a memory on this day two years ago', async () => {
     const { db } = load()
     const start = new Date(NOW.getFullYear() - 2, NOW.getMonth(), NOW.getDate())
