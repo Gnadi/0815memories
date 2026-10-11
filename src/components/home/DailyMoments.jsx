@@ -16,14 +16,17 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
 
   return (
     <section className="mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-xl font-bold text-bark">{t('dailyMoments.title')}</h2>
         <button onClick={onViewAll} className="text-sm font-semibold text-kaydo hover:text-kaydo-dark">
           {t('dailyMoments.viewAll')}
         </button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+      {/* Room at the top for the best-of's badge, which sits over the edge of
+          its circle: a row that scrolls sideways clips top and bottom too. Taken
+          off the heading's margin above, so the circles stay where they were. */}
+      <div className="flex gap-4 overflow-x-auto hide-scrollbar pt-1.5 pb-2">
         {/* Add moment button */}
         {isAdmin && (
           <button
