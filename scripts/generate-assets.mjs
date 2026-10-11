@@ -40,6 +40,25 @@ await sharp(makeIconSvg(180))
   .toFile(join(root, 'public/icons/apple-touch-icon.png'))
 console.log('✓ public/icons/apple-touch-icon.png')
 
+// ─── Notification badge 96×96 ─────────────────────────────────────────────────
+// Android draws a notification's badge from its alpha channel alone, tinted to
+// one colour. The opaque app icon therefore shows up as a blank square, so the
+// badge is the mark in white on a transparent background, without the tile.
+const badgeSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 100 100">
+  <g stroke="#FFFFFF" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="50" y1="8" x2="8" y2="38" stroke-width="9"/>
+    <line x1="8" y1="38" x2="8" y2="90" stroke-width="9"/>
+    <line x1="8" y1="62" x2="37" y2="38" stroke-width="8"/>
+    <line x1="8" y1="62" x2="44" y2="90" stroke-width="8"/>
+    <path d="M 35 90 L 35 57 Q 35 12 60 12 Q 90 12 90 56 L 90 90" stroke-width="8"/>
+  </g>
+</svg>`)
+
+await sharp(badgeSvg)
+  .png()
+  .toFile(join(root, 'public/icons/notification-badge.png'))
+console.log('✓ public/icons/notification-badge.png')
+
 // ─── OG Image 1200×630 ────────────────────────────────────────────────────────
 const ogSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <!-- Background -->
