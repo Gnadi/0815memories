@@ -28,10 +28,10 @@ import { thumbAt, tinyPreviewAt } from './mediaThumbs'
 export const BEST_OF_VERSION = 1
 
 /**
- * Fewer photos and clips than this, and a month has no best-of. Mirrored by
- * BEST_OF_MIN_MEDIA in functions/bestOf.js, which decides whether the push goes
- * out; a test keeps the two equal, or a family could be told about a best-of
- * the app then refuses to make.
+ * Fewer photos and clips than this, or no photo among them, and a month has no
+ * best-of. Mirrored by familiesWithBestOf in functions/bestOf.js, which
+ * decides whether the push goes out; a test keeps the two in step, or a
+ * family could be told about a best-of the app then refuses to make.
  */
 export const MIN_BEST_OF_MEDIA = 6
 
@@ -182,16 +182,38 @@ function byDate(a, b) {
     compare(a.url, b.url)
 }
 
-const byUrl = (a, b) => compare(a.url, b.url)
+// FNV-1a: a number from a string, the same on every device.
+function hashOf(text) {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
+}
+
+// Ties go by URL, but not in its order: a URL carries its upload time
+// (Cloudinary's /v<seconds>/), and with weights as coarse as these, URL order
+// would hand most of the story to the first days of the month. A hash of it is
+// just as stable from device to device and favours no part of the month.
+const byUrl = (a, b) => hashOf(a.url) - hashOf(b.url) || compare(a.url, b.url)
 
 export function hasEnoughForBestOf(media) {
   return media.length >= MIN_BEST_OF_MEDIA && media.some((m) => m.type === 'image')
 }
 
+/** `count` of `list`, evenly spaced from its first to its last. */
+function evenly(list, count) {
+  if (list.length <= count) return list
+  if (count === 1) return [list[Math.floor(list.length / 2)]]
+  return Array.from({ length: count }, (_, i) => list[Math.round((i * (list.length - 1)) / (count - 1))])
+}
+
 /**
  * Take `limit` items spread over the month: the first of every entry before
- * the second of any, and within that, days in turn. A month with one busy
- * weekend is otherwise all weekend.
+ * the second of any, and within that, one a day, from days evenly spaced
+ * through the month. A month with one busy weekend is otherwise all weekend,
+ * and one with a clip every day is otherwise all its first week.
  */
 function spread(items, limit) {
   const rounds = new Map() // round → day → items
@@ -208,11 +230,8 @@ function spread(items, limit) {
   for (const round of [...rounds.keys()].sort((a, b) => a - b)) {
     const queues = [...rounds.get(round).values()]
     while (picked.length < limit && queues.some((q) => q.length)) {
-      for (const queue of queues) {
-        if (picked.length >= limit) break
-        const next = queue.shift()
-        if (next) picked.push(next)
-      }
+      const waiting = queues.filter((q) => q.length)
+      for (const queue of evenly(waiting, limit - picked.length)) picked.push(queue.shift())
     }
   }
   return picked
@@ -339,8 +358,10 @@ export function chooseThemes(media, scores, limit = 3) {
  * then single photos of the same day pulled together — three quick moments of
  * one Sunday are one collage, not three slides.
  *
- * Entries are taken best first and spread over the days, so a month with one
- * big holiday still shows its other weeks.
+ * Entries are taken best first, but spread over the month: it is cut into as
+ * many stretches of the calendar as there are beats, and each stretch gives
+ * its best entry before any day gives a second. A month with one big holiday
+ * still shows its other weeks.
  */
 export function chooseBeats(photos, scores, used, limit = MAX_BEATS) {
   const entries = new Map()
@@ -354,14 +375,22 @@ export function chooseBeats(photos, scores, used, limit = MAX_BEATS) {
     .map((list) => ({ list, lead: list[0], weight: Math.max(...list.map((p) => scores.get(p.url))) }))
     .sort((a, b) => b.weight - a.weight || byUrl(a.lead, b.lead))
 
-  // Best first, but no day twice until every day has had a turn.
+  // Best first, but one stretch of the month at a time, then one day at a
+  // time, and only then a second entry of a day already shown.
+  const stretchOf = ({ date }) => {
+    const length = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+    return Math.floor(((date.getDate() - 1) * limit) / length)
+  }
   const chosen = []
+  const stretches = new Set()
   const days = new Set()
-  for (const pass of [0, 1]) {
+  for (const pass of [0, 1, 2]) {
     for (const entry of ranked) {
       if (chosen.length >= limit) break
       if (chosen.includes(entry)) continue
-      if (pass === 0 && days.has(entry.lead.day)) continue
+      if (pass === 0 && stretches.has(stretchOf(entry.lead))) continue
+      if (pass === 1 && days.has(entry.lead.day)) continue
+      stretches.add(stretchOf(entry.lead))
       days.add(entry.lead.day)
       chosen.push(entry)
     }
@@ -453,6 +482,7 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
 
   let motions = 0
   const turns = { 2: 0, 3: 0, 4: 0 }
+  let lastLayout = null
   const photoSlide = (item, kind = 'photo') => ({
     kind,
     media: slideMedia(item),
@@ -463,11 +493,16 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   })
   const beatSlide = (beat) => {
     if (beat.length === 1) return photoSlide(beat[0])
+    // Sizes take their turns apart, and polaroids and strips come in two of
+    // them, so a collage of three after one of four could repeat its layout.
     const layouts = LAYOUTS[beat.length]
+    let layout = layouts[turns[beat.length]++ % layouts.length]
+    if (layout === lastLayout && layouts.length > 1) layout = layouts[turns[beat.length]++ % layouts.length]
+    lastLayout = layout
     const entries = new Set(beat.map((p) => p.entryId))
     return {
       kind: 'collage',
-      layout: layouts[turns[beat.length]++ % layouts.length],
+      layout,
       media: beat.map(slideMedia),
       // A collage of one entry has its caption; one pulled together from a
       // day's moments has several, and shows the day and place instead.
@@ -483,6 +518,7 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   ].sort((a, b) => byDate(a.at, b.at))
 
   const themes = chooseThemes(media, scores)
+  for (const t of themes) if (t.item) used.add(t.item.url)
 
   // "And don't forget about…": photos that did not make it, from days the
   // story has not shown yet where there are any.

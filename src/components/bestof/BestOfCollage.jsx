@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import { BottomShade, Caption, PhotoSlide, SlideImage } from './BestOfSlides'
 
 /**
@@ -20,7 +21,10 @@ const LAYOUT_SIZES = {
   strip: [3, 4],
 }
 
-function fittingLayout(layout, count) {
+// The strip is the one layout whose photos only come into view by moving, so
+// for someone who asked for less motion it becomes a still one.
+function fittingLayout(layout, count, still) {
+  if (layout === 'strip' && still) layout = null
   if (count >= (LAYOUT_SIZES[layout]?.[0] ?? Infinity)) return layout
   if (count >= 4) return 'grid'
   if (count === 3) return 'trio'
@@ -160,13 +164,14 @@ function Strip({ photos, onReady }) {
 export function CollageSlide({ slide, labels, onReady }) {
   const all = Array.isArray(slide.media) ? slide.media.filter(Boolean) : []
   const empty = all.length === 0
+  const still = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   // With no photo there is nothing to wait for.
   useEffect(() => {
     if (empty) onReady?.()
   }, [empty, onReady])
 
-  const layout = empty ? null : fittingLayout(slide.layout, all.length)
+  const layout = empty ? null : fittingLayout(slide.layout, all.length, still)
   if (layout === 'single') {
     return <PhotoSlide slide={{ ...slide, media: all[0], motion: 'zoomIn' }} labels={labels} onReady={onReady} />
   }

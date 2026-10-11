@@ -26,15 +26,19 @@ vi.mock('../components/media/EncryptedVideo', () => ({
 const auth = { encryptionKey: { fake: 'key' } }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 
-// The music: a context that exists once something has unlocked it, and
-// soundtracks that record what was asked of them.
-const audio = vi.hoisted(() => ({ context: null, soundtracks: [] }))
-vi.mock('../utils/audioContext', () => ({
+// The music: a context that exists once something has unlocked it, sleeps
+// that are only written down, and soundtracks that record what was asked of
+// them. The device's music choice is the real one, in localStorage.
+const audio = vi.hoisted(() => ({ context: null, soundtracks: [], sleeps: [] }))
+vi.mock('../utils/audioContext', async (importOriginal) => ({
+  ...(await importOriginal()),
   getAudioContext: () => audio.context,
   unlockAudio: () => {
     audio.context ??= { state: 'running' }
     return audio.context
   },
+  resumeAudio: () => audio.context,
+  suspendAudio: (afterMs) => audio.sleeps.push(afterMs),
 }))
 vi.mock('../utils/bestOfMusic', () => ({
   trackForMonth: () => 'warm',
@@ -104,6 +108,7 @@ beforeEach(() => {
   prefetchDecryptedMedia.mockClear()
   audio.context = null
   audio.soundtracks.length = 0
+  audio.sleeps.length = 0
   localStorage.clear()
 })
 
@@ -135,6 +140,64 @@ describe('BestOfViewer', () => {
     expect(kind()).toBe('count')
   })
 
+  it('moves on again from a slide it comes back to after its time ran out', () => {
+    render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+    endClock()
+    expect(kind()).toBe('count')
+    tap(0.1)
+    expect(kind()).toBe('intro')
+    endClock()
+    expect(kind()).toBe('count')
+  })
+
+  it('shows a slide stepped back to during the fade afresh, and waits for its photo again', () => {
+    render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+    tapUntil('photo')
+    const photo = current().querySelector('[data-kind="stage"]')
+    fireEvent.load(photo)
+    tap(0.8)
+    tap(0.1)
+    expect(kind()).toBe('photo')
+    const again = current().querySelector('[data-kind="stage"]')
+    expect(again).not.toBe(photo)
+    expect(screen.getByTestId('bestof-fill').style.animationPlayState).toBe('paused')
+    fireEvent.load(again)
+    expect(screen.getByTestId('bestof-fill').style.animationPlayState).toBe('running')
+  })
+
+  it('plays on from a slide it steps to while paused', () => {
+    render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(screen.getByText('Paused')).toBeInTheDocument()
+    tap(0.8)
+    expect(kind()).toBe('count')
+    expect(screen.queryByText('Paused')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
+  })
+
+  it('holds the story and its music while the page is hidden', () => {
+    audio.context = { state: 'running' }
+    render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+    const [soundtrack] = audio.soundtracks
+    act(() => vi.advanceTimersByTime(3100))
+    expect(screen.getByTestId('bestof-fill').style.animationPlayState).toBe('running')
+    const hide = (hidden) =>
+      act(() => {
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+    try {
+      hide(true)
+      expect(screen.getByTestId('bestof-fill').style.animationPlayState).toBe('paused')
+      expect(soundtrack.pause).toHaveBeenCalled()
+      hide(false)
+      expect(screen.getByTestId('bestof-fill').style.animationPlayState).toBe('running')
+      expect(soundtrack.resume).toHaveBeenCalled()
+    } finally {
+      delete document.hidden
+    }
+  })
+
   it('times its slides in beats of the month’s music', () => {
     render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
     // The opening card is eight beats: 4 s at 120 bpm.
@@ -148,6 +211,24 @@ describe('BestOfViewer', () => {
     render(<BestOfViewer bestOf={{ ...BEST_OF, slides: [BEST_OF.slides[0], strip, BEST_OF.slides.at(-1)] }} onClose={() => {}} />)
     tapUntil('collage')
     expect(screen.getByTestId('bestof-fill').style.animation).toContain('7000ms')
+  })
+
+  it('gives a strip a collage’s time when it stands still for less motion', () => {
+    const matchMedia = window.matchMedia
+    window.matchMedia = (query) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+    try {
+      const strip = { kind: 'collage', layout: 'strip', media: [media('f'), media('g'), media('h')], day: '2026-09-07' }
+      render(<BestOfViewer bestOf={{ ...BEST_OF, slides: [BEST_OF.slides[0], strip, BEST_OF.slides.at(-1)] }} onClose={() => {}} />)
+      tapUntil('collage')
+      expect(current().querySelector('[data-layout]').dataset.layout).toBe('trio')
+      expect(screen.getByTestId('bestof-fill').style.animation).toContain('6000ms')
+    } finally {
+      window.matchMedia = matchMedia
+    }
   })
 
   it('fades one slide into the next, keeping the one being left until it has', () => {
@@ -318,13 +399,40 @@ describe('BestOfViewer', () => {
       expect(audio.soundtracks).toHaveLength(2)
     })
 
-    it('winds down once the story has reached its end', () => {
+    it('winds down once the story has reached its end, and stays down', () => {
       audio.context = { state: 'running' }
       render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
       tapUntil('outro')
       endClock()
       expect(audio.soundtracks[0].stop).toHaveBeenCalledWith({ fadeMs: expect.any(Number) })
-      expect(audio.soundtracks[0].stop.mock.calls[0][0].fadeMs).toBeGreaterThan(1000)
+      const { fadeMs } = audio.soundtracks[0].stop.mock.calls[0][0]
+      expect(fadeMs).toBeGreaterThan(1000)
+      // The context sleeps once the fade is over.
+      expect(audio.sleeps.at(-1)).toBeGreaterThanOrEqual(fadeMs)
+
+      // A key, or a click that bubbles to the stage, does not start it again.
+      fireEvent.keyDown(window, { key: 'Tab' })
+      fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+      expect(audio.soundtracks).toHaveLength(1)
+    })
+
+    it('lets the audio sleep once the story is closed', () => {
+      audio.context = { state: 'running' }
+      const { unmount } = render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      expect(audio.sleeps).toEqual([])
+      unmount()
+      const { fadeMs } = audio.soundtracks[0].stop.mock.calls[0][0]
+      expect(audio.sleeps.at(-1)).toBeGreaterThanOrEqual(fadeMs)
+    })
+
+    it('starts held when turned on while the story is held', () => {
+      localStorage.setItem('kaydo_bestof_music', 'off')
+      audio.context = { state: 'running' }
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Music on' }))
+      expect(audio.soundtracks).toHaveLength(1)
+      expect(audio.soundtracks[0].pause).toHaveBeenCalled()
     })
   })
 })

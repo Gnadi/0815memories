@@ -9,13 +9,14 @@ import {
   chooseThemes,
   collectMedia,
   currentBestOfMonth,
+  hasEnoughForBestOf,
   isMonthKey,
   monthKey,
   monthRange,
   parseMonthKey,
   scorePhoto,
 } from '../utils/bestOf'
-import { BEST_OF_MIN_MEDIA } from '../../functions/bestOf.js'
+import { BEST_OF_MIN_MEDIA, familiesWithBestOf } from '../../functions/bestOf.js'
 
 const day = (d, h = 12) => new Date(2026, 8, d, h) // September 2026
 
@@ -26,6 +27,12 @@ function memory(id, d, images, extra = {}) {
 function moment(id, d, images, extra = {}) {
   return { id, date: day(d), caption: `Moment ${id}`, images, ...extra }
 }
+
+// The app's media URLs carry their upload time (Cloudinary's /v<seconds>/), so
+// these are in upload order too: a URL sorted before another was uploaded
+// earlier in the month.
+const uploaded = (d, name) => `https://res.cloudinary.com/x/raw/upload/v17${String(d).padStart(2, '0')}/kaydo/encrypted/${name}`
+const dayOf = (slide) => Number(slide.day.slice(8))
 
 // A month with enough in it: eight entries over eight days, ten photos, a clip.
 function september() {
@@ -72,11 +79,16 @@ describe('months', () => {
     expect(currentBestOfMonth(new Date(2027, 0, 15))).toBe('2026-12')
   })
 
-  it('asks for as many photos as the push does', () => {
+  it('makes a best-of exactly when the push says there is one', () => {
     // functions/bestOf.js decides whether the family is told; this decides
     // whether the app makes one. A family must not be told about a best-of
-    // the app then refuses to make.
+    // the app then refuses to make — of a month of clips alone, say.
     expect(MIN_BEST_OF_MEDIA).toBe(BEST_OF_MIN_MEDIA)
+    for (const [photos, videos] of [[0, 9], [1, 5], [1, 4], [6, 0], [5, 0], [3, 3]]) {
+      const media = [...Array(photos).fill({ type: 'image' }), ...Array(videos).fill({ type: 'video' })]
+      const told = familiesWithBestOf(new Map([['f', { photos, videos }]])).length === 1
+      expect(hasEnoughForBestOf(media), `${photos} photos, ${videos} clips`).toBe(told)
+    }
   })
 })
 
@@ -197,6 +209,25 @@ describe('chooseBeats', () => {
     expect(used.has('t2')).toBe(true)
   })
 
+  it('spreads a month of equal days over all of it, not only its first week', () => {
+    const moments = Array.from({ length: 30 }, (_, i) => moment(`d${i + 1}`, i + 1, [uploaded(i + 1, `d${i + 1}`)]))
+    const media = collectMedia({ moments })
+    const days = chooseBeats(media, scoresOf(media), new Set()).map((beat) => Number(beat[0].day.slice(8)))
+    expect(days).toHaveLength(8)
+    // Each week of the month has its moments in the story.
+    for (const [from, to] of [[1, 7], [8, 15], [16, 22], [23, 30]]) {
+      expect(days.some((d) => d >= from && d <= to), `days ${from}–${to} in ${days}`).toBe(true)
+    }
+  })
+
+  it('leaves a big holiday room for the rest of the month', () => {
+    const holiday = Array.from({ length: 10 }, (_, i) => memory(`h${i}`, 10 + i, [uploaded(10 + i, `h${i}`)]))
+    const moments = [1, 3, 5, 25, 27, 29].map((d) => moment(`m${d}`, d, [uploaded(d, `m${d}`)]))
+    const media = collectMedia({ memories: holiday, moments })
+    const days = chooseBeats(media, scoresOf(media), new Set()).map((beat) => Number(beat[0].day.slice(8)))
+    expect(days.filter((d) => d < 10 || d > 19).length).toBeGreaterThanOrEqual(3)
+  })
+
   it('spreads a busy month over its days before taking a second entry of any', () => {
     const moments = [
       ...Array.from({ length: 6 }, (_, i) => ({ ...moment(`h${i}`, 3, [`h${i}`], { caption: 'holiday' }), date: new Date(2026, 8, 3, 8 + i) })),
@@ -258,6 +289,41 @@ describe('buildBestOf', () => {
     const layouts = bestOf.slides.filter((s) => s.kind === 'collage').map((s) => s.layout)
     expect(layouts.length).toBeGreaterThan(1)
     for (let i = 1; i < layouts.length; i++) expect(layouts[i]).not.toBe(layouts[i - 1])
+  })
+
+  it('takes its clips from all over the month', () => {
+    const moments = Array.from({ length: 30 }, (_, i) =>
+      moment(`d${i + 1}`, i + 1, [uploaded(i + 1, `p${i + 1}`)], { videos: [{ url: uploaded(i + 1, `v${i + 1}`) }] }),
+    )
+    const clips = buildBestOf({ month: '2026-09', moments }).slides.filter((s) => s.kind === 'video').map(dayOf)
+    expect(clips).toHaveLength(3)
+    expect(Math.min(...clips)).toBeLessThanOrEqual(10)
+    expect(Math.max(...clips)).toBeGreaterThanOrEqual(21)
+  })
+
+  it('never brings back a photo of the themes among the ones that did not make it', () => {
+    // A fortnight of snapshots, three of them with a subject: more than the
+    // story has room for, so some are left over for the end.
+    for (const [kids, food] of [[10, 11], [2, 13], [6, 7], [12, 14], [1, 9]]) {
+      const moments = Array.from({ length: 14 }, (_, i) => {
+        const d = i + 1
+        const category = d === kids || d === kids + 3 ? 'Kids' : d === food ? 'Food' : ''
+        return moment(`d${d}`, d, [uploaded(d, `x${d}`)], { category })
+      })
+      const { slides } = buildBestOf({ month: '2026-09', moments })
+      const themes = slides.find((s) => s.kind === 'themes').media.map((m) => m.url)
+      const end = slides.slice(slides.findIndex((s) => s.kind === 'dontForget'), -1).map((s) => s.media.url)
+      expect(end.filter((url) => themes.includes(url))).toEqual([])
+    }
+  })
+
+  it('does not give two collages in a row the same layout', () => {
+    const memories = [3, 6, 3, 6, 3, 6].map((n, i) =>
+      memory(`album${i}`, 2 + i * 5, Array.from({ length: n }, (_, j) => `a${i}-${j}`)),
+    )
+    const layouts = buildBestOf({ month: '2026-09', memories }).slides.filter((s) => s.kind === 'collage').map((s) => s.layout)
+    expect(layouts.length).toBeGreaterThan(3)
+    for (let i = 1; i < layouts.length; i++) expect(layouts[i], layouts.join(', ')).not.toBe(layouts[i - 1])
   })
 
   it('never shows a photo twice in the run of the month', () => {

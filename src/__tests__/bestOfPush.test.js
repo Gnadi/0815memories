@@ -73,14 +73,23 @@ describe('countMonthMedia', () => {
       ],
     })
     const counts = await countMonthMedia(db, { start: new Date(0), end: new Date(1) })
-    expect(Object.fromEntries(counts)).toEqual({ a: 6, c: 2 })
+    expect(Object.fromEntries(counts)).toEqual({ a: { photos: 5, videos: 1 }, c: { photos: 2, videos: 0 } })
   })
 })
 
 describe('familiesWithBestOf', () => {
   it('tells only families with enough for a best-of', () => {
-    const counts = new Map([['a', BEST_OF_MIN_MEDIA], ['b', BEST_OF_MIN_MEDIA - 1], ['c', 200]])
+    const counts = new Map([
+      ['a', { photos: BEST_OF_MIN_MEDIA - 1, videos: 1 }],
+      ['b', { photos: BEST_OF_MIN_MEDIA - 2, videos: 1 }],
+      ['c', { photos: 200, videos: 0 }],
+    ])
     expect(familiesWithBestOf(counts)).toEqual(['a', 'c'])
+  })
+
+  it('does not tell a family that only posted clips, which the app makes no best-of of', () => {
+    const counts = new Map([['clips', { photos: 0, videos: BEST_OF_MIN_MEDIA + 4 }]])
+    expect(familiesWithBestOf(counts)).toEqual([])
   })
 })
 

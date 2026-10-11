@@ -176,7 +176,7 @@ describe.skipIf(!EMULATOR)('best-of', () => {
 
       const window = previousMonthWindow(new Date('2026-10-01T16:00:00Z'), 'Europe/Berlin')
       const counts = await countMonthMedia(adminDb, window)
-      expect(counts.get('family-3')).toBe(6)
+      expect(counts.get('family-3')).toEqual({ photos: 6, videos: 0 })
     })
   })
 })

@@ -2,9 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Pause, Play, Sparkles, Volume2, VolumeX, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { AWARDS, slideUrls } from '../../utils/bestOf'
-import { getAudioContext, unlockAudio } from '../../utils/audioContext'
+import {
+  getAudioContext,
+  musicWantedOnDevice,
+  rememberMusic,
+  resumeAudio,
+  suspendAudio,
+  unlockAudio,
+} from '../../utils/audioContext'
 import { barMs, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
 import {
@@ -37,9 +45,10 @@ const SLIDES = {
 // Slides drawn on white, which want the controls in dark.
 const LIGHT_SLIDES = new Set(['count', 'themes', 'outro'])
 
-// How long each kind stays up, in beats of the month's track, so slides change
-// on the beat. The ones with something to read, or several photos to arrive,
-// get longer; a clip plays out instead, up to MAX_CLIP_S.
+// How long each kind stays up, in beats of the month's track, so the story
+// keeps the music's pace — though not its beat: a slide's clock starts once its
+// photo is in, whenever that is. The ones with something to read, or several
+// photos to arrive, get longer; a clip plays out instead, up to MAX_CLIP_S.
 const SLIDE_BEATS = {
   intro: 8,
   count: 6,
@@ -53,11 +62,12 @@ const SLIDE_BEATS = {
 }
 
 // A film strip has to travel for its last frame to come into view, which
-// takes about seven seconds (bestOf.css), whatever the tempo.
+// takes about seven seconds (bestOf.css), whatever the tempo. With less motion
+// asked for, it stands still as another collage does, and takes their time.
 const STRIP_BEATS = 14
 
-function beatsOf(slide) {
-  if (slide.kind === 'collage' && slide.layout === 'strip') return STRIP_BEATS
+function beatsOf(slide, still) {
+  if (slide.kind === 'collage' && slide.layout === 'strip' && !still) return STRIP_BEATS
   return SLIDE_BEATS[slide.kind] ?? CLIP_FALLBACK_BEATS
 }
 
@@ -89,27 +99,6 @@ const SWIPE_DOWN_PX = 90
 // Presses on the controls are theirs, not the stage's.
 const own = { onPointerDown: (e) => e.stopPropagation(), onPointerUp: (e) => e.stopPropagation() }
 
-// Whether this device wants the music, remembered between best-ofs. A switch
-// someone turned off stays off; it is the one thing here they would resent
-// having to do twice.
-const MUSIC_KEY = 'kaydo_bestof_music'
-
-function musicWantedOnDevice() {
-  try {
-    return window.localStorage.getItem(MUSIC_KEY) !== 'off'
-  } catch {
-    return true
-  }
-}
-
-function rememberMusic(on) {
-  try {
-    window.localStorage.setItem(MUSIC_KEY, on ? 'on' : 'off')
-  } catch {
-    // Private mode: the choice holds for this story, not the next.
-  }
-}
-
 const noop = () => {}
 
 /**
@@ -133,6 +122,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const labels = useMemo(() => bestOfLabels(bestOf.month, i18n.language, t), [bestOf.month, i18n.language, t])
   const track = useMemo(() => trackForMonth(bestOf.month), [bestOf.month])
   const beatMs = barMs(track) / 4
+  const still = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const [index, setIndex] = useState(0)
   const [run, setRun] = useState(0)
@@ -142,7 +132,9 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const [clipShare, setClipShare] = useState(0)
   const [finished, setFinished] = useState(false)
   const [clipFailed, setClipFailed] = useState(false)
-  const [leaving, setLeaving] = useState(null) // { key, index } of the slide fading out
+  const [leaving, setLeaving] = useState(null) // { visit, index } of the slide fading out
+  // Hidden — another tab, another app, a locked phone — the story holds.
+  const [away, setAway] = useState(false)
 
   const videoRef = useRef(null)
   const pointer = useRef(null)
@@ -154,16 +146,23 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const isLast = index === slides.length - 1
   const isVideo = slide?.kind === 'video'
   const light = LIGHT_SLIDES.has(slide?.kind)
-  const paused = userPaused || holding
+  const paused = userPaused || holding || away
 
   // A new slide starts its clock from nothing, in the render that shows it —
   // as an effect, the old slide's full bar would flash for a frame first. The
   // slide being left is kept for the crossfade.
+  //
+  // Each showing of a slide is a visit of its own, and the visit is what keys
+  // it: going back to a slide shows it afresh — its photo reported ready
+  // again, its motion from the start, its clock allowed to run out again —
+  // even one still fading out from a moment ago.
   const slideKey = `${run}:${index}`
   const [renderedKey, setRenderedKey] = useState(slideKey)
   const [renderedIndex, setRenderedIndex] = useState(index)
+  const [visit, setVisit] = useState(0)
   if (renderedKey !== slideKey) {
-    setLeaving({ key: renderedKey, index: renderedIndex })
+    setLeaving({ visit, index: renderedIndex })
+    setVisit(visit + 1)
     setRenderedKey(slideKey)
     setRenderedIndex(index)
     setReady(false)
@@ -193,25 +192,20 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
 
   const play = useCallback(() => {
     if (soundtrack.current) return true
-    const context = getAudioContext()
+    // A context put to sleep when the music last stopped, or by a pause, is
+    // woken: the page has had its gesture by then.
+    const context = resumeAudio()
     if (!context) return false
-    // A story closed while held leaves the context suspended (a pause suspends
-    // it). The page has had its gesture by then, so it may be woken again.
-    if (context.state === 'suspended') {
-      try {
-        Promise.resolve(context.resume?.()).catch(() => {})
-      } catch {
-        // Then it stays quiet until the next tap unlocks it.
-      }
-    }
     soundtrack.current = createSoundtrack(context, track)
     soundtrack.current.start()
     return true
   }, [track])
 
+  // The context sleeps once the fade is over, unless play() wakes it first.
   const silence = useCallback((fadeMs) => {
     soundtrack.current?.stop({ fadeMs })
     soundtrack.current = null
+    suspendAudio(fadeMs + 100)
   }, [])
 
   useEffect(() => {
@@ -224,9 +218,17 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     else soundtrack.current?.resume()
   }, [paused])
 
-  // In a gesture handler, where the browser lets sound begin.
+  // In a gesture handler, where the browser lets sound begin. Not on the end
+  // card, where the music has just wound down on purpose, and not while the
+  // story is held, which holds the music too.
   const tapForMusic = () => {
-    if (!musicWanted || musicOn) return
+    if (!musicWanted || finished || paused) return
+    if (musicOn) {
+      // A context the browser did not let start the first time, or stopped
+      // when the app went to the background, gets another try with this tap.
+      if (getAudioContext()?.state !== 'running') unlockAudio()
+      return
+    }
     unlockAudio()
     if (play()) setMusicOn(true)
   }
@@ -240,18 +242,31 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
       setMusicOn(false)
     } else {
       unlockAudio()
-      if (play()) setMusicOn(true)
+      if (play()) {
+        setMusicOn(true)
+        // Turned on while the story is held: it starts held too.
+        if (paused) soundtrack.current?.pause()
+      }
     }
     rememberMusic(!musicOn)
     setMusicWanted(!musicOn)
   }
 
   // ── Moving through it ───────────────────────────────────────────────────
+  // A step plays on from the slide it reaches, as a story does: held there,
+  // the slide would stand at the first frame of its entrance — tiles and
+  // caption not yet in — until someone found the play button.
   const next = useCallback(() => {
     if (isLast) onClose()
-    else setIndex((i) => Math.min(slides.length - 1, i + 1))
+    else {
+      setUserPaused(false)
+      setIndex((i) => Math.min(slides.length - 1, i + 1))
+    }
   }, [isLast, onClose, slides.length])
-  const prev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), [])
+  const prev = useCallback(() => {
+    setUserPaused(false)
+    setIndex((i) => Math.max(0, i - 1))
+  }, [])
   const markReady = useCallback(() => setReady(true), [])
   const markClipFailed = useCallback(() => {
     setClipFailed(true)
@@ -264,8 +279,8 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   // would skip the slide after it.
   const ranOut = useRef(null)
   const timeUp = useCallback(() => {
-    if (ranOut.current === slideKey) return
-    ranOut.current = slideKey
+    if (ranOut.current === visit) return
+    ranOut.current = visit
     if (isLast) {
       setFinished(true)
       silence(END_FADE_MS)
@@ -273,7 +288,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     } else {
       setIndex((i) => i + 1)
     }
-  }, [isLast, slideKey, silence])
+  }, [isLast, visit, silence])
 
   // "Watch again" is a click, so the music may start over with it.
   const restart = useCallback(() => {
@@ -293,7 +308,13 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     if (ready) return
     const timer = setTimeout(() => setReady(true), READY_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [ready, slideKey])
+  }, [ready, visit])
+
+  useEffect(() => {
+    const onVisibility = () => setAway(document.hidden)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   // The clip follows the story's pause. It stays muted: the music is the
   // story's sound, and a clip's own would talk over it.
@@ -304,7 +325,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     // Older browsers return nothing from play(); newer ones reject a play the
     // autoplay policy refuses, which the muted clip should never hit.
     else video.play()?.catch?.(() => {})
-  }, [isVideo, paused, slideKey])
+  }, [isVideo, paused, visit])
 
   const onClipProgress = useCallback((currentTime, duration) => {
     const share = currentTime / Math.min(duration, MAX_CLIP_S)
@@ -447,8 +468,8 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
         onClick={tapForMusic}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {leavingSlide && renderSlide(leavingSlide, leaving.key, false)}
-        {renderSlide(slide, slideKey, true)}
+        {leavingSlide && renderSlide(leavingSlide, `visit-${leaving.visit}`, false)}
+        {renderSlide(slide, `visit-${visit}`, true)}
 
         {/* Controls */}
         <div
@@ -469,11 +490,11 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
                   {i < index && <span className={`block h-full w-full ${fill}`} />}
                   {current && (timed ? (
                     <span
-                      key={slideKey}
+                      key={visit}
                       data-testid="bestof-fill"
                       className={`bestof-fill block h-full w-full origin-left ${fill}`}
                       style={{
-                        animation: `bestof-fill ${Math.round(beatsOf(slide) * beatMs)}ms linear forwards`,
+                        animation: `bestof-fill ${Math.round(beatsOf(slide, still) * beatMs)}ms linear forwards`,
                         animationPlayState: running ? 'running' : 'paused',
                       }}
                       onAnimationEnd={timeUp}

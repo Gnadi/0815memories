@@ -68,6 +68,8 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     return d > now ? new Date(now.getTime() - 60_000) : d
   }
   // A day of last month, which is always over: the month the best-of is of.
+  // None later than the 19th: on 1 March, nine days ago is 20 February, and
+  // the treehouse nine days ago has to stay the newest memory.
   const lastMonth = (day, hour = 11) => new Date(year, now.getMonth() - 1, day, hour)
   const shift = (date, { years = 0, months = 0, days = 0, hour = 12 } = {}) =>
     new Date(date.getFullYear() + years, date.getMonth() + months, date.getDate() + days, hour)
@@ -104,9 +106,9 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     daysAgo(9, 17),
     lastMonth(6, 15),
     lastMonth(14, 17),
-    lastMonth(21, 14),
+    lastMonth(18, 14),
     lastMonth(10, 16),
-    lastMonth(26, 19),
+    lastMonth(2, 19),
   ]
   c.memories.forEach((memory, i) => {
     const images = MEMORY_IMAGES[i].map(media)

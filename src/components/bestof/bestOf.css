@@ -196,8 +196,10 @@
 .bestof-sprockets::after { bottom: 0; }
 
 /* Holding a slide holds its motion too, as a paused video would. The fill is
-   paused by the viewer itself, so it stays out of this. */
-.bestof-paused *:not(.bestof-fill) {
+   paused by the viewer itself, so it stays out of this, and so does the
+   crossfade: the slide being left is taken away on a timer, and a fade held
+   half-way would end in a jump. */
+.bestof-paused *:not(.bestof-fill):not(.bestof-enter) {
   animation-play-state: paused !important;
 }
 

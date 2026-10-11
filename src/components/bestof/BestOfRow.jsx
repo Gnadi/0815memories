@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
-import { unlockAudio } from '../../utils/audioContext'
+import { musicWantedOnDevice, unlockAudio } from '../../utils/audioContext'
 import { bestOfLabels } from './bestOfLabels'
 
 /**
@@ -26,7 +26,7 @@ export default function BestOfRow({ bestOfs, onOpen }) {
               type="button"
               // The tap that opens the story is the one that lets its music play.
               onClick={() => {
-                unlockAudio()
+                if (musicWantedOnDevice()) unlockAudio()
                 onOpen(month)
               }}
               className="relative flex-shrink-0 w-32 aspect-[9/16] rounded-2xl overflow-hidden bg-[#141a2e] group"
@@ -43,7 +43,7 @@ export default function BestOfRow({ bestOfs, onOpen }) {
               )}
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
               <Sparkles className="absolute top-2.5 left-2.5 w-4 h-4 text-amber-300 drop-shadow" aria-hidden="true" />
-              {/* At the bottom, clear of the faces the cover is usually chosen for. */}
+              {/* At the bottom, where the shade is darkest. */}
               <span className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 text-left pointer-events-none">
                 <span className="block font-display text-3xl uppercase leading-none text-white drop-shadow">
                   {labels.monthShort}

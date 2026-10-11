@@ -14,9 +14,9 @@ import { zonedDateParts, zonedTimeToUtc } from './anniversary.js'
 import { normalizeLang } from './push.js'
 
 /**
- * Fewer photos and clips than this, and the family is not told. Mirrored by
- * MIN_BEST_OF_MEDIA in src/utils/bestOf.js, which refuses to make one below it;
- * src/__tests__/bestOf.test.js keeps the two equal.
+ * Fewer photos and clips than this, or no photo at all, and the family is not
+ * told. Mirrored by hasEnoughForBestOf in src/utils/bestOf.js, which refuses
+ * to make one below it; src/__tests__/bestOf.test.js keeps the two equal.
  */
 export const BEST_OF_MIN_MEDIA = 6
 
@@ -44,8 +44,10 @@ export function previousMonthWindow(now, timeZone) {
 function mediaOf(doc) {
   const images = doc.get('images')
   const videos = doc.get('videos')
-  const imageCount = Array.isArray(images) && images.length > 0 ? images.length : doc.get('imageUrl') ? 1 : 0
-  return imageCount + (Array.isArray(videos) ? videos.length : 0)
+  return {
+    photos: Array.isArray(images) && images.length > 0 ? images.length : doc.get('imageUrl') ? 1 : 0,
+    videos: Array.isArray(videos) ? videos.length : 0,
+  }
 }
 
 /**
@@ -58,7 +60,7 @@ function mediaOf(doc) {
  *
  * @param {import('firebase-admin/firestore').Firestore} db
  * @param {{ start: Date, end: Date }} window  start inclusive, end exclusive
- * @returns {Promise<Map<string, number>>} familyId → media count, families with none omitted
+ * @returns {Promise<Map<string, { photos: number, videos: number }>>} by familyId, families with none omitted
  */
 export async function countMonthMedia(db, window) {
   const counts = new Map()
@@ -72,16 +74,23 @@ export async function countMonthMedia(db, window) {
     for (const doc of snapshot.docs) {
       const familyId = doc.get('familyId')
       const media = mediaOf(doc)
-      if (typeof familyId !== 'string' || !familyId || media === 0) continue
-      counts.set(familyId, (counts.get(familyId) ?? 0) + media)
+      if (typeof familyId !== 'string' || !familyId || media.photos + media.videos === 0) continue
+      const count = counts.get(familyId) ?? { photos: 0, videos: 0 }
+      counts.set(familyId, { photos: count.photos + media.photos, videos: count.videos + media.videos })
     }
   }
   return counts
 }
 
-/** The families worth telling, in the order they were counted. */
+/**
+ * The families worth telling, in the order they were counted. A month of clips
+ * alone has no best-of: its slides are made of photos, and the clips only come
+ * in between.
+ */
 export function familiesWithBestOf(counts) {
-  return [...counts].filter(([, media]) => media >= BEST_OF_MIN_MEDIA).map(([familyId]) => familyId)
+  return [...counts]
+    .filter(([, { photos, videos }]) => photos > 0 && photos + videos >= BEST_OF_MIN_MEDIA)
+    .map(([familyId]) => familyId)
 }
 
 /** Where the notification leads: the viewer, which makes the best-of if need be. */

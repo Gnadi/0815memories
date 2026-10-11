@@ -37,14 +37,20 @@ faces reads as the opposite of that promise, wherever it runs.
 
 `utils/bestOf.js` builds the story from the month's memories and moments
 (`services/bestOf.js` reads them with a range on `date`, which is never
-encrypted). It is pure and deterministic — ties are broken by URL — so every
-device that builds the same month gets the same story. An admin's device saves
+encrypted). It is pure and deterministic — ties are broken by a hash of the
+URL — so every device that builds the same month gets the same story. Not by
+the URL itself: it carries the upload time, and with weights as coarse as
+these, URL order would give most of the story to the first days of the month.
+The moments are spread over the month on purpose: it is cut into as many
+stretches of the calendar as the story has room for, and each stretch gives its
+best entry before any day gives a second; the clips come from days evenly
+spaced through it. A month with one big holiday still shows its other weeks. An admin's device saves
 it to `bestOf/{familyId}_{YYYY-MM}`, the slides encrypted as one JSON string
 like a highlight's; the rules pin the id and the fields.
 
 - **An admin's device, in the background**: the moments row on the home page
   looks at last month when it has no saved best-of, and when there is enough
-  (six photos and clips), an admin's device makes and saves it a few seconds
+  (six photos and clips, at least one of them a photo), an admin's device makes and saves it a few seconds
   after the page settles (`useCurrentBestOf`).
 - **Whoever opens it first**: `/best-of/<month>` plays the saved one, or makes
   it there and then (`useBestOfMonth`). A viewer's device cannot save — the
@@ -62,20 +68,31 @@ saved best-of stays reachable from the row above the moments grid.
 The slides are React components animated with CSS (`components/bestof/`,
 `bestOf.css`): photos drift and zoom, collage tiles slide, pop and drop into
 place, and the viewer crossfades from one slide to the next. Everything stops
-while the story is held, and nothing moves for someone who has asked their
-system for reduced motion.
+while the story is held or the page is hidden, and nothing moves for someone
+who has asked their system for reduced motion — for them the film strip, the
+one layout that needs motion to show all its photos, is a still collage.
 
 The music is synthesized in the browser with the Web Audio API
-(`utils/bestOfMusic.js`): three moods — *calm* for winter, *bright* for summer,
-*warm* for the rest — each a short loop of chords, keys, bass and soft
-percussion. There are no audio files: nothing to license, nothing to download,
-nothing fetched from anyone. Slides last a whole number of beats of the
-month's track, so they change on the beat.
+(`utils/bestOfMusic.js`), in one of three moods, each a short loop:
+
+- *warm*, for spring and autumn: electric-piano arpeggios over a pad, a round
+  bass, and the softest kick and shaker;
+- *bright*, for summer: a marimba-like motif over a pad, a bass in eighths, a
+  kick, a clap on two and four and a shaker;
+- *calm*, for winter: long pads, a held bass and a few piano notes, no drums.
+
+There are no audio files: nothing to license, nothing to download, nothing
+fetched from anyone. Slides last a whole number of beats of the month's track,
+so the story keeps the music's pace — not its beat, though: a slide's clock
+starts once its photo is in. When the music stops — the story is closed, it
+has reached its end, or the music is turned off — the audio context is
+suspended after the fade, so nothing keeps the phone's audio running.
 
 Browsers only start sound after a tap. Opened from the moments row, the tap on
 the circle is that tap (`utils/audioContext.js`); opened from a notification,
 the story starts silent and the music begins with the first tap, or with the
-music button, which also turns it off — remembered on the device.
+music button, which also turns it off — remembered on the device. A device
+with the music off never starts an audio context at all.
 
 ## The push
 
@@ -83,8 +100,9 @@ music button, which also turns it off — remembered on the device.
 runs on the 1st at 18:00 Europe/Berlin. It counts each family's photos and
 clips of last month — memories and moments, one range query each, reading
 only `familyId` and the media URLs — and sends the push to families with at
-least six (`BEST_OF_MIN_MEDIA`, which `MIN_BEST_OF_MEDIA` in
-`utils/bestOf.js` mirrors; a test keeps them equal). The text is the month's
+least six, at least one of them a photo (`familiesWithBestOf`, which
+`hasEnoughForBestOf` in `utils/bestOf.js` mirrors; a test keeps them in step).
+A month of clips alone gets no push: the app makes no best-of of it. The text is the month's
 name and nothing else; the link is `/best-of/<YYYY-MM>`.
 
 The evening is deliberate: an admin who opened the app during the day has
