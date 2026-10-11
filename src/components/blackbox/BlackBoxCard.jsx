@@ -10,7 +10,7 @@ import EncryptedAudio from '../media/EncryptedAudio'
 const CHECK_IN_NUDGE_DAYS = 60
 
 export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, onCheckIn }) {
-  const { t } = useTranslation('blackbox')
+  const { t, i18n } = useTranslation('blackbox')
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   // The letter is not on `box` — it lives on a document Firestore withholds
@@ -51,7 +51,7 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
     // it is both honest and more useful than a euphemism.
     if (!box.unlockDate) return t('card.unknownDate')
     const d = box.unlockDate.toDate ? box.unlockDate.toDate() : new Date(box.unlockDate)
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    return d.toLocaleDateString(i18n.language, { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
   function getTriggerDescription(box) {

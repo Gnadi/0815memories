@@ -39,7 +39,7 @@
   "moment": {
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "deleteConfirm": "Diesen Moment löschen?",
+    "deleteConfirm": "Diesen Moment in den Papierkorb verschieben? Dort kannst du ihn {{days}} Tage lang wiederherstellen.",
     "noMedia": "Keine Medien",
     "author": "Familie",
     "aria": {
@@ -55,5 +55,5 @@
     "back": "Zurück",
     "empty": "Noch keine Momente"
   },
-  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+  "deleteMemoryConfirm": "Diese Erinnerung in den Papierkorb verschieben? Dort kannst du sie {{days}} Tage lang wiederherstellen."
 }

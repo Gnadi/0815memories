@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useState, useRef } from 'react'
 import { MoreHorizontal, Pencil, Trash2, ChevronLeft, ChevronRight, Mic, Video } from 'lucide-react'
-import { formatDate } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
@@ -16,6 +16,7 @@ const WIDTH_PRESETS = {
 
 export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
   const { t } = useTranslation('home')
+  const { formatDate } = useDateFormat()
   const [showMenu, setShowMenu] = useState(false)
   const [imgIndex, setImgIndex] = useState(0)
   const { isAdmin } = useAuth()

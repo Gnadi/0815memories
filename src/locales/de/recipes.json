@@ -8,7 +8,7 @@
       "body": "Füge Omas erstes Rezept hinzu und beginne, den kulinarischen Stammbaum deiner Familie aufzubauen.",
       "cta": "Füge dein erstes Rezept hinzu"
     },
-    "deleteConfirm": "Dieses Rezept und alle seine Forks dauerhaft löschen? Das kann nicht rückgängig gemacht werden."
+    "deleteConfirm": "Dieses Rezept mit allen Varianten in den Papierkorb verschieben? Dort kannst du es {{days}} Tage lang wiederherstellen."
   },
   "card": {
     "by": "von {{author}}",

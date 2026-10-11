@@ -13,6 +13,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -69,6 +70,14 @@ export async function createInvite(familyId, createdBy) {
     redeemedAt: null,
   })
   return token
+}
+
+/** The open invites `uid` minted, by token: what removing them has to revoke. */
+export async function openInvitesBy(familyId, uid) {
+  const snapshot = await getDocs(query(
+    collection(db, FAMILIES, familyId, 'invites'), where('createdBy', '==', uid), where('used', '==', false),
+  ))
+  return snapshot.docs.map((d) => d.id)
 }
 
 export async function revokeInvite(familyId, token) {

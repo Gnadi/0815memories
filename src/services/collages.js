@@ -6,7 +6,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   orderBy,
   query,
@@ -72,8 +71,4 @@ export async function updateCollage(key, id, data) {
     ...encrypted,
     updatedAt: serverTimestamp(),
   })
-}
-
-export async function deleteCollage(id) {
-  await deleteDoc(doc(db, COLLAGES, id))
 }

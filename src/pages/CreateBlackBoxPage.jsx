@@ -26,7 +26,7 @@ function computeMilestoneDate(birthdate, milestone) {
 }
 
 export default function CreateBlackBoxPage() {
-  const { t } = useTranslation('blackbox')
+  const { t, i18n } = useTranslation('blackbox')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids, loading: kidsLoading } = useKids(familyId, encryptionKey)
@@ -100,7 +100,7 @@ export default function CreateBlackBoxPage() {
 
   const unlockDate = getUnlockDate()
   const unlockDateStr = unlockDate
-    ? unlockDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? unlockDate.toLocaleDateString(i18n.language, { year: 'numeric', month: 'long', day: 'numeric' })
     : null
 
   const handleImagePick = async (e, inputRef) => {

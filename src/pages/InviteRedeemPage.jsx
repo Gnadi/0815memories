@@ -9,6 +9,7 @@ import { getInvite, redeemInvite } from '../services/invites'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
+import { MIN_PASSWORD_LENGTH } from '../constants/auth'
 
 export default function InviteRedeemPage() {
   const { t } = useTranslation('auth')
@@ -94,8 +95,8 @@ export default function InviteRedeemPage() {
       setError(t('invite.errors.passwordMismatch'))
       return
     }
-    if (password.length < 6) {
-      setError(t('invite.errors.passwordTooShort'))
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('invite.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
     }
 
@@ -142,7 +143,7 @@ export default function InviteRedeemPage() {
         // or expired after this page checked it.
         'permission-denied': 'invite.errors.invalidOrRevoked',
       }
-      setError(t(messages[err.code] || 'invite.errors.generic'))
+      setError(t(messages[err.code] || 'invite.errors.generic', { min: MIN_PASSWORD_LENGTH }))
     } finally {
       setLoading(false)
     }
@@ -256,15 +257,16 @@ export default function InviteRedeemPage() {
 }
 
 function AlreadySignedInBanner() {
+  const { t } = useTranslation('auth')
   return (
     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-      You're already signed in. To redeem this invite as a fresh admin, please{' '}
+      {t('invite.alreadySignedIn.body')}{' '}
       <button
         type="button"
         className="underline font-semibold"
         onClick={async () => { try { await signOut(auth) } catch { /* noop */ } window.location.reload() }}
       >
-        sign out first
+        {t('invite.alreadySignedIn.signOutFirst')}
       </button>.
     </div>
   )
@@ -277,17 +279,18 @@ function RedeemForm({
   showPassword, setShowPassword, showConfirm, setShowConfirm,
   error, loading, handleSubmit, disabled,
 }) {
+  const { t } = useTranslation('auth')
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Your Name</label>
+        <label className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.nameLabel')}</label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g., Sarah Miller"
+            placeholder={t('invite.form.namePlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             disabled={disabled}
@@ -296,14 +299,14 @@ function RedeemForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Email</label>
+        <label className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.emailLabel')}</label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('invite.form.emailPlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             disabled={disabled}
@@ -312,22 +315,23 @@ function RedeemForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Password</label>
+        <label className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.passwordLabel')}</label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
+            placeholder={t('invite.form.passwordPlaceholder', { min: MIN_PASSWORD_LENGTH })}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             disabled={disabled}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -336,22 +340,23 @@ function RedeemForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Confirm Password</label>
+        <label className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.confirmPasswordLabel')}</label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
             type={showConfirm ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Repeat your password"
+            placeholder={t('invite.form.confirmPasswordPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             disabled={disabled}
           />
           <button
             type="button"
             onClick={() => setShowConfirm(!showConfirm)}
+            aria-label={showConfirm ? t('hidePassword') : t('showPassword')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
             {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -372,7 +377,7 @@ function RedeemForm({
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            Join family
+            {t('invite.form.submit')}
             <span className="text-xl">&rarr;</span>
           </>
         )}

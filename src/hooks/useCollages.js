@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
 import {
   addCollage,
-  deleteCollage,
   subscribeCollages,
   updateCollage,
 } from '../services/collages'
+import { moveToTrash } from '../services/trash'
 
 /**
  * Write operations only — no Firestore subscription. The editor loads its one
@@ -15,7 +15,7 @@ export function useCollageWriter(familyId, encryptionKey) {
   return {
     addCollage: (data) => addCollage(familyId, encryptionKey, data),
     updateCollage: (id, data) => updateCollage(encryptionKey, id, data),
-    deleteCollage: (id) => deleteCollage(id),
+    deleteCollage: (id) => moveToTrash(encryptionKey, 'collages', id),
   }
 }
 

@@ -1,12 +1,13 @@
 import { Plus, Video } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { formatRelativeDate } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 
 export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
   const { t } = useTranslation('home')
+  const { formatRelativeDate } = useDateFormat()
   const { isAdmin } = useAuth()
 
   return (

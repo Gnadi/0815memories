@@ -1,11 +1,12 @@
 import { Calendar, MapPin } from 'lucide-react'
-import { formatDate } from '../../utils/helpers'
+import { useDateFormat } from '../../hooks/useDateFormat'
 import VoiceMemoPlayer from './VoiceMemoPlayer'
 import MemoryVideoPlayer from './MemoryVideoPlayer'
 import RichContent from './RichContent'
 import { isRichDoc } from '../../utils/richText'
 
 export default function MemoryBody({ memory }) {
+  const { formatDate } = useDateFormat()
   return (
     <article className="max-w-2xl mx-auto px-4 pt-10 pb-16">
       {/* Badges */}

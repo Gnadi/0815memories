@@ -8,6 +8,7 @@ import { useJournals } from '../hooks/useJournals'
 import JournalEntryCard from '../components/journal/JournalEntryCard'
 import EncryptedImage from '../components/media/EncryptedImage'
 import Sidebar from '../components/layout/Sidebar'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function JournalArchivePage() {
   const { t } = useTranslation('journal')
@@ -109,7 +110,7 @@ export default function JournalArchivePage() {
                   onView={() => navigate(`/journal/${childId}/view/${entry.id}`)}
                   onEdit={() => navigate(`/journal/${childId}/edit/${entry.id}`)}
                   onDelete={() => {
-                    if (confirm(t('archive.deleteLetterConfirm'))) {
+                    if (confirm(t('archive.deleteLetterConfirm', { days: TRASH_DAYS }))) {
                       deleteJournal(entry.id)
                     }
                   }}

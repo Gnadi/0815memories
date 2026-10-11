@@ -18,7 +18,6 @@
  */
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   orderBy,
@@ -147,16 +146,4 @@ export async function setUnlockDate(id, until) {
 export async function updateBox(key, id, updates) {
   const encrypted = await encryptFields(key, updates, METADATA_ENCRYPTED_FIELDS)
   await updateDoc(doc(db, BLACKBOX, id), encrypted)
-}
-
-export async function deleteBox(id) {
-  // Both halves, and the content first: a failure after this point leaves a
-  // capsule with no letter, which the card handles. The reverse would leave an
-  // orphaned letter no query would ever surface again.
-  try {
-    await deleteDoc(doc(db, BLACKBOX_CONTENT, id))
-  } catch (err) {
-    devError('Black Box content delete failed:', err)
-  }
-  await deleteDoc(doc(db, BLACKBOX, id))
 }

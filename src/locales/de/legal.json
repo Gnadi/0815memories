@@ -11,7 +11,7 @@
     "seoTitle": "Nutzungsbedingungen — Kaydo",
     "seoDescription": "Die Bedingungen, die deine Nutzung von Kaydo regeln – dem privaten Zuhause für die Erinnerungen deiner Familie.",
     "title": "Nutzungsbedingungen",
-    "effective": "Gültig ab: 28. Juni 2026",
+    "effective": "Gültig ab: 10. Oktober 2026",
     "intro": "Willkommen bei Kaydo. Diese Nutzungsbedingungen (die „Bedingungen“) regeln deinen Zugang zur und deine Nutzung der Kaydo-Website, der Anwendungen und der damit verbundenen Dienste (zusammen der „Dienst“). Mit der Erstellung eines Kontos oder der Nutzung des Dienstes stimmst du diesen Bedingungen zu. Wenn du nicht einverstanden bist, nutze den Dienst bitte nicht.",
     "sections": [
       {
@@ -62,7 +62,7 @@
       {
         "heading": "7. Beendigung",
         "paragraphs": [
-          "Du kannst die Nutzung des Dienstes jederzeit beenden und dein Konto löschen. Wenn du dein Konto löschst, entfernen oder anonymisieren wir Deine Inhalte gemäß unserer Datenschutzerklärung, soweit wir nicht gesetzlich zur Aufbewahrung bestimmter Informationen verpflichtet sind.",
+          "Du kannst die Nutzung des Dienstes jederzeit beenden und dein Konto in den Einstellungen löschen; wem die Familie gehört, löscht stattdessen die ganze Familie. Was dann mit Inhalten geschieht, beschreibt unsere Datenschutzerklärung unter „Speicherdauer“. Wir löschen sie, soweit wir nicht gesetzlich zur Aufbewahrung bestimmter Informationen verpflichtet sind.",
           "Wir können deinen Zugang sperren oder beenden, wenn du wesentlich gegen diese Bedingungen verstößt."
         ]
       },
@@ -86,7 +86,7 @@
     "seoTitle": "Datenschutzerklärung — Kaydo",
     "seoDescription": "Wie Kaydo die personenbezogenen Daten deiner Familie erhebt, verwendet und schützt.",
     "title": "Datenschutzerklärung",
-    "effective": "Gültig ab: 28. Juni 2026",
+    "effective": "Gültig ab: 10. Oktober 2026",
     "intro": "Die Erinnerungen deiner Familie sind zutiefst persönlich, und ihr Schutz steht im Mittelpunkt unseres Handelns. Diese Datenschutzerklärung erläutert, welche Daten wir erheben, warum wir sie erheben und welche Rechte du daran hast.",
     "sections": [
       {
@@ -136,7 +136,10 @@
       {
         "heading": "7. Speicherdauer",
         "paragraphs": [
-          "Wir bewahren dein Konto und deine Inhalte so lange auf, wie dein Konto aktiv ist. Wenn du Inhalte oder dein Konto löschst, entfernen oder anonymisieren wir diese innerhalb eines angemessenen Zeitraums, soweit wir nicht zur Aufbewahrung bestimmter Aufzeichnungen gesetzlich verpflichtet sind."
+          "Wir bewahren dein Konto und deine Inhalte so lange auf, wie dein Konto besteht, soweit wir nicht zur Aufbewahrung bestimmter Aufzeichnungen gesetzlich verpflichtet sind.",
+          "Was du löschst, kommt zuerst in den Papierkorb deiner Familie. Dort können es die Admins deiner Familie 30 Tage lang wiederherstellen. Danach, oder sobald es jemand im Papierkorb endgültig löscht, löschen wir es endgültig, samt den Fotos, Videos und Sprachnachrichten, die nur dazu gehören. Eine Datei, die an anderer Stelle in deiner Familie noch gezeigt wird, etwa in einer Collage, bleibt erhalten.",
+          "Ein Admin kann sein Konto in den Einstellungen löschen und verlässt damit die Familie. Was er gepostet hat, bleibt in der Familie; wer das nicht möchte, löscht es vorher. Wem die Familie gehört, kann sie in den Einstellungen ganz löschen: alle Inhalte, die Konten aller Admins und den Zugang für Gäste. Ab der Bestätigung kann sich niemand mehr anmelden, und innerhalb weniger Stunden ist alles gelöscht.",
+          "Fotos, Videos und Sprachnachrichten sind mit dem Schlüssel deiner Familie verschlüsselt. Mit der Familie löschen wir auch diesen Schlüssel. Eine Datei, die wir dabei nicht finden, kann danach niemand mehr entschlüsseln."
         ]
       },
       {

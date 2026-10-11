@@ -28,6 +28,7 @@ import {
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { MAX_PLAINTEXT_BYTES, formatBytes } from '../constants/media'
 import { devError } from '../utils/devLog'
+import { TRASH_DAYS } from '../services/trash'
 
 const ASPECT_OPTIONS = ['9:16', '1:1', '4:5']
 
@@ -263,7 +264,7 @@ export default function HighlightEditorPage() {
 
   const handleDelete = async () => {
     setMenuOpen(false)
-    if (!window.confirm(t('reel.confirmDelete'))) return
+    if (!window.confirm(t('reel.confirmDelete', { days: TRASH_DAYS }))) return
     try {
       await deleteHighlight(id)
       navigate('/highlights')

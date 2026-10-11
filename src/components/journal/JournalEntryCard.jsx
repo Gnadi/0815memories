@@ -5,12 +5,12 @@ import { EMOTIONS } from '../../constants/emotions'
 import EncryptedImage from '../media/EncryptedImage'
 
 export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
-  const { t } = useTranslation('journal')
+  const { t, i18n } = useTranslation('journal')
   const [menuOpen, setMenuOpen] = useState(false)
 
   const emotion = EMOTIONS.find((e) => e.key === entry.emotion) || EMOTIONS[1]
   const date = entry.date?.toDate ? entry.date.toDate() : new Date(entry.date)
-  const formattedDate = date.toLocaleDateString('en-US', {
+  const formattedDate = date.toLocaleDateString(i18n.language, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

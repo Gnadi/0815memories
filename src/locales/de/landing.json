@@ -280,7 +280,7 @@
     "displayNameAriaLabel": "Dein Name",
     "emailPlaceholder": "E-Mail",
     "emailAriaLabel": "E-Mail",
-    "passwordPlaceholder": "Passwort (mindestens 6 Zeichen)",
+    "passwordPlaceholder": "Passwort (mindestens {{min}} Zeichen)",
     "passwordAriaLabel": "Passwort",
     "showPassword": "Passwort anzeigen",
     "hidePassword": "Passwort verbergen",
@@ -289,10 +289,10 @@
     "login": "Anmelden",
     "errors": {
       "couldNotCheck": "Verfügbarkeit konnte nicht geprüft werden — bitte versuche es erneut.",
-      "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "passwordTooShort": "Das Passwort muss mindestens {{min}} Zeichen lang sein",
       "emailInUse": "Mit dieser E-Mail-Adresse existiert bereits ein Konto",
       "invalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein",
-      "weakPassword": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "weakPassword": "Das Passwort muss mindestens {{min}} Zeichen lang sein",
       "generic": "Konto konnte nicht erstellt werden"
     }
   }

@@ -203,5 +203,79 @@
     "previewAlt": "Vorschau",
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
     "uploadFailed": "Upload fehlgeschlagen"
+  },
+  "account": {
+    "title": "Dein Konto",
+    "signedInAs": "Angemeldet als {{email}}",
+    "password": {
+      "title": "Dein Passwort ändern",
+      "description": "Das Passwort, mit dem du dich als Admin anmeldest, nicht das Familienpasswort für Gäste. Deine anderen Geräte müssen sich danach neu anmelden.",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort (mindestens {{min}} Zeichen)",
+      "repeat": "Neues Passwort wiederholen",
+      "submit": "Passwort ändern",
+      "changed": "Dein Passwort wurde geändert.",
+      "errors": {
+        "wrongCurrent": "Dein aktuelles Passwort stimmt nicht.",
+        "tooShort": "Das neue Passwort muss mindestens {{min}} Zeichen lang sein.",
+        "mismatch": "Die neuen Passwörter stimmen nicht überein.",
+        "tooManyRequests": "Zu viele Versuche. Bitte versuch es später noch einmal.",
+        "generic": "Dein Passwort konnte nicht geändert werden. Bitte versuch es noch einmal."
+      }
+    },
+    "deleteAccount": {
+      "title": "Dein Konto löschen",
+      "description": "Du verlässt die Familie, und dein Konto wird gelöscht. Was du gepostet hast, bleibt in der Familie; wem die Familie gehört, kann es löschen.",
+      "password": "Dein Passwort zur Bestätigung",
+      "submit": "Mein Konto löschen",
+      "confirm": "Dein Konto löschen und die Familie verlassen? Das lässt sich nicht rückgängig machen."
+    },
+    "deleteFamily": {
+      "title": "Die Familie löschen",
+      "description": "Löscht alles in der Familie – Erinnerungen, Momente, Tagebücher, Rezepte, Fotobücher, Zeitkapseln, Fotos und Videos – mit den Konten aller Admins und dem Zugang für Gäste. Ab der Bestätigung kann sich niemand mehr anmelden; der Rest ist innerhalb weniger Stunden gelöscht. Das lässt sich nicht rückgängig machen, exportiere also vorher, wenn du eine Kopie behalten willst.",
+      "typeName": "Gib zur Bestätigung den Namen der Familie ein: {{name}}",
+      "password": "Dein Passwort zur Bestätigung",
+      "submit": "Familie endgültig löschen",
+      "confirm": "Die ganze Familie endgültig löschen? Das lässt sich nicht rückgängig machen."
+    },
+    "errors": {
+      "wrongPassword": "Das Passwort stimmt nicht.",
+      "tooManyRequests": "Zu viele Versuche. Bitte versuch es später noch einmal.",
+      "generic": "Das hat nicht geklappt. Bitte versuch es noch einmal."
+    }
+  },
+  "trash": {
+    "title": "Papierkorb",
+    "teaser": "Was du löschst, bleibt {{days}} Tage hier. Bis dahin kannst du es zurückholen.",
+    "open": "Papierkorb öffnen",
+    "back": "Zurück zu den Einstellungen",
+    "description": "Was deine Familie gelöscht hat, bleibt {{days}} Tage hier. Danach wird es endgültig gelöscht, mit seinen Fotos, Videos und Sprachnachrichten.",
+    "empty": "Der Papierkorb ist leer.",
+    "loadFailed": "Der Papierkorb konnte nicht geladen werden. Prüf deine Verbindung und versuch es noch einmal.",
+    "untitled": "Ohne Titel",
+    "deletedOn": "Gelöscht am {{date}}",
+    "purgedOn": "endgültig gelöscht am {{date}}",
+    "restore": "Wiederherstellen",
+    "deleteForever": "Endgültig löschen",
+    "deleteForeverConfirm": "„{{title}}“ endgültig löschen? Fotos, Videos und Sprachnachrichten werden mitgelöscht, und es lässt sich nicht mehr zurückholen.",
+    "restoreFailed": "Das ließ sich nicht wiederherstellen. Bitte versuch es noch einmal.",
+    "deleteFailed": "Das ließ sich nicht löschen. Bitte versuch es noch einmal.",
+    "kinds": {
+      "memories": "Erinnerung",
+      "moments": "Moment",
+      "journals": "Tagebucheintrag",
+      "children": "Kind",
+      "recipes": "Rezept",
+      "scrapbooks": "Fotobuch",
+      "collages": "Collage",
+      "highlights": "Highlight-Video",
+      "blackbox": "Zeitkapsel"
+    },
+    "more": {
+      "children_one": "mit {{count}} Tagebucheintrag",
+      "children_other": "mit {{count}} Tagebucheinträgen",
+      "recipes_one": "mit {{count}} Variante",
+      "recipes_other": "mit {{count}} Varianten"
+    }
   }
 }

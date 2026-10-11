@@ -8,7 +8,7 @@
       "body": "Add Grandma's first recipe and start building your family's culinary tree.",
       "cta": "Add Your First Recipe"
     },
-    "deleteConfirm": "Delete this recipe and all its forks permanently? This cannot be undone."
+    "deleteConfirm": "Move this recipe and all its versions to the trash? You can restore them there for {{days}} days."
   },
   "card": {
     "by": "by {{author}}",

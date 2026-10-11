@@ -14,7 +14,7 @@
     "body": "Create your first time-release message — a gift for the future.",
     "cta": "Seal Your First Message"
   },
-  "confirmDelete": "Delete this sealed message permanently? This cannot be undone.",
+  "confirmDelete": "Move this sealed message to the trash? You can restore it there for {{days}} days, still sealed.",
   "create": {
     "headerTitle": "Preserving a Moment",
     "subtitle": "Create a digital heirloom that remains sealed until the perfect moment in the future.",

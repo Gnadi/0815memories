@@ -24,6 +24,7 @@ import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { emptyKeepsakes } from '../utils/ourYear'
 import { subscribeDecrypted, subscribeDecryptedDocument } from './decrypted'
+import { requestMediaDeletion } from './mediaDeletions'
 
 export const RITUALS = 'ourYearRituals'
 export const CHAPTERS = 'ourYearChapters'
@@ -218,6 +219,10 @@ export async function closeChapter(id) {
  * The chapter goes first. firestore.rules only lets a handed-in answer be
  * deleted once its chapter is gone — otherwise deleting and rewriting it
  * would undo the hand-in after the partner's answers were visible.
+ *
+ * A chapter skips the trash, which every admin can see. Its keepsake photo is
+ * deleted on the server afterwards; `chapter` is the decrypted chapter, the
+ * only place that names it.
  */
 export async function deleteChapter(chapter) {
   const ids = (chapter.participantUids ?? []).flatMap((participant) =>
@@ -226,6 +231,7 @@ export async function deleteChapter(chapter) {
   await deleteDoc(doc(db, CHAPTERS, chapter.id))
   await Promise.allSettled(ids.map((id) => deleteDoc(doc(db, ENTRIES, id))))
   await deleteDoc(doc(db, LETTERS, chapter.id)).catch(() => {})
+  await requestMediaDeletion(chapter.familyId, chapter.keepsakes)
 }
 
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ import KidJournalCard from '../components/journal/KidJournalCard'
 import AddKidModal from '../components/admin/AddKidModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function KidsJournalPage() {
   const { t } = useTranslation('journal')
@@ -90,7 +91,7 @@ export default function KidsJournalPage() {
                 setShowAddKid(true)
               }}
               onDelete={() => {
-                if (confirm(t('list.deleteChildConfirm', { name: kid.name }))) {
+                if (confirm(t('list.deleteChildConfirm', { name: kid.name, days: TRASH_DAYS }))) {
                   deleteKid(kid.id)
                 }
               }}

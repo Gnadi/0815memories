@@ -203,5 +203,79 @@
     "previewAlt": "Preview",
     "clickToUpload": "Click to upload a photo",
     "uploadFailed": "Upload failed"
+  },
+  "account": {
+    "title": "Your account",
+    "signedInAs": "Signed in as {{email}}",
+    "password": {
+      "title": "Change your password",
+      "description": "The password you sign in with as an admin, not the family password for guests. Your other devices will have to sign in again.",
+      "current": "Current password",
+      "new": "New password (at least {{min}} characters)",
+      "repeat": "Repeat the new password",
+      "submit": "Change password",
+      "changed": "Your password has been changed.",
+      "errors": {
+        "wrongCurrent": "Your current password is not correct.",
+        "tooShort": "The new password must be at least {{min}} characters long.",
+        "mismatch": "The new passwords do not match.",
+        "tooManyRequests": "Too many attempts. Please try again later.",
+        "generic": "Your password could not be changed. Please try again."
+      }
+    },
+    "deleteAccount": {
+      "title": "Delete your account",
+      "description": "You leave the family, and your account is deleted. What you posted stays with the family; the family's owner can delete it.",
+      "password": "Your password, to confirm",
+      "submit": "Delete my account",
+      "confirm": "Delete your account and leave the family? This cannot be undone."
+    },
+    "deleteFamily": {
+      "title": "Delete the family",
+      "description": "Deletes everything in the family — memories, moments, journals, recipes, scrapbooks, time capsules, photos and videos — with every admin's account and the guests' access. Nobody can sign in from the moment you confirm; the rest is gone within a few hours. This cannot be undone, so export first if you want to keep a copy.",
+      "typeName": "Type the family's name, {{name}}, to confirm.",
+      "password": "Your password, to confirm",
+      "submit": "Delete the family for good",
+      "confirm": "Delete the whole family for good? This cannot be undone."
+    },
+    "errors": {
+      "wrongPassword": "That password is not correct.",
+      "tooManyRequests": "Too many attempts. Please try again later.",
+      "generic": "That didn't work. Please try again."
+    }
+  },
+  "trash": {
+    "title": "Trash",
+    "teaser": "What you delete stays here for {{days}} days. You can bring it back until then.",
+    "open": "Open the trash",
+    "back": "Back to settings",
+    "description": "What your family deleted stays here for {{days}} days. After that, it is deleted for good, together with its photos, videos and voice notes.",
+    "empty": "The trash is empty.",
+    "loadFailed": "The trash couldn't be loaded. Check your connection and try again.",
+    "untitled": "Untitled",
+    "deletedOn": "Deleted on {{date}}",
+    "purgedOn": "deleted for good on {{date}}",
+    "restore": "Restore",
+    "deleteForever": "Delete for good",
+    "deleteForeverConfirm": "Delete \"{{title}}\" for good? Its photos, videos and voice notes are deleted too, and it cannot be brought back.",
+    "restoreFailed": "It couldn't be restored. Please try again.",
+    "deleteFailed": "It couldn't be deleted. Please try again.",
+    "kinds": {
+      "memories": "Memory",
+      "moments": "Moment",
+      "journals": "Journal entry",
+      "children": "Child",
+      "recipes": "Recipe",
+      "scrapbooks": "Scrapbook",
+      "collages": "Collage",
+      "highlights": "Highlight video",
+      "blackbox": "Time capsule"
+    },
+    "more": {
+      "children_one": "with {{count}} journal entry",
+      "children_other": "with {{count}} journal entries",
+      "recipes_one": "with {{count}} version",
+      "recipes_other": "with {{count}} versions"
+    }
   }
 }

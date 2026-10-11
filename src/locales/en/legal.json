@@ -11,7 +11,7 @@
     "seoTitle": "Terms of Service — Kaydo",
     "seoDescription": "The terms and conditions that govern your use of Kaydo, the private home for your family's memories.",
     "title": "Terms of Service",
-    "effective": "Effective date: June 28, 2026",
+    "effective": "Effective date: October 10, 2026",
     "intro": "Welcome to Kaydo. These Terms of Service (the \"Terms\") govern your access to and use of the Kaydo website, applications, and related services (together, the \"Service\"). By creating an account or using the Service, you agree to these Terms. If you do not agree, please do not use the Service.",
     "sections": [
       {
@@ -62,7 +62,7 @@
       {
         "heading": "7. Termination",
         "paragraphs": [
-          "You may stop using the Service and delete your account at any time. When you delete your account, we remove or anonymize Your Content in line with our Privacy Policy, except where we are legally required to retain certain information.",
+          "You may stop using the Service at any time and delete your account in the settings; the family's owner deletes the whole family instead. What then happens to content is set out in our Privacy Policy under \"How long we keep data\". We delete it, except where we are legally required to retain certain information.",
           "We may suspend or terminate your access if you materially breach these Terms."
         ]
       },
@@ -86,7 +86,7 @@
     "seoTitle": "Privacy Policy — Kaydo",
     "seoDescription": "How Kaydo collects, uses, and protects your family's personal data.",
     "title": "Privacy Policy",
-    "effective": "Effective date: June 28, 2026",
+    "effective": "Effective date: October 10, 2026",
     "intro": "Your family's memories are deeply personal, and protecting them is at the heart of what we do. This Privacy Policy explains what data we collect, why we collect it, and the rights you have over it.",
     "sections": [
       {
@@ -136,7 +136,10 @@
       {
         "heading": "7. How long we keep data",
         "paragraphs": [
-          "We keep your account and content for as long as your account is active. When you delete content or your account, we remove or anonymize it within a reasonable period, except where we must retain certain records to meet legal obligations."
+          "We keep your account and content for as long as your account exists, except where we must retain certain records to meet legal obligations.",
+          "What you delete goes to your family's trash first, where your family's admins can restore it for 30 days. After that, or as soon as someone deletes it for good from the trash, we delete it for good, along with the photos, videos and voice notes that belong only to it. A file that is still shown elsewhere in your family, such as in a collage, stays.",
+          "An admin can delete their account in the settings, which also takes them out of the family. What they posted stays with the family; anyone who does not want that deletes it first. The family's owner can delete the whole family in the settings: all of its content, every admin's account and the guests' access. Nobody can sign in from the moment they confirm, and everything is deleted within a few hours.",
+          "Photos, videos and voice notes are encrypted with your family's key. When we delete a family, we delete its key too. A file we do not find in the process can no longer be decrypted by anyone."
         ]
       },
       {

@@ -15,7 +15,8 @@ Browser (React SPA + service worker)
  ├── Firebase Auth ─────── admins: email/password
  │                         viewers: custom token from viewerLogin
  ├── Firestore ─────────── all data; firestore.rules decide every read and write
- ├── Cloud Functions ───── viewer login, admin claims, public mirror, push
+ ├── Cloud Functions ───── viewer login, admin claims, public mirror, push,
+ │                         emptying the trash, deleting families
  │   (functions/, europe-west3)
  ├── Vercel function ───── api/cloudinary-sign: upload signatures, admins only
  └── Cloudinary ────────── media, stored as encrypted `raw` files
@@ -73,6 +74,32 @@ The encryption helpers back this up: writing without a key throws, except in
 the demo, whose family is the only one without one. The emulator seed is
 encrypted like any other family, pictures included.
 
+## Deleting
+
+Deleting moves a document to the trash (`src/services/trash.js`): into
+`trash/<collection>__<id>`, exactly as it was stored, and back out on
+restore. `firestore.rules` holds both moves to the same document, so the
+trash is no way around a collection's own rules. A child moves with their
+journal, a recipe with its versions; a capsule moves without its letter,
+which stays where it is, sealed.
+
+Each entry lists the Cloudinary files only it uses. The client works that
+out, because a collage, a scrapbook or a highlight shows memories' photos and
+says so only in encrypted fields; a file something else still shows stays.
+After 30 days, or once someone deletes an entry for good, the hourly
+`purgeTrash` function deletes it with those files (`functions/purge.js`). The
+list comes from a client, so the function deletes a file only if it is the
+family's: in the family's own upload folder, `kaydo/f/<familyId>/`, which
+`api/cloudinary-sign` signs uploads into, or, for a file from before the
+folders, if it decrypts with the family's key.
+
+An admin deletes their own account in the settings and leaves the family;
+what they posted stays. The owner deletes the whole family instead:
+`deleteFamily` locks every account out and moves the key into a deletion
+record no client can read, and `onFamilyDeletion` then deletes the family's
+documents with their files, its folder, its accounts and finally the record
+with the key (`functions/familyDeletion.js`).
+
 ## Data model
 
 Every top-level collection holds documents for all families, each with a
@@ -97,6 +124,9 @@ family.
 | `notificationsQueue` | retired; closed in the rules | nobody |
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
 | `feedback` | app feedback, deliberately unencrypted, append-only | family members |
+| `trash` | deleted documents, as they were stored, for 30 days | admins move in and out; functions empty it |
+| `mediaDeletions` | files to delete for what skips the trash (Our Year) | admins write, nobody reads |
+| `familyDeletions` | a family being deleted, with its key until the end | functions only |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
 from CI on merge (`.github/workflows/firebase-firestore.yml`).
@@ -114,9 +144,13 @@ the top of `functions/index.js`.
 | `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
+| `purgeTrash` | schedule, hourly | the trash's expired entries and their files, deletion requests, unfinished family deletions |
+| `deleteFamily` | callable, owner | locks the family's accounts, moves its key into a deletion record |
+| `onFamilyDeletion` | `familyDeletions/{id}` created | deletes the family's documents, files and accounts |
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
-`anniversary.js`, `push.js`), and `src/__tests__/` imports it directly.
+`anniversary.js`, `push.js`, `purge.js`, `familyDeletion.js`), and
+`src/__tests__/` imports it directly.
 The functions are deployed by hand for now (README, *Getting started*).
 
 ## The front end (`src/`)

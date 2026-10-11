@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
-import { addRecipe, deleteRecipe, getRecipeLineage, subscribeRecipes } from '../services/recipes'
+import { addRecipe, getRecipeLineage, subscribeRecipes } from '../services/recipes'
+import { moveToTrash } from '../services/trash'
 
 export function useRecipes(familyId, encryptionKey) {
   const [recipes, setRecipes] = useState([])
@@ -25,7 +26,7 @@ export function useRecipes(familyId, encryptionKey) {
     recipes,
     loading,
     addRecipe: (data) => addRecipe(familyId, encryptionKey, data),
-    deleteRecipe: (id) => deleteRecipe(familyId, id),
+    deleteRecipe: (id) => moveToTrash(encryptionKey, 'recipes', id),
   }
 }
 

@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Snowflake, Leaf, Sun, Wind, Clock, MapPin, Tag, Star } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTimeline } from '../hooks/useTimeline'
@@ -30,14 +31,15 @@ function toDate(ts) {
   return new Date(ts)
 }
 
-function formatOverlayDate(date) {
+function formatOverlayDate(date, locale) {
   return date
-    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-    .toUpperCase()
+    .toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' })
+    .toLocaleUpperCase(locale)
 }
 
 const TimelineCard = memo(function TimelineCard({ memory }) {
   const navigate = useNavigate()
+  const { i18n } = useTranslation()
   const date = toDate(memory.date)
   const image = (memory.images && memory.images[0]) || memory.imageUrl
 
@@ -67,7 +69,7 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
             {/* Date overlay */}
             <div className="absolute top-3 left-3">
               <span className="bg-warm-white/90 backdrop-blur-sm text-kaydo text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full">
-                {formatOverlayDate(date)}
+                {formatOverlayDate(date, i18n.language)}
               </span>
             </div>
           </div>
@@ -77,7 +79,7 @@ const TimelineCard = memo(function TimelineCard({ memory }) {
         <div className="p-4">
           {!image && (
             <p className="text-xs font-bold tracking-widest text-kaydo mb-2">
-              {formatOverlayDate(date)}
+              {formatOverlayDate(date, i18n.language)}
             </p>
           )}
           <h3 className="font-serif text-lg font-bold text-bark leading-snug mb-1">
@@ -128,6 +130,7 @@ function SkeletonCard() {
 }
 
 export default function SmartTimelinePage() {
+  const { t, i18n } = useTranslation('timeline')
   const { familyId, encryptionKey } = useAuth()
   const [searchParams] = useSearchParams()
 
@@ -169,9 +172,17 @@ export default function SmartTimelinePage() {
   }, [memories, selectedSeason, showOnThisDay])
 
   const today = new Date()
-  const todayLabel = today.toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })
-  const seasonLabel = selectedSeason || 'all seasons'
-  const yearLabel = selectedYear ? String(selectedYear) : 'all time'
+  const todayLabel = today.toLocaleDateString(i18n.language, { day: 'numeric', month: 'long' })
+  // The season inside a sentence: "in winter", "im Winter".
+  const seasonInText = selectedSeason ? t(`seasonsInText.${selectedSeason}`) : ''
+
+  function emptyMessage() {
+    if (showOnThisDay) return t('empty.onThisDay', { date: todayLabel })
+    if (selectedSeason && selectedYear) return t('empty.seasonWithYear', { season: seasonInText, year: selectedYear })
+    if (selectedSeason) return t('empty.season', { season: seasonInText })
+    if (selectedYear) return t('empty.year', { year: selectedYear })
+    return t('empty.generic')
+  }
 
   function clearFilters() {
     setSelectedYear(null)
@@ -189,10 +200,10 @@ export default function SmartTimelinePage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-5 h-5 text-kaydo" />
-            <span className="text-xs font-semibold text-kaydo tracking-widest uppercase">Family Vault</span>
+            <span className="text-xs font-semibold text-kaydo tracking-widest uppercase">{t('header.eyebrow')}</span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-bark leading-tight">Smart Timeline</h1>
-          <p className="text-bark-light mt-1 text-sm">Tracing the threads of our story.</p>
+          <h1 className="font-serif text-3xl font-bold text-bark leading-tight">{t('header.title')}</h1>
+          <p className="text-bark-light mt-1 text-sm">{t('header.subtitle')}</p>
         </div>
 
         {/* On This Day Banner */}
@@ -215,8 +226,8 @@ export default function SmartTimelinePage() {
         >
           <Star className="w-4 h-4 flex-shrink-0" fill={showOnThisDay ? '#FFFDF9' : 'none'} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-tight">Heute vor 3 Jahren</p>
-            <p className="text-xs opacity-75 leading-tight mt-0.5">{todayLabel} · Erinnerungen aus vergangenen Jahren</p>
+            <p className="text-sm font-semibold leading-tight">{t('onThisDay.banner')}</p>
+            <p className="text-xs opacity-75 leading-tight mt-0.5">{t('onThisDay.bannerSub', { date: todayLabel })}</p>
           </div>
         </button>
 
@@ -259,7 +270,7 @@ export default function SmartTimelinePage() {
                   : { backgroundColor: '#F5E6D0', color: '#7A6A5E' }
               }
             >
-              All
+              {t('seasons.all')}
             </button>
             {SEASONS.slice(0, 2).map(({ name, icon: Icon }) => {
               const active = selectedSeason === name
@@ -275,7 +286,7 @@ export default function SmartTimelinePage() {
                   }
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  {name}
+                  {t(`seasons.${name}`)}
                 </button>
               )
             })}
@@ -295,7 +306,7 @@ export default function SmartTimelinePage() {
                   }
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  {name}
+                  {t(`seasons.${name}`)}
                 </button>
               )
             })}
@@ -306,11 +317,11 @@ export default function SmartTimelinePage() {
         {!loading && (
           <p className="text-xs text-bark-muted mb-6 font-medium">
             {filteredMemories.length === 0
-              ? 'No memories found'
-              : `${filteredMemories.length} ${filteredMemories.length === 1 ? 'memory' : 'memories'}`}
-            {showOnThisDay ? ` · On this day · ${todayLabel}` : ''}
-            {!showOnThisDay && selectedSeason ? ` in ${seasonLabel}` : ''}
-            {!showOnThisDay && selectedYear ? ` · ${yearLabel}` : ''}
+              ? t('stats.noMemories')
+              : t('stats.count', { count: filteredMemories.length })}
+            {showOnThisDay ? t('stats.onThisDaySuffix', { date: todayLabel }) : ''}
+            {!showOnThisDay && selectedSeason ? t('stats.seasonSuffix', { season: seasonInText }) : ''}
+            {!showOnThisDay && selectedYear ? t('stats.yearSuffix', { year: selectedYear }) : ''}
           </p>
         )}
 
@@ -324,19 +335,13 @@ export default function SmartTimelinePage() {
             <div className="w-16 h-16 rounded-full bg-cream-dark flex items-center justify-center mb-4">
               <Clock className="w-8 h-8 text-bark-muted" />
             </div>
-            <p className="font-serif text-lg font-semibold text-bark mb-1">No memories here yet</p>
-            <p className="text-sm text-bark-muted max-w-xs">
-              {showOnThisDay
-                ? `Noch keine Erinnerungen vom ${todayLabel} aus vergangenen Jahren.`
-                : selectedSeason
-                  ? `No ${selectedSeason.toLowerCase()} memories found${selectedYear ? ` for ${selectedYear}` : ''}.`
-                  : `No memories found${selectedYear ? ` for ${selectedYear}` : ''}.`}
-            </p>
+            <p className="font-serif text-lg font-semibold text-bark mb-1">{t('empty.heading')}</p>
+            <p className="text-sm text-bark-muted max-w-xs">{emptyMessage()}</p>
             <button
               onClick={clearFilters}
               className="mt-4 text-sm text-kaydo font-medium hover:underline"
             >
-              Clear filters
+              {t('empty.clearFilters')}
             </button>
           </div>
         ) : (

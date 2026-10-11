@@ -5,7 +5,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   deleteField,
   doc,
   orderBy,
@@ -78,8 +77,4 @@ export async function updateKid(key, id, updates) {
     if (encrypted[field] === null) encrypted[field] = deleteField()
   }
   await updateDoc(doc(db, CHILDREN, id), encrypted)
-}
-
-export async function deleteKid(id) {
-  await deleteDoc(doc(db, CHILDREN, id))
 }

@@ -45,7 +45,7 @@
     "more": "More options",
     "download": "Download image",
     "delete": "Delete",
-    "confirmDelete": "Delete this collage? This cannot be undone.",
+    "confirmDelete": "Move this collage to the trash? You can restore it there for {{days}} days.",
     "titleLabel": "Title",
     "addPhotoToSlot": "Add a photo here",
     "selectPhoto": "Select this photo",
@@ -90,7 +90,7 @@
     "moveLater": "Move later",
     "removeShot": "Remove from reel",
     "pickHint": "Tap a photo to add it to the reel",
-    "confirmDelete": "Delete this highlight video? This cannot be undone.",
+    "confirmDelete": "Move this highlight video to the trash? You can restore it there for {{days}} days.",
     "themes": {
       "warm": "Warm",
       "cream": "Cream",

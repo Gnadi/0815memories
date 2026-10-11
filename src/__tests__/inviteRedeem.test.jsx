@@ -56,7 +56,7 @@ async function submitForm() {
   // The page lays the form out twice, for mobile and desktop; either will do.
   await user.type((await screen.findAllByPlaceholderText('e.g., Sarah Miller'))[0], 'Sam')
   await user.type(screen.getAllByPlaceholderText('you@example.com')[0], 'new@example.com')
-  await user.type(screen.getAllByPlaceholderText('At least 6 characters')[0], 'secret123')
+  await user.type(screen.getAllByPlaceholderText('At least 8 characters')[0], 'secret123')
   await user.type(screen.getAllByPlaceholderText('Repeat your password')[0], 'secret123')
   await user.click(screen.getAllByRole('button', { name: /create account|join/i })[0])
 }

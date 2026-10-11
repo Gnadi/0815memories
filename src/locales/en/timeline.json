@@ -5,8 +5,8 @@
     "subtitle": "Tracing the threads of our story."
   },
   "onThisDay": {
-    "banner": "Heute vor 3 Jahren",
-    "bannerSub": "{{date}} · Erinnerungen aus vergangenen Jahren"
+    "banner": "Three years ago today",
+    "bannerSub": "{{date}} · memories from past years"
   },
   "seasons": {
     "all": "All",
@@ -17,23 +17,25 @@
   },
   "stats": {
     "noMemories": "No memories found",
-    "memory": "{{count}} memory",
-    "memories": "{{count}} memories",
+    "count_one": "{{count}} memory",
+    "count_other": "{{count}} memories",
     "onThisDaySuffix": " · On this day · {{date}}",
     "seasonSuffix": " in {{season}}",
     "yearSuffix": " · {{year}}"
   },
-  "filters": {
-    "allSeasons": "all seasons",
-    "allTime": "all time"
-  },
   "empty": {
     "heading": "No memories here yet",
-    "onThisDay": "Noch keine Erinnerungen vom {{date}} aus vergangenen Jahren.",
+    "onThisDay": "No memories from {{date}} in past years yet.",
     "seasonWithYear": "No {{season}} memories found for {{year}}.",
     "season": "No {{season}} memories found.",
     "year": "No memories found for {{year}}.",
     "generic": "No memories found.",
     "clearFilters": "Clear filters"
+  },
+  "seasonsInText": {
+    "Winter": "winter",
+    "Spring": "spring",
+    "Summer": "summer",
+    "Autumn": "autumn"
   }
 }

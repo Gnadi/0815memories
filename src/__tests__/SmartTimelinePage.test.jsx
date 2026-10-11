@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import i18n from '../i18n'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before the module under test is imported
@@ -204,7 +205,7 @@ describe('SmartTimelinePage', () => {
 
   // ---- empty state ---------------------------------------------------------
 
-  it('shows German empty-state message when no "On This Day" memories exist', async () => {
+  it('says when no "On This Day" memories exist', async () => {
     // Only memories on dates that are NOT April 16
     mockMemories = [jan01_2022, dec25_2020]
 
@@ -214,7 +215,26 @@ describe('SmartTimelinePage', () => {
       </MemoryRouter>
     )
 
-    expect(await screen.findByText(/Noch keine Erinnerungen/i)).toBeInTheDocument()
+    expect(await screen.findByText('No memories from April 16 in past years yet.')).toBeInTheDocument()
+  })
+
+  // The page used to be English for everyone, with the On This Day texts in
+  // German for everyone.
+  it('speaks German, dates included, to a German reader', async () => {
+    mockMemories = [jan01_2022, dec25_2020]
+    await i18n.changeLanguage('de')
+    try {
+      render(
+        <MemoryRouter initialEntries={['/timeline?filter=onthisday']}>
+          <SmartTimelinePage />
+        </MemoryRouter>
+      )
+      expect(screen.getByText('Smarter Zeitstrahl')).toBeInTheDocument()
+      expect(await screen.findByText('Noch keine Erinnerungen vom 16. April aus vergangenen Jahren.')).toBeInTheDocument()
+      expect(screen.getByText('Filter zurücksetzen')).toBeInTheDocument()
+    } finally {
+      await i18n.changeLanguage('en')
+    }
   })
 
   // ---- loading state -------------------------------------------------------

@@ -6,6 +6,7 @@ import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import { generateSlug } from '../utils/familySlug'
+import { MIN_PASSWORD_LENGTH } from '../constants/auth'
 
 export default function SignupPage() {
   const { t } = useTranslation('auth')
@@ -38,8 +39,8 @@ export default function SignupPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError(t('signup.errors.passwordTooShort'))
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('signup.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
     }
 
@@ -53,7 +54,7 @@ export default function SignupPage() {
         'auth/invalid-email': 'signup.errors.invalidEmail',
         'auth/weak-password': 'signup.errors.weakPassword',
       }
-      setError(t(messages[err.code] || 'signup.errors.generic'))
+      setError(t(messages[err.code] || 'signup.errors.generic', { min: MIN_PASSWORD_LENGTH }))
     } finally {
       setLoading(false)
     }
@@ -292,10 +293,10 @@ function SignupForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('signup.form.passwordPlaceholder')}
+            placeholder={t('signup.form.passwordPlaceholder', { min: MIN_PASSWORD_LENGTH })}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
           <button
             type="button"
@@ -322,7 +323,7 @@ function SignupForm({
             placeholder={t('signup.form.confirmPasswordPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
           <button
             type="button"

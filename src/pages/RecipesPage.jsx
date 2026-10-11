@@ -7,6 +7,7 @@ import { useRecipes } from '../hooks/useRecipes'
 import RecipeCard from '../components/recipes/RecipeCard'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { TRASH_DAYS } from '../services/trash'
 
 export default function RecipesPage() {
   const { t } = useTranslation('recipes')
@@ -79,7 +80,7 @@ export default function RecipesPage() {
                   recipe={recipe}
                   onClick={() => navigate(`/recipes/${recipe.id}`)}
                   onDelete={() => {
-                    if (confirm(t('list.deleteConfirm'))) {
+                    if (confirm(t('list.deleteConfirm', { days: TRASH_DAYS }))) {
                       deleteRecipe(recipe.id)
                     }
                   }}
