@@ -21,7 +21,7 @@ export default function BestOfPage() {
   const { familyId, encryptionKey, isAdmin } = useAuth()
 
   const valid = isMonthKey(month)
-  const { status, bestOf, progress, retry, remake } = useBestOfMonth({
+  const { status, bestOf, retry, remake } = useBestOfMonth({
     familyId,
     encryptionKey,
     isAdmin,
@@ -78,12 +78,7 @@ export default function BestOfPage() {
           <Sparkles className="w-12 h-12 mx-auto mb-6 text-amber-300 animate-pulse" aria-hidden="true" />
           <p className="text-2xl font-semibold leading-snug">{t('making.title', { month: labels.monthName })}</p>
           <p className="mt-3 text-sm text-white/70 leading-relaxed">{t('making.body')}</p>
-          <div className="mt-8 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-amber-400 transition-[width] duration-300"
-              style={{ width: `${Math.round(Math.max(0.04, progress) * 100)}%` }}
-            />
-          </div>
+          <Loader2 className="w-6 h-6 mx-auto mt-8 animate-spin text-white/60" aria-hidden="true" />
         </div>
       ) : (
         <Loader2 className="w-8 h-8 animate-spin text-white/70" aria-label={labels.title} />

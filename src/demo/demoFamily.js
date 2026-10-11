@@ -37,6 +37,8 @@ const MEMORY_IMAGES = [
   ['lake.webp', 'picnic.webp', 'sunset.webp', 'walk.webp'],
   ['leo.webp', 'bike.webp', 'playground.webp'],
   ['cookies.webp', 'kitchen.webp', 'cake.webp'],
+  ['garden.webp'],
+  ['books.webp'],
 ]
 const MOMENT_IMAGES = ['pancakes.webp', 'playground.webp', 'books.webp', 'bike.webp', 'treehouse.webp']
 const RECIPE_IMAGES = ['pie.webp', 'kitchen.webp', 'cookies.webp', 'pancakes.webp']
@@ -103,6 +105,8 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     lastMonth(6, 15),
     lastMonth(14, 17),
     lastMonth(21, 14),
+    lastMonth(10, 16),
+    lastMonth(26, 19),
   ]
   c.memories.forEach((memory, i) => {
     const images = MEMORY_IMAGES[i].map(media)

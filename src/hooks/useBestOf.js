@@ -7,7 +7,6 @@ import {
   collectMedia,
   currentBestOfMonth,
   hasEnoughForBestOf,
-  pickCandidates,
   slideMedia,
 } from '../utils/bestOf'
 import { devError } from '../utils/devLog'
@@ -27,56 +26,31 @@ import { devError } from '../utils/devLog'
 
 // One making per family and month, shared by every screen that asks: the row
 // starting it in the background and the viewer opened while it runs must not
-// look at every photo twice.
+// read the month twice, nor save it twice.
 const makings = new Map()
-
-function makingKey(familyId, month) {
-  return `${familyId}_${month}`
-}
 
 /**
  * Make `month`'s best-of — and save it, on an admin's device. Resolves to the
- * best-of, or null when the month has too little for one. `onProgress(share)`
- * hears how far the photo analysis has got, 0–1, also when joining a making
- * that is already under way.
+ * best-of, or null when the month has too little for one.
  */
-export function makeBestOf({ familyId, encryptionKey, month, isAdmin, onProgress }) {
-  const key = makingKey(familyId, month)
-  let making = makings.get(key)
-  if (!making) {
-    making = { progress: 0, listeners: new Set() }
-    const report = (share) => {
-      making.progress = share
-      for (const listener of making.listeners) listener(share)
-    }
-    making.promise = (async () => {
+export function makeBestOf({ familyId, encryptionKey, month, isAdmin }) {
+  const key = `${familyId}_${month}`
+  if (!makings.has(key)) {
+    const promise = (async () => {
       const { memories, moments } = await getMonthEntries(familyId, encryptionKey, month)
-      const media = collectMedia({ memories, moments })
-      if (!hasEnoughForBestOf(media)) return null
-      // Loaded only now: it pulls in the face detector, megabytes of it.
-      const { analysePhotos } = await import('../utils/photoAnalysis')
-      const analysis = await analysePhotos(pickCandidates(media), {
-        encryptionKey,
-        onProgress: (done, total) => report(total ? done / total : 1),
-      })
-      const bestOf = buildBestOf({ month, memories, moments, analysis })
+      const bestOf = buildBestOf({ month, memories, moments })
       if (bestOf && isAdmin) {
         // Not saving is no reason not to show it: it will be made again next time.
         await saveBestOf(familyId, encryptionKey, bestOf).catch((err) => devError('Saving the best-of failed', err))
       }
       return bestOf
     })()
-    makings.set(key, making)
+    makings.set(key, promise)
     // A finished making is forgotten, so "make it again" makes it again — and
     // a failed one can be retried.
-    making.promise.finally(() => makings.delete(key)).catch(() => {})
+    promise.finally(() => makings.delete(key)).catch(() => {})
   }
-  if (onProgress) {
-    making.listeners.add(onProgress)
-    onProgress(making.progress)
-    making.promise.finally(() => making.listeners.delete(onProgress)).catch(() => {})
-  }
-  return making.promise
+  return makings.get(key)
 }
 
 /** The family's saved best-ofs, newest month first. */
@@ -178,10 +152,10 @@ export function useCurrentBestOf({ familyId, encryptionKey, isAdmin, now }) {
 /**
  * One month's best-of, for the viewer: the saved one, or one made now.
  *
- * status: 'loading' → 'making' (with progress, 0–1) → 'ready' | 'empty' | 'error'
+ * status: 'loading' → 'making' → 'ready' | 'empty' | 'error'
  */
 export function useBestOfMonth({ familyId, encryptionKey, isAdmin, month }) {
-  const [state, setState] = useState({ for: null, status: 'loading', bestOf: null, progress: 0 })
+  const [state, setState] = useState({ for: null, status: 'loading', bestOf: null })
   const [attempt, setAttempt] = useState(0)
   const [remaking, setRemaking] = useState(false)
   const target = month && familyId ? `${familyId}_${month}:${attempt}` : null
@@ -193,11 +167,9 @@ export function useBestOfMonth({ familyId, encryptionKey, isAdmin, month }) {
       if (!cancelled) setState((prev) => ({ ...prev, for: target, ...patch }))
     }
     const make = () => {
-      set({ status: 'making', progress: 0 })
-      return makeBestOf({
-        familyId, encryptionKey, month, isAdmin,
-        onProgress: (progress) => set({ progress }),
-      }).then((bestOf) => set({ status: bestOf ? 'ready' : 'empty', bestOf }))
+      set({ status: 'making' })
+      return makeBestOf({ familyId, encryptionKey, month, isAdmin })
+        .then((bestOf) => set({ status: bestOf ? 'ready' : 'empty', bestOf }))
     }
     ;(async () => {
       try {
@@ -226,6 +198,6 @@ export function useBestOfMonth({ familyId, encryptionKey, isAdmin, month }) {
     setAttempt((n) => n + 1)
   }, [])
 
-  const current = state.for === target ? state : { status: 'loading', bestOf: null, progress: 0 }
+  const current = state.for === target ? state : { status: 'loading', bestOf: null }
   return { ...current, retry, remake }
 }

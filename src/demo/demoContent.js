@@ -117,6 +117,22 @@ const en = {
       authorName: 'Sarah',
       category: 'Family',
     },
+    {
+      title: 'Apple picking',
+      content: 'Two baskets, one ladder, and a tree Leo is sure he will be able to climb next year.',
+      quote: '',
+      location: 'Apple Hill',
+      authorName: 'David',
+      category: 'Family',
+    },
+    {
+      title: 'Emma reads to Leo',
+      content: 'For the first time it was the other way round: Emma read the bedtime story, voices and all, and Leo did not interrupt once.',
+      quote: '',
+      location: 'Home',
+      authorName: 'Sarah',
+      category: 'Everyday',
+    },
   ],
 
   moments: [
@@ -415,6 +431,22 @@ const de = {
       location: 'Zuhause',
       authorName: 'Lena',
       category: 'Familie',
+    },
+    {
+      title: 'Äpfel pflücken',
+      content: 'Zwei Körbe, eine Leiter und ein Baum, auf den Leo nächstes Jahr ganz sicher hinaufkommt.',
+      quote: '',
+      location: 'Obstgarten',
+      authorName: 'Jonas',
+      category: 'Familie',
+    },
+    {
+      title: 'Emma liest Leo vor',
+      content: 'Zum ersten Mal andersherum: Emma hat die Gutenachtgeschichte vorgelesen, mit allen Stimmen, und Leo hat kein einziges Mal unterbrochen.',
+      quote: '',
+      location: 'Zuhause',
+      authorName: 'Lena',
+      category: 'Alltag',
     },
   ],
 

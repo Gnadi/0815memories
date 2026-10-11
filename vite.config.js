@@ -39,11 +39,6 @@ export default defineConfig({
       // link previews, which crawlers fetch; nothing in the app shows it.
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       injectManifest: {
-        // The face detector's WebAssembly and model (utils/faceDetector.js),
-        // ~12 MB and ~4 MB. They are needed once a month, by the device that
-        // puts the best-of together, and then come from the HTTP cache like
-        // any other asset.
-        globIgnores: ['**/*.wasm', '**/*.task'],
         manifestTransforms: [
           shellPrecache(fileURLToPath(new URL('./dist/.vite/manifest.json', import.meta.url))),
         ],

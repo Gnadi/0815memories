@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import { unlockAudio } from '../../utils/audioContext'
 import { bestOfLabels } from './bestOfLabels'
 
 /**
@@ -23,7 +24,11 @@ export default function BestOfRow({ bestOfs, onOpen }) {
             <button
               key={month}
               type="button"
-              onClick={() => onOpen(month)}
+              // The tap that opens the story is the one that lets its music play.
+              onClick={() => {
+                unlockAudio()
+                onOpen(month)
+              }}
               className="relative flex-shrink-0 w-32 aspect-[9/16] rounded-2xl overflow-hidden bg-[#141a2e] group"
               aria-label={t('row.open', { month: labels.monthYear })}
             >

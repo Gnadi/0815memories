@@ -60,6 +60,92 @@
   100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
 }
 
+/* A photo's camera move, one of five so that photo after photo does not push
+   in the same way (utils/bestOf.js chooses; the tiles of a duo collage pan
+   too). Each lasts longer than any slide is up and eases out, so it is still
+   going when the story moves on instead of stopping in front of the viewer.
+   The pans travel 4% on a photo enlarged by 12%, which leaves 6% to spare on
+   either side: no edge comes into view. */
+@keyframes bestof-motion-zoomIn {
+  from { transform: scale(1); }
+  to { transform: scale(1.14); }
+}
+@keyframes bestof-motion-zoomOut {
+  from { transform: scale(1.14); }
+  to { transform: scale(1); }
+}
+@keyframes bestof-motion-panLeft {
+  from { transform: translate3d(4%, 0, 0) scale(1.12); }
+  to { transform: translate3d(-4%, 0, 0) scale(1.14); }
+}
+@keyframes bestof-motion-panRight {
+  from { transform: translate3d(-4%, 0, 0) scale(1.12); }
+  to { transform: translate3d(4%, 0, 0) scale(1.14); }
+}
+@keyframes bestof-motion-panUp {
+  from { transform: translate3d(0, 4%, 0) scale(1.12); }
+  to { transform: translate3d(0, -4%, 0) scale(1.14); }
+}
+
+/* A collage's tiles arriving (BestOfCollage.jsx): sliding in from either
+   side, popping up, or dropped like a print onto a table. */
+@keyframes bestof-tile-left {
+  from { transform: translate3d(-105%, 0, 0); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+@keyframes bestof-tile-right {
+  from { transform: translate3d(105%, 0, 0); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+@keyframes bestof-tile-pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+/* The tilt is the print's own `rotate` (see .bestof-tile-drop) as well as
+   where its drop ends, so that without motion it still lies at its angle. */
+@keyframes bestof-tile-drop {
+  from { transform: translate3d(0, -25%, 0) scale(1.3); rotate: 0deg; opacity: 0; }
+  50% { opacity: 1; }
+  to { transform: translate3d(0, 0, 0) scale(1); rotate: var(--bestof-tilt, 0deg); opacity: 1; }
+}
+
+/* After the entrance the tiles keep moving: a photo drifting in its frame,
+   enlarged so that no edge shows, and a print swaying a little. They go back
+   and forth rather than end, so however long a slide is up, they never stop. */
+@keyframes bestof-tile-drift {
+  from { transform: translate3d(-3%, 2%, 0) scale(1.12); }
+  to { transform: translate3d(3%, -2%, 0) scale(1.16); }
+}
+@keyframes bestof-sway {
+  from { transform: rotate(-1deg); }
+  to { transform: rotate(1.2deg); }
+}
+
+/* The grid of four coming closer, slowly enough to read as life rather than
+   as a zoom. */
+@keyframes bestof-grid-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+
+/* The film strip's run. --bestof-travel is set per strip, in shares of the
+   slide's width, to bring its last frame to the middle. It eases out rather
+   than running evenly: a collage is up for about 6.5 to 8 seconds, and at an
+   even pace the last of four photos would be only half in by then. */
+@keyframes bestof-strip {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(-1 * var(--bestof-travel, 0%)), 0, 0); }
+}
+
+/* One slide fading in over the one being left (BestOfViewer.jsx), which stays
+   beneath until this has run: no black frame between two photos. */
+@keyframes bestof-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* The progress bar's fill. It is the slide's clock as well: the viewer moves
    on when it ends, and pausing it pauses the story. */
 @keyframes bestof-fill {
@@ -76,6 +162,38 @@
 .bestof-text { animation: bestof-text 0.8s ease-out both; }
 .bestof-reveal { animation: bestof-reveal 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .bestof-badge { animation: bestof-badge 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) 0.5s both; }
+.bestof-enter { animation: bestof-enter 0.45s ease-out both; }
+
+/* A little above the middle, where a photo's people usually are. */
+.bestof-motion-zoomIn { animation: bestof-motion-zoomIn 9s ease-out both; transform-origin: 50% 40%; }
+.bestof-motion-zoomOut { animation: bestof-motion-zoomOut 9s ease-out both; }
+.bestof-motion-panLeft { animation: bestof-motion-panLeft 9s ease-out both; }
+.bestof-motion-panRight { animation: bestof-motion-panRight 9s ease-out both; }
+.bestof-motion-panUp { animation: bestof-motion-panUp 9s ease-out both; }
+.bestof-tile-left { animation: bestof-tile-left 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-tile-right { animation: bestof-tile-right 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-tile-pop { animation: bestof-tile-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bestof-tile-drop {
+  rotate: var(--bestof-tilt, 0deg);
+  animation: bestof-tile-drop 0.8s cubic-bezier(0.2, 0.8, 0.3, 1.1) both;
+}
+.bestof-tile-drift { animation: bestof-tile-drift 7s ease-in-out infinite alternate; }
+.bestof-sway { animation: bestof-sway 5s ease-in-out infinite alternate; }
+.bestof-grid-zoom { animation: bestof-grid-zoom 9s ease-out both; }
+.bestof-strip { animation: bestof-strip 9s cubic-bezier(0.2, 0.3, 0.5, 1) both; }
+
+/* The film's perforations, a row above the frames and a row below. */
+.bestof-sprockets::before,
+.bestof-sprockets::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10%;
+  background: repeating-linear-gradient(90deg, rgb(255 253 249 / 0.28) 0 0.7rem, transparent 0.7rem 1.5rem) 0 50% / 100% 0.45rem no-repeat;
+}
+.bestof-sprockets::before { top: 0; }
+.bestof-sprockets::after { bottom: 0; }
 
 /* Holding a slide holds its motion too, as a paused video would. The fill is
    paused by the viewer itself, so it stays out of this. */
@@ -92,7 +210,21 @@
   .bestof-drop,
   .bestof-text,
   .bestof-reveal,
-  .bestof-badge {
+  .bestof-badge,
+  .bestof-enter,
+  .bestof-motion-zoomIn,
+  .bestof-motion-zoomOut,
+  .bestof-motion-panLeft,
+  .bestof-motion-panRight,
+  .bestof-motion-panUp,
+  .bestof-tile-left,
+  .bestof-tile-right,
+  .bestof-tile-pop,
+  .bestof-tile-drop,
+  .bestof-tile-drift,
+  .bestof-sway,
+  .bestof-grid-zoom,
+  .bestof-strip {
     animation: none;
   }
 }

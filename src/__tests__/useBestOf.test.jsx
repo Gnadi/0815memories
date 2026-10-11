@@ -27,13 +27,6 @@ vi.mock('../services/bestOf', () => ({
     return () => h.listeners.delete(emit)
   },
 }))
-// No pictures in jsdom to look at: every photo is judged on its entry alone.
-const analysePhotos = vi.fn(async (photos, { onProgress }) => {
-  photos.forEach((_, i) => onProgress?.(i + 1, photos.length))
-  return new Map()
-})
-vi.mock('../utils/photoAnalysis', () => ({ analysePhotos: (...args) => analysePhotos(...args) }))
-
 import { makeBestOf, useBestOfMonth, useCurrentBestOf } from '../hooks/useBestOf'
 
 const at = (d) => new Date(2026, 8, d, 12)
@@ -51,7 +44,6 @@ beforeEach(() => {
   h.entries = SEPTEMBER
   getMonthEntries.mockClear()
   saveBestOf.mockClear()
-  analysePhotos.mockClear()
 })
 
 afterEach(() => {
@@ -71,21 +63,18 @@ describe('makeBestOf', () => {
   })
 
   it('makes a month once for everyone asking at the same time', async () => {
-    const progress = vi.fn()
     const [first, second] = await Promise.all([
       makeBestOf({ ...family, month: '2026-09', isAdmin: true }),
-      makeBestOf({ ...family, month: '2026-09', isAdmin: true, onProgress: progress }),
+      makeBestOf({ ...family, month: '2026-09', isAdmin: true }),
     ])
     expect(first).toBe(second)
     expect(getMonthEntries).toHaveBeenCalledTimes(1)
-    expect(analysePhotos).toHaveBeenCalledTimes(1)
-    expect(progress).toHaveBeenLastCalledWith(1)
+    expect(saveBestOf).toHaveBeenCalledTimes(1)
   })
 
   it('makes nothing of a month with too little, and saves nothing', async () => {
     h.entries = TOO_LITTLE
     await expect(makeBestOf({ ...family, month: '2026-09', isAdmin: true })).resolves.toBeNull()
-    expect(analysePhotos).not.toHaveBeenCalled()
     expect(saveBestOf).not.toHaveBeenCalled()
   })
 })

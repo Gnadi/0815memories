@@ -12,19 +12,14 @@
     "photosAndVideos": "photos and videos"
   },
   "awardIntro": {
-    "smile": "and the biggest smile award goes to…",
-    "group": "and the best group photo award goes to…",
     "place": "and the place of the month is…",
     "busiestDay": "and the busiest day of the month was…",
     "story": "and the story of the month is…"
   },
   "award": {
-    "smile": "Biggest smile",
-    "group": "Best group photo",
     "place": "Place of the month",
     "busiestDay": "Busiest day",
     "story": "Story of the month",
-    "faces": "{{count}} faces in one picture",
     "entries_one": "{{count}} moment shared here",
     "entries_other": "{{count}} moments shared here",
     "dayPhotos_one": "{{count}} photo in one day",
@@ -45,12 +40,12 @@
     "paused": "Paused",
     "previous": "Previous",
     "next": "Next",
-    "soundOn": "Sound on",
-    "soundOff": "Sound off"
+    "musicOn": "Music on",
+    "musicOff": "Music off"
   },
   "making": {
     "title": "Putting together your {{month}}…",
-    "body": "Looking for the best photos and the biggest smiles. Your photos stay on this device.",
+    "body": "From what you shared this month: the memories you featured, the places you were, the fullest days.",
     "empty": "{{month}} has too few photos for a best-of.",
     "error": "The best-of could not be loaded.",
     "retry": "Try again",

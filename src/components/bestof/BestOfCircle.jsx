@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import { unlockAudio } from '../../utils/audioContext'
 import { bestOfLabels } from './bestOfLabels'
 
 /**
@@ -14,7 +15,11 @@ export default function BestOfCircle({ bestOf, seen, onOpen }) {
   return (
     <button
       type="button"
-      onClick={onOpen}
+      // The tap that opens the story is the one that lets its music play.
+      onClick={() => {
+        unlockAudio()
+        onOpen()
+      }}
       className="flex flex-col items-center gap-1.5 flex-shrink-0"
       aria-label={t('row.open', { month: labels.monthYear })}
       data-testid="bestof-circle"

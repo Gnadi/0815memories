@@ -57,8 +57,8 @@ test("last month's best-of is put together in the tab and plays as a story", asy
   const { errors, outside } = watch(page)
   await openDemo(page)
   // The demo family has last month's photos (demo/demoFamily.js); opening the
-  // circle makes the best-of there and then, face detector and all — which
-  // must find everything it needs on this origin.
+  // circle makes the best-of there and then, soundtrack and all — which must
+  // need nothing from outside this origin.
   await page.getByTestId('bestof-circle').click()
   await expect(page).toHaveURL(/\/best-of\/\d{4}-\d{2}$/)
   await expect(page.getByTestId('bestof-slide-intro')).toBeVisible({ timeout: 45_000 })

@@ -4,6 +4,7 @@ import { RefreshCw, RotateCcw, Trophy } from 'lucide-react'
 import useDecryptedMedia from '../media/useDecryptedMedia'
 import CrossfadeImage from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
+import { MOTIONS } from '../../utils/bestOf'
 
 /**
  * The slides of a best-of, one component per kind (utils/bestOf.js makes the
@@ -14,7 +15,7 @@ import EncryptedVideo from '../media/EncryptedVideo'
 
 // A photo inside a collage or behind text. A thumbnail is plenty there, and it
 // arrives sooner; the blur-up rides on the best-of itself and shows at once.
-function SlideImage({ media, className = '', style, onReady }) {
+export function SlideImage({ media, className = '', style, onReady }) {
   const { decryptedUrl, error } = useDecryptedMedia(media?.thumbUrl || media?.url || '', 'image/*')
   const [loaded, setLoaded] = useState(false)
   const reported = useRef(false)
@@ -73,7 +74,7 @@ function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
   )
 }
 
-const BottomShade = ({ strength = 'from-black/70' }) => (
+export const BottomShade = ({ strength = 'from-black/70' }) => (
   <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${strength} via-black/20 to-transparent pointer-events-none`} />
 )
 
@@ -232,7 +233,7 @@ function ReadyNow({ onReady }) {
 
 // ── The month's photos and clips ────────────────────────────────────────────
 
-function Caption({ caption, meta, children }) {
+export function Caption({ caption, meta, children }) {
   if (!caption && !meta && !children) return null
   return (
     <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
@@ -243,10 +244,15 @@ function Caption({ caption, meta, children }) {
   )
 }
 
+// The camera move utils/bestOf.js chose, so that photo after photo does not
+// push in the same way. One this version does not know — from a best-of saved
+// by a newer one — gets the push in.
+const motionOf = (slide) => `bestof-motion-${MOTIONS.includes(slide.motion) ? slide.motion : 'zoomIn'}`
+
 export function PhotoSlide({ slide, labels, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
-      <FullPhoto media={slide.media} onReady={onReady} alt={slide.caption || ''} />
+      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} alt={slide.caption || ''} />
       <BottomShade />
       <Caption caption={slide.caption} meta={labels.meta(slide)} />
     </div>
@@ -315,13 +321,6 @@ function AwardDetail({ slide, labels }) {
           </p>
         </>
       )
-    case 'group':
-      return (
-        <>
-          <p className={small} style={{ animationDelay: '0.8s' }}>{t('award.faces', { count: slide.faces })}</p>
-          {slide.caption && <p className="bestof-text mt-1 text-lg font-semibold drop-shadow" style={{ animationDelay: '1s' }}>{slide.caption}</p>}
-        </>
-      )
     case 'story':
       return slide.caption ? <p className={big} style={{ animationDelay: '0.8s' }}>{slide.caption}</p> : null
     default:
@@ -357,7 +356,7 @@ export function DontForgetSlide({ slide, labels, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
-      <FullPhoto media={slide.media} onReady={onReady} />
+      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} />
       <BottomShade />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-12 text-white pointer-events-none">
         <p className="bestof-text text-lg text-white/90 drop-shadow">{t('dontForget')}</p>
