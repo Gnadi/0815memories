@@ -58,6 +58,14 @@
       ]
     },
     {
+      "collectionGroup": "bestOf",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "recipes",
       "queryScope": "COLLECTION",
       "fields": [

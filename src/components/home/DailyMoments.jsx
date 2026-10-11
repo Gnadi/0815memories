@@ -4,8 +4,13 @@ import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import BestOfCircle from '../bestof/BestOfCircle'
 
-export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
+/**
+ * `bestOf` — last month's best-of, when there is one ({ month, cover }), shown
+ * first in the row with `bestOfSeen` deciding whether its ring still turns.
+ */
+export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf, onAddMoment, onMomentClick, onViewAll }) {
   const { t } = useTranslation('home')
   const { isAdmin } = useAuth()
 
@@ -31,6 +36,8 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
             <span className="text-xs text-bark-muted">{t('dailyMoments.add')}</span>
           </button>
         )}
+
+        {bestOf && <BestOfCircle bestOf={bestOf} seen={bestOfSeen} onOpen={onOpenBestOf} />}
 
         {/* Moment circles */}
         {moments.map((moment, index) => (

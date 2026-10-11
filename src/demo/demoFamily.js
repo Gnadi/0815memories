@@ -33,6 +33,10 @@ const MEMORY_IMAGES = [
   ['cake.webp'],
   [],
   ['treehouse.webp'],
+  // Last month's: enough for a best-of, with a busy day among them.
+  ['lake.webp', 'picnic.webp', 'sunset.webp', 'walk.webp'],
+  ['leo.webp', 'bike.webp', 'playground.webp'],
+  ['cookies.webp', 'kitchen.webp', 'cake.webp'],
 ]
 const MOMENT_IMAGES = ['pancakes.webp', 'playground.webp', 'books.webp', 'bike.webp', 'treehouse.webp']
 const RECIPE_IMAGES = ['pie.webp', 'kitchen.webp', 'cookies.webp', 'pancakes.webp']
@@ -61,6 +65,8 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     const d = new Date(year, now.getMonth(), now.getDate() - days, hour, minute)
     return d > now ? new Date(now.getTime() - 60_000) : d
   }
+  // A day of last month, which is always over: the month the best-of is of.
+  const lastMonth = (day, hour = 11) => new Date(year, now.getMonth() - 1, day, hour)
   const shift = (date, { years = 0, months = 0, days = 0, hour = 12 } = {}) =>
     new Date(date.getFullYear() + years, date.getMonth() + months, date.getDate() + days, hour)
   // Birthdays are stored as the date input writes them: midnight UTC.
@@ -94,6 +100,9 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     shift(leoBorn, { years: 6, hour: 16 }),
     daysAgo(23, 19, 30),
     daysAgo(9, 17),
+    lastMonth(6, 15),
+    lastMonth(14, 17),
+    lastMonth(21, 14),
   ]
   c.memories.forEach((memory, i) => {
     const images = MEMORY_IMAGES[i].map(media)

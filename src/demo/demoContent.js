@@ -92,6 +92,31 @@ const en = {
       authorName: 'David',
       category: 'Family',
     },
+    // Last month's, so the demo has a best-of to show.
+    {
+      title: 'A weekend at Lake Tahoe',
+      content: 'Cold water, warm sand and a picnic the seagulls very nearly got. We stayed until the sun went down behind the mountains and walked back in the dark.',
+      quote: '',
+      location: 'Lake Tahoe',
+      authorName: 'Sarah',
+      category: 'Travel',
+    },
+    {
+      title: 'Leo learns to ride',
+      content: 'Two scraped knees, one wobbly lap of the playground and then that grin. He rode until the street lights came on.',
+      quote: '"Don\'t let go! … You let go?"',
+      location: 'Golden Gate Park',
+      authorName: 'David',
+      category: 'Kids',
+    },
+    {
+      title: 'Sunday baking',
+      content: 'Emma measured, Leo stirred, everyone tasted. The cookies did not survive the afternoon, the cake only just.',
+      quote: '',
+      location: 'Home',
+      authorName: 'Sarah',
+      category: 'Family',
+    },
   ],
 
   moments: [
@@ -364,6 +389,31 @@ const de = {
       quote: '',
       location: 'Garten',
       authorName: 'Jonas',
+      category: 'Familie',
+    },
+    // Die vom letzten Monat, damit die Demo ein Best-of zu zeigen hat.
+    {
+      title: 'Ein Wochenende am Zeller See',
+      content: 'Kaltes Wasser, warmer Steg und ein Picknick, das die Möwen fast erwischt hätten. Wir sind geblieben, bis die Sonne hinter den Bergen verschwunden war.',
+      quote: '',
+      location: 'Zell am See',
+      authorName: 'Lena',
+      category: 'Reise',
+    },
+    {
+      title: 'Leo lernt Radfahren',
+      content: 'Zwei aufgeschürfte Knie, eine wackelige Runde um den Spielplatz und dann dieses Grinsen. Er ist gefahren, bis die Straßenlaternen angingen.',
+      quote: '„Nicht loslassen! … Du hast losgelassen?“',
+      location: 'Augarten',
+      authorName: 'Jonas',
+      category: 'Kinder',
+    },
+    {
+      title: 'Sonntagsbacken',
+      content: 'Emma hat abgewogen, Leo gerührt, alle haben gekostet. Die Kekse haben den Nachmittag nicht überlebt, der Kuchen gerade so.',
+      quote: '',
+      location: 'Zuhause',
+      authorName: 'Lena',
       category: 'Familie',
     },
   ],

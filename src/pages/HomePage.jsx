@@ -11,6 +11,7 @@ import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import PostEntryModal from '../components/admin/PostEntryModal'
 import { useMemories, useMoments } from '../hooks/useMemories'
+import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
 import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
@@ -24,6 +25,7 @@ export default function HomePage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId, encryptionKey)
   const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId, encryptionKey)
+  const bestOf = useCurrentBestOf({ familyId, encryptionKey, isAdmin })
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 
@@ -77,6 +79,9 @@ export default function HomePage() {
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl min-[88rem]:max-w-[92rem] mx-auto w-full">
           <DailyMoments
             moments={moments}
+            bestOf={bestOf}
+            bestOfSeen={!!bestOf && hasSeenBestOf(familyId, bestOf.month)}
+            onOpenBestOf={() => navigate(`/best-of/${bestOf.month}`)}
             onAddMoment={() => setShowMomentModal(true)}
             onMomentClick={(index) => setViewingMomentIndex(index)}
             onViewAll={() => navigate('/moments')}

@@ -29,6 +29,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
+import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
@@ -181,6 +182,29 @@ export const dailyAnniversaryCheck = onSchedule(
     }
 
     console.log(`[anniversary] year=${window.year} notified=${counts.size}`)
+  },
+)
+
+// ── "Best of September" ─────────────────────────────────────────────────────
+
+/**
+ * On the 1st, tell every family that posted enough last month that its best-of
+ * is ready — see functions/bestOf.js. The best-of is put together by the app,
+ * from photos only the family can decrypt; this only counts them. In the
+ * evening, so an admin who opened the app during the day has usually made it
+ * already, and the notification opens straight onto the story.
+ */
+export const monthlyBestOfCheck = onSchedule(
+  { schedule: '0 18 1 * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
+  async () => {
+    const window = previousMonthWindow(new Date(), ANNIVERSARY_TIMEZONE)
+    const families = familiesWithBestOf(await countMonthMedia(getFirestore(), window))
+
+    for (const familyId of families) {
+      await sendToFamily(familyId, (lang) => ({ ...bestOfCopy(lang, window), url: bestOfUrl(window.key) }))
+    }
+
+    console.log(`[bestOf] month=${window.key} notified=${families.length}`)
   },
 )
 

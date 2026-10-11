@@ -53,6 +53,24 @@ test('the demo family opens without an account, and every section with it', asyn
   expect(errors).toEqual([])
 })
 
+test("last month's best-of is put together in the tab and plays as a story", async ({ page }) => {
+  const { errors, outside } = watch(page)
+  await openDemo(page)
+  // The demo family has last month's photos (demo/demoFamily.js); opening the
+  // circle makes the best-of there and then, face detector and all — which
+  // must find everything it needs on this origin.
+  await page.getByTestId('bestof-circle').click()
+  await expect(page).toHaveURL(/\/best-of\/\d{4}-\d{2}$/)
+  await expect(page.getByTestId('bestof-slide-intro')).toBeVisible({ timeout: 45_000 })
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByTestId('bestof-slide-count')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(/\/home$/)
+
+  expect(outside).toEqual([])
+  expect(errors).toEqual([])
+})
+
 test('what the visitor adds stays in the tab until a reload', async ({ page }) => {
   await openDemo(page)
   await page.goto('/journal')

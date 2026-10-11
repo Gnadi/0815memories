@@ -23,6 +23,7 @@ import enLegal from '../locales/en/legal.json'
 import enFeedback from '../locales/en/feedback.json'
 import enSky from '../locales/en/sky.json'
 import enDemo from '../locales/en/demo.json'
+import enBestOf from '../locales/en/bestOf.json'
 
 import deHome from '../locales/de/home.json'
 import deMemory from '../locales/de/memory.json'
@@ -39,6 +40,7 @@ import deLegal from '../locales/de/legal.json'
 import deFeedback from '../locales/de/feedback.json'
 import deSky from '../locales/de/sky.json'
 import deDemo from '../locales/de/demo.json'
+import deBestOf from '../locales/de/bestOf.json'
 
 export default {
   en: {
@@ -57,6 +59,7 @@ export default {
     feedback: enFeedback,
     sky: enSky,
     demo: enDemo,
+    bestOf: enBestOf,
   },
   de: {
     home: deHome,
@@ -74,5 +77,6 @@ export default {
     feedback: deFeedback,
     sky: deSky,
     demo: deDemo,
+    bestOf: deBestOf,
   },
 }

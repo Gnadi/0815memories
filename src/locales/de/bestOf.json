@@ -1,0 +1,60 @@
+{
+  "title": "Best of {{month}}",
+  "subtitle": "Highlights des Monats",
+  "circle": "Best of {{month}}",
+  "row": {
+    "title": "Best of",
+    "open": "Best of {{month}} ansehen"
+  },
+  "count": {
+    "photos_one": "Foto",
+    "photos_other": "Fotos",
+    "photosAndVideos": "Fotos und Videos"
+  },
+  "awardIntro": {
+    "smile": "und der Preis für das breiteste Lächeln geht an…",
+    "group": "und der Preis für das beste Gruppenfoto geht an…",
+    "place": "und der Ort des Monats ist…",
+    "busiestDay": "und der ereignisreichste Tag des Monats war…",
+    "story": "und die Geschichte des Monats ist…"
+  },
+  "award": {
+    "smile": "Breitestes Lächeln",
+    "group": "Bestes Gruppenfoto",
+    "place": "Ort des Monats",
+    "busiestDay": "Ereignisreichster Tag",
+    "story": "Geschichte des Monats",
+    "faces": "{{count}} Gesichter auf einem Bild",
+    "entries_one": "{{count}} Moment hier geteilt",
+    "entries_other": "{{count}} Momente hier geteilt",
+    "dayPhotos_one": "{{count}} Foto an einem Tag",
+    "dayPhotos_other": "{{count}} Fotos an einem Tag",
+    "dayMedia": "{{count}} Fotos und Videos an einem Tag"
+  },
+  "dontForget": "und nicht zu vergessen…",
+  "outro": {
+    "seeYou": "Bis nächsten Monat!",
+    "watchAgain": "Nochmal ansehen",
+    "remake": "Neu zusammenstellen",
+    "remakeHint": "Fotos, die seither zum {{month}} dazugekommen sind, kommen mit hinein."
+  },
+  "controls": {
+    "close": "Schließen",
+    "pause": "Pausieren",
+    "play": "Abspielen",
+    "paused": "Pausiert",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "soundOn": "Ton an",
+    "soundOff": "Ton aus"
+  },
+  "making": {
+    "title": "Euer {{month}} wird zusammengestellt…",
+    "body": "Wir suchen die schönsten Fotos und das breiteste Lächeln. Eure Fotos bleiben dabei auf diesem Gerät.",
+    "empty": "Im {{month}} gibt es zu wenige Fotos für ein Best-of.",
+    "error": "Das Best-of konnte nicht geladen werden.",
+    "retry": "Nochmal versuchen",
+    "back": "Zurück",
+    "notFound": "Hier gibt es kein Best-of."
+  }
+}

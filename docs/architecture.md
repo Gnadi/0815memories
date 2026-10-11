@@ -92,6 +92,7 @@ family.
 | `blackbox`, `blackboxContent` | the Vault; time-locked capsules open by `request.time` | admins |
 | `recipes` | recipe tree with versions and forks | admins |
 | `scrapbooks`, `collages`, `highlights` | the creative tools | admins |
+| `bestOf` | the monthly best-of, one per family and month (`docs/best-of.md`) | admins' devices, automatically |
 | `ourYearRituals`, `ourYearChapters`, `ourYearEntries`, `ourYearLetters` | *Our Year*, readable by its two partners only | the partners |
 | `fcmTokens` | devices registered for push; never readable by clients | family members |
 | `notificationsQueue` | retired; closed in the rules | nobody |
@@ -114,9 +115,10 @@ the top of `functions/index.js`.
 | `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
+| `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
-`anniversary.js`, `push.js`), and `src/__tests__/` imports it directly.
+`anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
 The functions are deployed by hand for now (README, *Getting started*).
 
 ## The front end (`src/`)

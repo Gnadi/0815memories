@@ -1,0 +1,98 @@
+/* The best-of story's motion (BestOfViewer.jsx). Here rather than in
+   index.css because only the viewer uses it, and the viewer is loaded with its
+   page: this way it stays out of the startup stylesheet.
+
+   Every slide is remounted when it is shown, so each animation runs from the
+   start on every visit. */
+
+/* The opening card's photos drift, each its own way, the way they float in
+   Google's: slowly enough to read as depth rather than movement. */
+@keyframes bestof-drift-a {
+  from { transform: translate3d(-3%, 2%, 0) scale(1); }
+  to { transform: translate3d(2%, -2%, 0) scale(1.06); }
+}
+@keyframes bestof-drift-b {
+  from { transform: translate3d(3%, -2%, 0) scale(1.04); }
+  to { transform: translate3d(-2%, 3%, 0) scale(0.98); }
+}
+
+/* The month's name lands. */
+@keyframes bestof-pop {
+  0% { transform: scale(0.6); opacity: 0; letter-spacing: 0.2em; }
+  60% { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; letter-spacing: 0; }
+}
+
+/* A photo's slow push in. */
+@keyframes bestof-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+/* A card rising into place, tilted. */
+@keyframes bestof-rise {
+  from { transform: translate3d(0, 30%, 0) rotate(var(--bestof-tilt-from, -8deg)); opacity: 0; }
+  to { transform: translate3d(0, 0, 0) rotate(var(--bestof-tilt, -3deg)); opacity: 1; }
+}
+
+/* A card dropping in from above. */
+@keyframes bestof-drop {
+  from { transform: translate3d(0, -40%, 0) rotate(0deg); opacity: 0; }
+  to { transform: translate3d(0, 0, 0) rotate(var(--bestof-tilt, 0deg)); opacity: 1; }
+}
+
+/* Text arriving. */
+@keyframes bestof-text {
+  from { transform: translate3d(0, 0.6em, 0); opacity: 0; filter: blur(6px); }
+  to { transform: translate3d(0, 0, 0); opacity: 1; filter: blur(0); }
+}
+
+/* The award's photo coming out of the blur it was announced behind. */
+@keyframes bestof-reveal {
+  from { transform: scale(1.15); filter: blur(24px) brightness(0.6); }
+  to { transform: scale(1); filter: blur(0) brightness(1); }
+}
+
+/* The trophy pill's glint. */
+@keyframes bestof-badge {
+  0% { transform: translate3d(0, 1rem, 0) scale(0.8); opacity: 0; }
+  70% { transform: translate3d(0, 0, 0) scale(1.05); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+}
+
+/* The progress bar's fill. It is the slide's clock as well: the viewer moves
+   on when it ends, and pausing it pauses the story. */
+@keyframes bestof-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.bestof-drift-a { animation: bestof-drift-a 7s ease-in-out infinite alternate; }
+.bestof-drift-b { animation: bestof-drift-b 8s ease-in-out infinite alternate; }
+.bestof-pop { animation: bestof-pop 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bestof-zoom { animation: bestof-zoom 6s ease-out both; }
+.bestof-rise { animation: bestof-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-drop { animation: bestof-drop 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-text { animation: bestof-text 0.8s ease-out both; }
+.bestof-reveal { animation: bestof-reveal 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-badge { animation: bestof-badge 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) 0.5s both; }
+
+/* Holding a slide holds its motion too, as a paused video would. The fill is
+   paused by the viewer itself, so it stays out of this. */
+.bestof-paused *:not(.bestof-fill) {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bestof-drift-a,
+  .bestof-drift-b,
+  .bestof-pop,
+  .bestof-zoom,
+  .bestof-rise,
+  .bestof-drop,
+  .bestof-text,
+  .bestof-reveal,
+  .bestof-badge {
+    animation: none;
+  }
+}

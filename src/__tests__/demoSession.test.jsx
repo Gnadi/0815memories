@@ -72,7 +72,7 @@ describe('a demo tab', () => {
     expect(screen.getByText('isDemo:true')).toBeInTheDocument()
     // No key in the demo family: the gate opens on the plaintext answer.
     expect(await screen.findByText('keyLoading:false')).toBeInTheDocument()
-    expect(await screen.findByText('memories:9')).toBeInTheDocument()
+    expect(await screen.findByText('memories:12')).toBeInTheDocument()
     expect(screen.getByText('first:The treehouse is finished')).toBeInTheDocument()
 
     // Firebase was never started, let alone asked who is signed in.

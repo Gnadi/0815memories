@@ -37,6 +37,17 @@ under the [Creative Commons Attribution 4.0 License](https://creativecommons.org
 The file keeps the name, country and coordinates of places with at least 5,000
 inhabitants and drops everything else.
 
+## Face landmarker model — MediaPipe
+
+`src/assets/models/face_landmarker.task` is MediaPipe's face landmarker model
+(`float16/1`, published at
+`storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/`),
+unchanged. The monthly best-of uses it in the browser to find faces and smiles
+(`src/utils/faceDetector.js`). It bundles three models by Google LLC — BlazeFace
+(short range), Face Mesh V2 and Blendshape V2 — each licensed under the
+[Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0), as
+their model cards state.
+
 ## Font — Anton
 
 `public/fonts/anton-*.woff2` are subsets of Anton, designed by Vernon Adams,
