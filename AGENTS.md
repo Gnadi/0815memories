@@ -46,6 +46,11 @@ changes to sign-in, routing or the seed.
 - **Every UI string exists in `src/locales/en/` and `src/locales/de/`** with
   the same keys (a test enforces it). New namespaces are registered in
   `src/i18n/`.
+- **The landing page describes the app** (`src/locales/*/landing.json`).
+  When you add, change or remove a feature, check what it says about it, and
+  that it promises nothing the app does not do. Its screenshots are listed in
+  `src/components/landing/screenshots.js` and taken from the demo family with
+  `scripts/capture-screenshots.mjs`.
 - **The landing page is pre-rendered in Node.** Code on public routes must
   not touch `window`, `document` or storage during render.
 - **Keep the startup bundle small.** Signed-in features are lazy-loaded;

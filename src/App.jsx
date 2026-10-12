@@ -21,7 +21,7 @@ import { devError } from './utils/devLog'
 import { getSubdomainSlug } from './utils/familySlug'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
-import { enterDemo, exitDemo } from './demo/demoMode'
+import { demoTarget, enterDemo, exitDemo } from './demo/demoMode'
 
 // Eagerly loaded — public pages served on first visit
 import LandingPage from './pages/LandingPage'
@@ -161,9 +161,10 @@ function PageLoader() {
 // the app starts over on the demo's own database instead of switching under
 // whatever was running.
 function DemoEntry() {
+  const { search } = useLocation()
   useEffect(() => {
-    enterDemo('/home')
-  }, [])
+    enterDemo(demoTarget(search))
+  }, [search])
   return <PageLoader />
 }
 

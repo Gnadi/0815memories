@@ -34,6 +34,16 @@ export function isDemoMode() {
   }
 }
 
+// The parts of the app a link may open the demo on (`/demo?to=/scrapbook`),
+// for the landing page's feature buttons. A fixed list rather than any path in
+// the query, so that /demo cannot be made to send someone somewhere else.
+const DEMO_TARGETS = ['/home', '/timeline', '/journal', '/blackbox', '/recipes', '/scrapbook', '/collages', '/highlights', '/our-year']
+
+export function demoTarget(search) {
+  const to = new URLSearchParams(search).get('to')
+  return DEMO_TARGETS.includes(to) ? to : '/home'
+}
+
 export function enterDemo(target = '/home') {
   try {
     window.sessionStorage.setItem(KEY, '1')
