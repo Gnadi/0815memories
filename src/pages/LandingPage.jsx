@@ -31,6 +31,7 @@ import {
   CalendarHeart,
   Languages,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -129,6 +130,7 @@ export default function LandingPage() {
               'https://kaydo.app/screenshots/recipe-tree-desktop.webp',
               'https://kaydo.app/screenshots/highlights-desktop.webp',
               'https://kaydo.app/screenshots/collages-desktop.webp',
+              'https://kaydo.app/screenshots/best-of-mobile.webp',
             ],
             featureList: t('seo.ldFeatures', { returnObjects: true }),
             publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
@@ -385,6 +387,35 @@ export default function LandingPage() {
               />
             </div>
 
+            {/* Card 4b — Look back: the monthly best-of, beside the recipe tree */}
+            <div className="bg-[#E3E7F4] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-indigo-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.bestOf.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('pillars.bestOf.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {t('pillars.bestOf.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                    <Check className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {/* Real best-of of the demo family, on its title slide */}
+              <PhoneFrame
+                src="/screenshots/best-of-mobile.webp"
+                alt={t('screens.bestOfMobileAlt')}
+                width={440}
+                height={952}
+                className="mt-auto"
+              />
+            </div>
+
             {/* Card 5 — Create: Digital Scrapbook (full-width) */}
             <div className="md:col-span-2 bg-[#EDE9F5] rounded-3xl p-8 flex flex-col lg:flex-row gap-8 items-start">
               {/* Left — text */}
@@ -415,7 +446,8 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              {/* Right — real scrapbook editor screenshot */}
+              {/* Right — real scrapbook editor screenshot, with the dialog
+                  for ordering it printed laid over its corner. */}
               <div className="lg:w-96 w-full flex-shrink-0">
                 <BrowserFrame
                   src="/screenshots/scrapbook-desktop.webp"
@@ -423,6 +455,17 @@ export default function LandingPage() {
                   width={1200}
                   height={750}
                 />
+                <figure className="relative -mt-10 ml-auto w-3/4 max-w-xs rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white">
+                  <img
+                    src="/screenshots/print-dialog.webp"
+                    alt={t('screens.printDialogAlt')}
+                    width={640}
+                    height={598}
+                    loading="lazy"
+                    decoding="async"
+                    className="block w-full h-auto"
+                  />
+                </figure>
               </div>
             </div>
 

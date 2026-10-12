@@ -48,7 +48,9 @@
     "blackboxAlt": "The Kaydo Black Box — a vault of time-locked messages",
     "highlightsAlt": "The Kaydo highlight video page, with ready-made reel ideas built from the family's photos and the reels they kept",
     "collagesAlt": "The Kaydo collage gallery, every layout previewed with the family's own photos",
-    "ourYearMobileAlt": "The \"Our Year\" timeline in Kaydo on a phone, showing a completed chapter and a sealed letter"
+    "ourYearMobileAlt": "The \"Our Year\" timeline in Kaydo on a phone, showing a completed chapter and a sealed letter",
+    "bestOfMobileAlt": "The monthly best-of in Kaydo on a phone: the title slide of September, with the month's photos drifting behind it",
+    "printDialogAlt": "The Kaydo dialog for ordering a scrapbook as a printed book, with its notice that the print copy is not encrypted"
   },
   "pillars": {
     "sectionTitle": "The Pillars of Home",
@@ -60,7 +62,6 @@
         "Inner circle access — one shared password, zero sign-ups",
         "Admins post, the inner circle looks — journals, the Vault and recipes stay with the admins",
         "Daily Moments — story circles for quick everyday snapshots",
-        "A best-of of every month on the 1st — its photos, places and busiest day, set to music",
         "A smart timeline sorts memories by season and \"on this day\""
       ],
       "pills": {
@@ -86,6 +87,15 @@
     "recipe": {
       "title": "Evolve: Recipe Tree",
       "desc": "Recipes aren't static. Watch how Grandma's pasta evolved through three generations, with notes, variations, and photo logs of every holiday meal."
+    },
+    "bestOf": {
+      "title": "Look back: Best of the Month",
+      "desc": "On the 1st, last month comes back as a story in the moments row: its photos in motion, albums as animated collages, its clips, and awards like place of the month and busiest day — set to music. Everyone in the family gets a push that it's there.",
+      "bullets": [
+        "Put together from what your family wrote — featured memories, places, days",
+        "No photo is analysed, anywhere",
+        "Encrypted like everything else; the music is made on your device"
+      ]
     },
     "scrapbook": {
       "title": "Create: Digital Scrapbook",

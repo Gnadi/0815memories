@@ -48,7 +48,9 @@
     "blackboxAlt": "Die Kaydo Black Box – ein Tresor für zeitversiegelte Nachrichten",
     "highlightsAlt": "Die Highlight-Video-Seite in Kaydo — fertige Reel-Ideen aus den Fotos der Familie und die Reels, die sie behalten hat",
     "collagesAlt": "Die Collagen-Galerie in Kaydo — jede Vorlage in der Vorschau mit den eigenen Fotos der Familie",
-    "ourYearMobileAlt": "Die Timeline von „Unser Jahr\" in Kaydo auf dem Smartphone, mit einem abgeschlossenen Kapitel und einem versiegelten Brief"
+    "ourYearMobileAlt": "Die Timeline von „Unser Jahr\" in Kaydo auf dem Smartphone, mit einem abgeschlossenen Kapitel und einem versiegelten Brief",
+    "bestOfMobileAlt": "Das Monats-Best-of in Kaydo auf dem Handy: die Titelseite des Septembers, dahinter die Fotos des Monats",
+    "printDialogAlt": "Der Kaydo-Dialog zum Bestellen eines Sammelalbums als gedrucktes Buch, mit dem Hinweis, dass die Druckkopie nicht verschlüsselt ist"
   },
   "pillars": {
     "sectionTitle": "Die Säulen des Zuhauses",
@@ -60,7 +62,6 @@
         "Zugang für den engsten Kreis — ein gemeinsames Passwort, keine Anmeldungen",
         "Admins posten, der engste Kreis schaut zu — Tagebücher, Tresor und Rezepte bleiben bei den Admins",
         "Tägliche Momente — Story-Kreise für schnelle Alltags-Schnappschüsse",
-        "Am 1. jedes Monats ein Best-of — seine Fotos, Orte und der vollste Tag, mit Musik",
         "Die smarte Timeline ordnet Erinnerungen nach Jahreszeit und \"Heute vor ...\""
       ],
       "pills": {
@@ -86,6 +87,15 @@
     "recipe": {
       "title": "Weiterentwickeln: Rezeptbaum",
       "desc": "Rezepte sind nicht statisch. Verfolge, wie sich Omas Pasta über drei Generationen entwickelt hat — mit Notizen, Variationen und Fotos von jedem Festessen."
+    },
+    "bestOf": {
+      "title": "Zurückblicken: Das Beste des Monats",
+      "desc": "Am 1. kommt der letzte Monat als Story in die Momente-Leiste zurück: seine Fotos in Bewegung, Alben als animierte Collagen, seine Clips und Auszeichnungen wie Ort des Monats und vollster Tag — mit Musik. Alle in der Familie bekommen eine Benachrichtigung, dass es da ist.",
+      "bullets": [
+        "Zusammengestellt aus dem, was eure Familie geschrieben hat — hervorgehobene Erinnerungen, Orte, Tage",
+        "Kein Foto wird analysiert, nirgends",
+        "Verschlüsselt wie alles andere; die Musik entsteht auf deinem Gerät"
+      ]
     },
     "scrapbook": {
       "title": "Gestalten: Digitales Sammelalbum",
