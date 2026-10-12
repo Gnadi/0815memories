@@ -906,6 +906,19 @@ export default function LandingPage() {
             </a>
           </div>
           <p className="text-xs text-bark-muted">{t('cta.noCreditCard')}</p>
+          {/* The blog post is in German, which the English page says. */}
+          <p className="mt-10 text-sm text-bark-light">
+            {t('story.question')}{' '}
+            <a
+              href={t('story.url')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-kaydo-dark underline underline-offset-4 hover:text-kaydo transition-colors"
+            >
+              {t('story.link')}
+            </a>
+            {t('story.note') && <span className="text-bark-muted"> {t('story.note')}</span>}
+          </p>
         </div>
       </section>
       </main>
@@ -926,6 +939,9 @@ export default function LandingPage() {
                 {link.label}
               </Link>
             ))}
+            <a href={t('story.url')} target="_blank" rel="noopener noreferrer" className="hover:text-bark transition-colors">
+              {t('footer.story')}
+            </a>
             {canInstall && (
               <button type="button" onClick={promptInstall} className="hover:text-bark transition-colors">
                 {t('footer.install')}
