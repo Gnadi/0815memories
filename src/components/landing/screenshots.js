@@ -7,8 +7,8 @@
  * the languages differ), given to the <img> so the page does not jump while
  * it loads. They follow from where the script takes the picture: `viewport`
  * is the window it is taken in, `out` the width it is scaled to, and `path`
- * the page of the demo family it shows. Best-of and
- * print dialog are taken by clicking through instead (`path: null`).
+ * the page of the demo family it shows. Best-of and print dialog are taken
+ * by clicking through instead (`path: null`).
  *
  * This module is imported by Node as well, so it stays plain JavaScript with
  * no imports of its own.
