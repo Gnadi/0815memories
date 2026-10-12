@@ -29,13 +29,16 @@ import {
   Zap,
   Bell,
   CalendarHeart,
+  Languages,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
+import { SCREENSHOTS, screenshotPath, screenshotSize } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
 import { isSlugAvailable } from '../services/family'
 import usePWAInstall from '../hooks/usePWAInstall'
@@ -56,7 +59,7 @@ function OctocatIcon({ className }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const { isAuthenticated, signup, firebaseReady } = useAuth()
+  const { isAuthenticated, isAdmin, signup, firebaseReady } = useAuth()
   const { t } = useTranslation('landing')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { canInstall, promptInstall } = usePWAInstall()
@@ -68,6 +71,14 @@ export default function LandingPage() {
   const lang = t('seo.ogLocale').slice(0, 2)
   const canonicalUrl = lang === 'de' ? 'https://kaydo.app/?lang=de' : 'https://kaydo.app/'
   const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
+  // The screenshots show the app in the page's language.
+  const shot = (key) => ({ src: screenshotPath(SCREENSHOTS[key], lang), ...screenshotSize(SCREENSHOTS[key], lang) })
+
+  // Where a feature's button leads: into the feature for an admin, to the feed
+  // for a viewer, whom the creative tools and the journals are closed to, and
+  // to the same place in the demo family for a visitor. A visitor used to be
+  // sent to the admin login, which is no use to someone without an account.
+  const openFeature = (path) => navigate(isAdmin ? path : isAuthenticated ? '/home' : `/demo?to=${path}`)
 
   return (
     <div className="min-h-screen bg-cream font-sans">
@@ -122,13 +133,8 @@ export default function LandingPage() {
               { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
               { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
             ],
-            screenshot: [
-              'https://kaydo.app/screenshots/home-desktop.webp',
-              'https://kaydo.app/screenshots/scrapbook-desktop.webp',
-              'https://kaydo.app/screenshots/recipe-tree-desktop.webp',
-              'https://kaydo.app/screenshots/highlights-desktop.webp',
-              'https://kaydo.app/screenshots/collages-desktop.webp',
-            ],
+            screenshot: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
+              .map((key) => `https://kaydo.app${shot(key).src}`),
             featureList: t('seo.ldFeatures', { returnObjects: true }),
             publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
           })}
@@ -237,10 +243,8 @@ export default function LandingPage() {
         {/* Right — real app screenshot */}
         <div className="relative flex items-center justify-center">
           <BrowserFrame
-            src="/screenshots/home-desktop.webp"
+            {...shot('homeDesktop')}
             alt={t('screens.homeAlt')}
-            width={1200}
-            height={750}
             priority
             className="w-full max-w-xl lg:rotate-1"
           />
@@ -297,10 +301,8 @@ export default function LandingPage() {
 
                 {/* Real mobile app screenshot */}
                 <PhoneFrame
-                  src="/screenshots/home-mobile.webp"
+                  {...shot('homeMobile')}
                   alt={t('screens.homeMobileAlt')}
-                  width={440}
-                  height={952}
                 />
               </div>
             </div>
@@ -326,15 +328,13 @@ export default function LandingPage() {
               </ul>
               {/* Real Black Box vault screenshot */}
               <BrowserFrame
-                src="/screenshots/blackbox-desktop.webp"
+                {...shot('blackbox')}
                 alt={t('screens.blackboxAlt')}
-                width={1200}
-                height={750}
                 className="mt-2"
               />
             </div>
 
-            {/* Card 3 — Write: The Letters */}
+            {/* Card 3 — Write: Letters & Journals */}
             <div className="bg-kaydo-dark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
@@ -347,7 +347,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
+                  onClick={() => openFeature('/journal')}
                   className="px-5 py-2.5 rounded-full border-2 border-white/60 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
                 >
                   {t('pillars.letters.button')}
@@ -355,10 +355,8 @@ export default function LandingPage() {
               </div>
               {/* Real journal / letters screenshot */}
               <BrowserFrame
-                src="/screenshots/journal-desktop.webp"
+                {...shot('journal')}
                 alt={t('screens.journalAlt')}
-                width={1200}
-                height={750}
                 className="mt-2"
               />
             </div>
@@ -376,10 +374,37 @@ export default function LandingPage() {
               </div>
               {/* Real recipe evolution tree screenshot */}
               <BrowserFrame
-                src="/screenshots/recipe-tree-desktop.webp"
+                {...shot('recipeTree')}
+                fill
                 alt={t('screens.recipeAlt')}
-                width={1200}
-                height={750}
+                className="mt-auto"
+              />
+            </div>
+
+            {/* Card 4b — Look back: the monthly best-of, beside the recipe tree */}
+            <div className="bg-[#E3E7F4] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-indigo-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.bestOf.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('pillars.bestOf.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {t('pillars.bestOf.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                    <Check className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {/* Real best-of of the demo family, on its title slide */}
+              <PhoneFrame
+                {...shot('bestOf')}
+                statusBar="#070B13"
+                alt={t('screens.bestOfMobileAlt')}
                 className="mt-auto"
               />
             </div>
@@ -396,33 +421,40 @@ export default function LandingPage() {
                   {t('pillars.scrapbook.desc')}
                 </p>
                 <ul className="space-y-2">
-                  {[
-                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[0] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[1] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[2] },
-                  ].map(({ icon, text }) => (
-                    <li key={text} className="flex items-start gap-2 text-sm text-bark">
-                      {icon}
-                      {text}
-                    </li>
-                  ))}
+                  {t('pillars.scrapbook.bullets', { returnObjects: true }).map((text, i) => {
+                    const Icon = i === 0 ? Layers : Check
+                    return (
+                      <li key={text} className="flex items-start gap-2 text-sm text-bark">
+                        <Icon className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                        {text}
+                      </li>
+                    )
+                  })}
                 </ul>
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
+                  onClick={() => openFeature('/scrapbook')}
                   className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
                 >
                   {t('pillars.scrapbook.button')}
                 </button>
               </div>
 
-              {/* Right — real scrapbook editor screenshot */}
+              {/* Right — real scrapbook editor screenshot, with the dialog
+                  for ordering it printed laid over its corner. */}
               <div className="lg:w-96 w-full flex-shrink-0">
                 <BrowserFrame
-                  src="/screenshots/scrapbook-desktop.webp"
+                  {...shot('scrapbook')}
                   alt={t('screens.scrapbookAlt')}
-                  width={1200}
-                  height={750}
                 />
+                <figure className="relative -mt-10 ml-auto w-3/4 max-w-xs rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white">
+                  <img
+                    {...shot('printDialog')}
+                    alt={t('screens.printDialogAlt')}
+                    loading="lazy"
+                    decoding="async"
+                    className="block w-full h-auto"
+                  />
+                </figure>
               </div>
             </div>
 
@@ -447,7 +479,7 @@ export default function LandingPage() {
               </ul>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/highlights' : '/login?admin=1')}
+                  onClick={() => openFeature('/highlights')}
                   className="px-5 py-2.5 rounded-full border-2 border-kaydo/40 text-kaydo-dark text-sm font-semibold hover:bg-kaydo/10 transition-colors"
                 >
                   {t('pillars.highlights.button')}
@@ -456,10 +488,8 @@ export default function LandingPage() {
               {/* Real "Highlight video" page: the suggestions built from the
                   family's photos, and the reels they kept. */}
               <BrowserFrame
-                src="/screenshots/highlights-desktop.webp"
+                {...shot('highlights')}
                 alt={t('screens.highlightsAlt')}
-                width={1200}
-                height={938}
                 className="mt-2"
               />
             </div>
@@ -485,7 +515,7 @@ export default function LandingPage() {
               </ul>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/collages' : '/login?admin=1')}
+                  onClick={() => openFeature('/collages')}
                   className="px-5 py-2.5 rounded-full border-2 border-rose-400/60 text-rose-800 text-sm font-semibold hover:bg-rose-100 transition-colors"
                 >
                   {t('pillars.collages.button')}
@@ -494,10 +524,8 @@ export default function LandingPage() {
               {/* Real collage gallery — every template previewed with the
                   family's own photos, which is what the page actually does. */}
               <BrowserFrame
-                src="/screenshots/collages-desktop.webp"
+                {...shot('collages')}
                 alt={t('screens.collagesAlt')}
-                width={1200}
-                height={851}
                 className="mt-2"
               />
             </div>
@@ -530,10 +558,8 @@ export default function LandingPage() {
                   couple actually sits down with this. */}
               <div className="lg:w-96 w-full flex-shrink-0">
                 <PhoneFrame
-                  src="/screenshots/our-year-mobile.webp"
+                  {...shot('ourYearMobile')}
                   alt={t('screens.ourYearMobileAlt')}
-                  width={440}
-                  height={1128}
                 />
               </div>
             </div>
@@ -654,6 +680,10 @@ export default function LandingPage() {
               <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
                 <Bell className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                 {t('app.items.notify')}
+              </span>
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Languages className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                {t('app.items.languages')}
               </span>
             </div>
           </div>

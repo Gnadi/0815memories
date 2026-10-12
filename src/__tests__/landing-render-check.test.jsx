@@ -2,7 +2,7 @@
    demo CTA / two-zone / trust sections, and stays free of retired claims
    (invite-only, military-grade, zero-knowledge, breach stats). */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import i18n from '../i18n'
 
@@ -16,8 +16,12 @@ vi.mock('../context/AuthContext', () => ({
 import LandingPage from '../pages/LandingPage'
 
 function renderLanding() {
-  const router = createMemoryRouter([{ path: '/', element: <LandingPage /> }])
-  return render(<RouterProvider router={router} />)
+  const router = createMemoryRouter([
+    { path: '/', element: <LandingPage /> },
+    { path: '*', element: null },
+  ])
+  render(<RouterProvider router={router} />)
+  return router
 }
 
 describe('LandingPage renders in both languages', () => {
@@ -52,5 +56,21 @@ describe('LandingPage renders in both languages', () => {
     expect(screen.getByText('DSGVO-konform')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/nur auf Einladung|Zero-Knowledge|Datenlecks/i)
+  })
+
+  it('sends a visitor from a feature to the same place in the demo family', () => {
+    const router = renderLanding()
+    fireEvent.click(screen.getByText('Open Scrapbooks'))
+    expect(router.state.location.pathname).toBe('/demo')
+    expect(router.state.location.search).toBe('?to=/scrapbook')
+  })
+
+  it('shows the screenshots in the page\'s language', async () => {
+    renderLanding()
+    expect(screen.getByAltText(/scrapbook editor/).getAttribute('src')).toBe('/screenshots/scrapbook-desktop.webp')
+    cleanup()
+    await i18n.changeLanguage('de')
+    renderLanding()
+    expect(screen.getByAltText(/Scrapbook-Editor/).getAttribute('src')).toBe('/screenshots/de/scrapbook-desktop.webp')
   })
 })

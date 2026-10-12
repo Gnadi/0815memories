@@ -43,7 +43,7 @@
     "year": "Jahr",
     "legacyTrigger": "Vermächtnis-Auslöser",
     "legacyTriggerDesc": "Nach meinem Ableben freigeben",
-    "noticeLegacy": "Einmal versiegelt, wird diese Box nur durch einen Vermächtnis-Auslöser freigegeben. Dein Vermächtnis ist bei uns sicher.",
+    "noticeLegacy": "Einmal versiegelt, öffnet sich diese Box in 12 Monaten — es sei denn, du meldest dich vorher. Jede Meldung verschiebt sie um weitere 12 Monate. So öffnet sie sich erst, wenn niemand mehr da ist, der sich meldet.",
     "noticeDatePrefix": "Einmal versiegelt, kann diese Box nicht geöffnet werden bis",
     "noticeDateSuffix": ". Dein Vermächtnis ist bei uns sicher.",
     "heroTitle": "Ein Geschenk für die Zukunft.",
