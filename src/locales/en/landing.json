@@ -280,7 +280,8 @@
     "safetyTo": "/safety",
     "install": "Install App",
     "copyright": "© {{year}} Kaydo. All rights reserved.",
-    "crafted": "Crafted for memories."
+    "crafted": "Crafted for memories.",
+    "story": "The story behind Kaydo"
   },
   "claim": {
     "namePlaceholder": "The Millers",
@@ -311,5 +312,11 @@
       "weakPassword": "Password must be at least 6 characters",
       "generic": "Could not create account"
     }
+  },
+  "story": {
+    "question": "Why does Kaydo exist?",
+    "link": "Read the story behind it",
+    "note": "(in German)",
+    "url": "https://blog.gnadlinger.me/blog/kaydo/"
   }
 }

@@ -280,7 +280,8 @@
     "safetyTo": "/safety",
     "install": "App installieren",
     "copyright": "© {{year}} Kaydo. Alle Rechte vorbehalten.",
-    "crafted": "Mit Liebe für Erinnerungen gemacht."
+    "crafted": "Mit Liebe für Erinnerungen gemacht.",
+    "story": "Die Geschichte hinter Kaydo"
   },
   "claim": {
     "namePlaceholder": "Die Müllers",
@@ -311,5 +312,11 @@
       "weakPassword": "Das Passwort muss mindestens 6 Zeichen lang sein",
       "generic": "Konto konnte nicht erstellt werden"
     }
+  },
+  "story": {
+    "question": "Warum gibt es Kaydo?",
+    "link": "Lies die Geschichte dahinter",
+    "note": "",
+    "url": "https://blog.gnadlinger.me/blog/kaydo/"
   }
 }

@@ -73,4 +73,18 @@ describe('LandingPage renders in both languages', () => {
     renderLanding()
     expect(screen.getByAltText(/Scrapbook-Editor/).getAttribute('src')).toBe('/screenshots/de/scrapbook-desktop.webp')
   })
+
+  it('links the story behind Kaydo, and says in English that it is German', async () => {
+    renderLanding()
+    const link = screen.getByText('Read the story behind it').closest('a')
+    expect(link.getAttribute('href')).toBe('https://blog.gnadlinger.me/blog/kaydo/')
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(screen.getByText('(in German)')).toBeInTheDocument()
+    cleanup()
+    await i18n.changeLanguage('de')
+    renderLanding()
+    expect(screen.getByText('Lies die Geschichte dahinter')).toBeInTheDocument()
+    expect(screen.getByText('Die Geschichte hinter Kaydo').closest('a').getAttribute('href'))
+      .toBe('https://blog.gnadlinger.me/blog/kaydo/')
+  })
 })
