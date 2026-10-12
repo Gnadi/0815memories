@@ -13,12 +13,13 @@
     "ldFeatures": [
       "Memories encrypted on your device with AES-256",
       "Private family photo and video sharing",
-      "Family recipe tree with version history",
-      "Digital scrapbook with PDF export",
+      "A best-of of the family's month, every month",
+      "Letters and journals for your children, with the sky of the night they were born",
+      "Time-locked capsules that open on a birthday, a wedding or a date you choose",
+      "Family recipe tree with version history and forks",
+      "Digital scrapbook with PDF export and printed books",
       "Highlight videos built from your family photos",
       "Photo collages with 14 ready-made layouts",
-      "Scheduled future letters to family members",
-      "AES-256 encrypted vault for precious originals",
       "Shared yearly review for couples with a sealed letter to the future"
     ]
   },
@@ -57,8 +58,9 @@
       "desc": "Every candid snapshot, milestone video, and voice memo — gathered in one warm, private feed. Your inner circle gets instant access with just a shared family password. No accounts, no friction, no strangers.",
       "bullets": [
         "Inner circle access — one shared password, zero sign-ups",
-        "Family admin controls who sees what and when",
+        "Admins post, the inner circle looks — journals, the Vault and recipes stay with the admins",
         "Daily Moments — story circles for quick everyday snapshots",
+        "A best-of of every month on the 1st — its photos, places and busiest day, set to music",
         "A smart timeline sorts memories by season and \"on this day\""
       ],
       "pills": {
@@ -69,16 +71,16 @@
     },
     "vault": {
       "title": "Preserve: The Vault",
-      "desc": "Securely store high-fidelity originals of your most precious assets. From deed documents to rare family photos — encrypted with AES-256 in your browser before they're uploaded.",
+      "desc": "Seal letters, voice notes, photos and videos into a time capsule. It stays closed until the day you pick — an 18th birthday, a graduation, a wedding you might not attend — and everything in it is encrypted with AES-256 in your browser before it's uploaded.",
       "bullets": [
-        "AES-256 encryption",
-        "Encrypted on your device, before upload",
-        "Time-locked capsules — sealed until a date you choose"
+        "AES-256, encrypted on your device before upload",
+        "Opens on a date you choose or a life milestone",
+        "Addressed to one of your children or to the whole family"
       ]
     },
     "letters": {
-      "title": "Write: The Letters",
-      "desc": "Schedule messages for the future. Congratulate a grandchild on a wedding you might not attend, or share wisdom across decades.",
+      "title": "Write: Letters & Journals",
+      "desc": "Write letters to your children that they'll read when they're grown — the small joys, the big milestones, a voice note in your own words. Each child's journal also holds the sky of their birth: the stars, planets and moon above their birthplace at the moment they were born, as a poster to print.",
       "button": "Compose a Legacy"
     },
     "recipe": {
@@ -87,11 +89,12 @@
     },
     "scrapbook": {
       "title": "Create: Digital Scrapbook",
-      "desc": "Turn your family memories into handcrafted digital pages. Drag and drop polaroid photos, playful stickers, and personal notes onto a freeform canvas — then export your finished book as a PDF to print or share.",
+      "desc": "Turn your family memories into handcrafted digital pages. Drag and drop polaroid photos, playful stickers, and personal notes onto a freeform canvas — then export your finished book as a PDF or order it as a printed book.",
       "bullets": [
         "Drag-and-drop canvas with photos, stickers & text",
         "Polaroid-style photo frames with rotation & resize",
-        "Export finished scrapbooks to PDF"
+        "Export finished scrapbooks to PDF",
+        "Order a printed book through Peecho — the one file we don't encrypt, and we tell you first"
       ],
       "button": "Open Scrapbooks"
     },
@@ -101,7 +104,7 @@
       "bullets": [
         "Ready-made ideas built from your own photos — a season, a year, the last few weeks",
         "Title card, shot order and timing all under your control",
-        "Four moods and portrait, square or landscape formats",
+        "Four colour moods, in story, portrait or square format",
         "Share to the family feed or download the finished video"
       ],
       "button": "Make a highlight video"
@@ -150,7 +153,8 @@
     "items": {
       "install": "Install on any phone or desktop",
       "offline": "Loads instantly — even on shaky connections",
-      "notify": "Notifications for new memories & anniversaries"
+      "notify": "Notifications for new memories, anniversaries and the monthly best-of",
+      "languages": "In English and German"
     }
   },
   "zones": {
@@ -164,16 +168,18 @@
         "One shared password for the inner circle",
         "No accounts or app installs for viewers",
         "Family admins decide what gets shared",
+        "Invite co-admins with a secure link",
+        "Your own front door — design the login page of your family's address",
         "Encrypted on your device too — convenience without the trade-off"
       ]
     },
     "vaultZone": {
       "badge": "Vault-grade privacy",
       "title": "Vault & Letters",
-      "desc": "Your originals, documents and future letters are encrypted with AES-256 in your browser before they're uploaded. What reaches our servers is ciphertext.",
+      "desc": "Vault capsules, your children's journals and letters are encrypted with AES-256 in your browser before they're uploaded, and only the family's admins can open them. What reaches our servers is ciphertext.",
       "bullets": [
         "AES-256-GCM, encrypted on your device",
-        "Unlocked only inside your family's private space",
+        "Readable by the family's admins only — viewers see the feed",
         "Full export any time — it stays yours"
       ]
     }
@@ -209,15 +215,15 @@
     "items": [
       {
         "q": "Do grandparents need an account?",
-        "a": "No. Your inner circle enters with one shared family password and views everything right in the browser — no account, no app install."
+        "a": "No. Your inner circle enters with one shared family password and views the family feed right in the browser — no account, no app install."
       },
       {
         "q": "What does Kaydo cost?",
-        "a": "Kaydo is free. No credit card required."
+        "a": "Kaydo is free. No credit card required. Only a printed book costs money, and you pay the print shop, Peecho, directly."
       },
       {
         "q": "Are my photos encrypted?",
-        "a": "Yes. Photos, videos, letters and Vault originals are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext."
+        "a": "Yes. Photos, videos, letters and Vault capsules are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext. The one exception is a book you order printed: a print shop can only print what it can read, so Kaydo tells you before it makes the print file, keeps it to your family's admins and deletes it after 30 days."
       },
       {
         "q": "Can I take my data with me?",

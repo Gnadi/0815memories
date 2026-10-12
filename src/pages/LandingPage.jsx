@@ -29,6 +29,7 @@ import {
   Zap,
   Bell,
   CalendarHeart,
+  Languages,
   ChevronDown,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
@@ -334,7 +335,7 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Card 3 — Write: The Letters */}
+            {/* Card 3 — Write: Letters & Journals */}
             <div className="bg-kaydo-dark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
@@ -396,16 +397,15 @@ export default function LandingPage() {
                   {t('pillars.scrapbook.desc')}
                 </p>
                 <ul className="space-y-2">
-                  {[
-                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[0] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[1] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[2] },
-                  ].map(({ icon, text }) => (
-                    <li key={text} className="flex items-start gap-2 text-sm text-bark">
-                      {icon}
-                      {text}
-                    </li>
-                  ))}
+                  {t('pillars.scrapbook.bullets', { returnObjects: true }).map((text, i) => {
+                    const Icon = i === 0 ? Layers : Check
+                    return (
+                      <li key={text} className="flex items-start gap-2 text-sm text-bark">
+                        <Icon className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                        {text}
+                      </li>
+                    )
+                  })}
                 </ul>
                 <button
                   onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
@@ -654,6 +654,10 @@ export default function LandingPage() {
               <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
                 <Bell className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                 {t('app.items.notify')}
+              </span>
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Languages className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                {t('app.items.languages')}
               </span>
             </div>
           </div>

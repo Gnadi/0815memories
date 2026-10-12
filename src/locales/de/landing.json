@@ -13,12 +13,13 @@
     "ldFeatures": [
       "Erinnerungen werden mit AES-256 auf deinem Gerät verschlüsselt",
       "Privates Teilen von Familienfotos und -videos",
-      "Familien-Rezeptbaum mit Versionsverlauf",
-      "Digitales Sammelalbum mit PDF-Export",
+      "Jeden Monat ein Best-of des Familienmonats",
+      "Briefe und Tagebücher für deine Kinder, mit dem Himmel ihrer Geburtsnacht",
+      "Zeitkapseln, die sich an einem Geburtstag, einer Hochzeit oder einem Datum deiner Wahl öffnen",
+      "Familien-Rezeptbaum mit Versionsverlauf und Abzweigungen",
+      "Digitales Sammelalbum mit PDF-Export und gedruckten Büchern",
       "Highlight-Videos aus euren Familienfotos",
       "Fotocollagen mit 14 fertigen Vorlagen",
-      "Geplante Briefe an Familienmitglieder für die Zukunft",
-      "AES-256-verschlüsselter Tresor für wertvolle Originale",
       "Gemeinsamer Jahresrückblick für Paare mit versiegeltem Zukunftsbrief"
     ]
   },
@@ -57,8 +58,9 @@
       "desc": "Jeder spontane Schnappschuss, jedes Meilenstein-Video und jede Sprachnachricht — gesammelt in einem warmen, privaten Feed. Dein engster Kreis erhält sofort Zugang mit nur einem gemeinsamen Familienpasswort. Keine Konten, keine Hürden, keine Fremden.",
       "bullets": [
         "Zugang für den engsten Kreis — ein gemeinsames Passwort, keine Anmeldungen",
-        "Die Familien-Admins bestimmen, wer was und wann sieht",
+        "Admins posten, der engste Kreis schaut zu — Tagebücher, Tresor und Rezepte bleiben bei den Admins",
         "Tägliche Momente — Story-Kreise für schnelle Alltags-Schnappschüsse",
+        "Am 1. jedes Monats ein Best-of — seine Fotos, Orte und der vollste Tag, mit Musik",
         "Die smarte Timeline ordnet Erinnerungen nach Jahreszeit und \"Heute vor ...\""
       ],
       "pills": {
@@ -69,16 +71,16 @@
     },
     "vault": {
       "title": "Bewahren: Der Tresor",
-      "desc": "Speichere hochauflösende Originale deiner wertvollsten Schätze sicher ab. Von Urkunden bis zu seltenen Familienfotos — mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden.",
+      "desc": "Versiegle Briefe, Sprachnachrichten, Fotos und Videos in einer Zeitkapsel. Sie bleibt verschlossen bis zu dem Tag, den du wählst — ein 18. Geburtstag, ein Schulabschluss, eine Hochzeit, bei der du vielleicht nicht dabei sein kannst — und alles darin wird mit AES-256 direkt in deinem Browser verschlüsselt, bevor es hochgeladen wird.",
       "bullets": [
-        "AES-256-Verschlüsselung",
-        "Auf deinem Gerät verschlüsselt — vor dem Upload",
-        "Zeitkapseln — versiegelt bis zu einem Datum deiner Wahl"
+        "AES-256 — auf deinem Gerät verschlüsselt, vor dem Upload",
+        "Öffnet sich an einem Datum deiner Wahl oder zu einem Lebensmeilenstein",
+        "Für eines deiner Kinder oder für die ganze Familie"
       ]
     },
     "letters": {
-      "title": "Schreiben: Die Briefe",
-      "desc": "Plane Nachrichten für die Zukunft. Gratuliere einem Enkelkind zu einer Hochzeit, bei der du vielleicht nicht dabei sein kannst, oder gib Weisheit über Jahrzehnte weiter.",
+      "title": "Schreiben: Briefe & Tagebücher",
+      "desc": "Schreibe deinen Kindern Briefe, die sie lesen, wenn sie groß sind — die kleinen Freuden, die großen Meilensteine, eine Sprachnachricht in deinen eigenen Worten. Im Tagebuch jedes Kindes wartet außerdem sein Geburtshimmel: Sterne, Planeten und Mond über seinem Geburtsort im Moment der Geburt, als Poster zum Drucken.",
       "button": "Ein Vermächtnis verfassen"
     },
     "recipe": {
@@ -87,11 +89,12 @@
     },
     "scrapbook": {
       "title": "Gestalten: Digitales Sammelalbum",
-      "desc": "Verwandle eure Familienerinnerungen in handgemachte digitale Seiten. Ziehe Polaroid-Fotos, verspielte Sticker und persönliche Notizen auf eine freie Leinwand — und exportiere dein fertiges Buch als PDF zum Drucken oder Teilen.",
+      "desc": "Verwandle eure Familienerinnerungen in handgemachte digitale Seiten. Ziehe Polaroid-Fotos, verspielte Sticker und persönliche Notizen auf eine freie Leinwand — und exportiere dein fertiges Buch als PDF oder bestelle es als gedrucktes Buch.",
       "bullets": [
         "Drag-and-drop-Leinwand mit Fotos, Stickern & Text",
         "Polaroid-Fotorahmen mit Drehen & Skalieren",
-        "Fertige Sammelalben als PDF exportieren"
+        "Fertige Sammelalben als PDF exportieren",
+        "Als gedrucktes Buch über Peecho bestellen — die eine Datei, die wir nicht verschlüsseln, und wir sagen es dir vorher"
       ],
       "button": "Sammelalben öffnen"
     },
@@ -101,7 +104,7 @@
       "bullets": [
         "Fertige Ideen aus euren eigenen Fotos — eine Jahreszeit, ein Jahr, die letzten Wochen",
         "Titelkarte, Reihenfolge und Dauer bestimmst du",
-        "Vier Stimmungen sowie Hoch-, Quer- und quadratisches Format",
+        "Vier Farbstimmungen, im Story-, Hoch- oder quadratischen Format",
         "Im Familien-Feed teilen oder das fertige Video herunterladen"
       ],
       "button": "Highlight-Video erstellen"
@@ -150,7 +153,8 @@
     "items": {
       "install": "Auf jedem Handy oder Desktop installierbar",
       "offline": "Lädt sofort — auch bei wackeligem Empfang",
-      "notify": "Benachrichtigungen bei neuen Erinnerungen & Jahrestagen"
+      "notify": "Benachrichtigungen bei neuen Erinnerungen, Jahrestagen und dem Monats-Best-of",
+      "languages": "Auf Deutsch und Englisch"
     }
   },
   "zones": {
@@ -164,16 +168,18 @@
         "Ein gemeinsames Passwort für den engsten Kreis",
         "Keine Konten oder App-Installationen für Mitleser",
         "Die Familien-Admins entscheiden, was geteilt wird",
+        "Weitere Admins per sicherem Einladungslink",
+        "Eure eigene Haustür — gestalte die Login-Seite eurer Familienadresse",
         "Auch hier auf deinem Gerät verschlüsselt — Bequemlichkeit ohne Kompromiss"
       ]
     },
     "vaultZone": {
       "badge": "Tresor-Privatsphäre",
       "title": "Tresor & Briefe",
-      "desc": "Deine Originale, Dokumente und Zukunftsbriefe werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden. Auf unseren Servern kommt nur Chiffretext an.",
+      "desc": "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden, und nur die Admins der Familie können sie öffnen. Auf unseren Servern kommt nur Chiffretext an.",
       "bullets": [
         "AES-256-GCM — verschlüsselt auf deinem Gerät",
-        "Nur im privaten Bereich deiner Familie entschlüsselt",
+        "Nur für die Admins der Familie lesbar — Mitleser sehen den Feed",
         "Jederzeit vollständiger Export — es bleibt deins"
       ]
     }
@@ -209,15 +215,15 @@
     "items": [
       {
         "q": "Brauchen Oma und Opa ein Konto?",
-        "a": "Nein. Der engste Kreis kommt mit einem gemeinsamen Familienpasswort hinein und sieht alles direkt im Browser — kein Konto, keine App-Installation."
+        "a": "Nein. Der engste Kreis kommt mit einem gemeinsamen Familienpasswort hinein und sieht den Familien-Feed direkt im Browser — kein Konto, keine App-Installation."
       },
       {
         "q": "Was kostet Kaydo?",
-        "a": "Kaydo ist kostenlos. Keine Kreditkarte nötig."
+        "a": "Kaydo ist kostenlos. Keine Kreditkarte nötig. Nur ein gedrucktes Buch kostet Geld, und das bezahlst du direkt bei der Druckerei Peecho."
       },
       {
         "q": "Sind meine Fotos verschlüsselt?",
-        "a": "Ja. Fotos, Videos, Briefe und Tresor-Originale werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext."
+        "a": "Ja. Fotos, Videos, Briefe und Tresor-Zeitkapseln werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext. Die eine Ausnahme ist ein Buch, das du drucken lässt: Eine Druckerei kann nur drucken, was sie lesen kann. Kaydo sagt dir das, bevor die Druckdatei entsteht, gibt sie nur den Admins deiner Familie frei und löscht sie nach 30 Tagen."
       },
       {
         "q": "Kann ich meine Daten mitnehmen?",
