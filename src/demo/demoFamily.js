@@ -41,7 +41,7 @@ const MEMORY_IMAGES = [
   ['books.webp'],
 ]
 const MOMENT_IMAGES = ['pancakes.webp', 'playground.webp', 'books.webp', 'bike.webp', 'treehouse.webp']
-const RECIPE_IMAGES = ['pie.webp', 'kitchen.webp', 'cookies.webp', 'pancakes.webp']
+const RECIPE_IMAGES = ['pie.webp', 'kitchen.webp', 'cookies.webp', 'pancakes.webp', 'pie.webp']
 
 /**
  * @param {{ language?: 'en'|'de', now?: Date }} options
@@ -180,12 +180,13 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
     })
   })
 
-  // ── Recipes: a strudel (or pie) with two generations of forks, and one more
+  // ── Recipes: a strudel (or pie) with two generations of forks and a second branch, and one more
   const recipeSlots = [
     { id: 'demo-recipe-1', year: 1978, parentId: null, rootId: null, createdAt: inYear(3, 2, 1) },
     { id: 'demo-recipe-2', year: 2005, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', createdAt: inYear(3, 2, 2) },
     { id: 'demo-recipe-3', year: year - 1, parentId: 'demo-recipe-2', rootId: 'demo-recipe-1', createdAt: inYear(1, 3, 15) },
     { id: 'demo-recipe-4', year: 2012, parentId: null, rootId: null, createdAt: inYear(2, 5, 4) },
+    { id: 'demo-recipe-5', year: 1996, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', createdAt: inYear(2, 1, 20) },
   ]
   c.recipes.forEach((recipe, i) => {
     const slot = recipeSlots[i]

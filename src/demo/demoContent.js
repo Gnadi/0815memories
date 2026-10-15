@@ -213,6 +213,19 @@ const en = {
       ingredients: ['2 cups flour', '2 tbsp sugar', '2 tsp baking powder', '2 eggs', '1½ cups milk', '3 tbsp melted butter'],
       changes: [],
     },
+    {
+      title: "Aunt Maya's Crumble Pie",
+      author: 'Maya',
+      description: 'Grandma\'s filling under a golden walnut crumble instead of a lid.',
+      instructions: 'Fill the crust as in the original. Rub butter, flour, brown sugar and chopped walnuts into crumbs, scatter over the apples and bake at 190 °C for 45 minutes.',
+      chefNote: 'Cold butter, or the crumble turns to paste.',
+      forkReason: 'No time for a lid on a busy weeknight.',
+      ingredients: ['6 Granny Smith apples', '1 cup sugar', '2 tsp cinnamon', 'Single pie crust', 'Walnut crumble'],
+      changes: [
+        { type: 'REMOVED', ingredient: 'Top crust', description: 'Replaced by a crumble.' },
+        { type: 'ADDED', ingredient: 'Walnut crumble', description: 'Butter, flour, brown sugar and walnuts.' },
+      ],
+    },
   ],
 
   scrapbook: {
@@ -527,6 +540,19 @@ const de = {
       forkReason: '',
       ingredients: ['4 Eier', '250 ml Milch', '150 g Mehl', '2 EL Zucker', '2 EL Butter', 'Staubzucker'],
       changes: [],
+    },
+    {
+      title: 'Tante Mayas Strudel mit Nussbröseln',
+      author: 'Maya',
+      description: 'Omas Füllung, aber mit knusprigen Nussbröseln statt Strudelteig.',
+      instructions: 'Die Füllung in eine Form geben. Butter, Mehl, braunen Zucker und gehackte Walnüsse zu Streuseln verreiben, über die Äpfel streuen und bei 190 °C 45 Minuten backen.',
+      chefNote: 'Die Butter muss kalt sein, sonst wird aus den Streuseln Matsch.',
+      forkReason: 'Unter der Woche fehlt die Zeit, Teig auszuziehen.',
+      ingredients: ['1 kg säuerliche Äpfel', '100 g Zucker', '2 TL Zimt', '50 g Rosinen', 'Walnussbrösel'],
+      changes: [
+        { type: 'REMOVED', ingredient: 'Strudelteig', description: 'Durch Streusel ersetzt.' },
+        { type: 'ADDED', ingredient: 'Walnussbrösel', description: 'Butter, Mehl, brauner Zucker und Walnüsse.' },
+      ],
     },
   ],
 

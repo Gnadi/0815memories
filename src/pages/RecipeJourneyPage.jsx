@@ -92,7 +92,7 @@ export default function RecipeJourneyPage() {
             </div>
 
             {/* Body */}
-            <div className="flex-1 p-4 md:p-8 max-w-3xl mx-auto w-full space-y-8">
+            <div className="flex-1 p-4 md:p-8 max-w-3xl xl:max-w-5xl mx-auto w-full space-y-8">
 
               {/* Compare button */}
               {hasMultipleVersions && (
