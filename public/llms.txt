@@ -1,31 +1,47 @@
 # Kaydo
 
-> Kaydo is a private, end-to-end-encrypted sanctuary for your family's memories.
-> No ads, no AI training, no data selling — just your stories, photos, letters,
-> recipes and scrapbooks, preserved for the people you love.
+> Kaydo is a private app for a family's memories: photos, videos, voice memos,
+> letters, journals, recipes and scrapbooks, shared with the family and no one
+> else. It is free, carries no ads, does not use families' content for AI
+> training, and is open source (MIT).
 
-Each family gets its own space at `your-name.kaydo.app`. Everything is encrypted,
-you own and can export all of your data at any time, and the app is open source.
+Each family gets its own address at `your-name.kaydo.app`. The family's admins
+sign in with email and password and post. The rest of the inner circle,
+grandparents for instance, open the family feed with one shared family password,
+without an account or an app to install; journals, the Vault and recipes stay
+with the admins. Photos, videos, memories and journal entries can be downloaded
+at any time. Kaydo is in English and German, and installs on phones and
+desktops as an app.
 
 ## Core pages
 
-- [Home / overview](https://kaydo.app/): What Kaydo is and how to claim your family name.
+- [Home](https://kaydo.app/): What Kaydo is, and how to claim a family address.
+- [Kaydo auf Deutsch](https://kaydo.app/de): The same page in German.
+- [Demo](https://kaydo.app/demo): A fictional demo family to look around in, without an account.
+- [Sign up](https://kaydo.app/signup): Create a family space.
 - [Log in](https://kaydo.app/login): Sign in to an existing family space.
-- [Sign up](https://kaydo.app/signup): Create a new family space.
 
 ## Features
 
-- [Moments & Memories](https://kaydo.app/#features): Privately share photos, videos and voice memos with your family.
-- [The Vault](https://kaydo.app/#features): Securely store high-fidelity originals of your most precious files.
-- [The Letters](https://kaydo.app/#features): Write messages to be delivered to loved ones in the future.
-- [Recipe Tree](https://kaydo.app/#features): Preserve and evolve family recipes across generations.
-- [Digital Scrapbook](https://kaydo.app/#features): Turn memories into handcrafted, drag-and-drop pages.
-- [Data Export](https://kaydo.app/#features): Own and export all of your data whenever you want.
+- [Moments & Memories](https://kaydo.app/#features): A private feed of photos, videos and voice memos, daily moments, and a timeline by season and "on this day".
+- [Best of the month](https://kaydo.app/#features): On the 1st, last month comes back as a story set to music, put together from what the family wrote. No photo is analysed.
+- [The Vault](https://kaydo.app/#features): Time capsules of letters, voice notes, photos and videos for one child or the whole family. They open on a chosen date, at a milestone, or, as a legacy, a year after their writer last checked in.
+- [Letters & Journals](https://kaydo.app/#features): Letters and a journal for each child, with a printable poster of the sky at the moment they were born.
+- [Recipe Tree](https://kaydo.app/#features): Family recipes with their versions and forks across generations.
+- [Digital Scrapbook](https://kaydo.app/#features): Drag-and-drop pages of photos, stickers and notes, exported as a PDF or ordered as a printed book.
+- [Highlight videos](https://kaydo.app/#features): Short films made from the family's photos, shared to the feed or downloaded.
+- [Collages](https://kaydo.app/#features): 14 layouts for the family's photos.
+- [Our Year](https://kaydo.app/#features): A recurring look back for a couple, visible to the two of them only.
+- [Data export](https://kaydo.app/#features): A ZIP of every photo and video, with memories and journal entries as structured data.
 
 ## Privacy & security
 
 - [Privacy commitments](https://kaydo.app/#privacy): No ads, no AI training, no data selling.
-- [Security](https://kaydo.app/#security): End-to-end encryption and verified-members-only access.
+- [Security](https://kaydo.app/#security): Photos, videos, voice memos, memories, journals, recipes, scrapbooks and Vault capsules are encrypted with AES-256-GCM in the browser before they are uploaded, so the servers store ciphertext. The family's key is kept on the server, in the family's own record, so Kaydo is not zero-knowledge. A printed book is the one exception: a print shop can only print what it can read, so Kaydo says so before it makes the print file, and deletes the file after 30 days.
+
+## Pricing
+
+- Kaydo is free, with no credit card required. Only a printed book costs money, paid to the print shop (Peecho) directly.
 
 ## Legal
 
@@ -36,5 +52,6 @@ you own and can export all of your data at any time, and the app is open source.
 
 ## More
 
-- [Source code on GitHub](https://github.com/Gnadi/0815memories): Kaydo is open source.
+- [Source code on GitHub](https://github.com/Gnadi/0815memories): Kaydo is open source under the MIT license, and a family can run it on its own Firebase project.
+- [The story behind Kaydo](https://blog.gnadlinger.me/blog/kaydo/): Why Kaydo exists, in German.
 - [Sitemap](https://kaydo.app/sitemap.xml)
