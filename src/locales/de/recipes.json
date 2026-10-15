@@ -55,6 +55,7 @@
     "original": "Original",
     "authorFork": "{{author}}s Fork",
     "fork": "Fork",
+    "forkedFrom": "Abgeleitet von {{name}}",
     "rowTitle": "{{year}}: {{label}}",
     "viewDetails": "Details ansehen →"
   },
