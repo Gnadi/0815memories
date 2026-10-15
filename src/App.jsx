@@ -7,7 +7,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
-import i18n, { ensureAppTranslations } from './i18n'
+import i18n, { ensureAppTranslations, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -71,7 +71,8 @@ const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 // Part of the demo, so loaded only in a demo tab.
 const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 
-// What "/" resolves to, in priority order:
+// What "/" resolves to — and "/de", the landing page in German (lng) — in
+// priority order:
 //
 //   1. A signed-in visitor goes straight to /home. "/" is where every return
 //      visit starts — a bookmark, a tapped app icon, the PWA's start_url — and
@@ -86,7 +87,7 @@ const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 // HTML *is* the landing page, so it would still paint for the moment before
 // hydration; index.html covers it with a cream shell for exactly that window
 // (the .kaydo-restoring class, cleared below once this route has decided).
-export function RootRoute() {
+export function RootRoute({ lng }) {
   const navigate = useNavigate()
   const { isAuthenticated, loading, isDemo } = useAuth()
   // 'unknown'   — pre-hydration, storage not read yet (renders the landing page,
@@ -150,7 +151,7 @@ export function RootRoute() {
   }, [status])
 
   if (status === 'restoring') return <PageLoader />
-  return <LandingPage />
+  return <LandingPage lng={lng} />
 }
 
 function PageLoader() {
@@ -189,16 +190,17 @@ function DemoBannerSlot() {
   )
 }
 
-// Lifts index.html's pre-hydration cover on every path but "/", which RootRoute
-// handles because it has its own decision to make first. It renders inside the
-// same <Suspense> as the page, so its effect runs only once the page itself has
-// committed: while a lazy page is still loading, React keeps the pre-rendered
-// landing markup in place of the boundary during hydration, and uncovering
-// before then is exactly the flash the cover exists to hide.
+// Lifts index.html's pre-hydration cover on every path but the landing page's
+// ("/", "/de"), which RootRoute handles because it has its own decision to make
+// first. It renders inside the same <Suspense> as the page, so its effect runs
+// only once the page itself has committed: while a lazy page is still loading,
+// React keeps the pre-rendered landing markup in place of the boundary during
+// hydration, and uncovering before then is exactly the flash the cover exists
+// to hide.
 function RevealPage() {
   const { pathname } = useLocation()
   useEffect(() => {
-    if (pathname !== '/') uncoverPage()
+    if (!Object.values(LANDING_PATHS).includes(pathname)) uncoverPage()
   }, [pathname])
   return null
 }
@@ -348,6 +350,8 @@ export const routes = [
     errorElement: <RouteErrorScreen />,
     children: [
       { index: true, element: <RootRoute /> },
+      // The landing page in German, at an address of its own (LANDING_PATHS).
+      { path: 'de', element: <RootRoute lng="de" /> },
       { path: 'login', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'family/:slug', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },

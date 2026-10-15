@@ -224,8 +224,20 @@
     "sectionTitle": "Frequently asked questions",
     "items": [
       {
+        "q": "Why not just use a WhatsApp group?",
+        "a": "Keep it — for talking. In a chat, photos get buried between messages; in Kaydo they stay where you can find them: in a feed and a timeline by season and \"on this day\", with the stories behind them. And next to them there is room for what a family keeps besides photos: letters and journals for your children, time capsules, recipes and scrapbooks."
+      },
+      {
         "q": "Do grandparents need an account?",
         "a": "No. Your inner circle enters with one shared family password and views the family feed right in the browser — no account, no app install."
+      },
+      {
+        "q": "How is Kaydo different from a shared Google Photos or iCloud album?",
+        "a": "A shared album collects photos and videos. Kaydo is a home for all of a family's memories: photos, videos and voice memos with the stories behind them, and next to them letters and journals for your children, time capsules that open on a birthday or a wedding, the family's recipes with all their versions, and scrapbooks you can have printed — at your family's own address."
+      },
+      {
+        "q": "How is Kaydo different from FamilyAlbum?",
+        "a": "FamilyAlbum is made for sharing photos and videos of your children with your family. Kaydo does that too, and around the photos it has room for more: letters and journals for your children, time capsules that open on a birthday or a wedding, the family's recipes with all their versions, and a recurring look back for the two of you. Kaydo is also open source: anyone can read its code, and you can run it for your family yourself."
       },
       {
         "q": "What does Kaydo cost?",
@@ -234,6 +246,10 @@
       {
         "q": "Are my photos encrypted?",
         "a": "Yes. Photos, videos, letters and Vault capsules are encrypted with AES-256 in your browser before they're uploaded — our servers store ciphertext. The one exception is a book you order printed: a print shop can only print what it can read, so Kaydo tells you before it makes the print file, keeps it to your family's admins and deletes it after 30 days."
+      },
+      {
+        "q": "Is Kaydo a social network like Facebook?",
+        "a": "No. There are no public profiles, no followers and nothing to discover beyond your own family. Each family has its own space at its own address, and only the people you let in see its memories."
       },
       {
         "q": "Can I take my data with me?",

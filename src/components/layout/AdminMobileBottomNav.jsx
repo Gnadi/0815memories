@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Home, BookHeart, Plus, Lock, Camera, BookMarked, CalendarHeart, LayoutGrid, Film, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { LANDING_PATHS } from '../../i18n'
 import { LAYOUT_PRESETS } from '../scrapbook/layoutPresets'
 import { devError } from '../../utils/devLog'
 
@@ -50,7 +51,7 @@ export default function AdminMobileBottomNav() {
 
   // Hide on public/auth pages and on the full-screen editors
   if (!isAdmin) return null
-  const publicPaths = ['/', '/login', '/signup']
+  const publicPaths = [...Object.values(LANDING_PATHS), '/login', '/signup']
   if (publicPaths.includes(location.pathname)) return null
   if (location.pathname.startsWith('/family/')) return null
   if (location.pathname.match(/^\/(scrapbook|collage|highlight)\/.+/)) return null

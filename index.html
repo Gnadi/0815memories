@@ -41,8 +41,9 @@
          reload of /home would paint the marketing page, and a returning
          member's launch of "/" would look logged out. Each pre-rendered page
          carries the path it was built for (data-prerendered, stamped in
-         vite.config.js): when that is not the URL, or it is "/" and a session
-         is stored or the tab is in the demo (src/demo/demoMode.js), hide the
+         vite.config.js): when that is not the URL, or it is the landing page
+         ("/", or "/de" in German: LANDING_PATHS in src/i18n) and a session is
+         stored or the tab is in the demo (src/demo/demoMode.js), hide the
          page behind the same cream the loading shell uses; the app uncovers it
          once the real page has rendered (src/utils/prehydrationCover.js). A
          page served its own HTML, like /terms, paints straight away.
@@ -59,7 +60,7 @@
       (function () {
         var builtFor = document.documentElement.getAttribute('data-prerendered')
         var cover = location.pathname !== builtFor
-        if (!cover && builtFor === '/') {
+        if (!cover && (builtFor === '/' || builtFor === '/de')) {
           try {
             cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId') ||
               sessionStorage.getItem('kaydo_demo'))

@@ -66,6 +66,26 @@ describe('i18n translation completeness', () => {
   })
 })
 
+describe('language detection', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/')
+    localStorage.clear()
+  })
+
+  it('opens /de in German, over a language chosen before', () => {
+    localStorage.setItem('kaydo_lang', 'en')
+    window.history.replaceState(null, '', '/de')
+    expect(i18n.services.languageDetector.detect()[0]).toBe('de')
+  })
+
+  it('leaves the language of every other address to the visitor', () => {
+    for (const path of ['/', '/demo', '/login']) {
+      window.history.replaceState(null, '', path)
+      expect(i18n.services.languageDetector.detect()).not.toContain('de')
+    }
+  })
+})
+
 describe('LanguageSwitcher', () => {
   afterEach(() => {
     i18n.changeLanguage('en')

@@ -161,9 +161,12 @@ The NAS export decrypts through the services for the same reason
 
 Build and delivery details that affect many changes:
 
-- **Pre-rendering.** `vite-react-ssg` renders the landing page (`/`) to
-  static HTML at build time. Anything on the public routes must render in
-  Node, without `window`. The signed-in app is client-only and lazy-loaded.
+- **Pre-rendering.** `vite-react-ssg` renders the landing page to static
+  HTML at build time, at `/` in English and at `/de` in German
+  (`LANDING_PATHS` in `src/i18n/`): crawlers detect no language, so each
+  language needs an address of its own. Anything on the public routes must
+  render in Node, without `window`. The signed-in app is client-only and
+  lazy-loaded.
 - **The shell is kept small.** Only the startup code is precached by the
   service worker (`scripts/shellPrecache.mjs`); pages and the signed-in
   translations load on demand. CI reports the shell's size on every PR.
