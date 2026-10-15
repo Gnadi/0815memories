@@ -146,3 +146,11 @@ describe('demo family', () => {
     expect(JSON.parse(emma.birthPlace)).toMatchObject({ name: 'Wien', tz: 'Europe/Vienna' })
   })
 })
+
+describe('demo recipes', () => {
+  it('has a recipe forked twice from the original, so the tree branches', () => {
+    const { documents } = load()
+    const forks = documents.filter(([path, d]) => path.startsWith('recipes/') && d.parentId === 'demo-recipe-1')
+    expect(forks).toHaveLength(2)
+  })
+})
