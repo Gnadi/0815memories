@@ -16,6 +16,8 @@ import { devError } from '../../utils/devLog'
 import { EMPTY_RICH_DOC, isRichDoc } from '../../utils/richText'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import RichTextToolbar from './richTextEditor/RichTextToolbar'
+import { DictationStatus } from '../DictationField'
+import useDictation from '../../hooks/useDictation'
 import { mediaExtensions } from './richTextEditor/mediaNodes'
 import { newUploadId, patchByUploadId, removeByUploadId } from './richTextEditor/nodeUtils'
 import { setPreview, clearPreview, clearAllPreviews } from './richTextEditor/previewStore'
@@ -43,6 +45,17 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   const [error, setError] = useState('')
   const [pending, setPending] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
+
+  const editorRef = useRef(null)
+  const dictation = useDictation((spoken) => {
+    const e = editorRef.current
+    if (!e || e.isDestroyed) return
+    // A leading space keeps the phrase apart from the word before the cursor.
+    const { from } = e.state.selection
+    const before = from > 1 ? e.state.doc.textBetween(from - 1, from) : ''
+    const prefix = before && !/\s/.test(before) ? ' ' : ''
+    e.chain().focus().insertContent(prefix + spoken.trim()).run()
+  })
 
   const imageInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -74,6 +87,10 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   useEffect(() => {
     onPendingChange?.(pending)
   }, [pending, onPendingChange])
+
+  useEffect(() => {
+    editorRef.current = editor
+  }, [editor])
 
   useEffect(() => {
     editor?.setEditable(!disabled)
@@ -239,6 +256,7 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
         onTakePhoto={() => cameraInputRef.current?.click()}
         onPickVideo={() => videoInputRef.current?.click()}
         onAddAudio={() => setShowRecorder((v) => !v)}
+        dictation={dictation}
         fullscreen={fullscreen}
         onToggleFullscreen={toggleFullscreen}
       />
@@ -260,6 +278,10 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
           <VoiceMemoRecorder onMemoAdded={handleMemoAdded} />
         </div>
       )}
+
+      <div className="px-4">
+        <DictationStatus listening={dictation.listening} error={dictation.error} />
+      </div>
 
       {error && (
         <p className="flex items-center gap-1.5 px-4 py-2 text-xs text-red-600 border-t border-cream-dark flex-shrink-0">

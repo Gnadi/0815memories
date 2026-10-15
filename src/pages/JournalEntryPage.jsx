@@ -12,6 +12,8 @@ import { useMediaUploader } from '../hooks/useMediaUploader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
 import { devError } from '../utils/devLog'
+import DictationField from '../components/DictationField'
+import { appendDictation } from '../hooks/useDictation'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -305,12 +307,14 @@ export default function JournalEntryPage() {
           )}
 
           {/* Main textarea */}
-          <textarea
-            value={form.content}
-            onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-            placeholder={t('editor.contentPlaceholder', { name: kid?.name || t('editor.contentPlaceholderFallback') })}
-            className="w-full min-h-16 px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300"
-          />
+          <DictationField onText={(s) => setForm((p) => ({ ...p, content: appendDictation(p.content, s) }))}>
+            <textarea
+              value={form.content}
+              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
+              placeholder={t('editor.contentPlaceholder', { name: kid?.name || t('editor.contentPlaceholderFallback') })}
+              className="w-full min-h-16 px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300 pr-12"
+            />
+          </DictationField>
         </div>
 
         {/* Sticky bottom toolbar */}

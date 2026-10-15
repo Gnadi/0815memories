@@ -124,6 +124,7 @@
         "paragraphs": [
           "Deine Inhalte sind standardmäßig auf deinen Familienbereich beschränkt. Sie sind nur für die von dir eingeladenen Personen sichtbar.",
           "Wir setzen sorgfältig ausgewählte Dienstleister für Hosting und Betrieb des Dienstes ein (zum Beispiel Cloud-Hosting und Medienspeicherung). Diese handeln als unsere Auftragsverarbeiter, verarbeiten Daten nur auf unsere Weisung und sind durch entsprechende Datenschutzvereinbarungen gebunden.",
+          "Diktierfunktion: Wenn du ein Textfeld per Sprache ausfüllst, übernimmt die Spracherkennung deines Browsers die Umwandlung in Text. Je nach Browser (zum Beispiel Chrome oder Safari) wird dafür das Audio an den Hersteller des Browsers gesendet; Kaydo selbst erhält und speichert diese Aufnahme nicht. Der entstehende Text wird wie jeder andere Inhalt verschlüsselt gespeichert. Du kannst die Funktion jederzeit weglassen und stattdessen tippen.",
           "Wir geben deine personenbezogenen Daten nicht an Werbetreibende weiter und nutzen deine Inhalte nicht zum Aufbau von Werbeprofilen."
         ]
       },
