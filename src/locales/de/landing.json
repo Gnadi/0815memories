@@ -224,8 +224,16 @@
     "sectionTitle": "Häufige Fragen",
     "items": [
       {
+        "q": "Warum nicht einfach eine WhatsApp-Gruppe?",
+        "a": "Behalte sie — zum Reden. Im Chat gehen Fotos zwischen den Nachrichten unter; in Kaydo bleiben sie, wo man sie wiederfindet: in einem Feed und einer Timeline nach Jahreszeit und \"Heute vor ...\", mit den Geschichten dazu. Und daneben ist Platz für das, was eine Familie außer Fotos aufhebt: Briefe und Tagebücher für deine Kinder, Zeitkapseln, Rezepte und Sammelalben."
+      },
+      {
         "q": "Brauchen Oma und Opa ein Konto?",
         "a": "Nein. Der engste Kreis kommt mit einem gemeinsamen Familienpasswort hinein und sieht den Familien-Feed direkt im Browser — kein Konto, keine App-Installation."
+      },
+      {
+        "q": "Was ist anders als bei einem geteilten Album in Google Fotos oder iCloud?",
+        "a": "Ein geteiltes Album sammelt Fotos und Videos. Kaydo ist ein Zuhause für alle Erinnerungen einer Familie: Fotos, Videos und Sprachnachrichten mit den Geschichten dazu, und daneben Briefe und Tagebücher für deine Kinder, Zeitkapseln, die sich an einem Geburtstag oder einer Hochzeit öffnen, die Rezepte der Familie mit all ihren Versionen und Sammelalben, die du drucken lassen kannst — unter der eigenen Adresse eurer Familie."
       },
       {
         "q": "Was kostet Kaydo?",
@@ -234,6 +242,10 @@
       {
         "q": "Sind meine Fotos verschlüsselt?",
         "a": "Ja. Fotos, Videos, Briefe und Tresor-Zeitkapseln werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden — auf unseren Servern liegt Chiffretext. Die eine Ausnahme ist ein Buch, das du drucken lässt: Eine Druckerei kann nur drucken, was sie lesen kann. Kaydo sagt dir das, bevor die Druckdatei entsteht, gibt sie nur den Admins deiner Familie frei und löscht sie nach 30 Tagen."
+      },
+      {
+        "q": "Ist Kaydo ein soziales Netzwerk wie Facebook?",
+        "a": "Nein. Es gibt keine öffentlichen Profile, keine Follower und nichts zu entdecken jenseits der eigenen Familie. Jede Familie hat ihren eigenen Bereich unter ihrer eigenen Adresse, und ihre Erinnerungen sieht nur, wen ihr hereinlasst."
       },
       {
         "q": "Kann ich meine Daten mitnehmen?",
