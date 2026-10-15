@@ -43,6 +43,27 @@ export const LAZY_NAMESPACES = [
 export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]
 export const SUPPORTED_LANGUAGES = ['en', 'de']
 
+// The landing page's address in each language. Crawlers detect no language,
+// and most of them run no JavaScript, so a language reaches them only at an
+// address of its own, pre-rendered in it (src/prerenderedRoutes.js). "/" is
+// English to them and the visitor's language to everyone else; "/de" is German
+// to all. index.html's inline script names these paths too.
+export const LANDING_PATHS = { en: '/', de: '/de' }
+
+// A visit that starts on "/de" is in German whatever the visitor's settings
+// say. "/" names no language of its own.
+const landingPath = {
+  name: 'landingPath',
+  lookup() {
+    if (typeof window === 'undefined') return undefined
+    return SUPPORTED_LANGUAGES.find(
+      (lng) => LANDING_PATHS[lng] !== '/' && LANDING_PATHS[lng] === window.location.pathname,
+    )
+  },
+}
+const languageDetector = new LanguageDetector()
+languageDetector.addDetector(landingPath)
+
 export const resources = {
   en: { common: enCommon, landing: enLanding, auth: enAuth },
   de: { common: deCommon, landing: deLanding, auth: deAuth },
@@ -75,7 +96,7 @@ export function ensureAppTranslations() {
 }
 
 i18n
-  .use(LanguageDetector)
+  .use(languageDetector)
   .use(initReactI18next)
   .init({
     resources,
@@ -90,10 +111,11 @@ i18n
     interpolation: { escapeValue: false }, // React already escapes
     react: { useSuspense: false }, // CRITICAL: keeps SSG pre-render synchronous
     detection: {
-      // "?lang=de" first: the hreflang alternate URLs (LandingPage <Head> and
-      // public/sitemap.xml) point crawlers and shared links at explicit
-      // language variants, which must win over a previously cached choice.
-      order: ['querystring', 'localStorage', 'navigator'],
+      // An address that names a language wins over a choice cached earlier:
+      // first the landing page's own path, then "?lang=", which was the German
+      // landing page's address before it had a path (vercel.json sends it on
+      // to /de) and still works on every page.
+      order: ['landingPath', 'querystring', 'localStorage', 'navigator'],
       lookupQuerystring: 'lang',
       lookupLocalStorage: 'kaydo_lang',
       caches: ['localStorage'],

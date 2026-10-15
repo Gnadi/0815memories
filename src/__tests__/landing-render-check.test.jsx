@@ -15,11 +15,12 @@ vi.mock('../context/AuthContext', () => ({
 
 import LandingPage from '../pages/LandingPage'
 
-function renderLanding() {
+function renderLanding(path = '/') {
   const router = createMemoryRouter([
     { path: '/', element: <LandingPage /> },
+    { path: '/de', element: <LandingPage lng="de" /> },
     { path: '*', element: null },
-  ])
+  ], { initialEntries: [path] })
   render(<RouterProvider router={router} />)
   return router
 }
@@ -56,6 +57,27 @@ describe('LandingPage renders in both languages', () => {
     expect(screen.getByText('DSGVO-konform')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/nur auf Einladung|Zero-Knowledge|Datenlecks/i)
+  })
+
+  it('renders German at /de, whatever the visitor\'s language', () => {
+    renderLanding('/de')
+    expect(screen.getAllByText('Demo-Familie ansehen').length).toBe(2)
+    expect(screen.getByText('Häufige Fragen')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Sprache' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Deutsch' })).toHaveAttribute('aria-pressed', 'true')
+    // Fixed to the page rather than switched for everyone: the pre-render
+    // builds the English page at the same time.
+    expect(i18n.language).toBe('en')
+  })
+
+  it('goes to the address of the language a visitor picks', () => {
+    const router = renderLanding()
+    fireEvent.click(screen.getByRole('button', { name: 'Deutsch' }))
+    expect(router.state.location.pathname).toBe('/de')
+    expect(i18n.language).toBe('de')
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(router.state.location.pathname).toBe('/')
+    expect(i18n.language).toBe('en')
   })
 
   it('sends a visitor from a feature to the same place in the demo family', () => {

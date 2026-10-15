@@ -53,6 +53,15 @@ test('the landing page renders', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
+// In a browser set to English: the address decides.
+test('the landing page renders in German at /de', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/de')
+  await expect(page.locator('h1')).toContainText('Zuhause')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'de')
+  expect(errors).toEqual([])
+})
+
 test('a wrong password keeps the admin on the login page', async ({ page }) => {
   await signIn(page, 'not-the-password')
   await expect(page.getByText('Could not sign in').filter({ visible: true })).toBeVisible()

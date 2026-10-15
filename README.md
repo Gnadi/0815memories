@@ -146,7 +146,7 @@ VITE_USE_EMULATOR=true npm run dev
 | --- | --- |
 | `npm run dev` | Vite dev server |
 | `npm run dev:local` | Emulators + demo data + dev server, no Firebase project needed |
-| `npm run build` | Production build incl. static pre-render of `/` |
+| `npm run build` | Production build incl. static pre-render of `/` and `/de` |
 | `npm test` | Run the Vitest suite |
 | `npm run test:rules` | Firestore and Storage security-rule tests (needs the emulators + Java) |
 | `npm run test:e2e` | End-to-end smoke tests in Chromium against the seeded emulators (needs Java; Chromium via `npx playwright install chromium`, or `CHROMIUM_PATH`) |

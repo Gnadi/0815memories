@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LANDING_PATHS } from '../i18n'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
@@ -57,20 +58,32 @@ function OctocatIcon({ className }) {
   )
 }
 
-export default function LandingPage() {
+// lng: the language the page's address fixes, "de" on /de. Without it, as on
+// "/", the page is in the visitor's language. The translations are fixed to it
+// rather than switched globally: the pre-render builds several pages at once,
+// so a global switch would leak into the page being built next to this one.
+export default function LandingPage({ lng }) {
   const navigate = useNavigate()
   const { isAuthenticated, isAdmin, signup, firebaseReady } = useAuth()
-  const { t } = useTranslation('landing')
+  const { t, i18n } = useTranslation('landing', { lng })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { canInstall, promptInstall } = usePWAInstall()
 
 
-  // Language-dependent URLs: the language is selected client-side (localStorage /
-  // navigator / ?lang=), so the German version lives at "/?lang=de" while "/" is
-  // the English default. Canonical and hreflang must agree on that mapping.
+  // Each language has its own address (LANDING_PATHS), so crawlers see both.
+  // The canonical is the page's own address even when a visitor's settings
+  // show "/" in German: then hydration never changes it, and Google advises
+  // against a canonical that JavaScript moves.
   const lang = t('seo.ogLocale').slice(0, 2)
-  const canonicalUrl = lang === 'de' ? 'https://kaydo.app/?lang=de' : 'https://kaydo.app/'
+  const ownPath = LANDING_PATHS[lng ?? 'en']
+  const canonicalUrl = `https://kaydo.app${ownPath}`
   const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
+  // Picking a language goes to its address; changeLanguage carries the choice
+  // on into the app and remembers it.
+  const showLanguage = (next) => {
+    i18n.changeLanguage(next)
+    if (LANDING_PATHS[next] !== ownPath) navigate(LANDING_PATHS[next])
+  }
   // The screenshots show the app in the page's language.
   const shot = (key) => ({ src: screenshotPath(SCREENSHOTS[key], lang), ...screenshotSize(SCREENSHOTS[key], lang) })
 
@@ -95,7 +108,7 @@ export default function LandingPage() {
 
         {/* hreflang alternates — mirror the entries in public/sitemap.xml */}
         <link rel="alternate" hrefLang="en" href="https://kaydo.app/" />
-        <link rel="alternate" hrefLang="de" href="https://kaydo.app/?lang=de" />
+        <link rel="alternate" hrefLang="de" href="https://kaydo.app/de" />
         <link rel="alternate" hrefLang="x-default" href="https://kaydo.app/" />
 
         {/* Open Graph */}
@@ -171,7 +184,7 @@ export default function LandingPage() {
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <div className="hidden md:inline-flex">
-              <LanguageSwitcher variant="sidebar" />
+              <LanguageSwitcher variant="sidebar" language={lang} onSelect={showLanguage} />
             </div>
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
@@ -197,7 +210,7 @@ export default function LandingPage() {
             <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.privacy')}</a>
             <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.security')}</a>
             <div className="pt-1">
-              <LanguageSwitcher variant="sidebar" />
+              <LanguageSwitcher variant="sidebar" language={lang} onSelect={showLanguage} />
             </div>
           </div>
         )}
@@ -227,6 +240,7 @@ export default function LandingPage() {
             isAuthenticated={isAuthenticated}
             signup={signup}
             firebaseReady={firebaseReady}
+            lng={lng}
           />
 
           {/* Secondary CTA — look around a family space before claiming one:
@@ -970,8 +984,8 @@ export default function LandingPage() {
  * `<slug>.kaydo.app` is available, and — if it is — create the account inline
  * without leaving the landing page.
  */
-function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
-  const { t } = useTranslation('landing')
+function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng }) {
+  const { t } = useTranslation('landing', { lng })
   const [familyName, setFamilyName] = useState('')
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [status, setStatus] = useState('idle')

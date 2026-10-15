@@ -1,8 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "lang", "value": "de" }],
+      "destination": "/de",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
+    { "source": "/de", "destination": "/de.html" },
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
     { "source": "/contact", "destination": "/contact.html" },
