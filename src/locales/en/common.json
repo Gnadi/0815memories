@@ -34,6 +34,13 @@
     "en": "English",
     "de": "Deutsch"
   },
+  "textSize": {
+    "label": "Text size",
+    "description": "Make text larger or smaller. This only changes how it looks on this device.",
+    "normal": "Normal",
+    "large": "Large",
+    "xlarge": "Extra large"
+  },
   "errorScreen": {
     "updating": "Updating to the latest version…",
     "title": "Something went wrong",

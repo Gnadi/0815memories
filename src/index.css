@@ -44,6 +44,15 @@
   --font-family-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
 }
 
+/* Reader-chosen text size (src/utils/textSize.js). Everything is sized in rem,
+   so scaling the root scales the app. */
+html[data-text-size='large'] {
+  font-size: 125%;
+}
+html[data-text-size='xlarge'] {
+  font-size: 150%;
+}
+
 body {
   margin: 0;
   background-color: var(--color-cream);
@@ -53,11 +62,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Prevent mobile browser auto-zoom on input focus (requires font-size >= 16px) */
+/* Prevent mobile browser auto-zoom on input focus (requires font-size >= 16px).
+   1rem rather than 16px so fields grow with the chosen text size too. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
 textarea,
 select {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 /* Tailwind v4 dropped the pointer cursor on buttons, so on desktop nothing

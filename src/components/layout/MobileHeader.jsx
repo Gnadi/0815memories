@@ -2,6 +2,7 @@ import { LogOut, Settings, ChefHat } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import FeedbackLauncher from '../FeedbackLauncher'
+import TextSizeSwitcher from '../TextSizeSwitcher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -31,6 +32,7 @@ export default function MobileHeader() {
             <ChefHat className="w-5 h-5" />
           </button>
         )}
+        <TextSizeSwitcher variant="menu" />
         <FeedbackLauncher variant="icon" />
         <button
           onClick={() => navigate('/settings')}
