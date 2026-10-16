@@ -6,16 +6,32 @@ import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbsFor } from '../../utils/mediaThumbs'
 import { useAuth } from '../../context/AuthContext'
 
+// A pinch to zoom is two fingers moving apart, which on the first finger's
+// release looked exactly like a horizontal swipe and flipped to the next photo.
+// So a gesture that ever had a second finger down is never a swipe, and neither
+// is anything while the page is pinch-zoomed in (there a one-finger drag pans).
 function useSwipe(onPrev, onNext) {
   const startX = useRef(null)
+  const multiTouch = useRef(false)
   return {
-    onTouchStart: (e) => { startX.current = e.touches[0].clientX },
-    onTouchEnd: (e) => {
-      if (startX.current === null) return
-      const delta = startX.current - e.changedTouches[0].clientX
-      if (Math.abs(delta) > 40) delta > 0 ? onNext() : onPrev()
-      startX.current = null
+    onTouchStart: (e) => {
+      if (e.touches.length > 1) multiTouch.current = true
+      if (e.touches.length === 1) {
+        multiTouch.current = false
+        startX.current = e.touches[0].clientX
+      }
     },
+    onTouchEnd: (e) => {
+      // The last finger lifts when no touches remain; only then is the gesture over.
+      if (e.touches.length > 0) return
+      const start = startX.current
+      startX.current = null
+      const zoomed = (window.visualViewport?.scale ?? 1) > 1.01
+      if (start === null || multiTouch.current || zoomed) return
+      const delta = start - e.changedTouches[0].clientX
+      if (Math.abs(delta) > 40) delta > 0 ? onNext() : onPrev()
+    },
+    onTouchCancel: () => { startX.current = null },
   }
 }
 
