@@ -89,7 +89,7 @@ export default function Sidebar({ onPostMemory }) {
       </div>
 
       {/* Text size — for everyone: viewers have no settings page. */}
-      <div className="mb-3">
+      <div className="mb-1">
         <TextSizeSwitcher variant="sidebar" />
       </div>
 

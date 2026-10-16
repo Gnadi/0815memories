@@ -32,7 +32,7 @@ export default function MobileHeader() {
             <ChefHat className="w-5 h-5" />
           </button>
         )}
-        <TextSizeSwitcher variant="menu" />
+        <TextSizeSwitcher variant="icon" />
         <FeedbackLauncher variant="icon" />
         <button
           onClick={() => navigate('/settings')}

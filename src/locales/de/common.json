@@ -37,9 +37,8 @@
   "textSize": {
     "label": "Schriftgröße",
     "description": "Macht die Schrift größer oder kleiner. Gilt nur für dieses Gerät.",
-    "normal": "Normal",
-    "large": "Groß",
-    "xlarge": "Sehr groß"
+    "adjust": "Schriftgröße anpassen",
+    "percent": "{{value}} %"
   },
   "errorScreen": {
     "updating": "Aktualisierung auf die neueste Version…",

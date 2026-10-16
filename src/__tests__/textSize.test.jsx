@@ -2,44 +2,47 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '../i18n'
 import TextSizeSwitcher from '../components/TextSizeSwitcher'
-import { setTextSize, getTextSize, TEXT_SIZE_KEY } from '../utils/textSize'
+import { setTextSize, getTextSize, TEXT_SIZE_KEY, TEXT_SIZE_STEPS } from '../utils/textSize'
 
 describe('text size', () => {
   beforeEach(() => {
     localStorage.clear()
-    setTextSize('normal')
+    setTextSize(100)
   })
 
-  it('applies a pick to the page and remembers it on this device', () => {
+  it('applies a slider step to the page and remembers it on this device', () => {
     render(<TextSizeSwitcher variant="settings" />)
-    fireEvent.click(screen.getByRole('button', { name: /extra large|sehr groß/i }))
+    const slider = screen.getByRole('slider')
+    fireEvent.change(slider, { target: { value: String(TEXT_SIZE_STEPS.indexOf(160)) } })
 
-    expect(document.documentElement.getAttribute('data-text-size')).toBe('xlarge')
-    expect(localStorage.getItem(TEXT_SIZE_KEY)).toBe('xlarge')
-    expect(getTextSize()).toBe('xlarge')
+    expect(document.documentElement.style.fontSize).toBe('160%')
+    expect(localStorage.getItem(TEXT_SIZE_KEY)).toBe('160')
+    expect(getTextSize()).toBe(160)
+    expect(slider).toHaveAttribute('aria-valuetext', '160%')
   })
 
-  it('marks the active size and drops the attribute at normal size', () => {
-    render(<TextSizeSwitcher variant="sidebar" />)
-    const buttons = screen.getAllByRole('button')
-    fireEvent.click(buttons[1])
-    expect(buttons[1]).toHaveAttribute('aria-pressed', 'true')
-    expect(buttons[0]).toHaveAttribute('aria-pressed', 'false')
-
-    fireEvent.click(buttons[0])
-    expect(document.documentElement.hasAttribute('data-text-size')).toBe(false)
+  it('leaves the page at its own size at 100%', () => {
+    setTextSize(140)
+    setTextSize(100)
+    expect(document.documentElement.style.fontSize).toBe('')
   })
 
-  it('ignores a size it does not know', () => {
-    setTextSize('huge')
-    expect(getTextSize()).toBe('normal')
+  it('ignores a size that is not a step', () => {
+    setTextSize(500)
+    expect(getTextSize()).toBe(100)
     expect(localStorage.getItem(TEXT_SIZE_KEY)).toBeNull()
   })
 
-  it('opens the mobile menu from the header button', () => {
-    render(<TextSizeSwitcher variant="menu" />)
-    expect(screen.queryByRole('group')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: /text size|schriftgröße/i }))
-    expect(screen.getByRole('group')).toBeInTheDocument()
+  it('opens the slider from the header button and closes it with Escape', () => {
+    render(<TextSizeSwitcher variant="icon" />)
+    const toggle = screen.getByRole('button')
+    expect(screen.queryByRole('slider')).toBeNull()
+
+    fireEvent.click(toggle)
+    expect(screen.getByRole('slider')).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('slider')).toBeNull()
   })
 })

@@ -56,9 +56,9 @@
          paint so the page does not jump when the bundle starts. -->
     <script>
       try {
-        var textSize = localStorage.getItem('kaydo_textsize')
-        if (textSize === 'large' || textSize === 'xlarge') {
-          document.documentElement.setAttribute('data-text-size', textSize)
+        var textSize = Number(localStorage.getItem('kaydo_textsize'))
+        if ([80, 90, 110, 120, 140, 160, 180].indexOf(textSize) !== -1) {
+          document.documentElement.style.fontSize = textSize + '%'
         }
       } catch (e) { /* storage blocked — normal size */ }
     </script>
