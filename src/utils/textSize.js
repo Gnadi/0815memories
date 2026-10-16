@@ -15,7 +15,9 @@
  */
 import { useSyncExternalStore } from 'react'
 
-export const TEXT_SIZE_STEPS = [80, 90, 100, 110, 120, 140, 160, 180]
+// Even steps: a slider whose ticks change the page by different amounts
+// feels like it skips.
+export const TEXT_SIZE_STEPS = [80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180]
 export const DEFAULT_TEXT_SIZE = 100
 export const TEXT_SIZE_KEY = 'kaydo_textsize'
 

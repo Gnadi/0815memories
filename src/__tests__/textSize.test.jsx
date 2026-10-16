@@ -45,4 +45,21 @@ describe('text size', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('slider')).toBeNull()
   })
+
+  // The page grows with every step, and the button with it; a popover hung
+  // from the button slid away under the finger while it was dragged.
+  it('pins the popover to the screen where it opened', () => {
+    render(<TextSizeSwitcher variant="icon" />)
+    const toggle = screen.getByRole('button')
+    toggle.getBoundingClientRect = () => ({ top: 20, bottom: 60, left: 300, right: 340 })
+    fireEvent.click(toggle)
+
+    const popover = screen.getByRole('dialog')
+    expect(popover.style.top).toBe('70px')
+    expect(popover.style.right).toBe(`${window.innerWidth - 340}px`)
+
+    toggle.getBoundingClientRect = () => ({ top: 80, bottom: 120, left: 300, right: 340 })
+    fireEvent.change(screen.getByRole('slider'), { target: { value: '8' } })
+    expect(popover.style.top).toBe('70px')
+  })
 })

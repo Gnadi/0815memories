@@ -57,7 +57,7 @@
     <script>
       try {
         var textSize = Number(localStorage.getItem('kaydo_textsize'))
-        if ([80, 90, 110, 120, 140, 160, 180].indexOf(textSize) !== -1) {
+        if (textSize >= 80 && textSize <= 180 && textSize % 10 === 0 && textSize !== 100) {
           document.documentElement.style.fontSize = textSize + '%'
         }
       } catch (e) { /* storage blocked — normal size */ }
