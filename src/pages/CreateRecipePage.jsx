@@ -9,6 +9,8 @@ import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import { devError } from '../utils/devLog'
+import DictationField from '../components/DictationField'
+import { appendDictation } from '../hooks/useDictation'
 
 const STATUS_KEYS = { active: 'active', removed: 'removed', modified: 'modified' }
 const STATUS_STYLES = {
@@ -275,26 +277,30 @@ export default function CreateRecipePage() {
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
                     {t('form.descriptionLabel')}
                   </label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder={t('form.descriptionPlaceholder')}
-                    rows={2}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
-                  />
+                  <DictationField onText={(s) => setForm((p) => ({ ...p, description: appendDictation(p.description, s) }))}>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                      placeholder={t('form.descriptionPlaceholder')}
+                      rows={2}
+                      className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none pr-12"
+                    />
+                  </DictationField>
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
                     {t('form.instructionsLabel')}
                   </label>
-                  <textarea
-                    value={form.instructions}
-                    onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
-                    placeholder={t('form.instructionsPlaceholder')}
-                    rows={5}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
-                  />
+                  <DictationField onText={(s) => setForm((p) => ({ ...p, instructions: appendDictation(p.instructions, s) }))}>
+                    <textarea
+                      value={form.instructions}
+                      onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
+                      placeholder={t('form.instructionsPlaceholder')}
+                      rows={5}
+                      className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none pr-12"
+                    />
+                  </DictationField>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -425,13 +431,15 @@ export default function CreateRecipePage() {
                   <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
                     {t('form.forkReasonLabel')}
                   </label>
-                  <textarea
-                    value={form.forkReason}
-                    onChange={(e) => setForm((p) => ({ ...p, forkReason: e.target.value }))}
-                    placeholder={t('form.forkReasonPlaceholder')}
-                    rows={3}
-                    className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none"
-                  />
+                  <DictationField onText={(s) => setForm((p) => ({ ...p, forkReason: appendDictation(p.forkReason, s) }))}>
+                    <textarea
+                      value={form.forkReason}
+                      onChange={(e) => setForm((p) => ({ ...p, forkReason: e.target.value }))}
+                      placeholder={t('form.forkReasonPlaceholder')}
+                      rows={3}
+                      className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none pr-12"
+                    />
+                  </DictationField>
                 </div>
 
                 <div>

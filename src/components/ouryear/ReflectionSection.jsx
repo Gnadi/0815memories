@@ -9,6 +9,8 @@ import {
   periodKind,
 } from '../../utils/ourYear'
 import AnswerComparison from './AnswerComparison'
+import DictationField from '../../components/DictationField'
+import { appendDictation } from '../../hooks/useDictation'
 
 /**
  * The five questions both partners answer independently.
@@ -167,14 +169,16 @@ export default function ReflectionSection({ chapter, ritual, uid, encryptionKey,
             >
               {question.label}
             </label>
-            <textarea
-              id={`reflection-${question.id}`}
-              rows={3}
-              value={answers[question.id] ?? ''}
-              onChange={(e) => editAnswer(question.id, e.target.value)}
-              placeholder={t('reflection.placeholder')}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-            />
+            <DictationField onText={(s) => editAnswer(question.id, appendDictation(answers[question.id], s))}>
+              <textarea
+                id={`reflection-${question.id}`}
+                rows={3}
+                value={answers[question.id] ?? ''}
+                onChange={(e) => editAnswer(question.id, e.target.value)}
+                placeholder={t('reflection.placeholder')}
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+              />
+            </DictationField>
           </div>
         ))}
       </div>

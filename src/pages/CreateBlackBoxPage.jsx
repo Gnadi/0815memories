@@ -10,6 +10,8 @@ import { useBlackBox, addMonths, LEGACY_GRACE_MONTHS } from '../hooks/useBlackBo
 import { useKids } from '../hooks/useKids'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { devError } from '../utils/devLog'
+import DictationField from '../components/DictationField'
+import { appendDictation } from '../hooks/useDictation'
 
 const MILESTONES = ['18thBirthday', '21stBirthday', 'graduation', 'wedding', 'firstJob']
 
@@ -303,13 +305,15 @@ export default function CreateBlackBoxPage() {
                 </div>
 
                 {/* Text message */}
-                <textarea
-                  value={form.message}
-                  onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
-                  placeholder={t('create.messagePlaceholder')}
-                  rows={5}
-                  className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-                />
+                <DictationField onText={(s) => setForm((p) => ({ ...p, message: appendDictation(p.message, s) }))}>
+                  <textarea
+                    value={form.message}
+                    onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
+                    placeholder={t('create.messagePlaceholder')}
+                    rows={5}
+                    className="w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+                  />
+                </DictationField>
 
                 {/* Photos */}
                 <div>

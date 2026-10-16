@@ -97,5 +97,14 @@
     "failed": "Upload failed. Please try again.",
     "tooLarge": "This file is {{size}} — the limit is {{limit}} per file. Please use a shorter or more compressed clip.",
     "videoTooLong": "Video must be {{seconds}} seconds or shorter."
+  },
+  "dictation": {
+    "start": "Dictate",
+    "stop": "Stop dictation",
+    "notice": "Listening… Your browser may send the audio to its maker for speech recognition.",
+    "error": {
+      "denied": "Microphone access was denied. Allow it in your browser settings to dictate.",
+      "unavailable": "Dictation is not available right now."
+    }
   }
 }

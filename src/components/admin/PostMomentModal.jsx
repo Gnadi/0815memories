@@ -8,6 +8,8 @@ import { thumbsFor, buildThumbs, tinyPreviewsUpdate } from '../../utils/mediaThu
 import { momentFormToMemoryDraft } from '../../utils/entryConversion'
 import EntryTypeSwitch from './EntryTypeSwitch'
 import SortableMediaTiles from './SortableMediaTiles'
+import DictationField from '../../components/DictationField'
+import { appendDictation } from '../../hooks/useDictation'
 
 function buildInitialImages(moment) {
   if (moment?.images?.length) {
@@ -253,15 +255,17 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
             <label className="block text-sm font-medium text-bark mb-1">
               {t('postMoment.captionLabel')} <span className="text-kaydo">*</span>
             </label>
-            <textarea
-              name="caption"
-              value={form.caption}
-              onChange={handleChange}
-              placeholder={t('postMoment.captionPlaceholder')}
-              rows={3}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-              required
-            />
+            <DictationField onText={(s) => setForm((p) => ({ ...p, caption: appendDictation(p.caption, s) }))}>
+              <textarea
+                name="caption"
+                value={form.caption}
+                onChange={handleChange}
+                placeholder={t('postMoment.captionPlaceholder')}
+                rows={3}
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+                required
+              />
+            </DictationField>
           </div>
 
           {/* Category & Location */}

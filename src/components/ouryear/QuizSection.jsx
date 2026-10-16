@@ -10,6 +10,8 @@ import {
 } from '../../utils/ourYear'
 import AnswerComparison from './AnswerComparison'
 import QuizQuestionEditor from './QuizQuestionEditor'
+import DictationField from '../../components/DictationField'
+import { appendDictation } from '../../hooks/useDictation'
 
 /**
  * The couple's own quiz. Same blind-then-compare mechanic as the review, but
@@ -236,14 +238,16 @@ export default function QuizSection({ chapter, ritual, uid, encryptionKey, readO
               >
                 {question.label}
               </label>
-              <textarea
-                id={`quiz-${question.id}`}
-                rows={2}
-                value={answers[question.id] ?? ''}
-                onChange={(e) => editAnswer(question.id, e.target.value)}
-                placeholder={t('quiz.placeholder')}
-                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-              />
+              <DictationField onText={(s) => editAnswer(question.id, appendDictation(answers[question.id], s))}>
+                <textarea
+                  id={`quiz-${question.id}`}
+                  rows={2}
+                  value={answers[question.id] ?? ''}
+                  onChange={(e) => editAnswer(question.id, e.target.value)}
+                  placeholder={t('quiz.placeholder')}
+                  className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+                />
+              </DictationField>
             </div>
           ))}
         </div>
