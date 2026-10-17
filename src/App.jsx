@@ -15,7 +15,7 @@ import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 import NotificationPrompt from './components/NotificationPrompt'
-import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
+import { isPushOptedOut, listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
 import { devError } from './utils/devLog'
 
 import { getSubdomainSlug } from './utils/familySlug'
@@ -259,13 +259,19 @@ function AppNotifications() {
   // granted notification permission (covers return visits where the prompt
   // won't show again because permission is no longer 'default'). It also keeps
   // the token document's `lang` and `uid` current — the server reads both when
-  // it composes a notification.
+  // it composes a notification. A device switched off in the settings stays
+  // off, and a language switch is written right away rather than on the next
+  // load, or notifications would keep arriving in the old language.
   useEffect(() => {
     if (!isAuthenticated || !familyId) return
     if (typeof window === 'undefined' || !('Notification' in window)) return
-    if (Notification.permission === 'granted') {
+    const refresh = () => {
+      if (Notification.permission !== 'granted' || isPushOptedOut()) return
       requestAndSaveFCMToken(familyId).catch((err) => devError('FCM token refresh failed:', err))
     }
+    refresh()
+    i18n.on('languageChanged', refresh)
+    return () => i18n.off('languageChanged', refresh)
   }, [isAuthenticated, familyId])
 
   return (
@@ -370,7 +376,9 @@ export const routes = [
       // family's, like the moments it is made of.
       { path: 'best-of/:month', element: protect(<BestOfPage />) },
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
-      { path: 'settings', element: protectAdmin(<SettingsPage />) },
+      // Everyone's: a viewer sets language, text size and notifications here,
+      // and only admins are shown the family's settings below them.
+      { path: 'settings', element: protect(<SettingsPage />) },
       { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },
       { path: 'journal', element: protectAdmin(<KidsJournalPage />) },
       { path: 'journal/:childId', element: protectAdmin(<JournalArchivePage />) },

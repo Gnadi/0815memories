@@ -2,7 +2,8 @@
    Black Box — that firestore.rules gates on isFamilyAdmin. Clicking any of them
    mounted a listener the rules deny; /scrapbook did not even redirect, so it just
    sat there empty. Settings was the same defect one page further along: it
-   bounced viewers itself, while the sidebar kept advertising it.
+   bounced viewers itself, while the sidebar kept advertising it. It is now
+   open to viewers for their own device's settings.
 
    The `adminOnly` mechanism already existed and was already applied to three
    items. These tests pin it to what the rules actually say, so the two cannot
@@ -38,10 +39,11 @@ describe('the sidebar a viewer is shown', () => {
 
   const ADMIN_ONLY = [
     'nav.scrapbooks', 'nav.collages', 'nav.highlights',
-    'nav.kidJournals', 'nav.blackBox', 'nav.ourYear', 'nav.settings',
+    'nav.kidJournals', 'nav.blackBox', 'nav.ourYear',
   ]
   // Recipes: a viewer reads the ones an admin has shared (firestore.rules).
-  const EVERYONE = ['nav.home', 'nav.timeline', 'nav.recipes']
+  // Settings: a viewer's own language, text size and notifications.
+  const EVERYONE = ['nav.home', 'nav.timeline', 'nav.recipes', 'nav.settings']
 
   it('offers an admin everything', () => {
     auth.isAdmin = true
@@ -62,7 +64,7 @@ describe('the sidebar a viewer is shown', () => {
   it('still offers a viewer the pages backed by readable collections', () => {
     auth.isAdmin = false
     renderSidebar()
-    // memories and moments are world-readable, so these two genuinely work.
+    // memories and moments are world-readable, so these genuinely work.
     for (const key of EVERYONE) {
       expect(screen.getByText(label(key))).toBeInTheDocument()
     }
@@ -176,7 +178,7 @@ describe('the route table agrees with the rules', () => {
   })
 
   it('leaves the pages a viewer can genuinely use ungated', () => {
-    for (const path of ['home', 'timeline', 'moments']) {
+    for (const path of ['home', 'timeline', 'moments', 'settings']) {
       expect(app).toContain(`path: '${path}', element: protect(`)
     }
   })

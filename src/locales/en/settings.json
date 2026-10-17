@@ -2,6 +2,17 @@
   "page": {
     "title": "Settings"
   },
+  "personal": {
+    "title": "Your settings",
+    "description": "These apply to this device only."
+  },
+  "notifications": {
+    "label": "Notifications",
+    "description": "Get a notification when a new memory or moment is shared.",
+    "unsupported": "This browser can't show notifications. On an iPhone or iPad, add Kaydo to your home screen first.",
+    "blocked": "Notifications are blocked for Kaydo in this browser. Allow them in the browser's settings to turn them on here.",
+    "failed": "That didn't work. Please try again."
+  },
   "panel": {
     "title": "Admin Settings"
   },

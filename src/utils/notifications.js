@@ -9,6 +9,30 @@ const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 const TOKEN_ID_KEY = 'kaydo_fcm_token_id'
 
 /**
+ * Set when someone turned notifications off in the settings. The browser's
+ * permission stays granted (a page cannot revoke it), so without this the
+ * token refresh on the next app load would quietly register the device again.
+ */
+const OPTED_OUT_KEY = 'kaydo_notif_off'
+
+export function isPushOptedOut() {
+  try {
+    return localStorage.getItem(OPTED_OUT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function setPushOptedOut(optedOut) {
+  try {
+    if (optedOut) localStorage.setItem(OPTED_OUT_KEY, '1')
+    else localStorage.removeItem(OPTED_OUT_KEY)
+  } catch {
+    // Private mode. The switch still works for this visit.
+  }
+}
+
+/**
  * The document id for a token: its SHA-256, hex-encoded.
  *
  * Deliberately derived rather than looked up. The previous version queried
@@ -92,6 +116,22 @@ export async function requestAndSaveFCMToken(familyId) {
   }
 
   return token
+}
+
+/**
+ * The settings switch, on. Unlike the silent refresh this asks for permission
+ * if it has not been decided yet, and it clears an earlier opt-out first.
+ * Returns the token, or null when the browser said no.
+ */
+export async function enablePush(familyId) {
+  setPushOptedOut(false)
+  return requestAndSaveFCMToken(familyId)
+}
+
+/** The settings switch, off: remembered on this device, and the token dropped. */
+export async function disablePush() {
+  setPushOptedOut(true)
+  await removeFCMToken()
 }
 
 /**
