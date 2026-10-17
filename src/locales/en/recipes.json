@@ -8,6 +8,10 @@
       "body": "Add Grandma's first recipe and start building your family's culinary tree.",
       "cta": "Add Your First Recipe"
     },
+    "emptyViewer": {
+      "heading": "No recipes shared yet",
+      "body": "Once an admin shares a family recipe, you will find it here — with all of its versions."
+    },
     "deleteConfirm": "Delete this recipe and all its forks permanently? This cannot be undone."
   },
   "card": {
@@ -28,7 +32,12 @@
     "forkAttribution": "— {{author}}, {{year}}",
     "legacy_one": "A Living Family Legacy · {{count}} Generation of Shared History",
     "legacy_other": "A Living Family Legacy · {{count}} Generations of Shared History",
-    "forkRecipe": "Fork This Recipe"
+    "forkRecipe": "Fork This Recipe",
+    "share": {
+      "label": "Visible to viewers",
+      "hint": "Viewers see this recipe with all of its versions, and cannot change anything. New forks are visible too.",
+      "error": "The sharing setting could not be saved. Please try again."
+    }
   },
   "version": {
     "notFound": "Recipe version not found.",

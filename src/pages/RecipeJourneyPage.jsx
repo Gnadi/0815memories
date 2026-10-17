@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, GitFork, GitBranch, ArrowLeftRight, ChefHat } from 'lucide-react'
+import { ArrowLeft, GitFork, GitBranch, ArrowLeftRight, ChefHat, Eye } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useRecipeLineage } from '../hooks/useRecipes'
 import RecipeEvolutionTree from '../components/recipes/RecipeEvolutionTree'
@@ -21,16 +21,31 @@ export default function RecipeJourneyPage() {
   const { id } = useParams()
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { versions, loading } = useRecipeLineage(id, familyId, encryptionKey)
+  const { versions, loading, setViewerVisible } = useRecipeLineage(id, familyId, encryptionKey, { viewer: !isAdmin })
   const [showComparison, setShowComparison] = useState(false)
-
-  useEffect(() => {
-    if (!isAdmin) navigate('/home')
-  }, [isAdmin, navigate])
-
-  if (!isAdmin) return null
+  // Set while a change of the sharing flag is being saved: the box shows the
+  // new state at once, and the stored one again if the save fails.
+  const [pendingShare, setPendingShare] = useState(null)
+  const [shareError, setShareError] = useState(false)
 
   const root = versions[0]
+  // Every version carries the recipe's flag, so any of them can answer.
+  const shared = pendingShare ?? root?.viewerVisible === true
+
+  const toggleShare = async () => {
+    const next = !shared
+    setPendingShare(next)
+    setShareError(false)
+    try {
+      await setViewerVisible(next)
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('setViewerVisible error:', err)
+      setShareError(true)
+    } finally {
+      setPendingShare(null)
+    }
+  }
+
   const latest = versions[versions.length - 1]
   const latestChanges = latest?.changes || []
   const hasMultipleVersions = versions.length > 1
@@ -93,6 +108,31 @@ export default function RecipeJourneyPage() {
 
             {/* Body */}
             <div className="flex-1 p-4 md:p-8 max-w-3xl xl:max-w-5xl mx-auto w-full space-y-8">
+
+              {/* Sharing with the viewers — the recipe and all of its versions */}
+              {isAdmin && (
+                <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={shared}
+                      disabled={pendingShare !== null}
+                      onChange={toggleShare}
+                      className="mt-0.5 w-4 h-4 rounded accent-kaydo"
+                    />
+                    <span>
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-bark">
+                        <Eye className="w-4 h-4 text-kaydo" />
+                        {t('journey.share.label')}
+                      </span>
+                      <span className="block text-xs text-bark-muted mt-0.5">{t('journey.share.hint')}</span>
+                    </span>
+                  </label>
+                  {shareError && (
+                    <p className="text-xs text-red-600 mt-2" role="alert">{t('journey.share.error')}</p>
+                  )}
+                </div>
+              )}
 
               {/* Compare button */}
               {hasMultipleVersions && (
@@ -169,16 +209,18 @@ export default function RecipeJourneyPage() {
                 </div>
               )}
 
-              {/* Fork CTA */}
-              <div className="pb-4">
-                <button
-                  onClick={() => navigate(`/recipes/${latest.id}/fork`)}
-                  className="btn-kaydo w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
-                >
-                  <GitFork className="w-4 h-4" />
-                  {t('journey.forkRecipe')}
-                </button>
-              </div>
+              {/* Fork CTA — a viewer reads, and forking is writing */}
+              {isAdmin && (
+                <div className="pb-4">
+                  <button
+                    onClick={() => navigate(`/recipes/${latest.id}/fork`)}
+                    className="btn-kaydo w-full flex items-center justify-center gap-2 py-3 text-sm font-bold"
+                  >
+                    <GitFork className="w-4 h-4" />
+                    {t('journey.forkRecipe')}
+                  </button>
+                </div>
+              )}
 
             </div>
           </>

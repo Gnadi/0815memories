@@ -63,10 +63,16 @@ export function countForks(recipes) {
  * silently drop roots that have no parentId field at all. They are picked out
  * before decrypting, not after — every fork used to be decrypted in full,
  * ingredients and all, only to be thrown away.
+ *
+ * A viewer asks for the shared versions only. The rules refuse a viewer's query
+ * that does not say so, and a shared recipe's forks are all shared, so the
+ * counts come out the same as an admin's.
  */
-export function subscribeRecipes(familyId, key, onData, onError) {
+export function subscribeRecipes(familyId, key, onData, onError, { viewer = false } = {}) {
+  const constraints = [where('familyId', '==', familyId)]
+  if (viewer) constraints.push(where('viewerVisible', '==', true))
   return subscribeDecrypted(
-    query(collection(db, RECIPES), where('familyId', '==', familyId), orderBy('createdAt', 'desc')),
+    query(collection(db, RECIPES), ...constraints, orderBy('createdAt', 'desc')),
     (all) => {
       const forkCounts = countForks(all)
       return Promise.all(all.filter((r) => !r.parentId).map(async (root) => ({
@@ -84,15 +90,17 @@ export function getRecipe(familyId, key, id) {
   return getFamilyDocument(RECIPES, id, familyId, (data) => decryptRecipe(key, data))
 }
 
-function forksOf(familyId, rootId) {
-  return query(collection(db, RECIPES), where('familyId', '==', familyId), where('rootId', '==', rootId))
+function forksOf(familyId, rootId, { viewer = false } = {}) {
+  const constraints = [where('familyId', '==', familyId), where('rootId', '==', rootId)]
+  if (viewer) constraints.push(where('viewerVisible', '==', true))
+  return query(collection(db, RECIPES), ...constraints)
 }
 
 /** A family recipe and every version grown from it, oldest year first. */
-export async function getRecipeLineage(familyId, key, rootId) {
+export async function getRecipeLineage(familyId, key, rootId, { viewer = false } = {}) {
   const [root, forksSnap] = await Promise.all([
     getRecipe(familyId, key, rootId),
-    getDocs(forksOf(familyId, rootId)),
+    getDocs(forksOf(familyId, rootId, { viewer })),
   ])
   const forks = await Promise.all(
     forksSnap.docs.map((d) => decryptRecipe(key, { id: d.id, ...d.data() })),
@@ -108,6 +116,21 @@ export async function addRecipe(familyId, key, data) {
     familyId,
     createdAt: serverTimestamp(),
   })
+}
+
+/**
+ * Shares a family recipe with the family's viewers, or stops sharing it — the
+ * root and every version grown from it, in one batch. firestore.rules insists
+ * that a fork carry its root's flag, so a batch that missed one would be
+ * refused, but it cannot see a root that leaves forks behind: unsharing has to
+ * reach every fork here, or the viewers keep reading them.
+ */
+export async function setRecipeViewerVisible(familyId, rootId, visible) {
+  const batch = writeBatch(db)
+  const forksSnap = await getDocs(forksOf(familyId, rootId))
+  forksSnap.docs.forEach((d) => batch.update(d.ref, { viewerVisible: visible }))
+  batch.update(doc(db, RECIPES, rootId), { viewerVisible: visible })
+  await batch.commit()
 }
 
 /** A family recipe, with every version grown from it. */

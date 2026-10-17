@@ -165,6 +165,9 @@ export default function CreateRecipePage() {
         changes: isFork ? changes.map(({ id: _id, ...rest }) => rest) : [],
         parentId,
         rootId,
+        // A fork is shared exactly when its recipe is (firestore.rules), and the
+        // parent carries the root's flag like every other version.
+        viewerVisible: isFork ? parent.viewerVisible === true : false,
         image: image?.url || null,
       }
 

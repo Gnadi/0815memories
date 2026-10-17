@@ -586,19 +586,48 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
-    // Recipes — admin only (version-controlled family recipes)
+    // Recipes — the family recipes and the versions grown from them. Admins
+    // read and write them; a viewer reads the ones an admin has shared, and
+    // writes nothing.
+    //
+    // Sharing is per family recipe and covers every version grown from it, but
+    // the flag lives on each version rather than on the root alone. A rule that
+    // looked the root up instead could not hold for a viewer's list query, which
+    // spans many roots: the emulator served the fork of an unshared root there,
+    // while refusing the same fork read on its own. A flag on the document
+    // itself is something the query's own filter proves.
+    //
+    // So a version may never disagree with its root: a fork is written with its
+    // root's flag as the root stands after the write, which makes a new fork of
+    // a shared recipe shared, and sharing or unsharing a recipe one batch over
+    // the root and all of its forks (setRecipeViewerVisible). What the rules
+    // cannot see is a root unshared without its forks — that batch is the app's
+    // job, and services.test.js holds it to it.
+    function recipeSharingOk() {
+      let d = request.resource.data;
+      return (!('viewerVisible' in d) || d.viewerVisible is bool)
+        && (d.get('rootId', null) == null
+            || d.get('viewerVisible', false)
+               == getAfter(/databases/$(database)/documents/recipes/$(d.rootId)).data.get('viewerVisible', false));
+    }
+
     match /recipes/{recipeId} {
+      // Viewer first, as in isFamilyMember: their branch is token arithmetic and
+      // a field of the document, so a viewer's list costs no extra reads.
       allow read: if request.auth != null
                     && resource.data.familyId != null
-                    && isFamilyAdmin(resource.data.familyId);
+                    && ((isFamilyViewer(resource.data.familyId) && resource.data.viewerVisible == true)
+                        || isFamilyAdmin(resource.data.familyId));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && recipeSharingOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && request.resource.data.familyId == resource.data.familyId
-                    && isFamilyAdmin(resource.data.familyId);
+                    && isFamilyAdmin(resource.data.familyId)
+                    && recipeSharingOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);

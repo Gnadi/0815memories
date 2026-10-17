@@ -8,6 +8,10 @@
       "body": "Füge Omas erstes Rezept hinzu und beginne, den kulinarischen Stammbaum deiner Familie aufzubauen.",
       "cta": "Füge dein erstes Rezept hinzu"
     },
+    "emptyViewer": {
+      "heading": "Noch keine Rezepte freigegeben",
+      "body": "Sobald ein Admin ein Familienrezept freigibt, findest du es hier — mit allen seinen Versionen."
+    },
     "deleteConfirm": "Dieses Rezept und alle seine Forks dauerhaft löschen? Das kann nicht rückgängig gemacht werden."
   },
   "card": {
@@ -28,7 +32,12 @@
     "forkAttribution": "— {{author}}, {{year}}",
     "legacy_one": "Ein lebendiges Familienerbe · {{count}} Generation gemeinsamer Geschichte",
     "legacy_other": "Ein lebendiges Familienerbe · {{count}} Generationen gemeinsamer Geschichte",
-    "forkRecipe": "Dieses Rezept forken"
+    "forkRecipe": "Dieses Rezept forken",
+    "share": {
+      "label": "Für Viewer sichtbar",
+      "hint": "Viewer sehen dieses Rezept mit allen Versionen, ändern können sie nichts. Neue Forks sind ebenfalls sichtbar.",
+      "error": "Die Freigabe konnte nicht gespeichert werden. Bitte versuche es erneut."
+    }
   },
   "version": {
     "notFound": "Rezeptversion nicht gefunden.",

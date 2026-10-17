@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
-  const { logout, isAdmin } = useAuth()
+  const { logout } = useAuth()
   const { t } = useTranslation('common')
   const navigate = useNavigate()
 
@@ -27,15 +27,14 @@ export default function MobileHeader() {
         <h1 className="text-lg font-bold text-bark truncate">Kaydo</h1>
       </div>
       <div className="flex items-center gap-[min(0.25rem,4px)] shrink-0">
-        {isAdmin && (
-          <button
-            onClick={() => navigate('/recipes')}
-            className="p-[min(0.5rem,10px)] text-bark-light hover:text-kaydo transition-colors"
-            aria-label={t('nav.recipes')}
-          >
-            <ChefHat className="size-[min(1.25rem,26px)]" />
-          </button>
-        )}
+        {/* Everyone's: a viewer reads the recipes an admin has shared. */}
+        <button
+          onClick={() => navigate('/recipes')}
+          className="p-[min(0.5rem,10px)] text-bark-light hover:text-kaydo transition-colors"
+          aria-label={t('nav.recipes')}
+        >
+          <ChefHat className="size-[min(1.25rem,26px)]" />
+        </button>
         <TextSizeSwitcher variant="icon" />
         <FeedbackLauncher variant="icon" />
         <button
