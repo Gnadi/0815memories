@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '../config/firebase'
-import { addRecipe, deleteRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes } from '../services/recipes'
+import { addRecipe, deleteRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 
 export function useRecipes(familyId, encryptionKey, { viewer = false } = {}) {
   const [recipes, setRecipes] = useState([])
@@ -25,6 +25,7 @@ export function useRecipes(familyId, encryptionKey, { viewer = false } = {}) {
     recipes,
     loading,
     addRecipe: (data) => addRecipe(familyId, encryptionKey, data),
+    updateRecipe: (id, data) => updateRecipe(encryptionKey, id, data),
     deleteRecipe: (id) => deleteRecipe(familyId, id),
   }
 }

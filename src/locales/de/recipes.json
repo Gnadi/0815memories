@@ -52,6 +52,7 @@
     "forkReasonLabel": "Grund für den Fork",
     "forkAttribution": "— {{author}}, {{year}}",
     "forkVersion": "Diese Version forken",
+    "edit": "Bearbeiten",
     "status": {
       "removed": "Entfernt",
       "modified": "Geändert"
@@ -151,6 +152,15 @@
     "ingredientsEmpty": "Noch keine Zutaten — füge unten deine erste hinzu.",
     "ingredientPlaceholder": "z. B. 2 Tassen gemahlene Linsen",
     "addIngredient": "Zutat hinzufügen",
+    "paste": {
+      "open": "Liste einfügen",
+      "label": "Liste oder Tabelle einfügen",
+      "placeholder": "200 g Mehl\n2 Eier\n1 Prise Salz",
+      "help": "Eine Zutat pro Zeile. Listen und Tabellen aus einer Website, einer Tabellenkalkulation oder einer Notiz gehen auch; Aufzählungszeichen, Überschriften und Kopfzeilen fallen weg.",
+      "previewLabel": "Zutaten, die hinzugefügt werden",
+      "add_one": "{{count}} Zutat hinzufügen",
+      "add_other": "{{count}} Zutaten hinzufügen"
+    },
     "status": {
       "active": "Aktiv",
       "removed": "Entfernt",
@@ -172,6 +182,8 @@
     },
     "saving": "Speichert …",
     "saveFork": "Fork speichern",
-    "addToVault": "Zur Schatzkammer hinzufügen"
+    "addToVault": "Zur Schatzkammer hinzufügen",
+    "editTitle": "{{title}} bearbeiten",
+    "saveChanges": "Änderungen speichern"
   }
 }

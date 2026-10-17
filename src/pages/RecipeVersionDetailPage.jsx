@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ChefHat, GitFork } from 'lucide-react'
+import { ArrowLeft, ChefHat, GitFork, Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
@@ -176,6 +176,15 @@ export default function RecipeVersionDetailPage() {
                   >
                     <GitFork className="w-4 h-4" />
                     {t('version.forkVersion')}
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/recipes/${versionId}/edit`)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-warm-white text-sm font-semibold text-bark shadow-sm hover:bg-cream-dark transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    {t('version.edit')}
                   </button>
                 )}
                 <button

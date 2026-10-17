@@ -386,6 +386,7 @@ export const routes = [
       { path: 'recipes/new', element: protectAdmin(<CreateRecipePage />) },
       { path: 'recipes/:id', element: protect(<RecipeJourneyPage />) },
       { path: 'recipes/:id/fork', element: protectAdmin(<CreateRecipePage />) },
+      { path: 'recipes/:id/edit', element: protectAdmin(<CreateRecipePage mode="edit" />) },
       { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
       { path: 'scrapbook', element: protectAdmin(<ScrapbooksPage />) },
       { path: 'scrapbook/:id', element: protectAdmin(<ScrapbookEditorPage />) },

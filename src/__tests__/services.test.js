@@ -15,7 +15,7 @@ import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
-import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes } from '../services/recipes'
+import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
@@ -200,6 +200,30 @@ describe('one decryption for the list and the page', () => {
     expect(stored.instructionsFormat).toBe('rich')
 
     await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({ instructionsRich: rich, instructions: 'Knead it' })
+  })
+
+  it('recipes: an edit re-encrypts what it changes and keeps the version where it is', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Knead' }] }] }
+    const { id } = await addRecipe(FAMILY, key, {
+      title: 'Bread', author: 'Grandpa', parentId: 'root', rootId: 'root', viewerVisible: true,
+      instructionsFormat: 'rich', instructions: 'Knead', instructionsRich: rich,
+    })
+
+    await updateRecipe(key, id, {
+      title: 'Rye bread', instructionsFormat: 'markdown', instructions: '1. **Knead**', instructionsRich: null,
+      ingredients: [{ name: 'Rye', status: 'active' }],
+    })
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(stored.title).not.toContain('Rye')
+    expect(typeof stored.ingredients).toBe('string')
+    expect(stored).not.toHaveProperty('instructionsRich')
+    expect(stored).toMatchObject({ parentId: 'root', rootId: 'root', viewerVisible: true, familyId: FAMILY })
+
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({
+      title: 'Rye bread', author: 'Grandpa', instructionsFormat: 'markdown', instructions: '1. **Knead**',
+      ingredients: [{ name: 'Rye', status: 'active' }],
+    })
   })
 
   it('scrapbooks: the list leaves the pages encrypted, the editor gets them', async () => {
