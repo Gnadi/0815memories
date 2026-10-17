@@ -11,6 +11,8 @@ import MobileHeader from '../components/layout/MobileHeader'
 import { devError } from '../utils/devLog'
 import DictationField from '../components/DictationField'
 import { appendDictation } from '../hooks/useDictation'
+import RecipeInstructionsField from '../components/recipes/RecipeInstructionsField'
+import { richDocIsEmpty, richToPlainText } from '../utils/richText'
 
 const STATUS_KEYS = { active: 'active', removed: 'removed', modified: 'modified' }
 const STATUS_STYLES = {
@@ -35,10 +37,11 @@ export default function CreateRecipePage() {
     year: new Date().getFullYear(),
     author: '',
     description: '',
-    instructions: '',
     chefNote: '',
     forkReason: '',
   })
+  // The rich editor by default; Markdown is there for those who ask for it.
+  const [instructions, setInstructions] = useState({ format: 'rich', rich: null, markdown: '' })
   const [ingredients, setIngredients] = useState([])
   const [changes, setChanges] = useState([])
   const [image, setImage] = useState(null) // { preview, url, uploading }
@@ -153,12 +156,18 @@ export default function CreateRecipePage() {
       const rootId = isFork ? (parent.rootId ?? parent.id) : null
       const parentId = isFork ? parent.id : null
 
+      const richInstructions = instructions.format === 'rich' && !richDocIsEmpty(instructions.rich)
       const payload = {
         title: form.title.trim(),
         year: Number(form.year),
         author: form.author.trim(),
         description: form.description.trim(),
-        instructions: form.instructions.trim(),
+        instructionsFormat: instructions.format,
+        // A rich recipe keeps a plain-text mirror here; a Markdown one, its source.
+        instructions: instructions.format === 'markdown'
+          ? instructions.markdown.trim()
+          : richInstructions ? richToPlainText(instructions.rich) : '',
+        ...(richInstructions ? { instructionsRich: instructions.rich } : {}),
         chefNote: form.chefNote.trim(),
         forkReason: isFork ? form.forkReason.trim() : '',
         ingredients: ingredients.map(({ id: _id, ...rest }) => rest),
@@ -292,18 +301,7 @@ export default function CreateRecipePage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-semibold text-bark-muted uppercase tracking-wide block mb-1">
-                    {t('form.instructionsLabel')}
-                  </label>
-                  <DictationField onText={(s) => setForm((p) => ({ ...p, instructions: appendDictation(p.instructions, s) }))}>
-                    <textarea
-                      value={form.instructions}
-                      onChange={(e) => setForm((p) => ({ ...p, instructions: e.target.value }))}
-                      placeholder={t('form.instructionsPlaceholder')}
-                      rows={5}
-                      className="w-full bg-cream rounded-xl px-4 py-2.5 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors resize-none pr-12"
-                    />
-                  </DictationField>
+                  <RecipeInstructionsField value={instructions} onChange={setInstructions} disabled={saving} />
                 </div>
 
                 <div className="sm:col-span-2">

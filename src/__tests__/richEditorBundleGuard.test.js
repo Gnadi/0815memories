@@ -28,6 +28,11 @@ const READ_PATH = [
   'src/hooks/useMemories.js',
   'src/pages/MemoryDetailPage.jsx',
   'src/pages/HomePage.jsx',
+  'src/utils/markdown.js',
+  'src/components/recipes/RecipeInstructions.jsx',
+  'src/components/recipes/RecipeInstructionsField.jsx',
+  'src/pages/RecipeVersionDetailPage.jsx',
+  'src/pages/CreateRecipePage.jsx',
 ]
 
 describe('rich editor bundle boundary', () => {

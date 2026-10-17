@@ -188,6 +188,20 @@ describe('one decryption for the list and the page', () => {
     expect(listed).toMatchObject({ ...recipe, id, forkCount: 0 })
   })
 
+  it('recipes: the rich instructions are stored encrypted and come back as a document', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Knead it' }] }] }
+    const { id } = await addRecipe(FAMILY, key, {
+      title: 'Bread', author: 'Grandpa', instructionsFormat: 'rich', instructions: 'Knead it', instructionsRich: rich,
+    })
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(typeof stored.instructionsRich).toBe('string')
+    expect(stored.instructionsRich).not.toContain('Knead')
+    expect(stored.instructionsFormat).toBe('rich')
+
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({ instructionsRich: rich, instructions: 'Knead it' })
+  })
+
   it('scrapbooks: the list leaves the pages encrypted, the editor gets them', async () => {
     const pages = [{ id: 'p1', elements: [] }, { id: 'p2', elements: [] }]
     const id = await addScrapbook(FAMILY, key, { title: 'Summer 2025', pages })

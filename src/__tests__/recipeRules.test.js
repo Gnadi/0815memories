@@ -173,4 +173,28 @@ describe.skipIf(!EMULATOR)('recipes', () => {
       await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'legacy'), { viewerVisible: true }))
     })
   })
+
+  describe('instructions', () => {
+    it('are stored rich, encrypted, or as Markdown', async () => {
+      await assertSucceeds(setDoc(doc(asAdmin(), 'recipes', 'rich'), recipe({
+        viewerVisible: false, instructionsFormat: 'rich', instructionsRich: 'Y2lwaGVydGV4dA==', instructions: 'ciphertext',
+      })))
+      await assertSucceeds(setDoc(doc(asAdmin(), 'recipes', 'md'), recipe({
+        viewerVisible: false, instructionsFormat: 'markdown', instructions: 'ciphertext',
+      })))
+    })
+
+    it('are refused as a readable rich document', async () => {
+      const document = { type: 'doc', content: [] }
+      await assertFails(setDoc(doc(asAdmin(), 'recipes', 'map'), recipe({ viewerVisible: false, instructionsRich: document })))
+      await assertFails(setDoc(doc(asAdmin(), 'recipes', 'json'), recipe({
+        viewerVisible: false, instructionsRich: JSON.stringify(document),
+      })))
+      await assertFails(updateDoc(doc(asAdmin(), 'recipes', 'private'), { instructionsRich: JSON.stringify(document) }))
+    })
+
+    it('are in a format the app can read', async () => {
+      await assertFails(setDoc(doc(asAdmin(), 'recipes', 'html'), recipe({ viewerVisible: false, instructionsFormat: 'html' })))
+    })
+  })
 })

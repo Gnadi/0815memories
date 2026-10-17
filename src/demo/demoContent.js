@@ -207,7 +207,9 @@ const en = {
       title: "Dad's Sunday Pancakes",
       author: 'David',
       description: 'Fluffy, slightly lopsided, and the reason anyone gets up on Sundays.',
-      instructions: 'Whisk the dry ingredients, then the wet ones, and fold them together with a few lumps left. Rest for 10 minutes. Cook on a medium pan until bubbles appear, flip once.',
+      // Written in Markdown, so the demo shows the second editor too.
+      instructionsFormat: 'markdown',
+      instructions: '1. Whisk the **dry** ingredients, then the wet ones.\n2. Fold them together — _a few lumps are fine_.\n3. Rest for 10 minutes.\n4. Cook on a medium pan until bubbles appear, flip **once**.\n\n> Never press them flat with the spatula.',
       chefNote: 'The first pancake is always for the cook.',
       forkReason: '',
       ingredients: ['2 cups flour', '2 tbsp sugar', '2 tsp baking powder', '2 eggs', '1½ cups milk', '3 tbsp melted butter'],
@@ -535,7 +537,9 @@ const de = {
       title: 'Papas Sonntags-Kaiserschmarrn',
       author: 'Jonas',
       description: 'Flaumig, leicht zerrupft und der Grund, warum am Sonntag überhaupt jemand aufsteht.',
-      instructions: 'Eigelb mit Milch, Mehl und Zucker verrühren, Eischnee unterheben. In Butter anbacken, wenden, mit zwei Gabeln zerreißen und mit Staubzucker bestreuen.',
+      // Written in Markdown, so the demo shows the second editor too.
+      instructionsFormat: 'markdown',
+      instructions: '1. Eigelb mit Milch, Mehl und Zucker verrühren.\n2. Eischnee **vorsichtig** unterheben.\n3. In Butter anbacken und wenden.\n4. Mit zwei Gabeln zerreißen und mit Staubzucker bestreuen.\n\n> _Nicht zu früh zerreißen_ — erst wenn die Unterseite goldbraun ist.',
       chefNote: 'Der erste Schmarrn gehört immer dem Koch.',
       forkReason: '',
       ingredients: ['4 Eier', '250 ml Milch', '150 g Mehl', '2 EL Zucker', '2 EL Butter', 'Staubzucker'],

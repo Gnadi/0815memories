@@ -7,6 +7,7 @@ import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
+import RecipeInstructions from '../components/recipes/RecipeInstructions'
 
 const STATUS_STYLES = {
   removed: 'text-bark-muted line-through',
@@ -145,7 +146,7 @@ export default function RecipeVersionDetailPage() {
               {recipe.instructions && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
                   <h2 className="text-sm font-bold text-bark mb-3">{t('version.instructions')}</h2>
-                  <p className="text-sm text-bark leading-relaxed whitespace-pre-wrap">{recipe.instructions}</p>
+                  <RecipeInstructions recipe={recipe} />
                 </div>
               )}
 

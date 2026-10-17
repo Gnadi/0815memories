@@ -611,6 +611,22 @@ service cloud.firestore {
                == getAfter(/databases/$(database)/documents/recipes/$(d.rootId)).data.get('viewerVisible', false));
     }
 
+    // `instructionsRich`, the rich instructions document, gets the backstop
+    // memoryContentOk() gives `contentRich`: a string that does not start the
+    // way plaintext JSON does, so a document the client forgot to encrypt is
+    // refused rather than stored readable.
+    function recipeInstructionsOk() {
+      let d = request.resource.data;
+      return (!('instructionsRich' in d)
+          || d.instructionsRich == null
+          || (d.instructionsRich is string
+              && d.instructionsRich.size() > 0
+              && d.instructionsRich.size() <= 700000
+              && d.instructionsRich[0:1] != '{'
+              && d.instructionsRich[0:1] != '['))
+        && (!('instructionsFormat' in d) || d.instructionsFormat in ['rich', 'markdown']);
+    }
+
     match /recipes/{recipeId} {
       // Viewer first, as in isFamilyMember: their branch is token arithmetic and
       // a field of the document, so a viewer's list costs no extra reads.
@@ -622,12 +638,14 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
-                    && recipeSharingOk();
+                    && recipeSharingOk()
+                    && recipeInstructionsOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && request.resource.data.familyId == resource.data.familyId
                     && isFamilyAdmin(resource.data.familyId)
-                    && recipeSharingOk();
+                    && recipeSharingOk()
+                    && recipeInstructionsOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
