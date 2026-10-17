@@ -52,6 +52,16 @@
          has started (src/main.jsx sets __KAYDO_BOOTED__) the app owns the cover
          and has its own valves, so a slow route chunk does not flash the
          landing page back in. -->
+    <!-- The reader's text size (src/utils/textSize.js), applied before the first
+         paint so the page does not jump when the bundle starts. -->
+    <script>
+      try {
+        var textSize = Number(localStorage.getItem('kaydo_textsize'))
+        if (textSize >= 80 && textSize <= 180 && textSize % 10 === 0 && textSize !== 100) {
+          document.documentElement.style.fontSize = textSize + '%'
+        }
+      } catch (e) { /* storage blocked — normal size */ }
+    </script>
     <style>
       html.kaydo-restoring body { background: #FDF6EC; }
       html.kaydo-restoring #root { visibility: hidden; }

@@ -34,6 +34,12 @@
     "en": "English",
     "de": "Deutsch"
   },
+  "textSize": {
+    "label": "Schriftgröße",
+    "description": "Macht die Schrift größer oder kleiner. Gilt nur für dieses Gerät.",
+    "adjust": "Schriftgröße anpassen",
+    "percent": "{{value}} %"
+  },
   "errorScreen": {
     "updating": "Aktualisierung auf die neueste Version…",
     "title": "Etwas ist schiefgelaufen",

@@ -2,6 +2,7 @@ import { Home, LogOut, Settings, BookHeart, Lock, ChefHat, BookMarked, Clock, Ca
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import LanguageSwitcher from '../LanguageSwitcher'
+import TextSizeSwitcher from '../TextSizeSwitcher'
 import FeedbackLauncher from '../FeedbackLauncher'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -85,6 +86,11 @@ export default function Sidebar({ onPostMemory }) {
           and can report on it the least. */}
       <div className="mb-1">
         <FeedbackLauncher />
+      </div>
+
+      {/* Text size — for everyone: viewers have no settings page. */}
+      <div className="mb-1">
+        <TextSizeSwitcher variant="sidebar" />
       </div>
 
       {/* Language */}
