@@ -97,8 +97,8 @@ export default function ScrapbooksPage() {
           )}
 
           {/* Header */}
-          <div className="flex items-center justify-between gap-3 mb-6">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-bark">{t('list.title')}</h1>
               <p className="text-sm text-bark-muted mt-0.5">{t('list.subtitle')}</p>
             </div>

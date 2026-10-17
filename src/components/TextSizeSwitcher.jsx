@@ -9,7 +9,8 @@ import { TEXT_SIZE_STEPS, useTextSize } from '../utils/textSize'
 // variant:
 //   "sidebar"  — full-width row like the navigation items; the slider opens
 //                in a popover above it
-//   "icon"     — compact header button; the slider opens in a popover below
+//   "icon"     — compact header button, capped in size like the header's
+//                other icons; the slider opens in a popover below
 //   "settings" — labelled block with the slider inline, for the settings page
 //
 // Every step resizes the whole page, so whatever the slider is anchored to
@@ -132,9 +133,9 @@ export default function TextSizeSwitcher({ variant = 'sidebar' }) {
     <button
       {...toggleProps}
       aria-label={t('textSize.adjust')}
-      className="p-2 text-bark-light hover:text-kaydo transition-colors"
+      className="p-[min(0.5rem,10px)] text-bark-light hover:text-kaydo transition-colors"
     >
-      <ALargeSmall className="w-5 h-5" />
+      <ALargeSmall className="size-[min(1.25rem,26px)]" />
     </button>
   ) : (
     <button
