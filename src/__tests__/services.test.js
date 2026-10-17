@@ -19,7 +19,7 @@ import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscri
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
-import { addJournal, subscribeJournals } from '../services/journals'
+import { addJournal, subscribeJournals, updateJournal } from '../services/journals'
 import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
@@ -336,6 +336,33 @@ describe('kids and journals', () => {
     const entries = await firstDelivery((onData, onError) =>
       subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
     expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+
+  it('journals: the rich text is stored encrypted, and a switch to Markdown deletes it', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Dear Emma' }] }] }
+    const date = Timestamp.fromDate(new Date('2024-10-18'))
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Dear Emma', contentFormat: 'rich', contentRich: rich, date })
+
+    const [raw] = await stored('journals')
+    expect(typeof raw.contentRich).toBe('string')
+    expect(raw.contentRich).not.toContain('Dear')
+    expect(raw.contentFormat).toBe('rich')
+
+    const [entry] = await firstDelivery((onData, onError) =>
+      subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
+    expect(entry).toMatchObject({ content: 'Dear Emma', contentRich: rich })
+
+    await updateJournal(key, raw.id, { content: '**Dear** Emma', contentFormat: 'markdown', contentRich: null })
+    const [updated] = await stored('journals')
+    expect(updated).not.toHaveProperty('contentRich')
+    expect(updated.content).not.toContain('Emma')
+    expect(updated).toMatchObject({ contentFormat: 'markdown', familyId: FAMILY, childId: 'kid-a' })
+  })
+
+  it('journals: an entry without a document is stored without one', async () => {
+    await addJournal(FAMILY, 'kid-a', key, { content: '', contentFormat: 'rich', contentRich: null })
+    const [raw] = await stored('journals')
+    expect(raw).not.toHaveProperty('contentRich')
   })
 })
 

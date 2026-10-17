@@ -1,102 +1,79 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { EMOTIONS } from '../../constants/emotions'
 import EncryptedImage from '../media/EncryptedImage'
+import { entryDate, entryPlainText } from '../../utils/journalContent'
 
-export default function JournalEntryCard({ entry, onEdit, onDelete, onView }) {
-  const { t } = useTranslation('journal')
-  const [menuOpen, setMenuOpen] = useState(false)
+/**
+ * One entry in a child's archive: its date set apart on the left, the words on
+ * the right, and its first photo when it has one. The whole card opens the
+ * entry; editing and deleting happen there.
+ */
+export default function JournalEntryCard({ entry, onView }) {
+  const { t, i18n } = useTranslation('journal')
 
   const emotion = EMOTIONS.find((e) => e.key === entry.emotion) || EMOTIONS[1]
-  const date = entry.date?.toDate ? entry.date.toDate() : new Date(entry.date)
-  const formattedDate = date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const date = entryDate(entry)
+  const day = date?.toLocaleDateString(i18n.language, { day: 'numeric' })
+  const month = date?.toLocaleDateString(i18n.language, { month: 'short' })
+  const fullDate = date?.toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const preview = entryPlainText(entry)
+  const photos = entry.photos?.length || 0
+  const videos = entry.videos?.length || 0
+  const voiceMemos = entry.voiceMemos?.length || 0
 
   return (
-    <div onClick={onView} className="bg-warm-white rounded-2xl shadow-sm border border-cream-dark overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
-      {/* Photo strip */}
-      {entry.photos?.length > 0 && (
-        <div className="flex gap-1 h-36 overflow-hidden">
-          {entry.photos.slice(0, 3).map((url, i) => (
-            <EncryptedImage
-              key={i}
-              src={url}
-              alt=""
-              className="flex-1 object-cover min-w-0"
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="p-5">
-        {/* Date + emotion */}
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-bark-muted">{formattedDate}</p>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${emotion.bg} ${emotion.text}`}>
-              {emotion.emoji} {t('emotions:' + emotion.key)}
-            </span>
-            <div className="relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
-                className="text-bark-muted hover:text-bark p-1 rounded-lg"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-7 bg-white rounded-xl shadow-lg border border-cream-dark z-10 min-w-[130px] py-1">
-                  <button
-                    onClick={() => { setMenuOpen(false); onEdit() }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-bark hover:bg-cream"
-                  >
-                    <Pencil className="w-4 h-4" /> {t('common:buttons.edit')}
-                  </button>
-                  <button
-                    onClick={() => { setMenuOpen(false); onDelete() }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" /> {t('common:buttons.delete')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Volume */}
-        {entry.volume && (
-          <p className="text-xs font-semibold text-kaydo uppercase tracking-wide mb-1">{entry.volume}</p>
-        )}
-
-        {/* Title */}
-        {entry.title && (
-          <h3 className="text-lg font-bold text-bark mb-2">{entry.title}</h3>
-        )}
-
-        {/* Content preview */}
-        <p className="text-sm text-bark-muted leading-relaxed line-clamp-4 whitespace-pre-wrap">
-          {entry.content}
-        </p>
-
-        {/* Voice memo indicator */}
-        {entry.voiceMemos?.length > 0 && (
-          <p className="text-xs text-bark-muted mt-3">
-            🎙 {t('entryCard.voiceMemoCount', { count: entry.voiceMemos.length, label: entry.voiceMemos.length === 1 ? t('entryCard.voiceMemoSingular') : t('entryCard.voiceMemoPlural') })}
-          </p>
-        )}
-
-        {/* Video indicator */}
-        {entry.videos?.length > 0 && (
-          <p className="text-xs text-bark-muted mt-1">
-            🎬 {t('entryCard.videoCount', { count: entry.videos.length, label: entry.videos.length === 1 ? t('entryCard.videoSingular') : t('entryCard.videoPlural') })}
-          </p>
-        )}
+    <button
+      type="button"
+      onClick={onView}
+      className="w-full text-left bg-warm-white rounded-2xl border border-cream-dark shadow-sm hover:shadow-md hover:border-cream-darker transition-all flex gap-4 p-4"
+    >
+      <div className="flex-shrink-0 w-12 text-center pt-0.5" aria-hidden="true">
+        <p className="font-serif text-2xl font-bold text-bark leading-none">{day}</p>
+        <p className="text-xs uppercase tracking-wide text-bark-muted mt-1">{month}</p>
       </div>
-    </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="sr-only">{fullDate}</p>
+        {entry.volume && (
+          <p className="text-[11px] font-semibold text-kaydo uppercase tracking-widest truncate mb-0.5">{entry.volume}</p>
+        )}
+        <h3 className="font-serif text-lg font-bold text-bark leading-snug line-clamp-2">
+          {entry.title || t('entryCard.untitled')}
+        </h3>
+        {preview && (
+          <p className="text-sm text-bark-muted leading-relaxed line-clamp-3 mt-1">{preview}</p>
+        )}
+
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2.5 text-xs text-bark-muted">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${emotion.bg} ${emotion.text}`}>
+            <span aria-hidden="true">{emotion.emoji}</span> {t('emotions:' + emotion.key)}
+          </span>
+          {photos > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <ImageIcon className="w-3.5 h-3.5" aria-hidden="true" /> {t('entryCard.photos', { count: photos })}
+            </span>
+          )}
+          {videos > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Video className="w-3.5 h-3.5" aria-hidden="true" /> {t('entryCard.videos', { count: videos })}
+            </span>
+          )}
+          {voiceMemos > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Mic className="w-3.5 h-3.5" aria-hidden="true" /> {t('entryCard.voiceMemos', { count: voiceMemos })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {photos > 0 && (
+        <EncryptedImage
+          src={entry.photos[0]}
+          alt=""
+          className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover self-center"
+        />
+      )}
+    </button>
   )
 }

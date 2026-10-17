@@ -157,7 +157,8 @@ const en = {
     {
       title: 'To Emma, on your eighth birthday',
       volume: 'Volume 2',
-      content: 'Eight years ago you arrived at four in the morning and have been asking questions ever since. Keep asking them. We love who you are becoming — curious, stubborn, and kind to everyone smaller than you.',
+      contentFormat: 'markdown',
+      content: 'Eight years ago you arrived at four in the morning and have been asking questions ever since. **Keep asking them.**\n\nWe love who you are becoming:\n\n- curious,\n- stubborn,\n- and kind to everyone smaller than you.',
     },
     {
       title: 'Learning to ride',
@@ -487,7 +488,8 @@ const de = {
     {
       title: 'An Emma, zu deinem achten Geburtstag',
       volume: 'Band 2',
-      content: 'Vor acht Jahren bist du um vier Uhr früh angekommen und stellst seitdem Fragen. Hör nie damit auf. Wir lieben, wer du gerade wirst – neugierig, dickköpfig und lieb zu allen, die kleiner sind als du.',
+      contentFormat: 'markdown',
+      content: 'Vor acht Jahren bist du um vier Uhr früh angekommen und stellst seitdem Fragen. **Hör nie damit auf.**\n\nWir lieben, wer du gerade wirst:\n\n- neugierig,\n- dickköpfig\n- und lieb zu allen, die kleiner sind als du.',
     },
     {
       title: 'Radfahren lernen',

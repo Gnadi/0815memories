@@ -9,6 +9,7 @@ import KidJournalCard from '../components/journal/KidJournalCard'
 import AddKidModal from '../components/admin/AddKidModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import { entryDate } from '../utils/journalContent'
 
 export default function KidsJournalPage() {
   const { t } = useTranslation('journal')
@@ -23,8 +24,10 @@ export default function KidsJournalPage() {
     if (!isAdmin) navigate('/home')
   }, [isAdmin, navigate])
 
-  const journalCountByKid = journals.reduce((acc, j) => {
-    acc[j.childId] = (acc[j.childId] || 0) + 1
+  // Entries arrive newest first, so a child's first one seen is their latest.
+  const statsByKid = journals.reduce((acc, j) => {
+    const stats = acc[j.childId] || (acc[j.childId] = { count: 0, last: entryDate(j) })
+    stats.count += 1
     return acc
   }, {})
 
@@ -82,7 +85,8 @@ export default function KidsJournalPage() {
             <KidJournalCard
               key={kid.id}
               kid={kid}
-              journalCount={journalCountByKid[kid.id] || 0}
+              journalCount={statsByKid[kid.id]?.count || 0}
+              lastEntryDate={statsByKid[kid.id]?.last}
               onViewArchive={() => navigate(`/journal/${kid.id}`)}
               onViewSky={() => navigate(`/journal/${kid.id}/sky`)}
               onEdit={() => {

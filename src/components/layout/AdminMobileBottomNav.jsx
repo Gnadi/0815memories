@@ -55,6 +55,9 @@ export default function AdminMobileBottomNav() {
   if (publicPaths.includes(location.pathname)) return null
   if (location.pathname.startsWith('/family/')) return null
   if (location.pathname.match(/^\/(scrapbook|collage|highlight)\/.+/)) return null
+  // A journal entry is written and read full-screen. The bar sat on top of the
+  // editor's bottom edge, its save button included.
+  if (location.pathname.match(/^\/journal\/[^/]+\/(new|edit|view)(\/|$)/)) return null
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
