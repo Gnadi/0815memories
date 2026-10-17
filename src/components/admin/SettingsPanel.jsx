@@ -14,6 +14,7 @@ import OptimizePhotosPanel from './OptimizePhotosPanel'
 import SecureCapsulesPanel from './SecureCapsulesPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 import LanguageSwitcher from '../LanguageSwitcher'
+import TextSizeSwitcher from '../TextSizeSwitcher'
 
 export default function SettingsPanel() {
   const { familyId, isDemo } = useAuth()
@@ -197,6 +198,11 @@ export default function SettingsPanel() {
       {/* Language */}
       <div className="mb-6">
         <LanguageSwitcher variant="settings" />
+      </div>
+
+      {/* Text size */}
+      <div className="mb-6">
+        <TextSizeSwitcher variant="settings" />
       </div>
 
       {/* Login page header image */}

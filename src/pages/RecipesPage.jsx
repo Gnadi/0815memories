@@ -27,7 +27,7 @@ export default function RecipesPage() {
               <div className="w-10 h-10 rounded-2xl bg-bark flex items-center justify-center">
                 <ChefHat className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-bark">{t('list.title')}</h1>
+              <h1 className="min-w-0 text-3xl font-bold text-bark">{t('list.title')}</h1>
             </div>
             <p className="text-bark-muted max-w-lg">
               {t('list.subtitle')}

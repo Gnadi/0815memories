@@ -44,6 +44,18 @@
   --font-family-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
 }
 
+/* A page wider than the screen makes a phone browser zoom the whole app out
+   to fit it. With a large text size (src/utils/textSize.js) that happened
+   mid-drag of the size slider: the page zoomed out, the slider jumped under
+   the finger, the size fell back, and the page snapped back in. Layouts are
+   meant to fit; this keeps one that does not from moving the whole app.
+   `clip` rather than `hidden`, which would make <body> a scroll container
+   and break every sticky header. */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   background-color: var(--color-cream);
@@ -53,11 +65,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Prevent mobile browser auto-zoom on input focus (requires font-size >= 16px) */
+/* Prevent mobile browser auto-zoom on input focus (requires font-size >= 16px).
+   Fields grow with a larger chosen text size (src/utils/textSize.js) but never
+   drop below 16px with a smaller one. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
 textarea,
 select {
-  font-size: 16px;
+  font-size: max(16px, 1rem);
 }
 
 /* Tailwind v4 dropped the pointer cursor on buttons, so on desktop nothing
