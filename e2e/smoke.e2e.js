@@ -121,4 +121,20 @@ test('a viewer enters with the family password', async ({ page }) => {
   await visible(page, 'button[type="submit"]').click()
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 })
   await expect(page.getByText('Summer at Monterey Bay').first()).toBeVisible()
+
+  // The seed shares its recipe with the viewers: they read it, every version
+  // of it, and are offered nothing that would write.
+  await test.step('/recipes', async () => {
+    const errors = collectErrors(page)
+    await goTo(page, '/recipes')
+    await expect(page.getByRole('heading', { name: 'The Recipe Vault' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add a Recipe' })).toHaveCount(0)
+
+    await page.getByText("Grandma Rose's Apple Pie").first().click()
+    await expect(page).toHaveURL(/\/recipes\/recipe-root$/)
+    await expect(page.getByText("Emma's Mini Pies").first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Fork This Recipe' })).toHaveCount(0)
+    await expect(page.getByText('Visible to viewers')).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
 })

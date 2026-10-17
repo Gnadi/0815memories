@@ -11,13 +11,16 @@ import { useNavigate, useLocation } from 'react-router-dom'
 // viewer was shown four items that led to a denied listener and an empty screen
 // — /scrapbook did not even redirect. Everything a viewer cannot read is now
 // flagged, and the routes carry the same check for anyone arriving by URL.
+//
+// Recipes are offered to everyone: a viewer reads the ones an admin has shared.
+// Whether there are any is left to the page, so that the sidebar asks nothing.
 const navItems = [
   { icon: Home, labelKey: 'nav.home', route: '/home' },
   { icon: Clock, labelKey: 'nav.timeline', route: '/timeline' },
   { icon: BookMarked, labelKey: 'nav.scrapbooks', route: '/scrapbook', adminOnly: true },
   { icon: LayoutGrid, labelKey: 'nav.collages', route: '/collages', adminOnly: true },
   { icon: Film, labelKey: 'nav.highlights', route: '/highlights', adminOnly: true },
-  { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes', adminOnly: true },
+  { icon: ChefHat, labelKey: 'nav.recipes', route: '/recipes' },
   { icon: BookHeart, labelKey: 'nav.kidJournals', route: '/journal', adminOnly: true },
   { icon: Lock, labelKey: 'nav.blackBox', route: '/blackbox', adminOnly: true },
   // "Our Year" is narrower still: admin-only here, and the rules restrict it to

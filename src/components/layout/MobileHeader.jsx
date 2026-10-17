@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function MobileHeader() {
-  const { logout, isAdmin } = useAuth()
+  const { logout } = useAuth()
   const { t } = useTranslation('common')
   const navigate = useNavigate()
 
@@ -22,15 +22,14 @@ export default function MobileHeader() {
         <h1 className="text-lg font-bold text-bark">Kaydo</h1>
       </div>
       <div className="flex items-center gap-1">
-        {isAdmin && (
-          <button
-            onClick={() => navigate('/recipes')}
-            className="p-2 text-bark-light hover:text-kaydo transition-colors"
-            aria-label={t('nav.recipes')}
-          >
-            <ChefHat className="w-5 h-5" />
-          </button>
-        )}
+        {/* Everyone's: a viewer reads the recipes an admin has shared. */}
+        <button
+          onClick={() => navigate('/recipes')}
+          className="p-2 text-bark-light hover:text-kaydo transition-colors"
+          aria-label={t('nav.recipes')}
+        >
+          <ChefHat className="w-5 h-5" />
+        </button>
         <FeedbackLauncher variant="icon" />
         <button
           onClick={() => navigate('/settings')}

@@ -37,10 +37,11 @@ describe('the sidebar a viewer is shown', () => {
   const label = (key) => key.split('.').reduce((o, k) => o[k], en)
 
   const ADMIN_ONLY = [
-    'nav.scrapbooks', 'nav.collages', 'nav.highlights', 'nav.recipes',
+    'nav.scrapbooks', 'nav.collages', 'nav.highlights',
     'nav.kidJournals', 'nav.blackBox', 'nav.ourYear', 'nav.settings',
   ]
-  const EVERYONE = ['nav.home', 'nav.timeline']
+  // Recipes: a viewer reads the ones an admin has shared (firestore.rules).
+  const EVERYONE = ['nav.home', 'nav.timeline', 'nav.recipes']
 
   it('offers an admin everything', () => {
     auth.isAdmin = true
@@ -137,7 +138,6 @@ describe('the route table agrees with the rules', () => {
   // prefixes backed by it.
   const ADMIN_COLLECTIONS = {
     scrapbooks: ['scrapbook'],
-    recipes: ['recipes'],
     journals: ['journal'],
     blackbox: ['blackbox'],
     collages: ['collages', 'collage/:id'],
@@ -155,6 +155,23 @@ describe('the route table agrees with the rules', () => {
         const plain = new RegExp(`path: '${path.replace(/[:/]/g, '\\$&')}[^']*', element: protect\\(`)
         expect(app).not.toMatch(plain)
       }
+    }
+  })
+
+  // A viewer reads the recipes an admin has shared and writes none, so the
+  // pages that read are open to them and the two that write are not.
+  it('opens the recipe pages to viewers exactly as far as the rules do', () => {
+    const block = rules.slice(rules.indexOf('match /recipes/'))
+    const readRule = block.slice(0, block.indexOf('allow create'))
+    expect(readRule).toMatch(/isFamilyViewer\(resource\.data\.familyId\) && resource\.data\.viewerVisible == true/)
+    const writeRules = block.slice(block.indexOf('allow create'), block.indexOf('\n    }\n'))
+    expect(writeRules).not.toContain('isFamilyViewer')
+
+    for (const path of ['recipes', 'recipes/:id', 'recipes/:rootId/version/:versionId']) {
+      expect(app).toContain(`path: '${path}', element: protect(`)
+    }
+    for (const path of ['recipes/new', 'recipes/:id/fork']) {
+      expect(app).toContain(`path: '${path}', element: protectAdmin(`)
     }
   })
 

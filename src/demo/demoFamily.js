@@ -181,12 +181,14 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
   })
 
   // ── Recipes: a strudel (or pie) with two generations of forks and a second branch, and one more
+  // The strudel is shared with the viewers, every version of it, and the other
+  // one is not — so the sharing box shows up in both of its states.
   const recipeSlots = [
-    { id: 'demo-recipe-1', year: 1978, parentId: null, rootId: null, createdAt: inYear(3, 2, 1) },
-    { id: 'demo-recipe-2', year: 2005, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', createdAt: inYear(3, 2, 2) },
-    { id: 'demo-recipe-3', year: year - 1, parentId: 'demo-recipe-2', rootId: 'demo-recipe-1', createdAt: inYear(1, 3, 15) },
-    { id: 'demo-recipe-4', year: 2012, parentId: null, rootId: null, createdAt: inYear(2, 5, 4) },
-    { id: 'demo-recipe-5', year: 1996, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', createdAt: inYear(2, 1, 20) },
+    { id: 'demo-recipe-1', year: 1978, parentId: null, rootId: null, viewerVisible: true, createdAt: inYear(3, 2, 1) },
+    { id: 'demo-recipe-2', year: 2005, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', viewerVisible: true, createdAt: inYear(3, 2, 2) },
+    { id: 'demo-recipe-3', year: year - 1, parentId: 'demo-recipe-2', rootId: 'demo-recipe-1', viewerVisible: true, createdAt: inYear(1, 3, 15) },
+    { id: 'demo-recipe-4', year: 2012, parentId: null, rootId: null, viewerVisible: false, createdAt: inYear(2, 5, 4) },
+    { id: 'demo-recipe-5', year: 1996, parentId: 'demo-recipe-1', rootId: 'demo-recipe-1', viewerVisible: true, createdAt: inYear(2, 1, 20) },
   ]
   c.recipes.forEach((recipe, i) => {
     const slot = recipeSlots[i]
@@ -198,6 +200,7 @@ export function buildDemoFamily({ language = 'en', now = new Date() } = {}) {
       ...(slot.parentId ? { forkReason, changes } : {}),
       parentId: slot.parentId,
       rootId: slot.rootId,
+      viewerVisible: slot.viewerVisible,
       image: media(RECIPE_IMAGES[i]),
       familyId,
       createdAt: slot.createdAt,

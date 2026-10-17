@@ -15,7 +15,7 @@ import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
-import { addRecipe, getRecipe, subscribeRecipes } from '../services/recipes'
+import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
@@ -207,6 +207,54 @@ describe('one decryption for the list and the page', () => {
 
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+})
+
+/* Sharing a recipe with the viewers. firestore.rules holds each fork to its
+   root's flag but cannot see a root that is unshared without its forks; that
+   is setRecipeViewerVisible's to get right, and this is where it is held to it. */
+describe('recipes shared with the viewers', () => {
+  const strudel = { title: 'Strudel', author: 'Grandma', year: 1962, ingredients: [] }
+
+  async function lineage() {
+    const { id: root } = await addRecipe(FAMILY, key, { ...strudel, parentId: null, rootId: null, viewerVisible: false })
+    const { id: fork } = await addRecipe(FAMILY, key, { ...strudel, year: 1990, parentId: root, rootId: root, viewerVisible: false })
+    const { id: forkOfFork } = await addRecipe(FAMILY, key, { ...strudel, year: 2020, parentId: fork, rootId: root, viewerVisible: false })
+    const { id: other } = await addRecipe(FAMILY, key, { ...strudel, title: 'Pancakes', parentId: null, rootId: null, viewerVisible: false })
+    return { root, versions: [root, fork, forkOfFork], other }
+  }
+
+  const flags = async (ids) =>
+    Promise.all(ids.map(async (id) => (await fs.getDoc(fs.doc(null, 'recipes', id))).data().viewerVisible))
+
+  it('shares and unshares the root and every version grown from it, and nothing else', async () => {
+    const { root, versions, other } = await lineage()
+
+    await setRecipeViewerVisible(FAMILY, root, true)
+    expect(await flags(versions)).toEqual([true, true, true])
+    expect(await flags([other])).toEqual([false])
+
+    await setRecipeViewerVisible(FAMILY, root, false)
+    expect(await flags(versions)).toEqual([false, false, false])
+  })
+
+  it('lists a viewer the shared recipes only, with all of their forks counted', async () => {
+    const { root } = await lineage()
+    await setRecipeViewerVisible(FAMILY, root, true)
+
+    const listed = await firstDelivery((onData, onError) =>
+      subscribeRecipes(FAMILY, key, onData, onError, { viewer: true }))
+    expect(listed.map((r) => [r.id, r.forkCount])).toEqual([[root, 2]])
+
+    const versions = await getRecipeLineage(FAMILY, key, root, { viewer: true })
+    expect(versions.map((v) => v.year)).toEqual([1962, 1990, 2020])
+  })
+
+  it('lists a viewer nothing while no recipe is shared', async () => {
+    await lineage()
+    const listed = await firstDelivery((onData, onError) =>
+      subscribeRecipes(FAMILY, key, onData, onError, { viewer: true }))
+    expect(listed).toEqual([])
   })
 })
 

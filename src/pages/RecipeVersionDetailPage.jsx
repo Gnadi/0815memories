@@ -29,10 +29,6 @@ export default function RecipeVersionDetailPage() {
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    if (!isAdmin) navigate('/home')
-  }, [isAdmin, navigate])
-
-  useEffect(() => {
     if (!versionId) return
     const load = async () => {
       try {
@@ -50,8 +46,6 @@ export default function RecipeVersionDetailPage() {
     }
     load()
   }, [versionId])
-
-  if (!isAdmin) return null
 
   const isOriginal = recipe && !recipe.parentId
 
@@ -174,13 +168,15 @@ export default function RecipeVersionDetailPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-3 pt-2 pb-6">
-                <button
-                  onClick={() => navigate(`/recipes/${versionId}/fork`)}
-                  className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
-                >
-                  <GitFork className="w-4 h-4" />
-                  {t('version.forkVersion')}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/recipes/${versionId}/fork`)}
+                    className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+                  >
+                    <GitFork className="w-4 h-4" />
+                    {t('version.forkVersion')}
+                  </button>
+                )}
                 <button
                   onClick={() => navigate(`/recipes/${rootId}`)}
                   className="text-sm text-bark-muted hover:text-bark transition-colors"

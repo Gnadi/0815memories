@@ -324,6 +324,7 @@ async function main() {
     await db.collection('journals').add(await encrypted('journals', { ...j, familyId, createdAt: Timestamp.now() }))
   }
 
+  // Shared with the viewers, root and forks alike, so a viewer has a recipe to open.
   console.log('⑨ Seeding recipe tree (root + 2 forks) …')
   const rootRef = db.collection('recipes').doc('recipe-root')
   await rootRef.set(await encrypted('recipes', {
@@ -337,7 +338,7 @@ async function main() {
       { name: '2 tsp cinnamon', status: 'active' },
       { name: 'Double pie crust', status: 'active' },
     ],
-    parentId: null, rootId: null, image: url('pie.jpg'),
+    parentId: null, rootId: null, viewerVisible: true, image: url('pie.jpg'),
     familyId, createdAt: ts('2023-02-01'),
   }))
   const rootId = rootRef.id
@@ -357,7 +358,7 @@ async function main() {
       { type: 'ADDED', ingredient: 'Caramel sauce', description: 'Drizzled over the top.' },
       { type: 'MODIFIED', ingredient: 'Cinnamon', description: 'Reduced and balanced with nutmeg.' },
     ],
-    parentId: rootId, rootId, image: url('pie.jpg'),
+    parentId: rootId, rootId, viewerVisible: true, image: url('pie.jpg'),
     familyId, createdAt: ts('2023-02-02'),
   }))
   await db.collection('recipes').add(await encrypted('recipes', {
@@ -372,7 +373,7 @@ async function main() {
       { name: 'Muffin-tin crust circles', status: 'active' },
     ],
     changes: [{ type: 'MODIFIED', ingredient: 'Format', description: 'Single-serving mini pies.' }],
-    parentId: fork1.id, rootId, image: url('cookies.jpg'),
+    parentId: fork1.id, rootId, viewerVisible: true, image: url('cookies.jpg'),
     familyId, createdAt: ts('2024-03-15'),
   }))
 

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChefHat, Plus } from 'lucide-react'
@@ -12,13 +11,8 @@ export default function RecipesPage() {
   const { t } = useTranslation('recipes')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { recipes, loading, deleteRecipe } = useRecipes(familyId, encryptionKey)
-
-  useEffect(() => {
-    if (!isAdmin) navigate('/home')
-  }, [isAdmin, navigate])
-
-  if (!isAdmin) return null
+  // A viewer sees the recipes an admin has shared, and nothing to change them.
+  const { recipes, loading, deleteRecipe } = useRecipes(familyId, encryptionKey, { viewer: !isAdmin })
 
   return (
     <div className="min-h-screen bg-cream flex">
@@ -38,13 +32,15 @@ export default function RecipesPage() {
             <p className="text-bark-muted max-w-lg">
               {t('list.subtitle')}
             </p>
-            <button
-              onClick={() => navigate('/recipes/new')}
-              className="mt-5 flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              {t('list.addRecipe')}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/recipes/new')}
+                className="mt-5 flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t('list.addRecipe')}
+              </button>
+            )}
           </div>
 
           {/* Content */}
@@ -58,18 +54,20 @@ export default function RecipesPage() {
                 <ChefHat className="w-8 h-8 text-bark-muted" />
               </div>
               <div>
-                <p className="font-semibold text-bark">{t('list.empty.heading')}</p>
+                <p className="font-semibold text-bark">{t(isAdmin ? 'list.empty.heading' : 'list.emptyViewer.heading')}</p>
                 <p className="text-sm text-bark-muted mt-1">
-                  {t('list.empty.body')}
+                  {t(isAdmin ? 'list.empty.body' : 'list.emptyViewer.body')}
                 </p>
               </div>
-              <button
-                onClick={() => navigate('/recipes/new')}
-                className="flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                {t('list.empty.cta')}
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/recipes/new')}
+                  className="flex items-center gap-2 bg-bark text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-bark/90 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t('list.empty.cta')}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -78,11 +76,11 @@ export default function RecipesPage() {
                   key={recipe.id}
                   recipe={recipe}
                   onClick={() => navigate(`/recipes/${recipe.id}`)}
-                  onDelete={() => {
+                  onDelete={isAdmin ? () => {
                     if (confirm(t('list.deleteConfirm'))) {
                       deleteRecipe(recipe.id)
                     }
-                  }}
+                  } : undefined}
                 />
               ))}
             </div>

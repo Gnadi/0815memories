@@ -380,11 +380,13 @@ export const routes = [
       { path: 'journal/:childId/view/:entryId', element: protectAdmin(<JournalDetailPage />) },
       { path: 'blackbox', element: protectAdmin(<BlackBoxPage />) },
       { path: 'blackbox/new', element: protectAdmin(<CreateBlackBoxPage />) },
-      { path: 'recipes', element: protectAdmin(<RecipesPage />) },
+      // Recipes are read by viewers too, the ones an admin has shared; writing
+      // one stays with the admins.
+      { path: 'recipes', element: protect(<RecipesPage />) },
       { path: 'recipes/new', element: protectAdmin(<CreateRecipePage />) },
-      { path: 'recipes/:id', element: protectAdmin(<RecipeJourneyPage />) },
+      { path: 'recipes/:id', element: protect(<RecipeJourneyPage />) },
       { path: 'recipes/:id/fork', element: protectAdmin(<CreateRecipePage />) },
-      { path: 'recipes/:rootId/version/:versionId', element: protectAdmin(<RecipeVersionDetailPage />) },
+      { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
       { path: 'scrapbook', element: protectAdmin(<ScrapbooksPage />) },
       { path: 'scrapbook/:id', element: protectAdmin(<ScrapbookEditorPage />) },
       // Collages and highlight videos — a gallery and an editor each.
