@@ -12,7 +12,7 @@ import { devError } from '../utils/devLog'
 import DictationField from '../components/DictationField'
 import { appendDictation } from '../hooks/useDictation'
 import RecipeInstructionsField from '../components/recipes/RecipeInstructionsField'
-import { richDocIsEmpty, richToPlainText } from '../utils/richText'
+import { EMPTY_INSTRUCTIONS, instructionsFromRecipe, instructionsToFields } from '../utils/recipeInstructions'
 
 const STATUS_KEYS = { active: 'active', removed: 'removed', modified: 'modified' }
 const STATUS_STYLES = {
@@ -41,7 +41,7 @@ export default function CreateRecipePage() {
     forkReason: '',
   })
   // The rich editor by default; Markdown is there for those who ask for it.
-  const [instructions, setInstructions] = useState({ format: 'rich', rich: null, markdown: '' })
+  const [instructions, setInstructions] = useState(EMPTY_INSTRUCTIONS)
   const [ingredients, setIngredients] = useState([])
   const [changes, setChanges] = useState([])
   const [image, setImage] = useState(null) // { preview, url, uploading }
@@ -65,6 +65,9 @@ export default function CreateRecipePage() {
           setIngredients(
             (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
           )
+          // A fork starts from the original's steps, in the original's editor,
+          // like it starts from its ingredients.
+          setInstructions(instructionsFromRecipe(data))
         } else {
           setForkLoadError(t('form.forkOriginalNotFound'))
         }
@@ -156,18 +159,14 @@ export default function CreateRecipePage() {
       const rootId = isFork ? (parent.rootId ?? parent.id) : null
       const parentId = isFork ? parent.id : null
 
-      const richInstructions = instructions.format === 'rich' && !richDocIsEmpty(instructions.rich)
+      const { instructionsRich, ...instructionFields } = instructionsToFields(instructions)
       const payload = {
         title: form.title.trim(),
         year: Number(form.year),
         author: form.author.trim(),
         description: form.description.trim(),
-        instructionsFormat: instructions.format,
-        // A rich recipe keeps a plain-text mirror here; a Markdown one, its source.
-        instructions: instructions.format === 'markdown'
-          ? instructions.markdown.trim()
-          : richInstructions ? richToPlainText(instructions.rich) : '',
-        ...(richInstructions ? { instructionsRich: instructions.rich } : {}),
+        ...instructionFields,
+        ...(instructionsRich ? { instructionsRich } : {}),
         chefNote: form.chefNote.trim(),
         forkReason: isFork ? form.forkReason.trim() : '',
         ingredients: ingredients.map(({ id: _id, ...rest }) => rest),
