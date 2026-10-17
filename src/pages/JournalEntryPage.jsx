@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Image as ImageIcon, Mic, Video, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Image as ImageIcon, Mic, Video, X } from 'lucide-react'
 import { Timestamp } from '../config/firestore'
 import { EMOTIONS } from '../constants/emotions'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
@@ -11,12 +11,73 @@ import { useJournals } from '../hooks/useJournals'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
+import JournalContentField from '../components/journal/JournalContentField'
 import { devError } from '../utils/devLog'
-import DictationField from '../components/DictationField'
-import { appendDictation } from '../hooks/useDictation'
+import {
+  EMPTY_CONTENT,
+  contentFromEntry,
+  contentIsEmpty,
+  contentToFields,
+  entryDate,
+} from '../utils/journalContent'
 
-const today = new Date().toISOString().split('T')[0]
+// The date input speaks YYYY-MM-DD. Entries have always been stored at UTC
+// midnight of the day picked, so that is how a stored date is read back.
+const storedDay = (date) => date.toISOString().split('T')[0]
 
+function localToday() {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function AttachButton({ icon: Icon, label, onClick, active = false, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active || undefined}
+      className={`min-h-12 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-xl border text-xs sm:text-sm font-medium transition-colors disabled:opacity-40 ${
+        active
+          ? 'bg-kaydo text-white border-kaydo'
+          : 'bg-warm-white text-bark border-cream-dark hover:border-kaydo hover:text-kaydo'
+      }`}
+    >
+      <Icon className="w-5 h-5" />
+      {label}
+    </button>
+  )
+}
+
+function UploadingOverlay() {
+  return (
+    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
+function RemoveButton({ onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="absolute top-1 right-1 w-7 h-7 bg-bark/80 text-white rounded-full flex items-center justify-center"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  )
+}
+
+/**
+ * Writes or edits a journal entry, full-screen.
+ *
+ * The page scrolls inside its own column below a fixed header, so the save
+ * button stays in reach while the keyboard is up, and the editor's toolbar
+ * sticks to the top of the column rather than sliding under the header.
+ */
 export default function JournalEntryPage() {
   const { t } = useTranslation('journal')
   const { childId, entryId } = useParams()
@@ -28,13 +89,16 @@ export default function JournalEntryPage() {
   const kid = kids.find((k) => k.id === childId)
   const entry = entryId ? journals.find((j) => j.id === entryId) : null
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     title: '',
     volume: '',
-    content: '',
     emotion: 'love',
-    date: today,
-  })
+    date: localToday(),
+  }))
+  const [content, setContent] = useState(EMPTY_CONTENT)
+  // The editor reads its value once, when it mounts. An entry arrives from
+  // Firestore after the page does, so the field waits for it.
+  const [loaded, setLoaded] = useState(!entryId)
   const {
     images,
     videos,
@@ -50,7 +114,6 @@ export default function JournalEntryPage() {
   } = useMediaUploader(encryptionKey)
   const [voiceMemos, setVoiceMemos] = useState([])
   const [showRecorder, setShowRecorder] = useState(false)
-  const [showEmotionPicker, setShowEmotionPicker] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
@@ -60,36 +123,41 @@ export default function JournalEntryPage() {
     if (!isAdmin) navigate('/home')
   }, [isAdmin, navigate])
 
-  // Populate form when editing an existing entry (entry loads async from Firestore)
   useEffect(() => {
-    if (entry) {
-      setForm({
-        title: entry.title || '',
-        volume: entry.volume || '',
-        content: entry.content || '',
-        emotion: entry.emotion || 'love',
-        date: new Date(entry.date.seconds * 1000).toISOString().split('T')[0],
-      })
-      setImages(
-        entry.photos?.map((url, i) => ({ id: i, preview: url, url, uploading: false })) || []
-      )
-      setVideos(
-        entry.videos?.map((v, i) => ({
-          id: i, preview: v.url, url: v.url, publicId: v.publicId, title: v.title || '', uploading: false,
-        })) || []
-      )
-      setVoiceMemos(entry.voiceMemos || [])
-    }
+    if (!entry) return
+    const date = entryDate(entry)
+    setForm({
+      title: entry.title || '',
+      volume: entry.volume || '',
+      emotion: entry.emotion || 'love',
+      date: date ? storedDay(date) : localToday(),
+    })
+    setContent(contentFromEntry(entry))
+    setImages(
+      entry.photos?.map((url, i) => ({ id: i, preview: url, url, uploading: false })) || []
+    )
+    setVideos(
+      entry.videos?.map((v, i) => ({
+        id: i, preview: v.url, url: v.url, publicId: v.publicId, title: v.title || '', uploading: false,
+      })) || []
+    )
+    setVoiceMemos(entry.voiceMemos || [])
+    setLoaded(true)
+    // Only when another entry arrives: the snapshot listener delivers this one
+    // again on every change, and that must not wipe what is being typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, setImages, setVideos])
 
   if (!isAdmin) return null
 
-  const selectedEmotion = EMOTIONS.find((e) => e.key === form.emotion) || EMOTIONS[1]
+  const back = () => navigate(entryId ? `/journal/${childId}/view/${entryId}` : `/journal/${childId}`)
+  const empty = contentIsEmpty(content)
+  const canSave = loaded && !empty && !saving && !hasUploading
 
   const handleFileChange = async (e) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
     if (fileInputRef.current) fileInputRef.current.value = ''
-    await addImage(file)
+    await Promise.all(files.map((file) => addImage(file)))
   }
 
   const handleVideoFileChange = async (e) => {
@@ -100,12 +168,14 @@ export default function JournalEntryPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.content.trim()) return
+    if (!canSave) return
     setError('')
     setSaving(true)
     try {
+      const fields = contentToFields(content)
       const data = {
         ...form,
+        ...fields,
         date: Timestamp.fromDate(new Date(form.date)),
         photos: images.filter((img) => img.url).map((img) => img.url),
         videos: videos.filter((v) => v.url).map((v) => ({ url: v.url, publicId: v.publicId, title: v.title })),
@@ -113,10 +183,11 @@ export default function JournalEntryPage() {
       }
       if (entry) {
         await updateJournal(entry.id, data)
+        navigate(`/journal/${childId}/view/${entry.id}`, { replace: true })
       } else {
         await addJournal(data)
+        navigate(`/journal/${childId}`, { replace: true })
       }
-      navigate(`/journal/${childId}`)
     } catch (err) {
       devError('Failed to save journal entry:', err)
       setError(t('editor.saveError'))
@@ -125,246 +196,230 @@ export default function JournalEntryPage() {
     }
   }
 
+  const saveLabel = saving
+    ? t('editor.saving')
+    : hasUploading
+      ? t('editor.uploading')
+      : entry ? t('editor.update') : t('editor.save')
+
+  const placeholder = t('editor.contentPlaceholder', { name: kid?.name || t('editor.contentPlaceholderFallback') })
+  const hasMedia = images.length > 0 || videos.length > 0
+
   return (
-    <div className="h-[100dvh] flex flex-col relative overflow-hidden">
-
-      {/* Background */}
-      <div className="absolute inset-0 -z-10">
-        {kid?.profilePhoto ? (
-          <EncryptedImage src={kid.profilePhoto} className="w-full h-full object-cover" alt="" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-rose-200 via-orange-100 to-amber-200" />
-        )}
-        <div className="absolute inset-0 bg-black/35" />
-      </div>
-
-      {/* Top bar */}
-      <div className="px-4 pt-4 pb-1 flex items-center justify-between flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => navigate(`/journal/${childId}`)}
-          className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/30 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowEmotionPicker((v) => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${selectedEmotion.bg} ${selectedEmotion.text}`}
-        >
-          {selectedEmotion.emoji} {t('emotions:' + selectedEmotion.key)}
-        </button>
-      </div>
-
-      {/* Emotion picker */}
-      {showEmotionPicker && (
-        <div className="mx-4 mb-3 flex flex-wrap gap-2 p-3 pb-4 bg-white/88 backdrop-blur-md rounded-2xl flex-shrink-0 shadow-lg">
-          {EMOTIONS.map((em) => (
-            <button
-              key={em.key}
-              type="button"
-              onClick={() => { setForm((p) => ({ ...p, emotion: em.key })); setShowEmotionPicker(false) }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border-2 transition-all ${
-                form.emotion === em.key
-                  ? `${em.bg} ${em.text} border-current`
-                  : 'border-transparent text-stone-500 hover:bg-white/60'
-              }`}
-            >
-              {em.emoji} {t('emotions:' + em.key)}
-            </button>
-          ))}
+    <form
+      id="journal-entry-form"
+      onSubmit={handleSubmit}
+      className="h-[100dvh] flex flex-col bg-cream"
+    >
+      <header className="flex-shrink-0 bg-cream border-b border-cream-dark pt-[env(safe-area-inset-top)]">
+        <div className="max-w-2xl mx-auto flex items-center gap-2 px-2 sm:px-4 py-2">
+          <button
+            type="button"
+            onClick={back}
+            aria-label={t('editor.back')}
+            className="w-11 h-11 rounded-full flex items-center justify-center text-bark-muted hover:text-bark hover:bg-cream-dark transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-bark-muted leading-tight">
+              {entry ? t('editor.editHeading') : t('editor.newHeading')}
+            </p>
+            <p className="font-semibold text-bark truncate leading-tight">
+              {kid?.name ? t('editor.forName', { name: kid.name }) : t('archive.fallbackTitle')}
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={!canSave}
+            className="btn-kaydo text-sm py-2 px-4 min-h-11 disabled:opacity-50 flex-shrink-0"
+          >
+            {saveLabel}
+          </button>
         </div>
-      )}
+      </header>
 
-      {/* Writing card */}
-      <form
-        id="journal-entry-form"
-        onSubmit={handleSubmit}
-        className="h-[68dvh] md:flex-1 bg-white/[0.92] backdrop-blur-md rounded-t-3xl mx-1 flex flex-col min-h-0 shadow-2xl overflow-hidden"
-      >
-        {/* Coral accent line */}
-        <div className="w-10 h-1 rounded-full bg-kaydo mx-5 mt-3 flex-shrink-0" />
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div className="max-w-2xl mx-auto w-full px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] space-y-6">
+          {/* Title. The `!` beats the 16px floor index.css sets for every input. */}
+          <input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+            placeholder={t('editor.titlePlaceholder')}
+            aria-label={t('editor.titleLabel')}
+            className="w-full bg-transparent font-serif text-2xl! sm:text-3xl! font-bold text-bark placeholder-bark-muted/50 outline-none leading-tight"
+          />
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto min-h-0 pb-4">
-
-          {/* Title */}
-          <div className="px-5 pt-3">
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder={t('editor.titlePlaceholder')}
-              className="w-full bg-transparent text-stone-800 text-xl font-bold placeholder-stone-300 outline-none leading-tight"
-            />
+          {/* Date + volume */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="block text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
+                {t('editor.dateLabel')}
+              </span>
+              <span className="flex items-center gap-2 bg-warm-white border border-cream-dark rounded-xl px-3 min-h-12 focus-within:border-kaydo transition-colors">
+                <CalendarDays className="w-4 h-4 text-bark-muted flex-shrink-0" />
+                <input
+                  type="date"
+                  required
+                  value={form.date}
+                  onChange={(e) => setForm((p) => ({ ...p, date: e.target.value || p.date }))}
+                  className="flex-1 min-w-0 bg-transparent text-bark outline-none py-2"
+                />
+              </span>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
+                {t('editor.volumeLabel')}
+              </span>
+              <input
+                type="text"
+                value={form.volume}
+                onChange={(e) => setForm((p) => ({ ...p, volume: e.target.value }))}
+                placeholder={t('editor.volumePlaceholder')}
+                className="w-full bg-warm-white border border-cream-dark rounded-xl px-3 min-h-12 text-bark placeholder-bark-muted/60 outline-none focus:border-kaydo transition-colors"
+              />
+            </label>
           </div>
 
-          {/* Date + Volume */}
-          <div className="px-5 pt-1.5 flex items-center gap-2">
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-              className="bg-transparent text-stone-400 text-xs outline-none"
-            />
-            <span className="text-stone-300">•</span>
-            <input
-              type="text"
-              value={form.volume}
-              onChange={(e) => setForm((p) => ({ ...p, volume: e.target.value }))}
-              placeholder={t('editor.volumePlaceholder')}
-              className="flex-1 bg-transparent text-stone-400 text-xs outline-none placeholder-stone-300"
-            />
-          </div>
+          {/* Emotion: one row that scrolls sideways on a phone, rather than a
+              block of chips pushing the text off the screen. */}
+          <fieldset>
+            <legend className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
+              {t('editor.emotionLabel')}
+            </legend>
+            <div className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+              {EMOTIONS.map((em) => {
+                const selected = form.emotion === em.key
+                return (
+                  <button
+                    key={em.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setForm((p) => ({ ...p, emotion: em.key }))}
+                    className={`flex-shrink-0 flex items-center gap-1.5 min-h-10 px-3 rounded-full text-sm font-medium border transition-colors ${
+                      selected
+                        ? `${em.bg} ${em.text} border-current`
+                        : 'bg-warm-white border-cream-dark text-bark-muted hover:text-bark'
+                    }`}
+                  >
+                    <span aria-hidden="true">{em.emoji}</span> {t('emotions:' + em.key)}
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
 
-          {/* Media strip */}
-          {(images.length > 0 || videos.length > 0) && (
-            <div className="px-5 pt-3 flex gap-2 overflow-x-auto pb-1">
-              {images.map((img) => (
-                <div key={img.id} className="relative flex-shrink-0 w-16 h-16">
-                  {img.preview?.startsWith('blob:') ? (
-                    <img src={img.preview} alt="" className="w-16 h-16 rounded-xl object-cover" />
-                  ) : (
-                    <EncryptedImage src={img.preview} className="w-16 h-16 rounded-xl object-cover" />
-                  )}
-                  {img.uploading ? (
-                    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
+          {/* Text */}
+          {loaded ? (
+            <JournalContentField
+              value={content}
+              onChange={setContent}
+              placeholder={placeholder}
+              disabled={saving}
+            />
+          ) : (
+            <div className="min-h-[248px] rounded-xl bg-cream-dark animate-pulse" />
+          )}
+
+          {/* Attachments */}
+          <section>
+            <h2 className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
+              {t('editor.attachmentsLabel')}
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              <AttachButton icon={ImageIcon} label={t('editor.addPhoto')} onClick={() => fileInputRef.current?.click()} disabled={saving} />
+              <AttachButton icon={Video} label={t('editor.addVideo')} onClick={() => videoFileInputRef.current?.click()} disabled={saving} />
+              <AttachButton icon={Mic} label={t('editor.addVoice')} active={showRecorder} onClick={() => setShowRecorder((v) => !v)} disabled={saving} />
+            </div>
+
+            {showRecorder && (
+              <div className="mt-3">
+                <VoiceMemoRecorder
+                  onMemoAdded={(memo) => { setVoiceMemos((p) => [...p, memo]); setShowRecorder(false) }}
+                />
+              </div>
+            )}
+
+            {hasMedia && (
+              <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {images.map((img) => (
+                  <div key={`img-${img.id}`} className="relative aspect-square">
+                    {img.preview?.startsWith('blob:') ? (
+                      <img src={img.preview} alt="" className="w-full h-full rounded-xl object-cover" />
+                    ) : (
+                      <EncryptedImage src={img.preview} alt="" className="w-full h-full rounded-xl object-cover" />
+                    )}
+                    {img.uploading
+                      ? <UploadingOverlay />
+                      : <RemoveButton onClick={() => removeImage(img.id)} label={t('editor.removePhoto')} />}
+                  </div>
+                ))}
+                {videos.map((v) => (
+                  <div key={`vid-${v.id}`} className="relative aspect-square">
+                    {v.preview?.startsWith('blob:') ? (
+                      <video src={v.preview} className="w-full h-full rounded-xl object-cover bg-black" muted playsInline />
+                    ) : (
+                      <EncryptedVideo src={v.preview} className="w-full h-full rounded-xl object-cover bg-black" controls={false} muted playsInline />
+                    )}
+                    {v.uploading ? <UploadingOverlay /> : (
+                      <>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                            <Video className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <RemoveButton onClick={() => removeVideo(v.id)} label={t('editor.removeVideo')} />
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {voiceMemos.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {voiceMemos.map((memo, idx) => (
+                  <li key={idx} className="flex items-center justify-between gap-2 bg-warm-white border border-cream-dark rounded-xl pl-3 pr-1 min-h-12">
+                    <span className="flex items-center gap-2 text-sm text-bark min-w-0">
+                      <Mic className="w-4 h-4 text-kaydo flex-shrink-0" />
+                      <span className="truncate">{memo.title || t('editor.voiceNote', { index: idx + 1 })}</span>
+                    </span>
                     <button
                       type="button"
-                      onClick={() => removeImage(img.id)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
+                      onClick={() => setVoiceMemos((prev) => prev.filter((_, i) => i !== idx))}
+                      aria-label={t('editor.removeVoice')}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-bark-muted hover:text-kaydo transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </button>
-                  )}
-                </div>
-              ))}
-              {videos.map((v) => (
-                <div key={v.id} className="relative flex-shrink-0 w-16 h-16">
-                  {v.preview?.startsWith('blob:') ? (
-                    <video src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" muted playsInline />
-                  ) : (
-                    <EncryptedVideo src={v.preview} className="w-16 h-16 rounded-xl object-cover bg-black" controls={false} muted playsInline />
-                  )}
-                  {v.uploading ? (
-                    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-5 h-5 rounded-full bg-black/50 flex items-center justify-center">
-                          <Video className="w-3 h-3 text-white" />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeVideo(v.id)}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Voice memo list */}
-          {voiceMemos.length > 0 && (
-            <div className="px-5 pt-2 space-y-1">
-              {voiceMemos.map((memo, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-stone-100 rounded-xl px-3 py-1.5">
-                  <span className="text-xs text-stone-600">🎙 {memo.title || t('editor.voiceNote', { index: idx + 1 })}</span>
-                  <button
-                    type="button"
-                    onClick={() => setVoiceMemos((prev) => prev.filter((_, i) => i !== idx))}
-                    className="text-stone-400 hover:text-kaydo ml-2 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Voice recorder */}
-          {showRecorder && (
-            <div className="px-5 pt-2">
-              <VoiceMemoRecorder
-                onMemoAdded={(memo) => { setVoiceMemos((p) => [...p, memo]); setShowRecorder(false) }}
-              />
-            </div>
-          )}
-
-          {/* Errors */}
-          {(error || videoError || imageError) && (
-            <p className="px-5 pt-2 text-xs text-red-500">{error || videoError || imageError}</p>
-          )}
-
-          {/* Main textarea */}
-          <DictationField onText={(s) => setForm((p) => ({ ...p, content: appendDictation(p.content, s) }))}>
-            <textarea
-              value={form.content}
-              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-              placeholder={t('editor.contentPlaceholder', { name: kid?.name || t('editor.contentPlaceholderFallback') })}
-              className="w-full min-h-16 px-5 py-3 bg-transparent text-stone-700 text-base leading-relaxed resize-none outline-none placeholder-stone-300 pr-12"
-            />
-          </DictationField>
-        </div>
-
-        {/* Sticky bottom toolbar */}
-        <div className="flex-shrink-0 border-t border-stone-100 px-5 py-3 flex items-center gap-4 bg-white/60">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="text-stone-400 hover:text-stone-700 transition-colors"
-          >
-            <ImageIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowRecorder((v) => !v)}
-            className={`transition-colors ${showRecorder ? 'text-kaydo' : 'text-stone-400 hover:text-stone-700'}`}
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => videoFileInputRef.current?.click()}
-            className="text-stone-400 hover:text-stone-700 transition-colors"
-          >
-            <Video className="w-5 h-5" />
-          </button>
-          <div className="ml-auto">
-            {saving ? (
-              <span className="text-xs tracking-[0.25em] uppercase font-medium text-stone-400">
-                {t('editor.saving')}
-              </span>
-            ) : hasUploading ? (
-              <span className="text-xs tracking-widest uppercase text-stone-400">
-                {t('editor.uploading')}
-              </span>
-            ) : (
-              <button
-                type="submit"
-                disabled={!form.content.trim()}
-                className="text-xs tracking-[0.2em] uppercase font-semibold text-kaydo disabled:text-stone-300 transition-colors"
-              >
-                {entry ? t('editor.update') : t('editor.save')}
-              </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-        </div>
-      </form>
+          </section>
 
-      {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+          {(error || videoError || imageError) && (
+            <p role="alert" className="text-sm text-red-600">{error || videoError || imageError}</p>
+          )}
+
+          {/* A second way to save at the end of the letter, where the thumb is
+              after writing it. */}
+          <button
+            type="submit"
+            disabled={!canSave}
+            className="btn-kaydo w-full min-h-12 disabled:opacity-50"
+          >
+            {saveLabel}
+          </button>
+          {loaded && empty && (
+            <p className="-mt-4 text-xs text-bark-muted text-center">{t('editor.emptyHint')}</p>
+          )}
+        </div>
+      </main>
+
+      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
       <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFileChange} />
-    </div>
+    </form>
   )
 }

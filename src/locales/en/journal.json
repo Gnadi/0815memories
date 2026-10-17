@@ -15,37 +15,40 @@
     "born": "Born {{date}}",
     "ageSuffixOne": " · {{age}} yr old",
     "ageSuffixOther": " · {{age}} yrs old",
-    "lettersWritten": "{{count}} {{label}} written",
-    "letter": "Letter",
-    "letters": "Letters",
     "noLettersYet": "No letters written yet — start today.",
     "viewArchive": "View Archive",
     "startJournal": "Start Journal",
-    "skyOfBirth": "Sky of birth"
+    "skyOfBirth": "Sky of birth",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "lastEntry": "last on {{date}}",
+    "editChild": "Edit {{name}}",
+    "deleteChild": "Delete {{name}}"
   },
   "archive": {
     "fallbackTitle": "Journal",
     "yearsOld": "{{age}} years old",
     "write": "Write",
-    "letterCount": "{{count}} {{label}}",
-    "letter": "letter",
-    "letters": "letters",
     "empty": {
       "heading": "No letters written yet",
       "bodyNamed": "Write your first letter to {{name}}.",
       "bodyFallback": "your child",
       "writeFirst": "Write First Letter"
     },
-    "deleteLetterConfirm": "Delete this letter permanently?",
-    "skyOfBirth": "Sky of birth"
+    "skyOfBirth": "Sky of birth",
+    "back": "Back to all children",
+    "heading": "Letters to {{name}}",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries"
   },
   "entryCard": {
-    "voiceMemoCount": "{{count}} voice {{label}}",
-    "voiceMemoSingular": "memo",
-    "voiceMemoPlural": "memos",
-    "videoCount": "{{count}} {{label}}",
-    "videoSingular": "video",
-    "videoPlural": "videos"
+    "untitled": "Untitled",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
+    "videos_one": "{{count}} video",
+    "videos_other": "{{count}} videos",
+    "voiceMemos_one": "{{count}} voice note",
+    "voiceMemos_other": "{{count}} voice notes"
   },
   "editor": {
     "titlePlaceholder": "A Message for your Future Self",
@@ -57,11 +60,44 @@
     "uploading": "Uploading…",
     "update": "Update",
     "save": "Save",
-    "saveError": "Failed to save. Please try again."
+    "saveError": "Failed to save. Please try again.",
+    "back": "Back",
+    "newHeading": "New entry",
+    "editHeading": "Edit entry",
+    "forName": "For {{name}}",
+    "titleLabel": "Title",
+    "dateLabel": "Date",
+    "volumeLabel": "Volume / chapter",
+    "emotionLabel": "Mood",
+    "contentLabel": "Your letter",
+    "attachmentsLabel": "Attachments",
+    "addPhoto": "Photo",
+    "addVideo": "Video",
+    "addVoice": "Voice note",
+    "removePhoto": "Remove photo",
+    "removeVideo": "Remove video",
+    "removeVoice": "Remove voice note",
+    "emptyHint": "Write a few words to save the entry.",
+    "format": {
+      "label": "How the letter is written",
+      "rich": "Editor",
+      "markdown": "Markdown",
+      "richHint": "Format with the toolbar, as in a word processor",
+      "markdownHint": "Type your formatting: **bold**, _italic_, # headings, - lists"
+    },
+    "markdown": {
+      "write": "Write",
+      "preview": "Preview",
+      "previewEmpty": "Nothing to preview yet.",
+      "help": "**bold**, _italic_, ## heading, - list, 1. numbered list, > quote, [link](https://…)"
+    }
   },
   "detail": {
     "voiceNote": "Voice note {{index}}",
-    "deleteLetterConfirm": "Delete this letter permanently?"
+    "deleteLetterConfirm": "Delete this letter permanently?",
+    "back": "Back to the journal",
+    "toName": "To {{name}}",
+    "notFound": "This entry no longer exists."
   },
   "kidModal": {
     "editTitle": "Edit Child",

@@ -15,37 +15,40 @@
     "born": "Geboren am {{date}}",
     "ageSuffixOne": " · {{age}} Jahr alt",
     "ageSuffixOther": " · {{age}} Jahre alt",
-    "lettersWritten": "{{count}} {{label}} geschrieben",
-    "letter": "Brief",
-    "letters": "Briefe",
     "noLettersYet": "Noch keine Briefe geschrieben — fang heute an.",
     "viewArchive": "Archiv ansehen",
     "startJournal": "Tagebuch beginnen",
-    "skyOfBirth": "Himmel der Geburt"
+    "skyOfBirth": "Himmel der Geburt",
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge",
+    "lastEntry": "zuletzt am {{date}}",
+    "editChild": "{{name}} bearbeiten",
+    "deleteChild": "{{name}} löschen"
   },
   "archive": {
     "fallbackTitle": "Tagebuch",
     "yearsOld": "{{age}} Jahre alt",
     "write": "Schreiben",
-    "letterCount": "{{count}} {{label}}",
-    "letter": "Brief",
-    "letters": "Briefe",
     "empty": {
       "heading": "Noch keine Briefe geschrieben",
       "bodyNamed": "Schreibe deinen ersten Brief an {{name}}.",
       "bodyFallback": "dein Kind",
       "writeFirst": "Ersten Brief schreiben"
     },
-    "deleteLetterConfirm": "Diesen Brief endgültig löschen?",
-    "skyOfBirth": "Himmel der Geburt"
+    "skyOfBirth": "Himmel der Geburt",
+    "back": "Zurück zu allen Kindern",
+    "heading": "Briefe an {{name}}",
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge"
   },
   "entryCard": {
-    "voiceMemoCount": "{{count}} Sprach{{label}}",
-    "voiceMemoSingular": "memo",
-    "voiceMemoPlural": "memos",
-    "videoCount": "{{count}} {{label}}",
-    "videoSingular": "Video",
-    "videoPlural": "Videos"
+    "untitled": "Ohne Titel",
+    "photos_one": "{{count}} Foto",
+    "photos_other": "{{count}} Fotos",
+    "videos_one": "{{count}} Video",
+    "videos_other": "{{count}} Videos",
+    "voiceMemos_one": "{{count}} Sprachnotiz",
+    "voiceMemos_other": "{{count}} Sprachnotizen"
   },
   "editor": {
     "titlePlaceholder": "Eine Botschaft an dein zukünftiges Ich",
@@ -57,11 +60,44 @@
     "uploading": "Lädt hoch…",
     "update": "Aktualisieren",
     "save": "Speichern",
-    "saveError": "Speichern fehlgeschlagen. Bitte versuche es erneut."
+    "saveError": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
+    "back": "Zurück",
+    "newHeading": "Neuer Eintrag",
+    "editHeading": "Eintrag bearbeiten",
+    "forName": "Für {{name}}",
+    "titleLabel": "Titel",
+    "dateLabel": "Datum",
+    "volumeLabel": "Band / Kapitel",
+    "emotionLabel": "Stimmung",
+    "contentLabel": "Dein Brief",
+    "attachmentsLabel": "Anhänge",
+    "addPhoto": "Foto",
+    "addVideo": "Video",
+    "addVoice": "Sprachnotiz",
+    "removePhoto": "Foto entfernen",
+    "removeVideo": "Video entfernen",
+    "removeVoice": "Sprachnotiz entfernen",
+    "emptyHint": "Schreib ein paar Worte, um den Eintrag zu speichern.",
+    "format": {
+      "label": "Wie der Brief geschrieben wird",
+      "rich": "Editor",
+      "markdown": "Markdown",
+      "richHint": "Mit der Werkzeugleiste formatieren, wie in einer Textverarbeitung",
+      "markdownHint": "Formatierung tippen: **fett**, _kursiv_, # Überschriften, - Listen"
+    },
+    "markdown": {
+      "write": "Schreiben",
+      "preview": "Vorschau",
+      "previewEmpty": "Noch nichts für die Vorschau.",
+      "help": "**fett**, _kursiv_, ## Überschrift, - Liste, 1. nummerierte Liste, > Zitat, [Link](https://…)"
+    }
   },
   "detail": {
     "voiceNote": "Sprachnotiz {{index}}",
-    "deleteLetterConfirm": "Diesen Brief endgültig löschen?"
+    "deleteLetterConfirm": "Diesen Brief endgültig löschen?",
+    "back": "Zurück zum Tagebuch",
+    "toName": "An {{name}}",
+    "notFound": "Diesen Eintrag gibt es nicht mehr."
   },
   "kidModal": {
     "editTitle": "Kind bearbeiten",

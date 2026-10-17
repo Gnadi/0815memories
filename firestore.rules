@@ -396,6 +396,21 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // An entry's rich document, `contentRich`, is held to what memoryContentOk()
+    // asks of a memory's: a string that does not start the way plaintext JSON
+    // does, so a document the client forgot to encrypt is refused rather than
+    // stored readable. Entries from before the editor have neither field.
+    function journalContentOk() {
+      let d = request.resource.data;
+      return (!('contentRich' in d)
+          || (d.contentRich is string
+              && d.contentRich.size() > 0
+              && d.contentRich.size() <= 700000
+              && d.contentRich[0:1] != '{'
+              && d.contentRich[0:1] != '['))
+        && (!('contentFormat' in d) || d.contentFormat in ['rich', 'markdown']);
+    }
+
     // Journals — admin only (private letters to children)
     match /journals/{journalId} {
       allow read: if request.auth != null
@@ -404,11 +419,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && journalContentOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && journalContentOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
