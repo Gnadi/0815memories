@@ -27,9 +27,9 @@ const navItems = [
   // "Our Year" is narrower still: admin-only here, and the rules restrict it to
   // the two participants rather than every admin.
   { icon: CalendarHeart, labelKey: 'nav.ourYear', route: '/our-year', adminOnly: true },
-  // SettingsPage itself already bounces viewers to /home, so offering it was the
-  // same defect one page further along.
-  { icon: Settings, labelKey: 'nav.settings', route: '/settings', adminOnly: true },
+  // Everyone's: viewers have their own device settings there, and only admins
+  // see the family's.
+  { icon: Settings, labelKey: 'nav.settings', route: '/settings' },
 ]
 
 export default function Sidebar({ onPostMemory }) {
@@ -91,7 +91,8 @@ export default function Sidebar({ onPostMemory }) {
         <FeedbackLauncher />
       </div>
 
-      {/* Text size — for everyone: viewers have no settings page. */}
+      {/* Text size — kept at hand as well as in the settings, for anyone who
+          finds the text too small to find the settings. */}
       <div className="mb-1">
         <TextSizeSwitcher variant="sidebar" />
       </div>

@@ -2,6 +2,31 @@
   "page": {
     "title": "Settings"
   },
+  "personal": {
+    "title": "Your settings",
+    "description": "These apply to this device only."
+  },
+  "notifications": {
+    "label": "Notifications",
+    "description": "Get a notification when a new memory or moment is shared.",
+    "unsupported": "This browser can't show notifications. On an iPhone or iPad, add Kaydo to your home screen first.",
+    "blocked": "Notifications are blocked for Kaydo in this browser. Allow them in the browser's settings to turn them on here.",
+    "failed": "That didn't work. Please try again."
+  },
+  "install": {
+    "label": "Install the app",
+    "description": "Put Kaydo on your home screen. It opens like an app, without the browser around it.",
+    "button": "Install Kaydo",
+    "installed": "Kaydo is installed on this device.",
+    "ios": "In Safari, tap the share button and choose “Add to Home Screen”. On iPhone and iPad this is also what makes notifications possible.",
+    "manual": "Open your browser's menu and choose “Install app” or “Add to Home screen”."
+  },
+  "session": {
+    "label": "Stay logged in",
+    "on": "You stay logged in on this device, even after closing the browser.",
+    "off": "You will be logged out when you close the browser. Good for a device other people use too.",
+    "failed": "That didn't work. Please try again."
+  },
   "panel": {
     "title": "Admin Settings"
   },

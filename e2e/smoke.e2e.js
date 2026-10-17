@@ -137,4 +137,14 @@ test('a viewer enters with the family password', async ({ page }) => {
     await expect(page.getByText('Visible to viewers')).toHaveCount(0)
     expect(errors).toEqual([])
   })
+
+  // Their own device's settings, and none of the family's.
+  await test.step('/settings', async () => {
+    const errors = collectErrors(page)
+    await goTo(page, '/settings')
+    await expect(page).toHaveURL(/\/settings$/)
+    await expect(page.getByRole('heading', { name: 'Your settings' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Admin Settings' })).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
 })
