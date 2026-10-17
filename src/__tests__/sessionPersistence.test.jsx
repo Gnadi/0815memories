@@ -26,7 +26,7 @@ vi.mock('../context/AuthContext', () => ({
 import { RootRoute } from '../App'
 import {
   readStored, writeStored, clearStoredSession, setSessionOnly,
-  hasStoredSession, isSessionOnly,
+  hasStoredSession, isSessionOnly, moveStoredSession,
 } from '../utils/authStorage'
 
 function renderRoot() {
@@ -177,5 +177,42 @@ describe('the store "Stay logged in" picks', () => {
       expect(localStorage.getItem(key)).toBeNull()
       expect(sessionStorage.getItem(key)).toBeNull()
     }
+  })
+})
+
+// The settings switch changes the choice for a session already open, so what
+// is stored has to follow it into the other store.
+describe('changing "Stay logged in" after the login', () => {
+  it('moves a remembered session into the window', () => {
+    setSessionOnly(false)
+    writeStored('fh_familyId', 'fam1')
+    writeStored('fh_cardStyle', 'polaroid')
+
+    moveStoredSession(true)
+
+    expect(isSessionOnly()).toBe(true)
+    expect(localStorage.getItem('fh_familyId')).toBeNull()
+    expect(sessionStorage.getItem('fh_familyId')).toBe('fam1')
+    expect(sessionStorage.getItem('fh_cardStyle')).toBe('polaroid')
+  })
+
+  it('moves a session-only session out to be remembered', () => {
+    setSessionOnly(true)
+    writeStored('fh_familyId', 'fam1')
+
+    moveStoredSession(false)
+
+    expect(isSessionOnly()).toBe(false)
+    expect(sessionStorage.getItem('fh_familyId')).toBeNull()
+    expect(localStorage.getItem('fh_familyId')).toBe('fam1')
+  })
+
+  it('writes nothing that was not there', () => {
+    setSessionOnly(false)
+    writeStored('fh_familyId', 'fam1')
+
+    moveStoredSession(true)
+
+    expect(readStored('fh_cardStyle')).toBeNull()
   })
 })

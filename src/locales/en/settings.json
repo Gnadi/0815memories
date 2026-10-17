@@ -13,6 +13,20 @@
     "blocked": "Notifications are blocked for Kaydo in this browser. Allow them in the browser's settings to turn them on here.",
     "failed": "That didn't work. Please try again."
   },
+  "install": {
+    "label": "Install the app",
+    "description": "Put Kaydo on your home screen. It opens like an app, without the browser around it.",
+    "button": "Install Kaydo",
+    "installed": "Kaydo is installed on this device.",
+    "ios": "In Safari, tap the share button and choose “Add to Home Screen”. On iPhone and iPad this is also what makes notifications possible.",
+    "manual": "Open your browser's menu and choose “Install app” or “Add to Home screen”."
+  },
+  "session": {
+    "label": "Stay logged in",
+    "on": "You stay logged in on this device, even after closing the browser.",
+    "off": "You will be logged out when you close the browser. Good for a device other people use too.",
+    "failed": "That didn't work. Please try again."
+  },
   "panel": {
     "title": "Admin Settings"
   },

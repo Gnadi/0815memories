@@ -76,6 +76,21 @@ export function writeStored(key, value) {
   })
 }
 
+/**
+ * Change "Stay logged in" for the session already open, from the settings:
+ * every value moves to the store the new choice selects. The Firebase side is
+ * the caller's (setPersistence moves the signed-in user along with it).
+ */
+export function moveStoredSession(sessionOnly) {
+  attempt(() => {
+    const values = SESSION_KEYS.map((key) => [key, readStored(key)])
+    setSessionOnly(sessionOnly)
+    for (const [key, value] of values) {
+      if (value !== null) writeStored(key, value)
+    }
+  })
+}
+
 /** Drop the whole session from both stores. */
 export function clearStoredSession() {
   attempt(() => {

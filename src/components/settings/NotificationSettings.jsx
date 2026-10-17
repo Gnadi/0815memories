@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Bell } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
+import SettingSwitch from './SettingSwitch'
 import { disablePush, enablePush, isPushOptedOut, isPushSupported } from '../../utils/notifications'
 
 // Whether this device gets push notifications. Per device, like the token it
@@ -64,25 +65,7 @@ export default function NotificationSettings() {
           </div>
           <p className="text-xs text-bark-muted">{t('notifications.description')}</p>
         </div>
-        {!hint && (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            aria-labelledby={labelId}
-            onClick={toggle}
-            disabled={busy}
-            className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${
-              on ? 'bg-kaydo' : 'bg-cream-dark'
-            }`}
-          >
-            <span
-              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-warm-white shadow transition-transform ${
-                on ? 'translate-x-5' : ''
-              }`}
-            />
-          </button>
-        )}
+        {!hint && <SettingSwitch on={on} onToggle={toggle} disabled={busy} labelledBy={labelId} />}
       </div>
       {(hint || failed) && (
         <p className="text-xs text-kaydo bg-cream-dark px-3 py-2 rounded-lg mt-3" role="status">

@@ -13,6 +13,7 @@ import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import {
   readStored, writeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
+  isSessionOnly, moveStoredSession,
 } from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
 import { removeFCMToken } from '../utils/notifications'
@@ -55,6 +56,8 @@ export function AuthProvider({ children }) {
   // trigger has not written yet.
   const [role, setRole] = useState(null)
   const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
+  // What "Stay logged in" says for the open session, for the settings switch.
+  const [stayLoggedIn, setStayLoggedInState] = useState(() => !isSessionOnly())
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
 
@@ -211,6 +214,7 @@ export function AuthProvider({ children }) {
     // Chosen before the sign-in: setPersistence only applies to sessions opened
     // after it resolves, and it decides where the refresh token is written.
     setSessionOnly(!remember)
+    setStayLoggedInState(remember)
     try {
       await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
     } catch (err) {
@@ -262,6 +266,7 @@ export function AuthProvider({ children }) {
     // side below. A browser that denies IndexedDB rejects here — the sign-in is
     // still worth attempting, it just falls back to the SDK's in-memory default.
     setSessionOnly(!remember)
+    setStayLoggedInState(remember)
     try {
       await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
     } catch (err) {
@@ -295,6 +300,7 @@ export function AuthProvider({ children }) {
     // A brand-new family is always remembered; clears any session-only marker
     // left in this window by an earlier login.
     setSessionOnly(false)
+    setStayLoggedInState(true)
     try {
       await setPersistence(auth, browserLocalPersistence)
     } catch (err) {
@@ -319,6 +325,16 @@ export function AuthProvider({ children }) {
     // and the claim only has to arrive before that path is retired.
     pollForFamilyClaim(result.user)
   }, [pollForFamilyClaim, adoptKey])
+
+  // "Stay logged in", changed from the settings for the session already open.
+  // setPersistence on a signed-in user moves the user to the new store, so the
+  // Firebase token and the family binding keep expiring together.
+  const setStayLoggedIn = useCallback(async (remember) => {
+    if (DEMO || !auth) return
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    moveStoredSession(!remember)
+    setStayLoggedInState(remember)
+  }, [])
 
   const logout = useCallback(async () => {
     // The demo has no Firebase session, token or cache to clear: leaving it is
@@ -356,6 +372,7 @@ export function AuthProvider({ children }) {
     // The workers hold the family key; tearing them down drops it with the session.
     terminateDecryptPool()
     clearStoredSession()
+    setStayLoggedInState(true)
     // Firestore keeps documents in memory past their listeners (config/firebase);
     // the family document among them carries the key. A fresh instance holds none.
     await resetFirestore()
@@ -387,10 +404,13 @@ export function AuthProvider({ children }) {
     signup,
     logout,
     setActiveFamilyId,
+    stayLoggedIn,
+    setStayLoggedIn,
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
     memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
     loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
+    stayLoggedIn, setStayLoggedIn,
   ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

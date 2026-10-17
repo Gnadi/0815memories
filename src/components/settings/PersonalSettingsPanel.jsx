@@ -3,10 +3,14 @@ import { SlidersHorizontal } from 'lucide-react'
 import LanguageSwitcher from '../LanguageSwitcher'
 import TextSizeSwitcher from '../TextSizeSwitcher'
 import NotificationSettings from './NotificationSettings'
+import InstallSettings from './InstallSettings'
+import SessionSettings from './SessionSettings'
 
 // The settings everyone has, viewers included. All of them belong to this
 // device rather than to an account, since viewers have none: nothing here
 // reads or writes family documents, so firestore.rules has nothing to gate.
+// The push token is the one write, and the rules already allow every family
+// member theirs.
 export default function PersonalSettingsPanel() {
   const { t } = useTranslation('settings')
 
@@ -26,7 +30,17 @@ export default function PersonalSettingsPanel() {
         <TextSizeSwitcher variant="settings" />
       </div>
 
-      <NotificationSettings />
+      <div className="mb-6">
+        <NotificationSettings />
+      </div>
+
+      <div className="mb-6 pt-6 border-t border-cream-dark">
+        <InstallSettings />
+      </div>
+
+      <div className="pt-6 border-t border-cream-dark">
+        <SessionSettings />
+      </div>
     </div>
   )
 }
