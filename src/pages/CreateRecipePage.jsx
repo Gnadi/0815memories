@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork, ClipboardList } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useRecipes } from '../hooks/useRecipes'
@@ -13,6 +13,8 @@ import DictationField from '../components/DictationField'
 import { appendDictation } from '../hooks/useDictation'
 import RecipeInstructionsField from '../components/recipes/RecipeInstructionsField'
 import { EMPTY_INSTRUCTIONS, instructionsFromRecipe, instructionsToFields } from '../utils/recipeInstructions'
+import IngredientPastePanel from '../components/recipes/IngredientPastePanel'
+import { isIngredientList, parseIngredientList } from '../utils/ingredientList'
 
 const STATUS_KEYS = { active: 'active', removed: 'removed', modified: 'modified' }
 const STATUS_STYLES = {
@@ -43,6 +45,7 @@ export default function CreateRecipePage() {
   // The rich editor by default; Markdown is there for those who ask for it.
   const [instructions, setInstructions] = useState(EMPTY_INSTRUCTIONS)
   const [ingredients, setIngredients] = useState([])
+  const [pasteOpen, setPasteOpen] = useState(false)
   const [changes, setChanges] = useState([])
   const [image, setImage] = useState(null) // { preview, url, uploading }
   const [saving, setSaving] = useState(false)
@@ -107,6 +110,29 @@ export default function CreateRecipePage() {
     setIngredients((prev) =>
       prev.map((ing) => (ing.id === ingId ? { ...ing, [field]: value } : ing))
     )
+  }
+
+  // Adds the names after the ingredient `afterId`, or at the end. An empty
+  // ingredient the list was pasted into is replaced by it.
+  const insertIngredients = (names, afterId = null) => {
+    const added = names.map((name) => ({ id: crypto.randomUUID(), name, status: 'active' }))
+    setIngredients((prev) => {
+      const at = prev.findIndex((ing) => ing.id === afterId)
+      if (at === -1) return [...prev, ...added]
+      const replace = prev[at].name.trim() === '' ? 1 : 0
+      return [...prev.slice(0, at + 1 - replace), ...added, ...prev.slice(at + 1)]
+    })
+  }
+
+  // A list pasted into one ingredient's field becomes one ingredient per line,
+  // rather than one ingredient with every line run together.
+  const handleIngredientPaste = (e, ingId) => {
+    const text = e.clipboardData?.getData('text/plain')
+    if (!isIngredientList(text)) return
+    const names = parseIngredientList(text)
+    if (!names.length) return
+    e.preventDefault()
+    insertIngredients(names, ingId)
   }
 
   const removeIngredient = (ingId) => {
@@ -380,6 +406,7 @@ export default function CreateRecipePage() {
                       type="text"
                       value={ing.name}
                       onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
+                      onPaste={(e) => handleIngredientPaste(e, ing.id)}
                       placeholder={t('form.ingredientPlaceholder')}
                       className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                     />
@@ -412,14 +439,30 @@ export default function CreateRecipePage() {
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={addIngredient}
-                className="flex items-center gap-1.5 text-sm font-medium text-kaydo hover:text-kaydo-dark transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                {t('form.addIngredient')}
-              </button>
+              {pasteOpen && (
+                <IngredientPastePanel onAdd={(names) => insertIngredients(names)} onClose={() => setPasteOpen(false)} />
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <button
+                  type="button"
+                  onClick={addIngredient}
+                  className="flex items-center gap-1.5 text-sm font-medium text-kaydo hover:text-kaydo-dark transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t('form.addIngredient')}
+                </button>
+                {!pasteOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setPasteOpen(true)}
+                    className="flex items-center gap-1.5 text-sm font-medium text-kaydo hover:text-kaydo-dark transition-colors"
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    {t('form.paste.open')}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Card: Fork Story (fork mode only) */}

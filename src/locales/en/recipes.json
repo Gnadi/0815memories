@@ -151,6 +151,15 @@
     "ingredientsEmpty": "No ingredients yet — add your first one below.",
     "ingredientPlaceholder": "e.g. 2 cups ground lentils",
     "addIngredient": "Add Ingredient",
+    "paste": {
+      "open": "Paste a list",
+      "label": "Paste a list or table",
+      "placeholder": "200 g flour\n2 eggs\n1 pinch of salt",
+      "help": "One ingredient per line. Lists and tables copied from a website, a spreadsheet or a note work too; bullets, headings and header rows are left out.",
+      "previewLabel": "Ingredients to add",
+      "add_one": "Add {{count}} ingredient",
+      "add_other": "Add {{count}} ingredients"
+    },
     "status": {
       "active": "Active",
       "removed": "Removed",
