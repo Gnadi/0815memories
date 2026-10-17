@@ -44,6 +44,7 @@ function Divider() {
 export default function RichTextToolbar({
   editor,
   disabled,
+  media = true,
   onPickImage,
   onTakePhoto,
   onPickVideo,
@@ -163,21 +164,25 @@ export default function RichTextToolbar({
 
       <Divider />
 
-      <ToolButton onClick={onPickImage} label={t('richEditor.insertPhoto')} disabled={disabled}>
-        <ImageIcon className="w-4 h-4 text-kaydo" />
-      </ToolButton>
-      {/* Camera capture only makes sense on a phone. */}
-      <span className="lg:hidden flex">
-        <ToolButton onClick={onTakePhoto} label={t('richEditor.takePhoto')} disabled={disabled}>
-          <Camera className="w-4 h-4 text-kaydo" />
-        </ToolButton>
-      </span>
-      <ToolButton onClick={onPickVideo} label={t('richEditor.insertVideo')} disabled={disabled}>
-        <Video className="w-4 h-4 text-kaydo" />
-      </ToolButton>
-      <ToolButton onClick={onAddAudio} label={t('richEditor.insertAudio')} disabled={disabled}>
-        <Mic className="w-4 h-4 text-kaydo" />
-      </ToolButton>
+      {media && (
+        <>
+          <ToolButton onClick={onPickImage} label={t('richEditor.insertPhoto')} disabled={disabled}>
+            <ImageIcon className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+          {/* Camera capture only makes sense on a phone. */}
+          <span className="lg:hidden flex">
+            <ToolButton onClick={onTakePhoto} label={t('richEditor.takePhoto')} disabled={disabled}>
+              <Camera className="w-4 h-4 text-kaydo" />
+            </ToolButton>
+          </span>
+          <ToolButton onClick={onPickVideo} label={t('richEditor.insertVideo')} disabled={disabled}>
+            <Video className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+          <ToolButton onClick={onAddAudio} label={t('richEditor.insertAudio')} disabled={disabled}>
+            <Mic className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+        </>
+      )}
       {/* Speech to text at the cursor, as opposed to the voice memo above,
           which attaches the recording itself. */}
       {dictation?.supported && (

@@ -121,11 +121,14 @@ function Caption({ text }) {
   return <figcaption className="mt-2 text-sm text-bark-muted italic text-center">{text}</figcaption>
 }
 
-function renderChildren(nodes, depth) {
-  return (nodes || []).map((child, i) => renderNode(child, i, depth + 1))
+function renderChildren(nodes, depth, compact) {
+  return (nodes || []).map((child, i) => renderNode(child, i, depth + 1, compact))
 }
 
-function renderNode(node, key, depth) {
+const HEADING_SIZES = { 2: 'text-2xl', 3: 'text-xl', 4: 'text-lg' }
+const COMPACT_HEADING_SIZES = { 2: 'text-base', 3: 'text-sm', 4: 'text-sm' }
+
+function renderNode(node, key, depth, compact) {
   if (!node || typeof node !== 'object' || depth > MAX_DEPTH) return null
 
   switch (node.type) {
@@ -138,7 +141,7 @@ function renderNode(node, key, depth) {
     case 'paragraph':
       return (
         <p key={key} className="mb-4 leading-relaxed">
-          {renderChildren(node.content, depth)}
+          {renderChildren(node.content, depth, compact)}
         </p>
       )
 
@@ -146,10 +149,11 @@ function renderNode(node, key, depth) {
       // The memory title is the page's only h1, so headings start at h2.
       const level = Math.min(Math.max(Number(node.attrs?.level) || 2, 2), 4)
       const Tag = `h${level}`
-      const size = level === 2 ? 'text-2xl' : level === 3 ? 'text-xl' : 'text-lg'
+      const size = (compact ? COMPACT_HEADING_SIZES : HEADING_SIZES)[level]
+      const spacing = compact ? 'mt-5 mb-2 first:mt-0' : 'mt-8 mb-3'
       return (
-        <Tag key={key} className={`${size} font-serif font-bold text-bark mt-8 mb-3`}>
-          {renderChildren(node.content, depth)}
+        <Tag key={key} className={`${size} font-serif font-bold text-bark ${spacing}`}>
+          {renderChildren(node.content, depth, compact)}
         </Tag>
       )
     }
@@ -157,14 +161,14 @@ function renderNode(node, key, depth) {
     case 'bulletList':
       return (
         <ul key={key} className="list-disc pl-6 mb-4 space-y-1">
-          {renderChildren(node.content, depth)}
+          {renderChildren(node.content, depth, compact)}
         </ul>
       )
 
     case 'orderedList':
       return (
         <ol key={key} className="list-decimal pl-6 mb-4 space-y-1" start={node.attrs?.start || 1}>
-          {renderChildren(node.content, depth)}
+          {renderChildren(node.content, depth, compact)}
         </ol>
       )
 
@@ -172,7 +176,7 @@ function renderNode(node, key, depth) {
       return (
         // The list item's own margin would double up with its paragraph's.
         <li key={key} className="[&>p]:mb-0 leading-relaxed">
-          {renderChildren(node.content, depth)}
+          {renderChildren(node.content, depth, compact)}
         </li>
       )
 
@@ -182,14 +186,14 @@ function renderNode(node, key, depth) {
           key={key}
           className="border-l-4 border-kaydo pl-5 my-6 italic text-bark-light [&>p:last-child]:mb-0"
         >
-          {renderChildren(node.content, depth)}
+          {renderChildren(node.content, depth, compact)}
         </blockquote>
       )
 
     case 'codeBlock':
       return (
         <pre key={key} className="mb-4 p-4 rounded-xl bg-cream-dark overflow-x-auto text-sm">
-          <code>{renderChildren(node.content, depth)}</code>
+          <code>{renderChildren(node.content, depth, compact)}</code>
         </pre>
       )
 
@@ -240,12 +244,16 @@ function renderNode(node, key, depth) {
   }
 }
 
-export default function RichContent({ doc, className = '' }) {
+/**
+ * `compact` sets the text in a card's size rather than a story's — the recipe
+ * instructions, which sit in a card between the ingredients and the chef's tip.
+ */
+export default function RichContent({ doc, className = '', compact = false }) {
   if (!isRichDoc(doc)) return null
 
   return (
-    <div className={`text-bark-light text-lg leading-relaxed ${className}`}>
-      {renderChildren(doc.content, 0)}
+    <div className={`${compact ? 'text-bark text-sm [&>*:last-child]:mb-0' : 'text-bark-light text-lg'} leading-relaxed ${className}`}>
+      {renderChildren(doc.content, 0, compact)}
     </div>
   )
 }

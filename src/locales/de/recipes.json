@@ -126,6 +126,20 @@
     "descriptionPlaceholder": "Eine kurze Beschreibung des Gerichts und seiner Geschichte ...",
     "instructionsLabel": "Zubereitung",
     "instructionsPlaceholder": "Schritt-für-Schritt-Anleitung ...",
+    "instructionsFormat": {
+      "label": "Wie die Zubereitung geschrieben wird",
+      "rich": "Editor",
+      "richHint": "Mit Knöpfen formatieren: fett, Überschriften, Listen",
+      "markdown": "Markdown",
+      "markdownHint": "Für Profis: mit Markdown-Syntax formatieren"
+    },
+    "markdown": {
+      "write": "Schreiben",
+      "preview": "Vorschau",
+      "previewEmpty": "Noch nichts zum Anzeigen.",
+      "placeholder": "## Teig\n1. Mehl und Salz mischen\n2. **10 Minuten** kneten\n\n## Füllung\n- Äpfel schälen\n- _optional:_ Rosinen dazu",
+      "help": "Markdown: ## Überschrift, **fett**, _kursiv_, - Liste, 1. Schritt, > Hinweis, [Link](https://…)"
+    },
     "chefTipLabel": "Geheimtipp des Küchenchefs",
     "optional": "(optional)",
     "chefTipPlaceholder": "z. B. Der Trick ist, nur die Hälfte der Linsen zu zerdrücken ...",

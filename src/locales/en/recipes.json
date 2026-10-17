@@ -126,6 +126,20 @@
     "descriptionPlaceholder": "A brief description of the dish and its story...",
     "instructionsLabel": "Instructions",
     "instructionsPlaceholder": "Step-by-step instructions...",
+    "instructionsFormat": {
+      "label": "How to write the instructions",
+      "rich": "Editor",
+      "richHint": "Format with buttons: bold, headings, lists",
+      "markdown": "Markdown",
+      "markdownHint": "For pros: format with Markdown syntax"
+    },
+    "markdown": {
+      "write": "Write",
+      "preview": "Preview",
+      "previewEmpty": "Nothing to preview yet.",
+      "placeholder": "## Dough\n1. Mix the flour and salt\n2. Knead for **10 minutes**\n\n## Filling\n- Peel the apples\n- _optional:_ add raisins",
+      "help": "Markdown: ## heading, **bold**, _italic_, - list, 1. step, > note, [link](https://…)"
+    },
     "chefTipLabel": "Chef's Secret Tip",
     "optional": "(optional)",
     "chefTipPlaceholder": "e.g. The trick is to mash only half the lentils...",

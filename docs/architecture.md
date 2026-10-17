@@ -90,7 +90,7 @@ family.
 | `memories`, `moments`, `albums` | the feed | admins |
 | `children`, `journals` | children (birth time and place for the birth sky, encrypted) and their journal entries and letters | admins |
 | `blackbox`, `blackboxContent` | the Vault; time-locked capsules open by `request.time` | admins |
-| `recipes` | recipe tree with versions and forks; viewers read a recipe and its forks once an admin shares it (`viewerVisible`, on every version) | admins |
+| `recipes` | recipe tree with versions and forks; viewers read a recipe and its forks once an admin shares it (`viewerVisible`, on every version); instructions in the rich editor or in Markdown (`instructionsFormat`) | admins |
 | `scrapbooks`, `collages`, `highlights` | the creative tools | admins |
 | `bestOf` | the monthly best-of, one per family and month (`docs/best-of.md`) | admins' devices, automatically |
 | `ourYearRituals`, `ourYearChapters`, `ourYearEntries`, `ourYearLetters` | *Our Year*, readable by its two partners only | the partners |

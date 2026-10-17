@@ -15,14 +15,36 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, encryptFields, encryptJSON } from '../utils/encryption'
+import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 
 const RECIPES = 'recipes'
 
-const ENCRYPTED_TEXT_FIELDS = ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author']
+/**
+ * How a recipe's instructions were written, in `instructionsFormat`:
+ *
+ * - 'rich': the rich editor's document in `instructionsRich`, with a plain-text
+ *   mirror in `instructions` for everything that only shows text (the NAS
+ *   export, a client from before the editor).
+ * - 'markdown': the Markdown source in `instructions`, read with
+ *   src/utils/markdown.js.
+ * - absent: a recipe from before either, plain text in `instructions`.
+ *
+ * The format says nothing about the recipe itself, so it is stored as it is.
+ */
+export const INSTRUCTION_FORMATS = ['rich', 'markdown']
+
+// `instructionsRich` is a JSON string by the time it is encrypted, for the
+// reason MEMORY_WRITE_FIELDS gives for `contentRich`: encryptFields skips a
+// value that is not a string, and an object would be stored readable.
+const ENCRYPTED_TEXT_FIELDS = ['title', 'description', 'instructions', 'instructionsRich', 'chefNote', 'forkReason', 'author']
 
 async function encryptRecipe(key, data) {
-  const result = await encryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
+  const input = { ...data }
+  if (input.instructionsRich != null && typeof input.instructionsRich !== 'string') {
+    input.instructionsRich = JSON.stringify(input.instructionsRich)
+  }
+  const result = await encryptFields(key, input, ENCRYPTED_TEXT_FIELDS)
   if (Array.isArray(result.ingredients)) {
     result.ingredients = await encryptJSON(key, result.ingredients)
   }
@@ -32,6 +54,7 @@ async function encryptRecipe(key, data) {
 export async function decryptRecipe(key, data) {
   if (!key) return data
   const result = await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
+  if (result.instructionsRich != null) result.instructionsRich = parseRichDoc(result.instructionsRich)
   if (typeof result.ingredients === 'string') {
     result.ingredients = await decryptJSON(key, result.ingredients)
   }
