@@ -11,7 +11,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 
@@ -191,6 +191,16 @@ describe.skipIf(!EMULATOR)('recipes', () => {
         viewerVisible: false, instructionsRich: JSON.stringify(document),
       })))
       await assertFails(updateDoc(doc(asAdmin(), 'recipes', 'private'), { instructionsRich: JSON.stringify(document) }))
+    })
+
+    it('are corrected by an admin, on a recipe and on a fork', async () => {
+      await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'shared'), {
+        title: 'ciphertext', instructionsFormat: 'markdown', instructions: 'ciphertext', instructionsRich: deleteField(),
+      }))
+      await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'sharedFork'), {
+        title: 'ciphertext', instructionsFormat: 'rich', instructionsRich: 'Y2lwaGVydGV4dA==',
+      }))
+      await assertFails(updateDoc(doc(asViewer(), 'recipes', 'sharedFork'), { title: 'ciphertext' }))
     })
 
     it('are in a format the app can read', async () => {

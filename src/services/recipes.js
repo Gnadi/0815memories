@@ -5,11 +5,13 @@
 import {
   addDoc,
   collection,
+  deleteField,
   doc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   writeBatch,
 } from '../config/firestore'
@@ -138,6 +140,24 @@ export async function addRecipe(familyId, key, data) {
     ...encrypted,
     familyId,
     createdAt: serverTimestamp(),
+  })
+}
+
+/**
+ * Corrects a family recipe or a fork. `data` holds the fields the form edits,
+ * never the lineage, the sharing flag or the family: a version stays where it
+ * is in the tree and shared as its recipe is.
+ *
+ * An `instructionsRich` of null deletes the document — the recipe was switched
+ * to Markdown, or its instructions emptied.
+ */
+export async function updateRecipe(key, id, data) {
+  const { instructionsRich, ...rest } = data
+  const encrypted = await encryptRecipe(key, instructionsRich == null ? rest : data)
+  return updateDoc(doc(db, RECIPES, id), {
+    ...encrypted,
+    ...(instructionsRich === null ? { instructionsRich: deleteField() } : {}),
+    updatedAt: serverTimestamp(),
   })
 }
 

@@ -52,6 +52,7 @@
     "forkReasonLabel": "Reason for the Fork",
     "forkAttribution": "— {{author}}, {{year}}",
     "forkVersion": "Fork This Version",
+    "edit": "Edit",
     "status": {
       "removed": "Removed",
       "modified": "Modified"
@@ -181,6 +182,8 @@
     },
     "saving": "Saving…",
     "saveFork": "Save Fork",
-    "addToVault": "Add to Vault"
+    "addToVault": "Add to Vault",
+    "editTitle": "Edit {{title}}",
+    "saveChanges": "Save changes"
   }
 }

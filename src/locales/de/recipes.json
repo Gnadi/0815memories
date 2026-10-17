@@ -52,6 +52,7 @@
     "forkReasonLabel": "Grund für den Fork",
     "forkAttribution": "— {{author}}, {{year}}",
     "forkVersion": "Diese Version forken",
+    "edit": "Bearbeiten",
     "status": {
       "removed": "Entfernt",
       "modified": "Geändert"
@@ -181,6 +182,8 @@
     },
     "saving": "Speichert …",
     "saveFork": "Fork speichern",
-    "addToVault": "Zur Schatzkammer hinzufügen"
+    "addToVault": "Zur Schatzkammer hinzufügen",
+    "editTitle": "{{title}} bearbeiten",
+    "saveChanges": "Änderungen speichern"
   }
 }

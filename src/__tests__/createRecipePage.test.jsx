@@ -1,17 +1,18 @@
-/* The recipe form: ingredients pasted as a list or a table, and a fork that
-   starts from the original's ingredients and instructions. */
+/* The recipe form: ingredients pasted as a list or a table, a fork that
+   starts from the original's ingredients and instructions, and correcting a
+   recipe or a fork — offered to admins only, on the version's page. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../config/firebase', () => ({ db: {}, auth: null, messaging: null }))
-vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ familyId: 'fam1', encryptionKey: null, isAuthenticated: true, isAdmin: true }),
-}))
+const auth = { familyId: 'fam1', encryptionKey: null, isAuthenticated: true, isAdmin: true }
+vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 
 const mockAddRecipe = vi.fn()
+const mockUpdateRecipe = vi.fn()
 vi.mock('../hooks/useRecipes', () => ({
-  useRecipes: () => ({ recipes: [], loading: false, addRecipe: mockAddRecipe }),
+  useRecipes: () => ({ recipes: [], loading: false, addRecipe: mockAddRecipe, updateRecipe: mockUpdateRecipe }),
 }))
 
 const mockGetRecipe = vi.fn()
@@ -29,14 +30,18 @@ vi.mock('../components/admin/RichTextEditorLazy', () => ({
 }))
 
 const CreateRecipePage = (await import('../pages/CreateRecipePage')).default
+const RecipeVersionDetailPage = (await import('../pages/RecipeVersionDetailPage')).default
 
 const ingredientNames = () =>
   screen.queryAllByPlaceholderText('e.g. 2 cups ground lentils').map((input) => input.value)
 
 beforeEach(() => {
   mockParams = {}
+  auth.isAdmin = true
   mockAddRecipe.mockReset().mockResolvedValue({ id: 'new' })
+  mockUpdateRecipe.mockReset().mockResolvedValue()
   mockGetRecipe.mockReset()
+  mockNavigate.mockReset()
 })
 
 describe('pasting ingredients', () => {
@@ -92,5 +97,88 @@ describe('a fork', () => {
     await waitFor(() => expect(ingredientNames()).toEqual(['Apples']))
     expect(screen.getByRole('radio', { name: 'Markdown' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByDisplayValue('1. **Bake**')).toBeInTheDocument()
+  })
+})
+
+describe('editing', () => {
+  const fork = {
+    id: 'moms', parentId: 'pie', rootId: 'pie', viewerVisible: true, familyId: 'fam1',
+    title: "Mom's pie", author: 'Mom', year: 1990, description: 'With caramel', chefNote: 'Sea salt',
+    forkReason: 'For the holidays', changes: [{ type: 'ADDED', ingredient: 'Caramel', description: 'On top' }],
+    ingredients: [{ name: 'Apples', status: 'active' }, { name: 'Caramel', status: 'modified' }],
+    instructionsFormat: 'markdown', instructions: '1. Bake', image: 'https://res.example/img',
+  }
+
+  it('opens a fork with everything it holds', async () => {
+    mockParams = { id: 'moms' }
+    mockGetRecipe.mockResolvedValue(fork)
+    render(<CreateRecipePage mode="edit" />)
+
+    await waitFor(() => expect(screen.getByDisplayValue("Mom's pie")).toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: "Edit Mom's pie" })).toBeInTheDocument()
+    expect(screen.getByText('The Fork Story')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('For the holidays')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('1. Bake')).toBeInTheDocument()
+    expect(ingredientNames()).toEqual(['Apples', 'Caramel'])
+  })
+
+  it('saves the corrected fields only, never the lineage or the sharing flag', async () => {
+    const user = userEvent.setup()
+    mockParams = { id: 'moms' }
+    mockGetRecipe.mockResolvedValue(fork)
+    render(<CreateRecipePage mode="edit" />)
+    const title = await screen.findByDisplayValue("Mom's pie")
+
+    await user.clear(title)
+    await user.type(title, "Mom's caramel pie")
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(mockUpdateRecipe).toHaveBeenCalledTimes(1))
+    const [id, data] = mockUpdateRecipe.mock.calls[0]
+    expect(id).toBe('moms')
+    expect(data).toMatchObject({
+      title: "Mom's caramel pie",
+      instructionsFormat: 'markdown',
+      instructions: '1. Bake',
+      instructionsRich: null,
+      forkReason: 'For the holidays',
+      changes: [{ type: 'ADDED', ingredient: 'Caramel', description: 'On top' }],
+      ingredients: [{ name: 'Apples', status: 'active' }, { name: 'Caramel', status: 'modified' }],
+      image: 'https://res.example/img',
+    })
+    for (const field of ['parentId', 'rootId', 'viewerVisible', 'familyId', 'createdAt']) {
+      expect(data).not.toHaveProperty(field)
+    }
+    expect(mockAddRecipe).not.toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith('/recipes/pie/version/moms')
+  })
+
+  it('leaves a family recipe without a fork story', async () => {
+    const user = userEvent.setup()
+    mockParams = { id: 'pie' }
+    mockGetRecipe.mockResolvedValue({ id: 'pie', parentId: null, rootId: null, title: 'Pie', author: 'Grandma', year: 1970 })
+    render(<CreateRecipePage mode="edit" />)
+    await screen.findByDisplayValue('Pie')
+
+    expect(screen.queryByText('The Fork Story')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(mockUpdateRecipe).toHaveBeenCalled())
+    expect(mockUpdateRecipe.mock.calls[0][1]).not.toHaveProperty('forkReason')
+    expect(mockNavigate).toHaveBeenCalledWith('/recipes/pie/version/pie')
+  })
+
+  it('is offered on a version\'s page to admins, not to viewers', async () => {
+    mockParams = { rootId: 'pie', versionId: 'moms' }
+    mockGetRecipe.mockResolvedValue(fork)
+    const { unmount } = render(<RecipeVersionDetailPage />)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    expect(mockNavigate).toHaveBeenCalledWith('/recipes/moms/edit')
+    unmount()
+
+    auth.isAdmin = false
+    render(<RecipeVersionDetailPage />)
+    await screen.findByText("Mom's pie")
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
   })
 })

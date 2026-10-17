@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork, ClipboardList } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, ChefHat, Image as ImageIcon, GitFork, ClipboardList, Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { useRecipes } from '../hooks/useRecipes'
 import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
+import EncryptedImage from '../components/media/EncryptedImage'
 import { devError } from '../utils/devLog'
 import DictationField from '../components/DictationField'
 import { appendDictation } from '../hooks/useDictation'
@@ -24,16 +25,24 @@ const STATUS_STYLES = {
 }
 const CHANGE_TYPES = ['ADDED', 'REMOVED', 'MODIFIED']
 
-export default function CreateRecipePage() {
+/**
+ * A new family recipe, a fork of a version (`recipes/:id/fork`), or a
+ * correction to a recipe or fork (`recipes/:id/edit`, mode="edit"). An edit
+ * changes the version's own fields only; where it sits in the tree and
+ * whether it is shared stay as they are.
+ */
+export default function CreateRecipePage({ mode }) {
   const { t } = useTranslation('recipes')
   const { id } = useParams()
-  const isFork = !!id
+  const isEdit = mode === 'edit' && !!id
+  const isFork = !!id && !isEdit
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
-  const { addRecipe } = useRecipes(familyId, encryptionKey)
+  const { addRecipe, updateRecipe } = useRecipes(familyId, encryptionKey)
 
   const [parent, setParent] = useState(null)
-  const [parentLoading, setParentLoading] = useState(isFork)
+  const [editing, setEditing] = useState(null)
+  const [parentLoading, setParentLoading] = useState(!!id)
   const [form, setForm] = useState({
     title: '',
     year: new Date().getFullYear(),
@@ -57,13 +66,27 @@ export default function CreateRecipePage() {
     if (!isAdmin) navigate('/home')
   }, [isAdmin, navigate])
 
-  // Load parent recipe when forking
+  // Load the version being forked or edited.
   useEffect(() => {
-    if (!isFork || !id) return
+    if (!id) return
     const load = async () => {
       try {
         const data = await getRecipe(familyId, encryptionKey, id)
-        if (data) {
+        if (data && isEdit) {
+          setEditing(data)
+          setForm({
+            title: data.title || '',
+            year: data.year || new Date().getFullYear(),
+            author: data.author || '',
+            description: data.description || '',
+            chefNote: data.chefNote || '',
+            forkReason: data.forkReason || '',
+          })
+          setIngredients((data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() })))
+          setChanges((data.changes || []).map((c) => ({ ...c, id: crypto.randomUUID() })))
+          setInstructions(instructionsFromRecipe(data))
+          setImage(data.image ? { preview: null, url: data.image, uploading: false } : null)
+        } else if (data) {
           setParent(data)
           setIngredients(
             (data.ingredients || []).map((ing) => ({ ...ing, id: crypto.randomUUID() }))
@@ -72,19 +95,26 @@ export default function CreateRecipePage() {
           // like it starts from its ingredients.
           setInstructions(instructionsFromRecipe(data))
         } else {
-          setForkLoadError(t('form.forkOriginalNotFound'))
+          setForkLoadError(isEdit ? t('version.notFound') : t('form.forkOriginalNotFound'))
         }
       } catch {
-        setForkLoadError(t('form.forkLoadFailed'))
+        setForkLoadError(isEdit ? t('version.loadError') : t('form.forkLoadFailed'))
       } finally {
         setParentLoading(false)
       }
     }
     load()
-  }, [id, isFork, t])
+  }, [id, isEdit, t])
+
+  // A fork's own story (its reason, its changes, the status of each
+  // ingredient) when one is made, and when one is corrected.
+  const forkFields = isFork || !!editing?.parentId
+  const backTo = isEdit
+    ? `/recipes/${editing?.rootId ?? id}/version/${id}`
+    : isFork ? `/recipes/${id}` : '/recipes'
 
   if (!isAdmin) return null
-  if (isFork && parentLoading) {
+  if (id && parentLoading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-kaydo border-t-transparent rounded-full animate-spin" />
@@ -186,6 +216,27 @@ export default function CreateRecipePage() {
       const parentId = isFork ? parent.id : null
 
       const { instructionsRich, ...instructionFields } = instructionsToFields(instructions)
+
+      if (isEdit) {
+        await updateRecipe(id, {
+          title: form.title.trim(),
+          year: Number(form.year),
+          author: form.author.trim(),
+          description: form.description.trim(),
+          ...instructionFields,
+          instructionsRich,
+          chefNote: form.chefNote.trim(),
+          ...(forkFields ? {
+            forkReason: form.forkReason.trim(),
+            changes: changes.map(({ id: _id, ...rest }) => rest),
+          } : {}),
+          ingredients: ingredients.map(({ id: _id, ...rest }) => rest),
+          image: image?.url || null,
+        })
+        navigate(backTo)
+        return
+      }
+
       const payload = {
         title: form.title.trim(),
         year: Number(form.year),
@@ -225,15 +276,15 @@ export default function CreateRecipePage() {
         {/* Sticky mobile header */}
         <div className="lg:hidden sticky top-0 z-30 bg-cream/90 backdrop-blur-sm border-b border-cream-dark px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => navigate(isFork ? `/recipes/${id}` : '/recipes')}
+            onClick={() => navigate(backTo)}
             className="p-2 rounded-xl hover:bg-cream-dark transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-bark" />
           </button>
           <div className="flex items-center gap-2 flex-1">
-            {isFork ? <GitFork className="w-4 h-4 text-kaydo" /> : <ChefHat className="w-4 h-4 text-kaydo" />}
+            {isEdit ? <Pencil className="w-4 h-4 text-kaydo" /> : isFork ? <GitFork className="w-4 h-4 text-kaydo" /> : <ChefHat className="w-4 h-4 text-kaydo" />}
             <span className="font-semibold text-bark text-sm">
-              {isFork ? t('form.forkOf', { title: parent?.title }) : t('form.newRecipe')}
+              {isEdit ? t('form.editTitle', { title: editing?.title }) : isFork ? t('form.forkOf', { title: parent?.title }) : t('form.newRecipe')}
             </span>
           </div>
         </div>
@@ -243,15 +294,15 @@ export default function CreateRecipePage() {
           {/* Desktop header */}
           <div className="hidden lg:flex items-center gap-3 mb-8">
             <button
-              onClick={() => navigate(isFork ? `/recipes/${id}` : '/recipes')}
+              onClick={() => navigate(backTo)}
               className="p-2 rounded-xl hover:bg-cream-dark transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-bark" />
             </button>
             <div className="flex items-center gap-2">
-              {isFork ? <GitFork className="w-5 h-5 text-kaydo" /> : <ChefHat className="w-5 h-5 text-kaydo" />}
+              {isEdit ? <Pencil className="w-5 h-5 text-kaydo" /> : isFork ? <GitFork className="w-5 h-5 text-kaydo" /> : <ChefHat className="w-5 h-5 text-kaydo" />}
               <h1 className="text-2xl font-bold text-bark">
-                {isFork ? t('form.forkTitle', { title: parent?.title }) : t('form.newRecipe')}
+                {isEdit ? t('form.editTitle', { title: editing?.title }) : isFork ? t('form.forkTitle', { title: parent?.title }) : t('form.newRecipe')}
               </h1>
             </div>
           </div>
@@ -350,7 +401,11 @@ export default function CreateRecipePage() {
                 </label>
                 {image ? (
                   <div className="relative w-full h-40 rounded-xl overflow-hidden">
-                    <img src={image.preview} alt={t('form.photoPreviewAlt')} className="w-full h-full object-cover" />
+                    {/* A photo the recipe already had is stored encrypted, so it has
+                        no local preview to show. */}
+                    {image.preview
+                      ? <img src={image.preview} alt={t('form.photoPreviewAlt')} className="w-full h-full object-cover" />
+                      : <EncryptedImage src={image.url} alt={t('form.photoPreviewAlt')} className="w-full h-full object-cover" />}
                     {image.uploading && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -390,7 +445,7 @@ export default function CreateRecipePage() {
             <div className="bg-warm-white rounded-2xl p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-bark text-base">{t('form.ingredientsHeading')}</h2>
-                {isFork && (
+                {forkFields && (
                   <span className="text-xs text-bark-muted">{t('form.toggleStatusHint')}</span>
                 )}
               </div>
@@ -410,7 +465,7 @@ export default function CreateRecipePage() {
                       placeholder={t('form.ingredientPlaceholder')}
                       className="flex-1 bg-cream rounded-xl px-3 py-2 text-sm text-bark placeholder-bark-muted border border-cream-dark focus:outline-none focus:border-kaydo transition-colors"
                     />
-                    {isFork && (
+                    {forkFields && (
                       <div className="flex gap-1 shrink-0">
                         {['active', 'removed', 'modified'].map((s) => (
                           <button
@@ -465,8 +520,8 @@ export default function CreateRecipePage() {
               </div>
             </div>
 
-            {/* Card: Fork Story (fork mode only) */}
-            {isFork && (
+            {/* Card: Fork Story (forks only) */}
+            {forkFields && (
               <div className="bg-warm-white rounded-2xl p-5 shadow-sm space-y-4">
                 <h2 className="font-bold text-bark text-base">{t('form.forkStoryHeading')}</h2>
 
@@ -560,13 +615,15 @@ export default function CreateRecipePage() {
               >
                 {saving
                   ? t('form.saving')
+                  : isEdit
+                  ? t('form.saveChanges')
                   : isFork
                   ? t('form.saveFork')
                   : t('form.addToVault')}
               </button>
               <button
                 type="button"
-                onClick={() => navigate(isFork ? `/recipes/${id}` : '/recipes')}
+                onClick={() => navigate(backTo)}
                 className="px-4 py-3 text-sm text-bark-muted hover:text-bark transition-colors"
               >
                 {t('common:buttons.cancel')}

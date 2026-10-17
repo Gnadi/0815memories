@@ -170,7 +170,7 @@ describe('the route table agrees with the rules', () => {
     for (const path of ['recipes', 'recipes/:id', 'recipes/:rootId/version/:versionId']) {
       expect(app).toContain(`path: '${path}', element: protect(`)
     }
-    for (const path of ['recipes/new', 'recipes/:id/fork']) {
+    for (const path of ['recipes/new', 'recipes/:id/fork', 'recipes/:id/edit']) {
       expect(app).toContain(`path: '${path}', element: protectAdmin(`)
     }
   })
