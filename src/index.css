@@ -123,6 +123,13 @@ select {
   border-radius: 9999px;
 }
 
+/* The fill of a story's progress bar (MomentViewer.jsx), which is a photo's
+   clock as well. Scaled rather than widened, so it runs on the compositor. */
+@keyframes kaydo-story-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

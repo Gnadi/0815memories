@@ -28,7 +28,7 @@ vi.mock('../components/media/CrossfadeImage', async () => {
       useLayoutEffect(() => {
         h.commits.push({
           src: props.src,
-          fills: Array.from(document.querySelectorAll('[data-testid="progress-fill"]')).map((el) => el.style.width),
+          fills: Array.from(document.querySelectorAll('[data-testid="progress-fill"]')),
           infoCard: !!document.querySelector('[aria-label="Hide info"]'),
         })
       }, [props.src])
@@ -79,6 +79,7 @@ function moment(id, count = 1, { thumbs = true, tiny = true } = {}) {
 
 const stages = () => Array.from(document.querySelectorAll('[data-kind="stage"]'))
 const onScreen = () => h.stage.src
+const fills = () => Array.from(document.querySelectorAll('[data-testid="progress-fill"]'))
 const settle = () => act(() => h.stage.onSettled(h.stage.src))
 const next = () => act(() => { fireEvent.keyDown(window, { key: 'ArrowRight' }) })
 const noop = () => {}
@@ -250,14 +251,15 @@ describe('leaving a clip', () => {
 
 describe('moving between slides', () => {
   it('shows the new slide with its progress bar already reset — no frame of the old one', () => {
-    vi.useFakeTimers()
     render(<MomentViewer moments={[moment('a', 2), moment('b')]} initialIndex={0} onClose={noop} />)
     settle()
-    act(() => vi.advanceTimersByTime(2000))
+    const [firstClock] = fills()
 
     next()
-    const commit = h.commits.find((c) => c.src === 'https://cdn/a-1.enc')
-    expect(commit.fills).toEqual(['100%', '0%'])
+    const { fills: shown } = h.commits.find((c) => c.src === 'https://cdn/a-1.enc')
+    expect(shown.map((el) => el.dataset.fill)).toEqual(['full', 'clock'])
+    // A new element, so its animation starts from nothing.
+    expect(shown[1]).not.toBe(firstClock)
   })
 
   it('brings a hidden info card back in the same commit as the new moment', () => {
@@ -271,18 +273,49 @@ describe('moving between slides', () => {
   })
 
   it('starts the clock when the photo is on screen, not when the slide opens', () => {
-    vi.useFakeTimers()
     render(<MomentViewer moments={[moment('a', 2)]} initialIndex={0} onClose={noop} />)
 
     // A slow download: the story must not move on without ever showing it.
-    act(() => vi.advanceTimersByTime(6000))
-    expect(onScreen()).toBe('https://cdn/a-0.enc')
+    expect(fills()[0].style.animationPlayState).toBe('paused')
 
     settle()
-    act(() => vi.advanceTimersByTime(4900))
-    expect(onScreen()).toBe('https://cdn/a-0.enc')
-    act(() => vi.advanceTimersByTime(200))
+    expect(fills()[0].style.animation).toContain('5000ms')
+    expect(fills()[0].style.animationPlayState).toBe('running')
+    // jsdom has no AnimationEvent, so React listens for the prefixed name there.
+    act(() => {
+      fills()[0].dispatchEvent(new Event('webkitAnimationEnd', { bubbles: true }))
+    })
     expect(onScreen()).toBe('https://cdn/a-1.enc')
+  })
+
+  it('holds the clock while the story is held', () => {
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={noop} />)
+    settle()
+    fireEvent.pointerDown(stages()[0])
+    expect(fills()[0].style.animationPlayState).toBe('paused')
+    fireEvent.pointerUp(stages()[0])
+    expect(fills()[0].style.animationPlayState).toBe('running')
+  })
+
+  it('says so once the press is a hold, not on every tap', () => {
+    vi.useFakeTimers()
+    render(<MomentViewer moments={[moment('a', 2)]} initialIndex={0} onClose={noop} />)
+    settle()
+    const paused = () => document.querySelector('[data-testid="story-paused"]')
+
+    fireEvent.pointerDown(stages()[0])
+    act(() => vi.advanceTimersByTime(100))
+    expect(paused()).toBeNull()
+    act(() => vi.advanceTimersByTime(200))
+    expect(paused().textContent).toBe('Paused')
+    // The clock folds away beside the pill but is the same element, paused.
+    const clock = fills()[0]
+    expect(clock.style.animationPlayState).toBe('paused')
+
+    fireEvent.pointerUp(stages()[0])
+    expect(paused()).toBeNull()
+    expect(fills()[0]).toBe(clock)
+    expect(clock.style.animationPlayState).toBe('running')
   })
 })
 
