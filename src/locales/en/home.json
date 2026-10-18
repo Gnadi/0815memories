@@ -42,6 +42,7 @@
     "deleteConfirm": "Delete this moment?",
     "noMedia": "No media",
     "author": "Family",
+    "paused": "Paused",
     "aria": {
       "moreOptions": "More options",
       "close": "Close",

@@ -296,6 +296,27 @@ describe('moving between slides', () => {
     fireEvent.pointerUp(stages()[0])
     expect(fills()[0].style.animationPlayState).toBe('running')
   })
+
+  it('says so once the press is a hold, not on every tap', () => {
+    vi.useFakeTimers()
+    render(<MomentViewer moments={[moment('a', 2)]} initialIndex={0} onClose={noop} />)
+    settle()
+    const paused = () => document.querySelector('[data-testid="story-paused"]')
+
+    fireEvent.pointerDown(stages()[0])
+    act(() => vi.advanceTimersByTime(100))
+    expect(paused()).toBeNull()
+    act(() => vi.advanceTimersByTime(200))
+    expect(paused().textContent).toBe('Paused')
+    // The clock folds away beside the pill but is the same element, paused.
+    const clock = fills()[0]
+    expect(clock.style.animationPlayState).toBe('paused')
+
+    fireEvent.pointerUp(stages()[0])
+    expect(paused()).toBeNull()
+    expect(fills()[0]).toBe(clock)
+    expect(clock.style.animationPlayState).toBe('running')
+  })
 })
 
 describe('what the story viewer warms next', () => {

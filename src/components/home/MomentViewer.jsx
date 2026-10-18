@@ -6,6 +6,7 @@ import {
   Heart,
   MapPin,
   MoreHorizontal,
+  Pause,
   Pencil,
   Trash2,
 } from 'lucide-react'
@@ -20,6 +21,10 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 
 // How long a photo stays up before the story moves on.
 const PHOTO_MS = 5000
+// A press longer than this is holding the story, not tapping through it, and
+// only then does the bar say so. Every tap pauses for a moment, and a pill
+// flashing up on each one would be noise. The same as the monthly review's.
+const HOLD_MS = 220
 
 // Build a unified media list from a moment's images and videos.
 //
@@ -279,6 +284,17 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     el?.pause()
   }, [])
 
+  const [held, setHeld] = useState(false)
+  useEffect(() => {
+    if (!paused) return
+    const timer = setTimeout(() => setHeld(true), HOLD_MS)
+    return () => {
+      clearTimeout(timer)
+      setHeld(false)
+    }
+  }, [paused])
+  const showPaused = paused && held
+
   // Auto-play video when current item is a video
   useEffect(() => {
     if (!isVideo) return
@@ -347,37 +363,58 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   // An element, not a component: a component defined in here is a new type on
   // every render, and React would remount the bar — and restart the clock —
   // every time the viewer re-rendered.
+  //
+  // While the story is held, the current segment folds away for a "Paused"
+  // pill, as in the monthly review. It folds rather than unmounting: its fill
+  // is the photo's clock, and a remount would start it over. The row keeps the
+  // bar's height and lets the pill hang over it, so nothing below moves.
   const clockRunning = !paused && imageSettled
-  const renderProgressBar = (track, fill) => (
-    <div className="flex gap-[3px] w-full" aria-hidden="true">
-      {mediaItems.map((_, i) => (
-        <div key={i} className={`h-[3px] flex-1 rounded-full overflow-hidden ${track}`}>
-          {i < currentMediaIndex && (
-            <div data-testid="progress-fill" data-fill="full" className={`h-full w-full ${fill}`} />
-          )}
-          {i === currentMediaIndex && (isVideo ? (
-            <div
-              data-testid="progress-fill"
-              data-fill="clip"
-              className={`h-full w-full origin-left ${fill}`}
-              style={{ transform: `scaleX(${clipShare})` }}
-            />
-          ) : (
-            // Keyed on the slide, so every slide starts its clock from nothing.
-            <div
-              key={slideKey}
-              data-testid="progress-fill"
-              data-fill="clock"
-              className={`h-full w-full origin-left ${fill}`}
-              style={{
-                animation: `kaydo-story-fill ${PHOTO_MS}ms linear forwards`,
-                animationPlayState: clockRunning ? 'running' : 'paused',
-              }}
-              onAnimationEnd={handleSlideEnded}
-            />
-          ))}
-        </div>
-      ))}
+  const renderProgressBar = (track, fill, pill) => (
+    <div className="flex items-center gap-[3px] h-[3px] w-full" aria-hidden="true">
+      {mediaItems.map((_, i) => {
+        const current = i === currentMediaIndex
+        return [
+          <div
+            key={i}
+            className={`h-[3px] rounded-full overflow-hidden ${track} ${current && showPaused ? 'w-0 flex-none opacity-0' : 'flex-1'}`}
+          >
+            {i < currentMediaIndex && (
+              <div data-testid="progress-fill" data-fill="full" className={`h-full w-full ${fill}`} />
+            )}
+            {current && (isVideo ? (
+              <div
+                data-testid="progress-fill"
+                data-fill="clip"
+                className={`h-full w-full origin-left ${fill}`}
+                style={{ transform: `scaleX(${clipShare})` }}
+              />
+            ) : (
+              // Keyed on the slide, so every slide starts its clock from nothing.
+              <div
+                key={slideKey}
+                data-testid="progress-fill"
+                data-fill="clock"
+                className={`h-full w-full origin-left ${fill}`}
+                style={{
+                  animation: `kaydo-story-fill ${PHOTO_MS}ms linear forwards`,
+                  animationPlayState: clockRunning ? 'running' : 'paused',
+                }}
+                onAnimationEnd={handleSlideEnded}
+              />
+            ))}
+          </div>,
+          current && showPaused && (
+            <span
+              key="paused"
+              data-testid="story-paused"
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow ${pill}`}
+            >
+              <Pause className="w-3 h-3 fill-current" />
+              {t('moment.paused')}
+            </span>
+          ),
+        ]
+      })}
     </div>
   )
 
@@ -451,7 +488,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2 z-20">
-          {renderProgressBar('bg-white/35', 'bg-white')}
+          {renderProgressBar('bg-white/35', 'bg-white', 'bg-warm-white text-bark')}
 
           {/* User row */}
           <div className="flex items-center justify-between mt-3">
@@ -591,7 +628,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Progress bar */}
         <div className="px-4 pt-4">
-          {renderProgressBar('bg-bark/20', 'bg-bark')}
+          {renderProgressBar('bg-bark/20', 'bg-bark', 'bg-bark text-warm-white')}
         </div>
 
         {/* User info row */}
