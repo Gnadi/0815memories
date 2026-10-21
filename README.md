@@ -117,7 +117,7 @@ else does.
 
 3. Set up Firebase:
    - Create a project at console.firebase.google.com
-   - Enable Email/Password authentication, and under Authentication → Settings turn on *Email enumeration protection* (on by default for new projects). Admins reset a forgotten password from the login page; Firebase sends the email from the *Password reset* template (Authentication → Templates, add a German version there) and sets the new password on its own page
+   - Enable Email/Password authentication, and under Authentication → Settings turn on *Email enumeration protection* (on by default for new projects). Admins reset a forgotten password from the login page; Firebase sends the email from the *Password reset* template (Authentication → Templates, add a German version there) and sets the new password on its own page. New admins confirm their address through the *Email address verification* template before they can found or join a family (`firestore.rules` checks it), so give that one a German version too
    - Create a Firestore database and deploy `firestore.rules`
    - Deploy the Cloud Functions with `firebase deploy --only functions` (needs the Blaze plan). Viewer login is one of them, so the app is not fully usable without this step
    - Push notifications additionally need a Web Push certificate: Firebase Console → Cloud Messaging → Web Push certificates, then `VITE_FIREBASE_VAPID_KEY`. See `docs/plan-notifications.md` for how the pieces fit together

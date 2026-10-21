@@ -56,5 +56,16 @@
     "back": "Back",
     "empty": "No moments yet"
   },
-  "deleteMemoryConfirm": "Are you sure you want to delete this memory?"
+  "deleteMemoryConfirm": "Are you sure you want to delete this memory?",
+  "verifyEmail": {
+    "title": "Please confirm your email address",
+    "body": "A password reset for your account goes to {{email}}. Confirm that this address is yours, so only you can reset your password.",
+    "send": "Send confirmation email",
+    "resend": "Send again",
+    "confirmed": "I've confirmed it",
+    "sent": "Sent to {{email}}. Open the link in the email, then tap “I've confirmed it”.",
+    "notYet": "Not confirmed yet. Open the link in the email, then try again.",
+    "tooManyRequests": "Too many emails — please wait a few minutes and try again",
+    "failed": "Something went wrong. Please try again."
+  }
 }

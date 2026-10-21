@@ -34,7 +34,13 @@ anything the client can edit:
   through Firebase's reset email (`sendAdminPasswordReset` in
   `AuthContext`); the answer never says whether an account exists. The
   password protects the account only: the family key does not depend on it,
-  so a reset loses nothing. The `syncAdminClaims` trigger
+  so a reset loses nothing. Because the reset goes to the account's address,
+  an account becomes an admin only once that address is confirmed: the rules
+  refuse founding a family and redeeming an invite without `email_verified`
+  on the token (`hasVerifiedEmail()`). `/signup` and `/invite` lead through
+  the confirmation, and `ProtectedRoute` sends an account no family lists
+  back to `/signup` to finish. Admins from before that check keep their
+  access and are asked on the home page to confirm. The `syncAdminClaims` trigger
   puts `{ familyId, role: 'admin' }` on their token whenever the family's
   `adminUids` change. The rules also accept an admin listed in `adminUids`
   whose claim has not arrived yet (`isAdminByDocument` in `firestore.rules`).

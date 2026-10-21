@@ -72,6 +72,13 @@ const asAdmin = (uid, familyId) =>
 /** An admin from before the claim migration: in adminUids, no claim. */
 const asClaimlessAdmin = (uid) => testEnv.authenticatedContext(uid).firestore()
 
+/**
+ * A fresh email/password account, as Firebase Auth issues it: no claims yet,
+ * and `email_verified` as the account stands.
+ */
+const asNewAccount = (uid, { verified = true } = {}) =>
+  testEnv.authenticatedContext(uid, { email_verified: verified }).firestore()
+
 const asStranger = () => testEnv.unauthenticatedContext().firestore()
 
 describe.skipIf(!EMULATOR)('access control rules', () => {
@@ -444,12 +451,20 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     }
 
     it('makes the redeemer an admin', async () => {
-      await assertSucceeds(redeem(asClaimlessAdmin(NEWBIE)))
+      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
       await assertSucceeds(getDoc(doc(asClaimlessAdmin(NEWBIE), 'families', FAMILY)))
     })
 
+    // A password reset goes to the account's address, so an account whose
+    // address nobody confirmed belongs to whoever reads that mailbox.
+    it('needs a confirmed email address', async () => {
+      await assertFails(redeem(asNewAccount(NEWBIE, { verified: false })))
+      await assertFails(redeem(asClaimlessAdmin(NEWBIE)))
+      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
+    })
+
     it('cannot be done in separate writes', async () => {
-      const db = asClaimlessAdmin(NEWBIE)
+      const db = asNewAccount(NEWBIE)
       await assertFails(
         updateDoc(doc(db, 'families', FAMILY, 'invites', TOKEN), { used: true, redeemedBy: NEWBIE }),
       )
@@ -458,11 +473,11 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
 
     it('cannot change anything but adminUids on the way in', async () => {
-      await assertFails(redeem(asClaimlessAdmin(NEWBIE), { extra: { familyName: 'Mine now' } }))
+      await assertFails(redeem(asNewAccount(NEWBIE), { extra: { familyName: 'Mine now' } }))
     })
 
     it('cannot be replayed by an admin who was removed', async () => {
-      await assertSucceeds(redeem(asClaimlessAdmin(NEWBIE)))
+      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
 
       // What ManageAdminsPanel.handleRemove does.
       const owner = asAdmin(ADMIN, FAMILY)
@@ -471,7 +486,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
       // The spent invite still names them as its redeemer, and has not expired.
       // syncAdminClaims has cleared their claim.
-      const removed = asClaimlessAdmin(NEWBIE)
+      const removed = asNewAccount(NEWBIE)
       await assertFails(setDoc(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN }))
       await assertFails(updateDoc(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
       const batch = writeBatch(removed)
@@ -525,6 +540,41 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       const db = asAdmin('uid-admin-2', OTHER_FAMILY)
       await assertSucceeds(updateDoc(doc(db, name, 'theirs'), { title: 'still theirs' }))
       await assertFails(updateDoc(doc(db, name, 'theirs'), { familyId: FAMILY, title: 'Injected' }))
+    })
+  })
+
+  // ── 8b. A confirmed email address ─────────────────────────────────────────
+  //
+  // A password reset goes to the address an account was registered with. An
+  // account whose address nobody confirmed — a typo, someone else's address —
+  // belongs to whoever reads that mailbox, so it must not become an admin.
+
+  describe('an account whose email address is not confirmed', () => {
+    const KEY = { k: 'the-secret-key', kty: 'oct' }
+    const newFamily = (db) => setDoc(doc(db, 'families', 'family-new'), {
+      adminUid: 'uid-new-owner',
+      adminUids: ['uid-new-owner'],
+      familyName: 'The Newcomers',
+      familySlug: 'the-newcomers',
+      encryptionKeyJwk: KEY,
+    })
+
+    it('cannot found a family', async () => {
+      await assertFails(newFamily(asNewAccount('uid-new-owner', { verified: false })))
+      await assertFails(newFamily(asClaimlessAdmin('uid-new-owner')))
+    })
+
+    it('can, once the address is confirmed', async () => {
+      await assertSucceeds(newFamily(asNewAccount('uid-new-owner')))
+    })
+
+    it('does not lock out an admin from before the check', async () => {
+      const db = asNewAccount(ADMIN, { verified: false })
+      await assertSucceeds(getDoc(doc(db, 'families', FAMILY)))
+      await assertSucceeds(updateDoc(doc(db, 'families', FAMILY), { familyName: 'Still ours' }))
+      await assertSucceeds(
+        setDoc(doc(db, 'memories', 'mem-unverified'), { familyId: FAMILY, title: 'ciphertext' }),
+      )
     })
   })
 
@@ -594,7 +644,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
 
     it('is still written with a new family', async () => {
-      await assertSucceeds(setDoc(family(asClaimlessAdmin('uid-new-owner'), 'family-new'), {
+      await assertSucceeds(setDoc(family(asNewAccount('uid-new-owner'), 'family-new'), {
         adminUid: 'uid-new-owner',
         adminUids: ['uid-new-owner'],
         familyName: 'The Newcomers',
@@ -604,7 +654,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
 
     it('must come with a new family', async () => {
-      const db = asClaimlessAdmin('uid-new-owner')
+      const db = asNewAccount('uid-new-owner')
       const newFamily = (encryptionKeyJwk) => setDoc(family(db, 'family-new'), {
         adminUid: 'uid-new-owner',
         adminUids: ['uid-new-owner'],
