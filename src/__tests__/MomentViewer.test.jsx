@@ -9,7 +9,7 @@
    CrossfadeImage), and one frame of the previous slide's progress bar and info
    card before they reset, because the reset ran in an effect after paint. */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, cleanup, act, fireEvent } from '@testing-library/react'
+import { render, cleanup, act, fireEvent, waitFor } from '@testing-library/react'
 
 const h = vi.hoisted(() => ({ stage: null, commits: [] }))
 
@@ -370,5 +370,50 @@ describe('what the story viewer warms next', () => {
       auth.encryptionKey,
       'video/*',
     )
+  })
+})
+
+// On a phone the back gesture is how a story is put away. The viewer is state,
+// not a route, so back used to skip it and leave the app for whatever was open
+// before — the viewer has an entry in the history of its own now.
+describe('going back', () => {
+  beforeEach(() => {
+    window.history.replaceState({ usr: null, key: 'home', idx: 0 }, '')
+  })
+
+  it('closes the viewer instead of leaving the page', async () => {
+    const onClose = vi.fn()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+    // The router's own state stays as it was, so it sees no navigation.
+    expect(window.history.state).toMatchObject({ key: 'home', idx: 0, kaydoOverlay: true })
+
+    act(() => { window.history.back() })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
+  })
+
+  it('takes its entry back out when closed from inside, so the next back leaves nothing behind', async () => {
+    const onClose = vi.fn()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+    expect(window.history.state.kaydoOverlay).toBe(true)
+
+    act(() => { fireEvent.keyDown(window, { key: 'Escape' }) })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
+  })
+
+  it('opens with one entry when mounted twice, as StrictMode does', async () => {
+    const onClose = vi.fn()
+    const { unmount } = render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={noop} />)
+    unmount()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+
+    // One back is enough to close it and land on the page again.
+    act(() => { window.history.back() })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
   })
 })

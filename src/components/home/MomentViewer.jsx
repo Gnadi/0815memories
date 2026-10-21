@@ -18,6 +18,7 @@ import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import useMediaQuery from '../../hooks/useMediaQuery'
+import useCloseOnBack from '../../hooks/useCloseOnBack'
 
 // How long a photo stays up before the story moves on.
 const PHOTO_MS = 5000
@@ -75,6 +76,10 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
+
+  // Every way out of the viewer goes through close, so the back gesture on a
+  // phone closes it too, rather than leaving the app.
+  const close = useCloseOnBack(onClose)
 
   const videoRef = useRef(null)
   const pointerStart = useRef(null)
@@ -147,11 +152,11 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const isAtEnd = isLastMoment && isLastMedia
 
   // Stable refs let the keyboard listener call the latest
-  // goNext/goPrev/onClose without re-subscribing on every render.
+  // goNext/goPrev/close without re-subscribing on every render.
   const goNextRef = useRef(null)
   const goPrevRef = useRef(null)
   const isAtEndRef = useRef(isAtEnd)
-  const onCloseRef = useRef(onClose)
+  const onCloseRef = useRef(close)
 
   const goNext = () => {
     if (!isLastMedia) {
@@ -162,7 +167,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       setCurrentMomentIndex((i) => i + 1)
       setCurrentMediaIndex(0)
     } else {
-      onClose()
+      close()
     }
   }
 
@@ -184,7 +189,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       setCurrentMomentIndex((i) => i + 1)
       setCurrentMediaIndex(0)
     } else {
-      onClose()
+      close()
     }
   }
 
@@ -230,7 +235,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     goNextRef.current = goNext
     goPrevRef.current = goPrev
     isAtEndRef.current = isAtEnd
-    onCloseRef.current = onClose
+    onCloseRef.current = close
   })
 
   // Body scroll lock
@@ -321,14 +326,14 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const handleEdit = () => {
     setShowMenu(false)
     onEdit?.(moment)
-    onClose()
+    close()
   }
 
   const handleDelete = () => {
     setShowMenu(false)
     if (window.confirm(t('moment.deleteConfirm'))) {
       onDelete?.(moment.id)
-      onClose()
+      close()
     }
   }
 
@@ -538,7 +543,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
                 </div>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); onClose() }}
+                onClick={(e) => { e.stopPropagation(); close() }}
                 onPointerDown={(e) => e.stopPropagation()}
                 className="text-white/80 hover:text-white"
                 aria-label="Close"
@@ -612,7 +617,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   return (
     <div className="flex fixed inset-0 z-50 items-center justify-center">
       {/* Dark backdrop */}
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70" onClick={close} />
 
       {/* Left arrow */}
       <button
@@ -671,7 +676,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
               </div>
             )}
             <button
-              onClick={onClose}
+              onClick={close}
               className="text-bark-muted hover:text-bark p-1"
               aria-label="Close"
             >
