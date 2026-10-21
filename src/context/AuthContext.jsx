@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback } 
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   updateProfile, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
-  signInWithCustomToken,
+  signInWithCustomToken, sendPasswordResetEmail,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
@@ -287,6 +287,29 @@ export function AuthProvider({ children }) {
     }
   }, [resolveFamilyId])
 
+  // "Forgot password" for admins. Firebase sends the mail and its own page sets
+  // the new password, so the reset link never passes through this app. Nothing
+  // else changes with the password: the family key is stored in the family
+  // document, not derived from it, and Firebase ends the account's other
+  // sessions once the password is changed.
+  //
+  // The answer must not tell a stranger whether an account exists. Firebase
+  // says so only with auth/user-not-found, and only where the project's email
+  // enumeration protection is off, so that code reads as success here, and the
+  // page shows the same neutral line for both. Errors that do not depend on
+  // the account (a malformed address, the throttle, no network) still throw.
+  const sendAdminPasswordReset = useCallback(async (email, language) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    // The language of the email, from the templates set in the Firebase console.
+    if (language) auth.languageCode = language
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (err) {
+      if (err?.code === 'auth/user-not-found') return
+      throw err
+    }
+  }, [])
+
   const signup = useCallback(async (email, password, displayName, familyName) => {
     if (!auth || !db) throw new Error('Firebase not configured — add env vars and reload')
 
@@ -401,6 +424,7 @@ export function AuthProvider({ children }) {
     firebaseReady,
     loginAsViewer,
     loginAsAdmin,
+    sendAdminPasswordReset,
     signup,
     logout,
     setActiveFamilyId,
@@ -409,7 +433,7 @@ export function AuthProvider({ children }) {
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
     memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
-    loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
+    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, signup, logout, setActiveFamilyId,
     stayLoggedIn, setStayLoggedIn,
   ])
 
