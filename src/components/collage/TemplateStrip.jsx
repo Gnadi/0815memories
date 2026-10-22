@@ -12,6 +12,11 @@ import CollagePreview from './CollagePreview'
  * own ratio. Sizing it the other way round — a fixed width, height following —
  * let the one 9:16 template set the height of the whole row and stole space
  * from the canvas above, while leaving the common 4:5 thumbnails small.
+ *
+ * Each thumbnail is `relative` so its absolutely positioned sr-only label stays
+ * inside the scrolling row. Without it the labels of the off-screen templates
+ * stretched the page to ~1400px on a phone, the browser widened its layout
+ * viewport to fit, and fixed dialogs (the memory form) centred off-screen.
  */
 export default function TemplateStrip({ activeTemplateId, photos = [], onSelect }) {
   const { t } = useTranslation('collage')
@@ -34,7 +39,7 @@ export default function TemplateStrip({ activeTemplateId, photos = [], onSelect 
             type="button"
             aria-pressed={active}
             onClick={() => onSelect?.(template.id)}
-            className={`flex-shrink-0 h-28 sm:h-32 transition-transform active:scale-95 ${active ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}
+            className={`relative flex-shrink-0 h-28 sm:h-32 transition-transform active:scale-95 ${active ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}
           >
             {/* With the caption gone, the ring is the only selection signal. */}
             <CollagePreview

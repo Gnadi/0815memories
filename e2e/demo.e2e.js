@@ -110,3 +110,24 @@ test('server-only features say so, and leaving the demo ends it', async ({ page 
   await page.goto('/home')
   await expect(page).toHaveURL(/\/$/)
 })
+
+test.describe('on a phone', () => {
+  // isMobile matters: only a mobile browser widens its layout viewport to fit
+  // content that overflows the page, which is what hid the memory form.
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('a collage turned into a memory opens its form on screen', async ({ page }) => {
+    const { errors } = watch(page)
+    await openDemo(page)
+    await page.goto('/collage/demo-collage-1')
+    await expect(page.getByRole('button', { name: 'More options' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+
+    await page.getByRole('button', { name: 'More options' }).click()
+    await page.getByRole('button', { name: 'Create memory' }).click()
+    const heading = page.getByRole('heading', { name: 'Post a Memory' })
+    await expect(heading).toBeInViewport()
+    expect(await page.evaluate(() => window.innerWidth)).toBe(390)
+    expect(errors).toEqual([])
+  })
+})
