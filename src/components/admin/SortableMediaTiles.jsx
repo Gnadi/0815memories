@@ -9,7 +9,9 @@ import { useSortableMedia, stopDrag } from './useSortableMedia'
 // long-press menu from hijacking the gesture meant for reordering.
 function Preview({ item, kind }) {
   const className = 'w-20 h-20 rounded-xl object-cover pointer-events-none'
-  const local = item.preview?.startsWith('blob:')
+  // A photo still being made has no preview yet; its tile only shows the spinner.
+  if (!item.preview) return <div className={`${className} bg-cream-dark`} />
+  const local = item.preview.startsWith('blob:')
   if (kind === 'video') {
     return local ? (
       <video src={item.preview} className={`${className} bg-black`} muted playsInline />

@@ -89,6 +89,55 @@ describe('useMediaUploader', () => {
     expect(result.current.imageError).toMatch(/upload failed/i)
   })
 
+  it('shows a tile for a file still being made, and uploads it once it arrives', async () => {
+    encryptAndUploadWithThumb.mockResolvedValue({ url: 'https://cdn/collage.enc', publicId: 'pub-c' })
+    const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+    let finish
+    const pending = new Promise((resolve) => { finish = resolve })
+
+    let added
+    act(() => { added = result.current.addImage(pending) })
+
+    expect(result.current.images).toHaveLength(1)
+    expect(result.current.images[0]).toMatchObject({ preview: '', url: '', uploading: true })
+    expect(result.current.hasUploading).toBe(true)
+    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
+
+    await act(async () => {
+      finish(makeFile('collage.jpg'))
+      await added
+    })
+
+    expect(result.current.images).toHaveLength(1)
+    expect(result.current.images[0]).toMatchObject({ url: 'https://cdn/collage.enc', uploading: false })
+    expect(result.current.images[0].preview).toMatch(/^blob:/)
+  })
+
+  it('drops the tile and says so when the file cannot be made', async () => {
+    const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+
+    await act(async () => {
+      await result.current.addImage(Promise.reject(new Error('render failed')))
+    })
+
+    expect(result.current.images).toEqual([])
+    expect(result.current.imageError).toMatch(/upload failed/i)
+    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
+  })
+
+  it('does not upload a file that arrives after the form has closed', async () => {
+    const { result, unmount } = renderHook(() => useMediaUploader({ fakeKey: true }))
+    let finish
+    let added
+    act(() => { added = result.current.addImage(new Promise((resolve) => { finish = resolve })) })
+
+    unmount()
+    finish(makeFile('collage.jpg'))
+
+    expect(await added).toBe(null)
+    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
+  })
+
   it('returns null and does nothing when given no file', async () => {
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 

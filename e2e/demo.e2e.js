@@ -128,6 +128,8 @@ test.describe('on a phone', () => {
     const heading = page.getByRole('heading', { name: 'Post a Memory' })
     await expect(heading).toBeInViewport()
     expect(await page.evaluate(() => window.innerWidth)).toBe(390)
+    // The form opens before the collage is rendered; the photo follows.
+    await expect(page.locator('img[src^="blob:"]').first()).toBeVisible()
     expect(errors).toEqual([])
   })
 })

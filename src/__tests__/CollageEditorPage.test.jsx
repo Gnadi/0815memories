@@ -41,18 +41,23 @@ vi.mock('../utils/collageRenderer', async (importOriginal) => ({
 }))
 
 // The real form uploads and encrypts; here it only has to show what it was
-// handed and pass a memory back through onSave.
+// handed and pass a memory back through onSave. The editor hands over the
+// rendered collage as a Promise, so the form can open before it is ready;
+// tests read it from `memoryModal.initialFiles`.
+const memoryModal = vi.hoisted(() => ({ initialFiles: null }))
 vi.mock('../components/admin/PostMemoryModal', () => ({
-  default: ({ defaults, initialFiles, onSave, onClose }) => (
-    <div role="dialog">
-      <span>{defaults?.title}</span>
-      <span>{defaults?.category}</span>
-      <span>{initialFiles?.map((f) => f.name).join(',')}</span>
-      <button onClick={async () => { await onSave({ title: defaults.title, images: ['collage.enc'] }); onClose() }}>
-        Post memory
-      </button>
-    </div>
-  ),
+  default: ({ defaults, initialFiles, onSave, onClose }) => {
+    memoryModal.initialFiles = initialFiles
+    return (
+      <div role="dialog">
+        <span>{defaults?.title}</span>
+        <span>{defaults?.category}</span>
+        <button onClick={async () => { await onSave({ title: defaults.title, images: ['collage.enc'] }); onClose() }}>
+          Post memory
+        </button>
+      </div>
+    )
+  },
 }))
 
 vi.mock('../hooks/useMemoryPhotos', () => ({
@@ -210,8 +215,9 @@ describe('CollageEditorPage', () => {
 
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('Summer wall')
-    expect(dialog).toHaveTextContent('collage.jpg')
-    // The pending edit is written first, so the memory matches the saved collage.
+    const [file] = await Promise.all(memoryModal.initialFiles)
+    expect(file.name).toBe('collage.jpg')
+    // The pending edit is written too, so the memory matches the saved collage.
     expect(mockUpdateCollage).toHaveBeenCalled()
     expect(mockExportCollage.mock.calls[0][0].slots[0].url).toBe('beach.enc')
 
@@ -220,6 +226,25 @@ describe('CollageEditorPage', () => {
       expect.objectContaining({ title: 'Summer wall', images: ['collage.enc'] })
     ))
     expect(mockNavigate).toHaveBeenCalledWith('/home')
+  })
+
+  it('opens the memory form before the collage has finished rendering', async () => {
+    const user = userEvent.setup()
+    let finishRender
+    mockExportCollage.mockReturnValue(new Promise((resolve) => { finishRender = resolve }))
+    await renderEditor('mint-four')
+
+    await user.click(screen.getAllByLabelText('Add a photo here')[0])
+    await user.click(screen.getByTitle('Beach day'))
+    await user.click(screen.getByLabelText('More options'))
+    await user.click(screen.getByText('Create memory'))
+
+    // The form is up while the render is still running.
+    await screen.findByRole('dialog')
+    await waitFor(() => expect(mockExportCollage).toHaveBeenCalled())
+    finishRender(new Blob(['jpg'], { type: 'image/jpeg' }))
+    const [file] = await Promise.all(memoryModal.initialFiles)
+    expect(file.name).toBe('collage.jpg')
   })
 
   it('does not offer a memory for an empty collage', async () => {

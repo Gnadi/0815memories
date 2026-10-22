@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import {
@@ -70,11 +70,42 @@ export function useMediaUploader(encryptionKey, {
   const [videoError, setVideoError] = useState('')
   const [imageError, setImageError] = useState('')
 
-  const addImage = useCallback(async (file) => {
-    if (!file) return null
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  // `source` is a File, or a Promise of one that is still being made (the
+  // collage editor's render). A pending file gets its tile, spinner and all,
+  // straight away, so the form can open while the image is produced.
+  const addImage = useCallback(async (source) => {
+    if (!source) return null
     setImageError('')
 
+    let file = source
+    let tempId = null
+    if (typeof source.then === 'function') {
+      tempId = generateId()
+      setImages((prev) => [...prev, { id: tempId, preview: '', url: '', uploading: true }])
+      try {
+        file = await source
+      } catch (err) {
+        devError('Image could not be prepared:', err)
+        file = null
+        setImageError(t('upload.failed'))
+      }
+      // A form closed while the file was being made must not upload it after
+      // all: nobody would ever save the result.
+      if (!mountedRef.current) return null
+      if (!file) {
+        setImages((prev) => prev.filter((img) => img.id !== tempId))
+        return null
+      }
+    }
+
     if (file.size > MAX_PLAINTEXT_BYTES) {
+      if (tempId) setImages((prev) => prev.filter((img) => img.id !== tempId))
       setImageError(
         t('upload.tooLarge', {
           size: formatBytes(file.size),
@@ -85,8 +116,12 @@ export function useMediaUploader(encryptionKey, {
     }
 
     const preview = URL.createObjectURL(file)
-    const tempId = generateId()
-    setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+    if (tempId) {
+      setImages((prev) => prev.map((img) => (img.id === tempId ? { ...img, preview } : img)))
+    } else {
+      tempId = generateId()
+      setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])
+    }
 
     try {
       // Images get a second, downscaled encrypted asset so grids and story

@@ -70,7 +70,9 @@ function buildInitialVideos(memory) {
 /**
  * `memory` edits an existing memory. For a new one, `defaults` pre-fills the
  * form fields and `initialFiles` are uploaded as photos on open — the same path
- * as picking them by hand, so they get thumbnails and blur-up previews too.
+ * as picking them by hand, so they get thumbnails and blur-up previews too. An
+ * entry may be a Promise of a File still being made; its tile shows a spinner
+ * until it arrives, so the form need not wait for it to open.
  *
  * `draft` is a plaintext, document-shaped pre-fill, media included, handed over
  * by the moment modal's type switch. `onSwitchType`, when given, shows the
