@@ -21,10 +21,37 @@ import { encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { devError } from '../utils/devLog'
 
 // Lazy: the memory form (and its rich-text editor) is only needed once the
-// user asks to turn the collage into a memory.
-const PostMemoryModal = lazy(() => import('../components/admin/PostMemoryModal'))
+// user asks to turn the collage into a memory. The tap starts the download
+// itself, alongside the render, rather than leaving it to the first render of
+// the modal. One shared promise, so the tap and lazy() wait on the same load.
+let postMemoryModalLoad = null
+const loadPostMemoryModal = () => {
+  // A failed download is forgotten, so the next tap tries again.
+  postMemoryModalLoad ??= import('../components/admin/PostMemoryModal')
+    .catch((err) => { postMemoryModalLoad = null; throw err })
+  return postMemoryModalLoad
+}
+const PostMemoryModal = lazy(loadPostMemoryModal)
 
 const MAX_HISTORY = 20
+
+// Resolves after the browser has painted the frame React is about to commit.
+const afterNextPaint = () => new Promise((resolve) => {
+  requestAnimationFrame(() => setTimeout(resolve, 0))
+})
+
+// Shown while the memory form's code is still downloading, so the tap on
+// "Create memory" answers at once even on a slow connection.
+function PreparingMemory({ label }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="status">
+      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-warm-white text-bark text-sm font-medium shadow-xl">
+        <Loader2 className="w-5 h-5 animate-spin text-kaydo" />
+        {label}
+      </div>
+    </div>
+  )
+}
 
 function reducer(state, action) {
   const withHistory = (doc) => ({
@@ -119,7 +146,7 @@ export default function CollageEditorPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [saveStatus, setSaveStatus] = useState('idle')
-  const [busy, setBusy] = useState(null) // 'export' | 'share' | 'memory'
+  const [busy, setBusy] = useState(null) // 'export' | 'share'
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('templates')
   const [selectedSlotId, setSelectedSlotId] = useState(null)
@@ -292,21 +319,26 @@ export default function CollageEditorPage() {
 
   // Renders the collage and opens the full memory form with it as the photo, so
   // a description, date, place and more photos can be added before posting.
-  const handleCreateMemory = async () => {
+  // The form opens at once and the rendered collage drops into it when ready.
+  // Waiting for the render first left a phone showing nothing for a second or
+  // two: it is a full-size JPEG encode on the main thread, and the form's code
+  // only started downloading after it. The save runs alongside too; the render
+  // reads the same `doc` it writes, so the memory still matches the collage.
+  const handleCreateMemory = () => {
     setMenuOpen(false)
     if (filledCount === 0) { setError(t('errors.needPhoto')); return }
-    setBusy('memory')
     setError(null)
-    try {
-      await flushSave()
-      const blob = await exportCollage(doc, encryptionKey, { width: 1600 })
-      setMemoryFile(new File([blob], 'collage.jpg', { type: blob.type }))
-    } catch (err) {
-      devError('Collage export for memory failed', err)
-      setError(t('errors.exportFailed'))
-    } finally {
-      setBusy(null)
-    }
+    flushSave()
+    // The render starts once the form is on screen: drawing the canvas blocks
+    // the main thread, and run first it held the form back by just as long.
+    const file = loadPostMemoryModal()
+      .catch(() => {})
+      .then(afterNextPaint)
+      .then(() => exportCollage(doc, encryptionKey, { width: 1600 }))
+      .then((blob) => new File([blob], 'collage.jpg', { type: blob.type }))
+    // The form reports a failed render on its photo tile.
+    file.catch((err) => devError('Collage export for memory failed', err))
+    setMemoryFile(file)
   }
 
   const handleSaveMemory = async (data) => {
@@ -411,7 +443,7 @@ export default function CollageEditorPage() {
                 disabled={busy != null || filledCount === 0}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-bark hover:bg-cream disabled:opacity-50"
               >
-                {busy === 'memory' ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookHeart className="w-4 h-4" />}
+                <BookHeart className="w-4 h-4" />
                 {t('editor.createMemory')}
               </button>
               <button
@@ -525,7 +557,7 @@ export default function CollageEditorPage() {
       </div>
 
       {memoryFile && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<PreparingMemory label={t('editor.preparingMemory')} />}>
           <PostMemoryModal
             defaults={{ title: title || t('defaultTitle'), category: 'collage' }}
             initialFiles={[memoryFile]}
