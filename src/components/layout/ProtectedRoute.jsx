@@ -10,7 +10,7 @@ import FamilyKeyError from './FamilyKeyError'
  *   effect for exactly this; those stay as belt-and-braces.
  */
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, loading, familyId, keyLoading, keyError, isAdmin } = useAuth()
+  const { isAuthenticated, loading, familyId, keyLoading, keyError, isAdmin, isViewer } = useAuth()
 
   // The key will not come. The app used to open without it, and then wrote
   // family content in plaintext.
@@ -32,6 +32,13 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />
+  }
+
+  // An account no family lists: a signup that stopped before the address was
+  // confirmed, or an admin another admin removed. /signup finishes it. A
+  // viewer always has a family — their token names it.
+  if (!familyId && !isViewer) {
+    return <Navigate to="/signup" replace />
   }
 
   // Home, rather than the landing page: a viewer is signed in and belongs here,

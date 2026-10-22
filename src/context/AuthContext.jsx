@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback } 
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   updateProfile, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
-  signInWithCustomToken,
+  signInWithCustomToken, sendPasswordResetEmail, sendEmailVerification,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
@@ -44,6 +44,10 @@ function userFacingError(message) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null) // Firebase user — admin *or* viewer
+  // Whether the admin's email address is confirmed. Kept apart from `user`:
+  // Firebase updates the same User object in place when it learns of the
+  // confirmation, which React would not see.
+  const [emailVerified, setEmailVerified] = useState(false)
   // The role comes from the ID token, never from the client.
   //
   // This used to be `isAdmin = !!user`, which was correct only while viewers
@@ -150,6 +154,7 @@ export function AuthProvider({ children }) {
         .then((session) => {
           if (cancelled) return
           setUser(session.user)
+          setEmailVerified(true)
           setRole('admin')
           setFamilyId(session.familyId)
         })
@@ -169,6 +174,7 @@ export function AuthProvider({ children }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
+      setEmailVerified(!!firebaseUser?.emailVerified)
       try {
         const claimFamily = await applyClaims(firebaseUser)
         // Admins from before the claim migration have no familyId in their token.
@@ -277,27 +283,57 @@ export function AuthProvider({ children }) {
       .getIdTokenResult()
       .then(({ claims }) => (typeof claims?.familyId === 'string' ? claims.familyId : null))
       .catch(() => null)
-    const resolved = await resolveFamilyId(result.user.uid, claimFamily)
-    if (!resolved) {
-      // The Firebase Auth account exists but no family lists this UID — most
-      // likely because the user was removed by another admin. Sign them back
-      // out so they don't sit in a half-authed state.
-      await signOut(auth)
-      throw new Error('This account is no longer associated with any family. Ask a family admin for a new invite link.')
-    }
+    // No family lists this account: its signup stopped before the address was
+    // confirmed, or another admin removed it. It stays signed in, and
+    // ProtectedRoute sends it to /signup to confirm the address and found a
+    // family. Signing it out, as this used to, left an account whose address
+    // was taken and that could never be finished.
+    await resolveFamilyId(result.user.uid, claimFamily)
   }, [resolveFamilyId])
 
-  const signup = useCallback(async (email, password, displayName, familyName) => {
+  // "Forgot password" for admins. Firebase sends the mail and its own page sets
+  // the new password, so the reset link never passes through this app. Nothing
+  // else changes with the password: the family key is stored in the family
+  // document, not derived from it, and Firebase ends the account's other
+  // sessions once the password is changed.
+  //
+  // The answer must not tell a stranger whether an account exists. Firebase
+  // says so only with auth/user-not-found, and only where the project's email
+  // enumeration protection is off, so that code reads as success here, and the
+  // page shows the same neutral line for both. Errors that do not depend on
+  // the account (a malformed address, the throttle, no network) still throw.
+  const sendAdminPasswordReset = useCallback(async (email, language) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    // The language of the email, from the templates set in the Firebase console.
+    if (language) auth.languageCode = language
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (err) {
+      if (err?.code === 'auth/user-not-found') return
+      throw err
+    }
+  }, [])
+
+  // Creating an admin account is two steps with the mailbox in between.
+  //
+  // A password reset goes to the address the account was registered with, so
+  // an account whose address nobody confirmed belongs to whoever reads that
+  // mailbox. firestore.rules therefore lets an account found a family, or
+  // redeem an invite, only once Firebase has confirmed its address. signup()
+  // creates the account and sends the confirmation mail; createOwnFamily()
+  // founds the family once the address is confirmed.
+  const signup = useCallback(async (email, password, displayName, familyName, language) => {
     if (!auth || !db) throw new Error('Firebase not configured — add env vars and reload')
 
-    const name = familyName || displayName + "'s Family"
-    const slug = generateSlug(name)
-    if (!slug) throw new Error('Family name produces an invalid URL — please use letters or numbers')
+    // Checked now as well as when the family is founded, so a taken name is
+    // reported before an account exists.
+    if (familyName) {
+      const slug = generateSlug(familyName)
+      if (!slug) throw new Error('Family name produces an invalid URL — please use letters or numbers')
+      if (!(await isSlugAvailable(slug))) throw new Error('This family name is already taken — please choose another')
+    }
 
-    const available = await isSlugAvailable(slug)
-    if (!available) throw new Error('This family name is already taken — please choose another')
-
-    // A brand-new family is always remembered; clears any session-only marker
+    // A brand-new account is always remembered; clears any session-only marker
     // left in this window by an earlier login.
     setSessionOnly(false)
     setStayLoggedInState(true)
@@ -309,22 +345,86 @@ export function AuthProvider({ children }) {
 
     const result = await createUserWithEmailAndPassword(auth, email, password)
     if (displayName) {
-      await updateProfile(result.user, { displayName })
+      await updateProfile(result.user, { displayName }).catch((err) => devWarn('Could not set the name:', err))
     }
+    setEmailVerified(false)
+    if (language) auth.languageCode = language
+    await sendEmailVerification(result.user)
+  }, [])
+
+  const sendVerificationEmail = useCallback(async (language) => {
+    const current = auth?.currentUser
+    if (!current) throw new Error('Not signed in')
+    if (language) auth.languageCode = language
+    await sendEmailVerification(current)
+  }, [])
+
+  // Asks Firebase whether the address has been confirmed since, and if so
+  // fetches a fresh ID token: the rules read `email_verified` from the token,
+  // and the one the session holds was issued before the confirmation.
+  const checkEmailVerified = useCallback(async () => {
+    const current = auth?.currentUser
+    if (!current) return false
+    await current.reload()
+    const verified = !!auth.currentUser?.emailVerified
+    if (verified) await auth.currentUser.getIdToken(true)
+    setEmailVerified(verified)
+    return verified
+  }, [])
+
+  // The second step of signup(), for a signed-in account that belongs to no
+  // family yet.
+  const createOwnFamily = useCallback(async (familyName) => {
+    const current = auth?.currentUser
+    if (!current || !db) throw new Error('Not signed in')
+    if (!(await checkEmailVerified())) {
+      const err = new Error('The email address is not confirmed yet')
+      err.code = 'email-not-verified'
+      throw err
+    }
+
+    // ProtectedRoute also sends an admin here whose family lookup failed, say
+    // offline on a new device. Such an account is bound to its family again
+    // rather than handed a second one.
+    if (await resolveFamilyId(current.uid)) return
+
+    const name = familyName || (current.displayName ? current.displayName + "'s Family" : '')
+    const slug = generateSlug(name)
+    if (!slug) throw new Error('Family name produces an invalid URL — please use letters or numbers')
+
+    const available = await isSlugAvailable(slug)
+    if (!available) throw new Error('This family name is already taken — please choose another')
 
     // Generate a per-family encryption key
     const { key, jwk } = await generateEncryptionKey()
 
     // Create the family document with the encryption key
-    const newFamilyId = await createFamily({ uid: result.user.uid, name, slug, encryptionKeyJwk: jwk })
+    const newFamilyId = await createFamily({ uid: current.uid, name, slug, encryptionKeyJwk: jwk })
     // The key was just generated here, so there is nothing to load.
     adoptKey(newFamilyId, key)
     setFamilyId(newFamilyId)
     writeStored('fh_familyId', newFamilyId)
     // Not awaited: the app is usable immediately via the adminUids rule path,
     // and the claim only has to arrive before that path is retired.
-    pollForFamilyClaim(result.user)
-  }, [pollForFamilyClaim, adoptKey])
+    pollForFamilyClaim(current)
+  }, [checkEmailVerified, resolveFamilyId, pollForFamilyClaim, adoptKey])
+
+  // "Wrong address": deletes an account that belongs to no family yet, so the
+  // address can be typed again. Nothing is lost — there is no family to lose.
+  // Firebase refuses to delete an account signed in long ago; signing out is
+  // the fallback, and such an account can still be finished later.
+  const discardNewAccount = useCallback(async () => {
+    const current = auth?.currentUser
+    if (!current || familyId) return
+    try {
+      await current.delete()
+    } catch (err) {
+      devWarn('Could not delete the unfinished account:', err?.code)
+      await signOut(auth)
+    }
+    setRole(null)
+    clearStoredSession()
+  }, [familyId])
 
   // "Stay logged in", changed from the settings for the session already open.
   // setPersistence on a signed-in user moves the user to the new store, so the
@@ -401,7 +501,13 @@ export function AuthProvider({ children }) {
     firebaseReady,
     loginAsViewer,
     loginAsAdmin,
+    sendAdminPasswordReset,
     signup,
+    emailVerified,
+    sendVerificationEmail,
+    checkEmailVerified,
+    createOwnFamily,
+    discardNewAccount,
     logout,
     setActiveFamilyId,
     stayLoggedIn,
@@ -409,7 +515,9 @@ export function AuthProvider({ children }) {
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
     memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
-    loginAsViewer, loginAsAdmin, signup, logout, setActiveFamilyId,
+    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, signup, emailVerified,
+    sendVerificationEmail, checkEmailVerified, createOwnFamily, discardNewAccount,
+    logout, setActiveFamilyId,
     stayLoggedIn, setStayLoggedIn,
   ])
 

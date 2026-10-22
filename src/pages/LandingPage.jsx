@@ -985,7 +985,7 @@ export default function LandingPage({ lng }) {
  * without leaving the landing page.
  */
 function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng }) {
-  const { t } = useTranslation('landing', { lng })
+  const { t, i18n } = useTranslation('landing', { lng })
   const [familyName, setFamilyName] = useState('')
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [status, setStatus] = useState('idle')
@@ -1035,8 +1035,9 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng
 
     setSubmitting(true)
     try {
-      await signup(email, password, displayName, familyName)
-      navigate('/home')
+      await signup(email, password, displayName, familyName, lng || i18n.resolvedLanguage)
+      // The family is founded once the address is confirmed, on /signup.
+      navigate('/signup', { state: { familyName } })
     } catch (err) {
       const messages = {
         'auth/email-already-in-use': t('claim.errors.emailInUse'),

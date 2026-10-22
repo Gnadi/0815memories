@@ -10,7 +10,7 @@
    drift apart again. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
 
 const auth = { isAdmin: true, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1' }
@@ -28,7 +28,7 @@ function renderSidebar() {
 beforeEach(() => {
   cleanup()
   Object.assign(auth, {
-    isAdmin: true, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1',
+    isAdmin: true, isViewer: false, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1',
   })
 })
 
@@ -181,5 +181,31 @@ describe('the route table agrees with the rules', () => {
     for (const path of ['home', 'timeline', 'moments', 'settings']) {
       expect(app).toContain(`path: '${path}', element: protect(`)
     }
+  })
+})
+
+// An admin account that no family lists — a signup that stopped before the
+// email address was confirmed, or an admin another admin removed — finishes on
+// /signup instead of opening an app with no family behind it.
+describe('ProtectedRoute for an account without a family', () => {
+  const renderAt = () => render(
+    <MemoryRouter initialEntries={['/home']}>
+      <Routes>
+        <Route path="/home" element={<ProtectedRoute><div>the app</div></ProtectedRoute>} />
+        <Route path="/signup" element={<div>finish signing up</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  it('sends it to /signup', () => {
+    auth.familyId = null
+    renderAt()
+    expect(screen.getByText('finish signing up')).toBeInTheDocument()
+    expect(screen.queryByText('the app')).not.toBeInTheDocument()
+  })
+
+  it('lets a member of a family in', () => {
+    renderAt()
+    expect(screen.getByText('the app')).toBeInTheDocument()
   })
 })

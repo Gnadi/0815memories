@@ -1,5 +1,6 @@
 import { useTranslation, Trans } from 'react-i18next'
 import { Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
+import PasswordResetForm from './PasswordResetForm'
 
 export function SetupBanner() {
   const { t } = useTranslation('auth')
@@ -22,12 +23,21 @@ export default function LoginForm({
   showAdminLogin, email, setEmail, password, setPassword,
   showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
   error, loading, handleSubmit, tone = 'light', autoFocusPassword = false,
+  resetOpen = false, setResetOpen,
 }) {
   const { t } = useTranslation('auth')
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
   const subtleClass = tone === 'dark' ? 'text-cream/80' : 'text-bark-light'
+  const linkClass = tone === 'dark' ? 'text-cream/70 hover:text-cream' : 'text-bark-muted hover:text-kaydo'
+
+  // Only admins have an account whose password can be reset; the family's
+  // shared password is changed by an admin in the settings.
+  if (showAdminLogin && resetOpen) {
+    return <PasswordResetForm initialEmail={email} onBack={() => setResetOpen(false)} tone={tone} />
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Admin email field */}
@@ -77,7 +87,7 @@ export default function LoginForm({
       </div>
 
       {/* Stay logged in */}
-      <div className="flex items-center">
+      <div className="flex items-center justify-between gap-3">
         <label className={`flex items-center gap-2 text-sm ${subtleClass} cursor-pointer`}>
           <input
             type="checkbox"
@@ -87,6 +97,15 @@ export default function LoginForm({
           />
           {t('login.form.stayLoggedIn')}
         </label>
+        {showAdminLogin && setResetOpen && (
+          <button
+            type="button"
+            onClick={() => setResetOpen(true)}
+            className={`text-sm transition-colors ${linkClass}`}
+          >
+            {t('login.form.forgotPassword')}
+          </button>
+        )}
       </div>
 
       {/* Error message */}

@@ -56,5 +56,16 @@
     "back": "Zurück",
     "empty": "Noch keine Momente"
   },
-  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?",
+  "verifyEmail": {
+    "title": "Bitte bestätige deine E-Mail-Adresse",
+    "body": "Ein Passwort-Reset für dein Konto geht an {{email}}. Bestätige, dass diese Adresse dir gehört, damit nur du dein Passwort zurücksetzen kannst.",
+    "send": "Bestätigungsmail senden",
+    "resend": "Erneut senden",
+    "confirmed": "Ich habe bestätigt",
+    "sent": "An {{email}} gesendet. Öffne den Link in der E-Mail und tippe dann auf „Ich habe bestätigt“.",
+    "notYet": "Noch nicht bestätigt. Öffne den Link in der E-Mail und versuch es dann noch einmal.",
+    "tooManyRequests": "Zu viele E-Mails – bitte warte ein paar Minuten und versuch es erneut",
+    "failed": "Etwas ist schiefgelaufen. Bitte versuch es erneut."
+  }
 }

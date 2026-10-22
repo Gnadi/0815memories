@@ -57,6 +57,20 @@ service cloud.firestore {
       return isFamilyViewer(familyId) || isFamilyAdmin(familyId);
     }
 
+    // Does the caller own the address their account is registered with?
+    //
+    // A password reset goes to that address, so whoever reads its mail can take
+    // the account over. Without this check, an admin who signed up with a typo,
+    // or with someone else's address, handed a family — key included — to
+    // whoever owns that address. So an account becomes an admin only once its
+    // address is confirmed: when it founds a family, and when it redeems an
+    // invite. Admins from before this check keep their access; the app asks
+    // them to confirm.
+    function hasVerifiedEmail() {
+      return request.auth != null
+          && request.auth.token.get('email_verified', false) == true;
+    }
+
     // Has this capsule's unlock date arrived?
     //
     // Read from the capsule's own metadata document rather than duplicated onto
@@ -159,6 +173,7 @@ service cloud.firestore {
                         || resource.data.adminUid == request.auth.uid);
       allow create: if request.auth != null
                     && tokenRole() != 'viewer'
+                    && hasVerifiedEmail()
                     && request.resource.data.adminUid == request.auth.uid
                     && (!('adminUids' in request.resource.data)
                         || request.resource.data.adminUids == [request.auth.uid])
@@ -190,7 +205,8 @@ service cloud.firestore {
                       // accepting that let a removed admin whose old document was
                       // recreated from the spent invite walk straight back in.
                       || (
-                        !(request.auth.uid in resource.data.get('adminUids', [resource.data.adminUid]))
+                        hasVerifiedEmail()
+                        && !(request.auth.uid in resource.data.get('adminUids', [resource.data.adminUid]))
                         && request.auth.uid in request.resource.data.adminUids
                         && request.resource.data.adminUids.size() == resource.data.get('adminUids', [resource.data.adminUid]).size() + 1
                         && request.resource.data.adminUids.hasAll(resource.data.get('adminUids', [resource.data.adminUid]))
@@ -248,6 +264,7 @@ service cloud.firestore {
       // and is used by this caller after it, and only while joining adminUids.
       allow create: if request.auth != null
                     && tokenRole() != 'viewer'
+                    && hasVerifiedEmail()
                     && request.auth.uid == uid
                     && request.resource.data.viaInvite is string
                     && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == false
@@ -286,6 +303,7 @@ service cloud.firestore {
       // createdBy / expiresAt.
       allow update: if request.auth != null
                     && tokenRole() != 'viewer'
+                    && hasVerifiedEmail()
                     && resource.data.used == false
                     && resource.data.expiresAt > request.time
                     && request.resource.data.used == true

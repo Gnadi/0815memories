@@ -68,6 +68,101 @@ test('a wrong password keeps the admin on the login page', async ({ page }) => {
   await expect(page).toHaveURL(/\/login/)
 })
 
+// The whole reset, against the Auth emulator: the login page asks for the mail,
+// the emulator keeps the link it would send, and the new password replaces the
+// old one. A throwaway account, so the seeded admin keeps its password for the
+// other tests.
+const AUTH_EMULATOR = 'http://127.0.0.1:9099'
+const identityToolkit = (method) =>
+  `${AUTH_EMULATOR}/identitytoolkit.googleapis.com/v1/accounts:${method}?key=demo-api-key`
+
+test('an admin resets a forgotten password', async ({ page, request }) => {
+  const errors = collectErrors(page)
+  const email = `reset-${Date.now()}@example.com`
+  const signUp = await request.post(identityToolkit('signUp'), {
+    data: { email, password: 'the-old-password', returnSecureToken: true },
+  })
+  expect(signUp.ok()).toBe(true)
+
+  await page.goto('/login?admin=1')
+  await visible(page, 'input[type="email"]').fill(email)
+  await page.getByRole('button', { name: 'Forgot password?' }).filter({ visible: true }).click()
+  await expect(visible(page, 'input[type="email"]')).toHaveValue(email)
+  await page.getByRole('button', { name: 'Send reset link' }).filter({ visible: true }).click()
+  await expect(page.getByRole('status').filter({ visible: true })).toContainText(email)
+
+  const listed = await request.get(`${AUTH_EMULATOR}/emulator/v1/projects/demo-kaydo/oobCodes`)
+  const code = (await listed.json()).oobCodes
+    .find((c) => c.email === email && c.requestType === 'PASSWORD_RESET')
+  expect(code).toBeTruthy()
+
+  const reset = await request.post(identityToolkit('resetPassword'), {
+    data: { oobCode: code.oobCode, newPassword: 'the-new-password' },
+  })
+  expect(reset.ok()).toBe(true)
+
+  const signIn = (password) => request.post(identityToolkit('signInWithPassword'), {
+    data: { email, password, returnSecureToken: true },
+  })
+  expect((await signIn('the-old-password')).ok()).toBe(false)
+  expect((await signIn('the-new-password')).ok()).toBe(true)
+  expect(errors).toEqual([])
+})
+
+// An address without an account is answered like one with an account, and no
+// mail is sent for it.
+test('a password reset does not tell whether an account exists', async ({ page, request }) => {
+  const email = `nobody-${Date.now()}@example.com`
+  await page.goto('/login?admin=1')
+  await visible(page, 'input[type="email"]').fill(email)
+  await page.getByRole('button', { name: 'Forgot password?' }).filter({ visible: true }).click()
+  await page.getByRole('button', { name: 'Send reset link' }).filter({ visible: true }).click()
+  await expect(page.getByRole('status').filter({ visible: true }))
+    .toContainText(`If ${email} belongs to a Kaydo admin account`)
+
+  const listed = await request.get(`${AUTH_EMULATOR}/emulator/v1/projects/demo-kaydo/oobCodes`)
+  expect((await listed.json()).oobCodes.some((c) => c.email === email)).toBe(false)
+})
+
+// A new admin founds a family only once the email address is confirmed: the
+// rules refuse it before, and the app has to fetch a token that says so. The
+// emulator keeps the confirmation link it would have sent.
+test('a new admin confirms the email address before the family is founded', async ({ page, request }) => {
+  const errors = collectErrors(page)
+  const stamp = Date.now()
+  const email = `founder-${stamp}@example.com`
+  const familyName = `The Founders ${stamp}`
+
+  await page.goto('/signup')
+  await visible(page, 'input[placeholder="e.g., Sarah Miller"]').fill('Fran Founder')
+  await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
+  await visible(page, 'input[type="email"]').fill(email)
+  await visible(page, 'input[placeholder="At least 6 characters"]').fill('founder-password')
+  await visible(page, 'input[placeholder="Repeat your password"]').fill('founder-password')
+  await visible(page, 'button[type="submit"]').click()
+
+  await expect(page.getByText('Confirm your email address').filter({ visible: true })).toBeVisible()
+  // Nothing to open before the confirmation: every protected page sends the
+  // account back here.
+  await page.goto('/home')
+  await expect(page).toHaveURL(/\/signup$/)
+  await expect(page.getByText('Confirm your email address').filter({ visible: true })).toBeVisible()
+
+  const listed = await request.get(`${AUTH_EMULATOR}/emulator/v1/projects/demo-kaydo/oobCodes`)
+  const code = (await listed.json()).oobCodes
+    .find((c) => c.email === email && c.requestType === 'VERIFY_EMAIL')
+  expect(code).toBeTruthy()
+  const confirm = await request.post(identityToolkit('update'), { data: { oobCode: code.oobCode } })
+  expect(confirm.ok()).toBe(true)
+
+  await page.getByRole('button', { name: "I've confirmed it" }).filter({ visible: true }).click()
+  // The family name typed before the reload is gone; it is asked again.
+  await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
+  await page.getByRole('button', { name: 'Create family' }).filter({ visible: true }).click()
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 })
+  expect(errors).toEqual([])
+})
+
 // Firebase keeps the session in IndexedDB, per page — so one sign-in, then
 // every section in the same page. The app keeps a Firestore connection open,
 // so the network never goes idle: wait for content, never for 'networkidle'.
