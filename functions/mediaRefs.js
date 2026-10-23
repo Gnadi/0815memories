@@ -12,7 +12,9 @@
  * Only files of the document's own family are touched. A document can name
  * any id it likes; an id whose ledger entry belongs to another family, or that
  * the ledger does not know, is ignored, so one family can neither keep another
- * family's files alive nor let them go.
+ * family's files alive nor let them go. Files from before the ledger are the
+ * exception: the first document to name one creates its entry (phase 5), and
+ * such an entry is never deleted.
  *
  * Nothing here imports firebase-admin or firebase-functions, so the tests can
  * hand in a stand-in for Firestore.
@@ -45,10 +47,32 @@ export const MAX_MEDIA_REFS = 500
 // `kaydo/public/`. Its ledger id is the last segment.
 const PUBLIC_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/([0-9a-f]{32})$/
 
-/** The ledger id of a public id, or null for one the ledger cannot hold. */
-export function ledgerIdOf(publicId) {
-  return typeof publicId === 'string' ? (PUBLIC_ID.exec(publicId)?.[1] ?? null) : null
+// A file from before the ledger, as src/services/mediaRefs.js names it:
+// `legacy:<resourceType>/<publicId>`.
+const LEGACY_REF = /^legacy:(raw|image|video)\/(kaydo\/[A-Za-z0-9_\-./]{1,300})$/
+
+/** The resource type and public id of a file from before the ledger, or null. */
+export function parseLegacyRef(ref) {
+  const match = typeof ref === 'string' ? LEGACY_REF.exec(ref) : null
+  return match ? { resourceType: match[1], publicId: match[2] } : null
 }
+
+/**
+ * The ledger id of a reference, or null for one the ledger cannot hold. A file
+ * from before the ledger gets one made from its resource type and public id,
+ * which may hold slashes a document id cannot.
+ */
+export function ledgerIdOf(ref) {
+  if (typeof ref !== 'string') return null
+  const fresh = PUBLIC_ID.exec(ref)?.[1]
+  if (fresh) return fresh
+  const legacy = parseLegacyRef(ref)
+  return legacy ? `legacy~${legacy.resourceType}~${encodeURIComponent(legacy.publicId)}` : null
+}
+
+/** The reference a ledger entry answers to. */
+const refOfEntry = (entry) =>
+  entry.legacy ? `legacy:${entry.resourceType}/${entry.publicId}` : entry.publicId
 
 /** Every public id in a document's `mediaRefs`, or none if it is malformed. */
 export function refsOf(data) {
@@ -88,14 +112,36 @@ export function refChanges(collection, docId, before, after) {
  * Attach or let go of one file for one document, in a transaction, so two
  * documents changing the same file at once cannot lose a reference.
  *
+ * A file from before the ledger has no entry until a document names it; the
+ * first family to do so gets one, marked `legacy`. Those are counted, never
+ * deleted: nothing proves which family uploaded them, so a family naming a URL
+ * it found elsewhere must not be able to let another family's file go. When
+ * no document holds one any more it becomes `unused`, a state the clean-up
+ * does not look at.
+ *
  * @returns {Promise<'attached'|'detached'|'kept'|'ignored'>}
  */
-async function applyOne(db, now, publicId, familyId, path, attach) {
-  const ref = db.collection(MEDIA_ASSETS).doc(ledgerIdOf(publicId))
+async function applyOne(db, now, mediaRef, familyId, path, attach) {
+  const ref = db.collection(MEDIA_ASSETS).doc(ledgerIdOf(mediaRef))
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref)
     const entry = snap.exists ? snap.data() : null
-    if (!entry || !familyId || entry.familyId !== familyId || entry.publicId !== publicId) return 'ignored'
+    const legacy = parseLegacyRef(mediaRef)
+    if (!entry && legacy && attach && familyId) {
+      tx.set(ref, {
+        familyId,
+        publicId: legacy.publicId,
+        resourceType: legacy.resourceType,
+        kind: 'legacy',
+        legacy: true,
+        state: 'attached',
+        refs: [path],
+        createdAt: new Date(now()),
+        detachedAt: null,
+      })
+      return 'attached'
+    }
+    if (!entry || !familyId || entry.familyId !== familyId || refOfEntry(entry) !== mediaRef) return 'ignored'
 
     const refs = new Set(Array.isArray(entry.refs) ? entry.refs : [])
     if (attach) refs.add(path)
@@ -107,7 +153,7 @@ async function applyOne(db, now, publicId, familyId, path, attach) {
     }
     // A file no document ever held stays pending: it was abandoned, not let go.
     if (entry.state === 'pending') return 'ignored'
-    tx.update(ref, { refs: [], state: 'detached', detachedAt: new Date(now()) })
+    tx.update(ref, { refs: [], state: entry.legacy ? 'unused' : 'detached', detachedAt: new Date(now()) })
     return 'detached'
   })
 }

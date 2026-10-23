@@ -10,8 +10,8 @@
  * Deleting a family's photo cannot be undone, so the rules here lean the other
  * way at every step:
  *
- * - Only files in the ledger are touched. A file the ledger does not know —
- *   everything from before it — is never deleted here.
+ * - Only files signed into the ledger are touched. A file from before it is
+ *   never deleted here, whether or not a document names it.
  * - Each file is checked again, in a transaction, right before it goes. One a
  *   document picked up again since the query is kept.
  * - The grace periods are long: a week for a pending file, because an editor
@@ -48,7 +48,9 @@ const millis = (value) => {
  * query's results and again inside the transaction before each delete.
  */
 export function isDue(entry, now) {
-  if (!entry || (Array.isArray(entry.refs) && entry.refs.length > 0)) return false
+  // A file from before the ledger is never the clean-up's to delete
+  // (functions/mediaRefs.js says why).
+  if (!entry || entry.legacy || (Array.isArray(entry.refs) && entry.refs.length > 0)) return false
   if (entry.state === 'pending') return millis(entry.createdAt) <= now - PENDING_GRACE_DAYS * DAY_MS
   if (entry.state === 'detached') return millis(entry.detachedAt) <= now - DETACHED_GRACE_DAYS * DAY_MS
   return false

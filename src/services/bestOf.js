@@ -41,7 +41,7 @@ const LIST_LIMIT = 24
 
 export const bestOfId = (familyId, month) => `${familyId}_${month}`
 
-async function decryptBestOf(key, data) {
+export async function decryptBestOf(key, data) {
   if (!key) return data
   return { ...data, doc: typeof data.doc === 'string' ? await decryptJSON(key, data.doc) : data.doc }
 }

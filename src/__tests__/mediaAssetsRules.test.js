@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs'
 import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, signUpload } from '../../functions/mediaSigning.js'
 import { recordUpload } from '../../functions/mediaNotification.js'
 import { purgeMedia } from '../../functions/mediaPurge.js'
+import { inventoryLegacyMedia, MEDIA_REPORTS } from '../../functions/mediaInventory.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -132,5 +133,19 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
     const left = (await db.collection(MEDIA_ASSETS).get()).docs.map((d) => d.id).sort()
     expect(left).toEqual(['in-use', 'new-pending'])
     expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 40, files: 2 })
+  })
+
+  it('runs the legacy inventory with real queries, and keeps its report from clients', async () => {
+    const list = async (type) => ({
+      resources: type === 'raw' ? [{ public_id: 'kaydo/encrypted/lost.dat', bytes: 5 }] : [],
+    })
+    const report = await inventoryLegacyMedia({ db, list, now: () => Date.parse('2026-10-26T05:15:00Z') })
+    expect(report).toMatchObject({ files: 1, unclaimed: 1, familiesNotIndexed: 1 })
+
+    const admin = testEnv
+      .authenticatedContext(ADMIN, { familyId: FAMILY, role: 'admin', email_verified: true })
+      .firestore()
+    await assertFails(getDoc(doc(admin, MEDIA_REPORTS, '2026-10-26')))
+    await assertFails(setDoc(doc(admin, MEDIA_REPORTS, 'forged'), { unclaimed: 0 }))
   })
 })

@@ -37,6 +37,7 @@ import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { recordUpload, verifyNotification } from './mediaNotification.js'
 import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
+import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -403,7 +404,7 @@ const MEDIA_PURGE_DRY_RUN = defineBoolean('MEDIA_PURGE_DRY_RUN', {
   description: 'Only report the Cloudinary files the daily clean-up would delete',
 })
 // The account's cloud name, as in the browser's VITE_CLOUDINARY_CLOUD_NAME.
-// Without it the clean-up can only report.
+// Without it the clean-up can only report, and the inventory does not run.
 const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
   default: '',
   description: 'Cloudinary cloud name, for deleting unused files',
@@ -440,6 +441,39 @@ export const purgeUnusedMedia = onSchedule(
     console.log(`[media] purge ${JSON.stringify(counts)}`)
     // Public ids name a family and a random file, nothing of what is in it.
     if (wouldDelete?.length) console.log(`[media] would delete: ${wouldDelete.join(' ')}`)
+  },
+)
+
+/**
+ * Weekly inventory of the files from before the ledger — see
+ * functions/mediaInventory.js. Counts the claimed ones into their families'
+ * usage and reports the unclaimed ones in `mediaReports/<date>` and the log.
+ * Deletes nothing.
+ */
+export const reportLegacyMedia = onSchedule(
+  {
+    schedule: '15 5 * * 1',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no inventory')
+      return
+    }
+    const { unclaimedSample, ...counts } = await inventoryLegacyMedia({
+      db: getFirestore(),
+      list: cloudinaryLister({
+        fetch,
+        cloudName,
+        apiKey: CLOUDINARY_API_KEY.value(),
+        secret: CLOUDINARY_API_SECRET.value(),
+      }),
+    })
+    console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
+    if (unclaimedSample.length) console.log(`[media] unclaimed, for example: ${unclaimedSample.join(' ')}`)
   },
 )
 

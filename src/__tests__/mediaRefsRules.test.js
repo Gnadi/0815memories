@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertSucceeds } from '@firebase/rules-unit-testing'
-import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
@@ -111,5 +111,18 @@ describe.skipIf(!EMULATOR)('media references', () => {
 
     await write('families', FAMILY, (ref) => setDoc(ref, { loginHeaderImage: '', ...mediaRefsForMerge({ loginHeaderImage: '' }) }, { merge: true }))
     expect(await stateOf('a')).toBe('detached')
+  })
+
+  it('takes the whole map the backfill writes, and counts a file from before the ledger', async () => {
+    const legacyUrl = 'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/old1.dat'
+    await db.doc('memories/old').set({ familyId: FAMILY, title: 'Old', images: [legacyUrl] })
+
+    const { mediaRefs } = mediaRefsForCreate({ images: [legacyUrl] })
+    await write('memories', 'old', (ref) => updateDoc(ref, { mediaRefs }))
+    const entry = await read(`${MEDIA_ASSETS}/legacy~raw~kaydo%2Fencrypted%2Fold1.dat`)
+    expect(entry).toMatchObject({ familyId: FAMILY, legacy: true, state: 'attached', refs: ['memories/old'] })
+
+    await write('families', FAMILY, (ref) => updateDoc(ref, { mediaRefs: {}, mediaIndexedAt: serverTimestamp() }))
+    expect((await read(`families/${FAMILY}`)).mediaIndexedAt).toBeTruthy()
   })
 })

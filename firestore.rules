@@ -266,6 +266,11 @@ service cloud.firestore {
     match /mediaRates/{uid} {
       allow read, write: if false;
     }
+    // The weekly inventory of files from before the ledger, for the operator
+    // (functions/mediaInventory.js).
+    match /mediaReports/{reportId} {
+      allow read, write: if false;
+    }
 
     // Admins subcollection — display metadata for the Manage Admins UI AND
     // the proof of redemption for the invite flow (via `viaInvite`).

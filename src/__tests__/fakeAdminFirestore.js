@@ -1,6 +1,6 @@
 /**
  * Just enough of the Admin SDK's Firestore for the media functions' unit
- * tests: documents by path, get/set, queries with `==` and `<=` and a limit,
+ * tests: documents by path, get/set, queries with `==`, `<=`, a limit and select,
  * and transactions that apply their writes only when the callback returns.
  * The rules suites run the same functions against the emulator.
  *
@@ -28,6 +28,8 @@ export function fakeAdminFirestore(seed = {}) {
   const query = (name, filters = [], max = Infinity) => ({
     where: (field, op, value) => query(name, [...filters, [field, op, value]], max),
     limit: (n) => query(name, filters, n),
+    // Every field comes back anyway; the real one only trims the transfer.
+    select: () => query(name, filters, max),
     get: async () => ({
       docs: [...docs]
         .filter(([path]) => path.startsWith(`${name}/`) && !path.slice(name.length + 1).includes('/'))

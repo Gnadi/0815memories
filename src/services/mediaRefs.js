@@ -17,12 +17,28 @@
  *
  * The ids are the files signUpload named (`kaydo/<familyId>/<id>`, or under
  * `kaydo/public/`). They point at ciphertext and are no more telling than the
- * URLs documents already carry in clear. Files from before the ledger have
- * other ids and are not tracked yet.
+ * URLs documents already carry in clear.
+ *
+ * Files from before the ledger had their ids chosen by Cloudinary, and are
+ * only recognisable by their delivery URL. They are named
+ * `legacy:<resourceType>/<publicId>`, because their ids are unique per
+ * resource type only. The server keeps count of them but never deletes them
+ * (phase 5 of the plan).
  */
 import { deleteField } from '../config/firestore'
 
 const PUBLIC_ID = /kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}(?![0-9a-f])/g
+
+// A delivery URL of a file under `kaydo/`, without transformations. The public
+// id is everything after the version, minus the extension Cloudinary appends
+// for images and videos; for raw files the extension is part of the id.
+const LEGACY_URL = /https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/(raw|image|video)\/upload\/(?:v\d+\/)?(kaydo\/[A-Za-z0-9_\-./]+)/g
+const NEW_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}$/
+
+function legacyRef(resourceType, path) {
+  const publicId = resourceType === 'raw' ? path : path.replace(/\.[A-Za-z0-9]+$/, '')
+  return NEW_ID.test(publicId) ? null : `legacy:${resourceType}/${publicId}`
+}
 
 const isPlainObject = (v) => !!v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype
 
@@ -50,13 +66,18 @@ const mayChangeMedia = (key, value) =>
 
 /**
  * Every public id in a value: URLs, bare ids, and either inside a JSON string
- * such as a rich document. Sorted, without repeats.
+ * such as a rich document, plus the files from before the ledger by their URL.
+ * Sorted, without repeats.
  */
 export function mediaIdsIn(value) {
   const found = new Set()
   const walk = (v) => {
     if (typeof v === 'string') {
       for (const match of v.matchAll(PUBLIC_ID)) found.add(match[0])
+      for (const [, resourceType, path] of v.matchAll(LEGACY_URL)) {
+        const ref = legacyRef(resourceType, path)
+        if (ref) found.add(ref)
+      }
     } else if (Array.isArray(v)) {
       v.forEach(walk)
     } else if (isPlainObject(v)) {

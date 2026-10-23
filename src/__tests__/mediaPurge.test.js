@@ -57,6 +57,8 @@ describe('isDue', () => {
     expect(isDue(detached('a', 90, { state: 'attached' })[1], NOW)).toBe(false)
     expect(isDue(pending('a', 90, { createdAt: undefined })[1], NOW)).toBe(false)
     expect(isDue(null, NOW)).toBe(false)
+    // A file from before the ledger, whatever state it is in.
+    expect(isDue(detached('a', 90, { legacy: true })[1], NOW)).toBe(false)
   })
 })
 

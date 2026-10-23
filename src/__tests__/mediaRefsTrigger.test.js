@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { MEDIA_ASSETS } from '../../functions/mediaSigning.js'
-import { ledgerIdOf, refChanges, refsOf, trackMediaRefs, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
+import { ledgerIdOf, parseLegacyRef, refChanges, refsOf, trackMediaRefs, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-23T10:00:00Z')
@@ -123,5 +123,50 @@ describe('trackMediaRefs', () => {
     const stats = await run(db, { collection: 'fcmTokens', docId: 't', before: null, after: memory({ images: [pid('a')] }) })
     expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
     expect(entry(db, 'a').state).toBe('pending')
+  })
+})
+
+describe('files from before the ledger', () => {
+  const LEGACY = 'legacy:raw/kaydo/encrypted/abc123.dat'
+  const LEGACY_ID = 'legacy~raw~kaydo%2Fencrypted%2Fabc123.dat'
+
+  it('reads their references, and keeps their ids free of slashes', () => {
+    expect(parseLegacyRef(LEGACY)).toEqual({ resourceType: 'raw', publicId: 'kaydo/encrypted/abc123.dat' })
+    expect(ledgerIdOf(LEGACY)).toBe(LEGACY_ID)
+    expect(ledgerIdOf('legacy:raw/elsewhere/a.dat')).toBe(null)
+    expect(ledgerIdOf('legacy:pdf/kaydo/a')).toBe(null)
+    expect(refsOf(memory({ images: [LEGACY] }))).toEqual(new Set([LEGACY]))
+  })
+
+  it('gives one an entry when a document first names it', async () => {
+    const db = ledger([])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: [LEGACY] }) })
+    expect(stats.attached).toBe(1)
+    expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toEqual({
+      familyId: 'fam-1',
+      publicId: 'kaydo/encrypted/abc123.dat',
+      resourceType: 'raw',
+      kind: 'legacy',
+      legacy: true,
+      state: 'attached',
+      refs: ['memories/m1'],
+      createdAt: new Date(NOW),
+      detachedAt: null,
+    })
+  })
+
+  it('marks one no document holds any more unused, not detached, so the clean-up never sees it', async () => {
+    const db = ledger([])
+    await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: [LEGACY] }) })
+    await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [LEGACY] }), after: null })
+    expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toMatchObject({ state: 'unused', refs: [] })
+  })
+
+  it('leaves one another family named first to that family', async () => {
+    const db = ledger([])
+    await run(db, { collection: 'memories', docId: 'theirs', before: null, after: memory({ images: [LEGACY] }) })
+    const stats = await run(db, { collection: 'memories', docId: 'mine', before: null, after: memory({ images: [LEGACY] }, { familyId: 'fam-2' }) })
+    expect(stats.ignored).toBe(1)
+    expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toMatchObject({ familyId: 'fam-1', refs: ['memories/theirs'] })
   })
 })

@@ -25,11 +25,29 @@ describe('mediaIdsIn', () => {
       .toEqual([`kaydo/public/fam-1/${'d'.repeat(32)}`])
   })
 
-  it('leaves out files from before the ledger, and anything that only looks close', () => {
+  it('names files from before the ledger by resource type and public id', () => {
     expect(mediaIdsIn([
-      'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/abcdefghij0123456789',
+      'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/abcdefghij0123456789.dat',
+      'https://res.cloudinary.com/demo/image/upload/kaydo/header1.jpg',
+      JSON.stringify({ src: 'https://res.cloudinary.com/demo/video/upload/v2/kaydo/videos/clip.mp4' }),
+    ])).toEqual([
+      'legacy:image/kaydo/header1',
+      'legacy:raw/kaydo/encrypted/abcdefghij0123456789.dat',
+      'legacy:video/kaydo/videos/clip',
+    ])
+  })
+
+  it('names a file signUpload made by its id only, not again as a legacy one', () => {
+    expect(mediaIdsIn(`https://res.cloudinary.com/demo/image/upload/v1/kaydo/public/fam-1/${'d'.repeat(32)}.jpg`))
+      .toEqual([`kaydo/public/fam-1/${'d'.repeat(32)}`])
+  })
+
+  it('leaves out anything that only looks close', () => {
+    expect(mediaIdsIn([
       `kaydo/fam-1/${'a'.repeat(31)}`,
       `kaydo/fam-1/${'a'.repeat(33)}`,
+      'https://res.cloudinary.com/demo/image/upload/w_400,h_300,c_fill/kaydo/a.jpg',
+      'https://res.cloudinary.com/demo/raw/upload/encrypted.dat',
       'blob:https://kaydo.app/1234',
     ])).toEqual([])
   })

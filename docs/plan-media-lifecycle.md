@@ -5,7 +5,7 @@ upload signature can store anything there, and nothing the app does ever
 removes a file again. This plan reorganises uploads so that every file has an
 owner, a reason to exist, and an end.
 
-Phases 1 to 4 are built; phase 5 is not yet. Each claim about the code points at a
+Phases 1 to 5 are built. Each claim about the code points at a
 file.
 
 ## What is wrong today
@@ -185,19 +185,43 @@ before phase 4.
   only. It is switched on only after a few weeks of logs show nothing that is
   still in use.
 
-### Phase 5 — Files from before the ledger
+### Phase 5 — Files from before the ledger (done)
 
 Existing files have no ledger entry and existing documents no `mediaRefs`, so
 phase 4 leaves them alone — correct, but it means old orphans stay.
 
-- A backfill in the admin's browser, built like the thumbnail migration
-  (resumable, re-derives its progress from the data): it decrypts each
-  document, writes `mediaRefs`, and the trigger attaches them. It has to run in
-  the browser because only there can rich text be read.
-- `inventoryMedia` (admin-only callable): lists the family's Cloudinary assets
-  and creates `legacy` ledger entries for those no document claims.
-- `legacy` entries are reported to the admin, never purged automatically. A
-  family decides about its own old files.
+What changed from the first draft of this phase: those files were uploaded
+without a family tag into folders every family shared (`kaydo/encrypted`,
+`kaydo/videos`, `kaydo/audio`, `kaydo`), so Cloudinary cannot say whose they
+are, and a per-family inventory is not possible. Documents can say it, so the
+work is split between the families' browsers and a report for the operator.
+
+- `src/services/mediaRefs.js` also recognises the delivery URLs of old files
+  and names them `legacy:<resourceType>/<publicId>` (their ids are unique per
+  resource type only). Every write since then carries them.
+- The trigger gives such a file an entry the first time a document of a
+  family names it — ledger id `legacy~<type>~<encoded public id>`, marked
+  `legacy`. A file a family names that another family named first stays with
+  the first. When no document holds it any more it becomes `unused`, not
+  `detached`, and `isDue` refuses legacy entries anyway: nothing proves which
+  family uploaded an old file, so naming one must never be a way to get it
+  deleted.
+- `src/services/mediaIndex.js`, run from the settings ("Fotos und Videos
+  erfassen", `MediaIndexPanel`): goes through every media document of the
+  family, decrypts it, and writes its whole `mediaRefs` in a transaction. No
+  media is downloaded. A sealed capsule's letter and a closed chapter are
+  refused by the rules and skipped. A run that gets through everything notes
+  `mediaIndexedAt` on the family document.
+- `reportLegacyMedia` (weekly, Mondays 05:15), logic in
+  `functions/mediaInventory.js`: lists every file under `kaydo/` through the
+  Admin API, counts the size of each claimed old file into its family's usage
+  once, and writes `mediaReports/<date>` (closed to clients) with the totals,
+  the unclaimed files (count, bytes, the first 50 by name) and how many
+  families have not run the backfill. It deletes nothing.
+- Deleting unclaimed old files is the operator's decision, in Cloudinary, and
+  only sensible once `familiesNotIndexed` is 0: until then an unclaimed file
+  may belong to a family that has not run the backfill. Files outside `kaydo/`
+  are not looked at.
 
 ### Phase 6 — Words
 
