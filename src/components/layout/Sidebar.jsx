@@ -46,8 +46,11 @@ export default function Sidebar({ onPostMemory }) {
   const isActive = (route) =>
     location.pathname === route || location.pathname.startsWith(route + '/')
 
+  // The narrow side padding leaves room for the longest German labels
+  // ("Kinder-Tagebücher") on one line. A larger text size may still wrap them,
+  // and then they wrap left-aligned beside their icon.
   return (
-    <aside className="hidden lg:flex flex-col w-56 min-h-screen p-6 border-r border-cream-dark bg-cream">
+    <aside className="hidden lg:flex flex-col w-56 min-h-screen px-3 py-6 border-r border-cream-dark bg-cream">
       {/* Brand */}
       <div className="flex items-center gap-2 mb-10">
         <KaydoLogo size={32} />
@@ -73,13 +76,13 @@ export default function Sidebar({ onPostMemory }) {
           <button
             key={route}
             onClick={() => navigate(route)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-sm font-medium transition-colors ${
               isActive(route)
                 ? 'bg-kaydo text-white'
                 : 'text-bark-light hover:bg-cream-dark hover:text-bark'
             }`}
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-5 h-5 flex-shrink-0" />
             {t(labelKey)}
           </button>
         ))}

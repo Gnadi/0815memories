@@ -32,8 +32,14 @@ export default function KidJournalCard({ kid, journalCount, lastEntryDate, onVie
           <h3 className="font-serif text-xl font-bold text-bark truncate">{kid.name}</h3>
           {formattedBirth && (
             <p className="text-sm text-bark-muted">
-              {t('card.born', { date: formattedBirth })}
-              {age >= 0 && (age === 1 ? t('card.ageSuffixOne', { age }) : t('card.ageSuffixOther', { age }))}
+              {/* Each part kept whole, so a narrow card breaks the line at the
+                  separator rather than inside the date. */}
+              <span className="inline-block">{t('card.born', { date: formattedBirth })}</span>{' '}
+              {age >= 0 && (
+                <span className="inline-block">
+                  {age === 1 ? t('card.ageSuffixOne', { age }) : t('card.ageSuffixOther', { age })}
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -58,7 +64,7 @@ export default function KidJournalCard({ kid, journalCount, lastEntryDate, onVie
         <button
           type="button"
           onClick={onViewArchive}
-          className="flex items-center gap-1.5 min-h-11 px-3 rounded-full text-sm font-semibold text-kaydo hover:bg-cream transition-colors"
+          className="flex items-center gap-1.5 min-h-11 px-3 rounded-full text-sm font-semibold text-kaydo whitespace-nowrap hover:bg-cream transition-colors"
         >
           {journalCount > 0 ? (
             <><BookOpen className="w-4 h-4" /> {t('card.viewArchive')}</>
