@@ -5,7 +5,7 @@ upload signature can store anything there, and nothing the app does ever
 removes a file again. This plan reorganises uploads so that every file has an
 owner, a reason to exist, and an end.
 
-Phases 1 and 2 are built; the rest is not yet. Each claim about the code points at a
+Phases 1 to 3 are built; the rest is not yet. Each claim about the code points at a
 file.
 
 ## What is wrong today
@@ -70,11 +70,13 @@ mediaAssets/{assetId}
   `overwrite=false`, so a second upload with it lands on the same `public_id`
   and stores nothing new (signed uploads overwrite by default).
 - **Documents say what they use.** Every document that holds media gets a
-  plain `mediaIds` array, written by its service next to the encrypted fields.
-  The ids are random and point at ciphertext, so they reveal no more than the
+  plain `mediaRefs` map — for each field, the public ids of the files in it —
+  written by its service next to the encrypted fields. A map rather than one
+  list, because most writes are partial and must only replace the entries of
+  the fields they write. The ids are random and point at ciphertext, so they reveal no more than the
   URLs the documents already carry in clear text, and they are the only way the
   server can learn about media inside encrypted rich text.
-- **A trigger keeps the ledger.** When a document's `mediaIds` change, ids that
+- **A trigger keeps the ledger.** When a document's `mediaRefs` change, ids that
   were added are attached (with the path in `refs`), and ids that were removed,
   or all of them when the document is deleted, lose that path. An asset with no
   refs left becomes `detached`. An id whose ledger entry belongs to another
@@ -135,22 +137,36 @@ before phase 4.
   counted once phase 5 has an inventory of it.
 - `mediaUsage` and `mediaRates` are closed to clients like the ledger.
 
-### Phase 3 — Documents declare their media
+### Phase 3 — Documents declare their media (done)
 
-- `src/utils/mediaIds.js`: one helper that derives `mediaIds` from what a
-  service is about to write — URL arrays, thumbnails, and the media nodes of a
-  rich document before it is encrypted. Every service that writes media uses
-  it: `memories`, `moments`, `collages`, `highlights`, `recipes`, `kids`,
-  `scrapbooks`, `ourYear` (keepsakes), `journals`, `blackbox`, `family` (login
-  header, Polaroid border).
-- The rules of those collections allow `mediaIds` as a list of strings, with
-  tests in the matching `*Rules.test.js`.
-- `trackMediaRefs` (`onDocumentWritten` on each of those collections), logic
-  in `functions/mediaRefs.js`: diff of `mediaIds`, then the ledger update in a
-  transaction.
-- `src/config/firestore.js` and `src/demo/demoDatabase.js` need nothing new as
-  long as the services use only functions already there. The demo uploads
-  nothing and writes empty `mediaIds`.
+- `src/services/mediaRefs.js` works out `mediaRefs` from the plaintext a
+  service is about to write: every public id signUpload made, found in URLs,
+  bare ids, lists, maps and JSON strings such as rich documents.
+  `mediaRefsForCreate` for a whole document, `mediaRefsForUpdate` (field paths)
+  for a partial one, `mediaRefsForMerge` for `setDoc` with merge. A partial
+  write replaces the entries of the fields it writes and no others.
+- Every write of media goes through them: `memories` (and the conversions to
+  and from moments), `moments`, `children`, `journals`, `blackbox` and
+  `blackboxContent`, `scrapbooks`, `collages`, `highlights`, `bestOf` (the
+  photos inside the encrypted story), `recipes`, `ourYearChapters`
+  (keepsakes), the family document (login page pictures), and the thumbnail
+  backfill.
+- `trackMediaReferences`, one `onDocumentWritten('{collection}/{docId}')` for
+  all of them, logic in `functions/mediaRefs.js`. It returns at once for a
+  collection not in `MEDIA_COLLECTIONS` or a write that left `mediaRefs` as it
+  was; otherwise it attaches and lets go in one transaction per file. A file no
+  document ever held stays `pending`; one whose last document let it go
+  becomes `detached` with `detachedAt`; one picked up again is `attached`.
+- Rules: only `bestOf` lists its fields, and now allows `mediaRefs` as a map.
+  Every other collection already accepted extra fields.
+  `src/__tests__/mediaRefsRules.test.js` writes through the rules and runs the
+  trigger's logic on what Firestore made of it.
+- Not tracked: files from before the ledger (their ids have another shape),
+  and the Black Box migration, which only moves such files.
+- For phase 4: a file uploaded in an editor left open for more than a day
+  before saving is `pending` past the cut-off. The cut-off should be longer
+  than any editor stays open, or `pending` files should be checked against
+  Cloudinary's upload time rather than the signature's.
 
 ### Phase 4 — Deletion, first as a dry run
 
@@ -164,12 +180,12 @@ before phase 4.
 
 ### Phase 5 — Files from before the ledger
 
-Existing files have no ledger entry and existing documents no `mediaIds`, so
+Existing files have no ledger entry and existing documents no `mediaRefs`, so
 phase 4 leaves them alone — correct, but it means old orphans stay.
 
 - A backfill in the admin's browser, built like the thumbnail migration
   (resumable, re-derives its progress from the data): it decrypts each
-  document, writes `mediaIds`, and the trigger attaches them. It has to run in
+  document, writes `mediaRefs`, and the trigger attaches them. It has to run in
   the browser because only there can rich text be read.
 - `inventoryMedia` (admin-only callable): lists the family's Cloudinary assets
   and creates `legacy` ledger entries for those no document claims.
@@ -201,8 +217,8 @@ phase 4 leaves them alone — correct, but it means old orphans stay.
 
 - Unit: `mediaSigning`, `mediaRefs` (attach, detach, foreign family ignored,
   document deleted), `mediaPurge` (due selection, dry run, failed destroy keeps
-  the entry), `mediaIds` (rich document, empty, demo).
-- Rules: `mediaAssets` closed to clients; `mediaIds` accepted on every media
+  the entry), `mediaRefs` (rich document, empty, demo).
+- Rules: `mediaAssets` closed to clients; `mediaRefs` accepted on every media
   collection, as a list of strings only.
 - E2E against the emulators: upload, save, delete a moment, and see the ledger
   move from `pending` to `attached` to `detached`.

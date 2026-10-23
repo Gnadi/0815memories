@@ -22,6 +22,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
+import { mediaRefsForMerge } from './mediaRefs'
 
 const FAMILIES = 'families'
 const FAMILY_PUBLIC = 'familyPublic'
@@ -46,7 +47,7 @@ export async function getFamily(familyId) {
 
 /** Merges `fields` into the family document: its name, address, card style, login page. */
 export async function updateFamily(familyId, fields) {
-  await setDoc(doc(db, FAMILIES, familyId), fields, { merge: true })
+  await setDoc(doc(db, FAMILIES, familyId), { ...fields, ...mediaRefsForMerge(fields) }, { merge: true })
 }
 
 /** A new family, with its key: the rules refuse one without (hasEncryptionKey). */

@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const COLLAGES = 'collages'
 
@@ -59,6 +60,7 @@ export async function addCollage(familyId, key, data) {
   const encrypted = await encryptCollage(key, data)
   const ref = await addDoc(collection(db, COLLAGES), {
     ...encrypted,
+    ...mediaRefsForCreate(data),
     familyId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -70,6 +72,7 @@ export async function updateCollage(key, id, data) {
   const encrypted = await encryptCollage(key, data)
   await updateDoc(doc(db, COLLAGES, id), {
     ...encrypted,
+    ...mediaRefsForUpdate(data),
     updatedAt: serverTimestamp(),
   })
 }

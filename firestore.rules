@@ -608,10 +608,13 @@ service cloud.firestore {
     // can file one under another's name. The story lives in `doc`, encrypted
     // as a single string, and nothing else may ride along: the fields are
     // listed, and `doc` must not start the way plaintext JSON does — the same
-    // backstop memoryContentOk() is for `contentRich`.
+    // backstop memoryContentOk() is for `contentRich`. `mediaRefs` names the
+    // photos the story shows (src/services/mediaRefs.js), so they are not
+    // deleted while it does.
     function bestOfOk(bestOfId) {
       let d = request.resource.data;
-      return d.keys().hasOnly(['familyId', 'month', 'version', 'doc', 'createdByUid', 'createdAt'])
+      return d.keys().hasOnly(['familyId', 'month', 'version', 'doc', 'createdByUid', 'createdAt', 'mediaRefs'])
+        && (!('mediaRefs' in d) || d.mediaRefs is map)
         && d.familyId is string
         && d.month is string
         && d.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')

@@ -17,6 +17,7 @@ import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const JOURNALS = 'journals'
 
@@ -84,6 +85,7 @@ export async function addJournal(familyId, childId, key, entry) {
   const encrypted = await encryptJournal(key, contentRich == null ? rest : entry)
   await addDoc(collection(db, JOURNALS), {
     ...encrypted,
+    ...mediaRefsForCreate(entry),
     familyId,
     childId,
     createdAt: serverTimestamp(),
@@ -100,6 +102,7 @@ export async function updateJournal(key, id, updates) {
   await updateDoc(doc(db, JOURNALS, id), {
     ...encrypted,
     ...(contentRich === null ? { contentRich: deleteField() } : {}),
+    ...mediaRefsForUpdate(updates),
     updatedAt: serverTimestamp(),
   })
 }

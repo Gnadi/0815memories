@@ -35,6 +35,7 @@ import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { recordUpload, verifyNotification } from './mediaNotification.js'
+import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -371,6 +372,28 @@ export const cloudinaryNotification = onRequest(
     }
   },
 )
+
+/**
+ * Attach files to the documents that use them, and let go of the ones a
+ * document stopped using — see functions/mediaRefs.js.
+ *
+ * One trigger for every top-level collection rather than one per media
+ * collection: a collection that starts carrying media is one line in
+ * MEDIA_COLLECTIONS, not a new function to deploy. Writes elsewhere return
+ * before reading anything.
+ */
+export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', async (event) => {
+  const { collection, docId } = event.params
+  if (!MEDIA_COLLECTIONS.includes(collection)) return
+  const before = event.data?.before?.exists ? event.data.before.data() : null
+  const after = event.data?.after?.exists ? event.data.after.data() : null
+  if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
+
+  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  if (stats.attached || stats.detached || stats.ignored) {
+    console.log(`[media] ${collection}/${docId} attached=${stats.attached} detached=${stats.detached} ignored=${stats.ignored}`)
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Access control — see docs/plan-a-zugriffskontrolle.md

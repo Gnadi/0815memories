@@ -33,6 +33,7 @@ import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { devError } from '../utils/devLog'
 import { subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const BLACKBOX = 'blackbox'
 const BLACKBOX_CONTENT = 'blackboxContent'
@@ -94,12 +95,13 @@ export async function addBox(familyId, key, box) {
   const batch = writeBatch(db)
   batch.set(ref, {
     ...encryptedMetadata,
+    ...mediaRefsForCreate(metadata),
     familyId,
     isSealed: true,
     sealedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
   })
-  batch.set(doc(db, BLACKBOX_CONTENT, ref.id), { ...encryptedContent, familyId })
+  batch.set(doc(db, BLACKBOX_CONTENT, ref.id), { ...encryptedContent, ...mediaRefsForCreate(content), familyId })
   await batch.commit()
   return ref.id
 }
@@ -146,7 +148,7 @@ export async function setUnlockDate(id, until) {
 
 export async function updateBox(key, id, updates) {
   const encrypted = await encryptFields(key, updates, METADATA_ENCRYPTED_FIELDS)
-  await updateDoc(doc(db, BLACKBOX, id), encrypted)
+  await updateDoc(doc(db, BLACKBOX, id), { ...encrypted, ...mediaRefsForUpdate(updates) })
 }
 
 export async function deleteBox(id) {

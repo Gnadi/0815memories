@@ -19,6 +19,7 @@ import { auth, db } from '../config/firebase'
 import { decryptFields, decryptStringArray, encryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const MEMORIES = 'memories'
 const MOMENTS = 'moments'
@@ -112,6 +113,7 @@ export async function addMemory(familyId, key, memory) {
   const encrypted = await encryptMemoryData(key, memory)
   await addDoc(collection(db, MEMORIES), {
     ...encrypted,
+    ...mediaRefsForCreate(memory),
     familyId,
     createdByUid: createdByUid(),
     createdAt: serverTimestamp(),
@@ -120,7 +122,7 @@ export async function addMemory(familyId, key, memory) {
 
 export async function updateMemory(key, id, updates) {
   const encrypted = await encryptMemoryData(key, updates)
-  await updateDoc(doc(db, MEMORIES, id), encrypted)
+  await updateDoc(doc(db, MEMORIES, id), { ...encrypted, ...mediaRefsForUpdate(updates) })
 }
 
 export async function deleteMemory(id) {
@@ -140,6 +142,7 @@ export async function convertMemoryToMoment(familyId, memoryId, moment, date) {
   const momentRef = doc(collection(db, MOMENTS))
   batch.set(momentRef, {
     ...moment,
+    ...mediaRefsForCreate(moment),
     familyId,
     createdByUid: createdByUid(),
     // Keep the memory's own date so it lands where it happened, not as today.
@@ -156,6 +159,7 @@ export async function convertMomentToMemory(familyId, key, momentId, memory) {
   const memoryRef = doc(collection(db, MEMORIES))
   batch.set(memoryRef, {
     ...encrypted,
+    ...mediaRefsForCreate(memory),
     familyId,
     createdByUid: createdByUid(),
     createdAt: serverTimestamp(),

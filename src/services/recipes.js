@@ -19,6 +19,7 @@ import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, encryptFields, encryptJSON } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const RECIPES = 'recipes'
 
@@ -138,6 +139,7 @@ export async function addRecipe(familyId, key, data) {
   const encrypted = await encryptRecipe(key, data)
   return addDoc(collection(db, RECIPES), {
     ...encrypted,
+    ...mediaRefsForCreate(data),
     familyId,
     createdAt: serverTimestamp(),
   })
@@ -157,6 +159,7 @@ export async function updateRecipe(key, id, data) {
   return updateDoc(doc(db, RECIPES, id), {
     ...encrypted,
     ...(instructionsRich === null ? { instructionsRich: deleteField() } : {}),
+    ...mediaRefsForUpdate(data),
     updatedAt: serverTimestamp(),
   })
 }
