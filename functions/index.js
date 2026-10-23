@@ -294,6 +294,11 @@ const MEDIA_FAMILY_STORAGE_MB = defineInt('MEDIA_FAMILY_STORAGE_MB', {
   description: 'Cloudinary storage one family may use, in MB',
 })
 
+// Public ids reach the log from requests and from Cloudinary's answers. Only
+// the characters a public id has are kept, so none can forge a log line, and
+// they go as arguments, never inside the message, which is a format string.
+const loggable = (value) => String(value).replace(/[^A-Za-z0-9_./~:-]/g, '').slice(0, 300)
+
 // Where Cloudinary reports each stored file (cloudinaryNotification below).
 // Not in the emulator: Cloudinary cannot reach it there.
 const notificationUrl = () =>
@@ -366,9 +371,7 @@ export const cloudinaryNotification = onRequest(
 
     try {
       const result = await recordUpload({ db: getFirestore() }, payload)
-      // The id as an argument, not inside the message: it comes from the
-      // request, and a message is read as a format string.
-      if (result === 'unknown') console.warn('[media] notification for an unknown file:', String(payload.public_id))
+      if (result === 'unknown') console.warn('[media] notification for an unknown file:', loggable(payload.public_id))
       res.status(200).json({ result })
     } catch (error) {
       console.error('[media] recording an upload failed', error)
@@ -395,7 +398,7 @@ export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', as
 
   const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
   if (stats.attached || stats.detached || stats.ignored) {
-    console.log('[media] references', `${collection}/${docId}`, JSON.stringify(stats))
+    console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
   }
 })
 
@@ -442,7 +445,7 @@ export const purgeUnusedMedia = onSchedule(
     const { wouldDelete, ...counts } = stats
     console.log(`[media] purge ${JSON.stringify(counts)}`)
     // Public ids name a family and a random file, nothing of what is in it.
-    if (wouldDelete?.length) console.log(`[media] would delete: ${wouldDelete.join(' ')}`)
+    if (wouldDelete?.length) console.log('[media] would delete:', wouldDelete.map(loggable).join(' '))
   },
 )
 
@@ -475,7 +478,7 @@ export const reportLegacyMedia = onSchedule(
       }),
     })
     console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
-    if (unclaimedSample.length) console.log(`[media] unclaimed, for example: ${unclaimedSample.join(' ')}`)
+    if (unclaimedSample.length) console.log('[media] unclaimed, for example:', unclaimedSample.map(loggable).join(' '))
   },
 )
 

@@ -186,7 +186,7 @@ export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
         const result = await forget(db, entry.id, at)
         if (result === 'raced') {
           stats.raced++
-          console.error(`[media] ${entry.publicId} was picked up again while it was being deleted`)
+          console.error('[media] a file was picked up again while it was being deleted:', entry.id)
         } else {
           stats.deleted++
         }
