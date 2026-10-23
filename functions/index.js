@@ -366,7 +366,9 @@ export const cloudinaryNotification = onRequest(
 
     try {
       const result = await recordUpload({ db: getFirestore() }, payload)
-      if (result === 'unknown') console.warn(`[media] notification for an unknown file ${payload.public_id}`)
+      // The id as an argument, not inside the message: it comes from the
+      // request, and a message is read as a format string.
+      if (result === 'unknown') console.warn('[media] notification for an unknown file:', String(payload.public_id))
       res.status(200).json({ result })
     } catch (error) {
       console.error('[media] recording an upload failed', error)
@@ -393,7 +395,7 @@ export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', as
 
   const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
   if (stats.attached || stats.detached || stats.ignored) {
-    console.log(`[media] ${collection}/${docId} attached=${stats.attached} detached=${stats.detached} ignored=${stats.ignored}`)
+    console.log('[media] references', `${collection}/${docId}`, JSON.stringify(stats))
   }
 })
 

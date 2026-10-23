@@ -35,8 +35,15 @@ const PUBLIC_ID = /kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}(?![0-9
 const LEGACY_URL = /https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/(raw|image|video)\/upload\/(?:v\d+\/)?(kaydo\/[A-Za-z0-9_\-./]+)/g
 const NEW_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}$/
 
+// The extension of the last segment, cut by position rather than by a regex
+// anchored at the end, which backtracks on a long run of dots and letters.
+function withoutExtension(path) {
+  const dot = path.lastIndexOf('.')
+  return dot > path.lastIndexOf('/') + 1 ? path.slice(0, dot) : path
+}
+
 function legacyRef(resourceType, path) {
-  const publicId = resourceType === 'raw' ? path : path.replace(/\.[A-Za-z0-9]+$/, '')
+  const publicId = resourceType === 'raw' ? path : withoutExtension(path)
   return NEW_ID.test(publicId) ? null : `legacy:${resourceType}/${publicId}`
 }
 
