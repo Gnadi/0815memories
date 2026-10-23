@@ -249,6 +249,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Every file uploaded to Cloudinary: which family and admin it belongs to,
+    // and later which documents use it. Written only by the signUpload function
+    // and its successors through the Admin SDK (functions/mediaSigning.js);
+    // what decides whether a file is deleted must not be writable by a client.
+    match /mediaAssets/{assetId} {
+      allow read, write: if false;
+    }
+
     // Admins subcollection — display metadata for the Manage Admins UI AND
     // the proof of redemption for the invite flow (via `viaInvite`).
     //

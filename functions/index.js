@@ -2,7 +2,8 @@
  * Firebase Cloud Functions — Kaydo
  *
  * Push notifications (this file's first half) and access control (the second),
- * with the daily clean-up of printed-book files between them.
+ * with the daily clean-up of printed-book files and the signing of media
+ * uploads between them.
  * Everything runs in europe-west3, set once at the top: setGlobalOptions only
  * reaches v2 functions, and only those defined after the call.
  *
@@ -32,6 +33,7 @@ import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
+import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -259,6 +261,40 @@ export const createPrintCheckout = onCall(
       if (error instanceof CheckoutError) throw new HttpsError(error.code, error.message)
       console.error('[print] checkout failed', error)
       throw new HttpsError('internal', 'Could not create the checkout')
+    }
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Media uploads — see functions/mediaSigning.js and docs/plan-media-lifecycle.md
+// ---------------------------------------------------------------------------
+
+// From Cloudinary's console (Settings > API Keys), both in Secret Manager:
+// `firebase functions:secrets:set CLOUDINARY_API_SECRET`, and the same for
+// CLOUDINARY_API_KEY. The key is not secret — it goes to the browser with every
+// signature — but a string parameter without a default stops the emulator from
+// loading any function, viewer login included, and a default would let a
+// deploy go out without one.
+const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
+const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
+
+/**
+ * Sign one Cloudinary upload for an admin, and record the file in the
+ * `mediaAssets` ledger before it exists. Replaces api/cloudinary-sign.
+ */
+export const signUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY] },
+  async (request) => {
+    try {
+      return await signMediaUpload(
+        { db: getFirestore(), apiKey: CLOUDINARY_API_KEY.value(), secret: CLOUDINARY_API_SECRET.value() },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof SigningError) throw new HttpsError(error.code, error.message)
+      console.error('[media] signing failed', error)
+      throw new HttpsError('internal', 'Could not sign the upload')
     }
   },
 )

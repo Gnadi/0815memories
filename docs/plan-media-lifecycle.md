@@ -5,7 +5,8 @@ upload signature can store anything there, and nothing the app does ever
 removes a file again. This plan reorganises uploads so that every file has an
 owner, a reason to exist, and an end.
 
-Nothing here is built yet. Each claim about today's code points at a file.
+Phase 1 is built; the rest is not yet. Each claim about the code points at a
+file.
 
 ## What is wrong today
 
@@ -92,16 +93,16 @@ mediaAssets/{assetId}
 Each phase can ship and be reverted on its own, and none deletes anything
 before phase 4.
 
-### Phase 1 — Signing moves to a Cloud Function
+### Phase 1 — Signing moves to a Cloud Function (done)
 
-- `functions/mediaSigning.js`: pure logic (public id, parameters to sign,
-  quota decision), tested from `src/__tests__/mediaSigning.test.js`.
+- `functions/mediaSigning.js`: pure logic (admin check, public id, ledger
+  entry, parameters to sign), tested from `src/__tests__/mediaSigning.test.js`.
 - `signUpload` in `functions/index.js`: `onCall`, `europe-west3`, App Check as
-  the other callables, Cloudinary secret from Secret Manager (`defineSecret`,
-  as `PEECHO_API_KEY`). It checks admin status with the Admin SDK, writes the
+  the other callables, Cloudinary key and secret from Secret Manager
+  (`defineSecret`, as `PEECHO_API_KEY`). It checks admin status with the Admin SDK, writes the
   `pending` ledger entry, and signs `public_id`, `overwrite=false`,
-  `timestamp`, `tags`
-  (`family:<id>`) and `notification_url`.
+  `timestamp` and `tags` (`family:<id>`). The family is the one the session
+  works in (`fh_familyId`), checked against the family document.
 - `kind: 'public'` signs `image` into `kaydo/public/`; everything else signs
   `raw`. The client asks for a kind, not a folder.
 - `src/utils/uploadSignature.js` calls the function instead of
@@ -114,6 +115,7 @@ before phase 4.
 
 ### Phase 2 — Uploads report their size
 
+- `signUpload` adds `notification_url` to the parameters it signs.
 - `cloudinaryNotification` (`onRequest`): verifies Cloudinary's signature on
   the notification, then writes `bytes` to the ledger entry named by the
   `public_id`. An unknown `public_id` is logged and ignored.

@@ -15,9 +15,10 @@ Browser (React SPA + service worker)
  ├── Firebase Auth ─────── admins: email/password
  │                         viewers: custom token from viewerLogin
  ├── Firestore ─────────── all data; firestore.rules decide every read and write
- ├── Cloud Functions ───── viewer login, admin claims, public mirror, push
- │   (functions/, europe-west3)
- ├── Vercel function ───── api/cloudinary-sign: upload signatures, admins only
+ ├── Cloud Functions ───── viewer login, admin claims, public mirror, push,
+ │   (functions/, europe-west3)  upload signatures (signUpload, admins only)
+ ├── Vercel function ───── api/cloudinary-sign: the old upload signatures, kept
+ │                         for clients from before signUpload
  └── Cloudinary ────────── media, stored as encrypted `raw` files
 ```
 
