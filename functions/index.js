@@ -22,7 +22,7 @@ import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
-import { defineInt, defineSecret, defineString } from 'firebase-functions/params'
+import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
@@ -36,6 +36,7 @@ import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from 
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { recordUpload, verifyNotification } from './mediaNotification.js'
 import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -394,6 +395,53 @@ export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', as
     console.log(`[media] ${collection}/${docId} attached=${stats.attached} detached=${stats.detached} ignored=${stats.ignored}`)
   }
 })
+
+// The clean-up deletes for real only once this is set to false, after its
+// logs have shown for a while that it would delete nothing still in use.
+const MEDIA_PURGE_DRY_RUN = defineBoolean('MEDIA_PURGE_DRY_RUN', {
+  default: true,
+  description: 'Only report the Cloudinary files the daily clean-up would delete',
+})
+// The account's cloud name, as in the browser's VITE_CLOUDINARY_CLOUD_NAME.
+// Without it the clean-up can only report.
+const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
+  default: '',
+  description: 'Cloudinary cloud name, for deleting unused files',
+})
+
+/**
+ * Delete the Cloudinary files nothing uses any more — see
+ * functions/mediaPurge.js. A dry run until MEDIA_PURGE_DRY_RUN is false.
+ */
+export const purgeUnusedMedia = onSchedule(
+  {
+    schedule: '15 4 * * *',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    const dryRun = MEDIA_PURGE_DRY_RUN.value() || !cloudName
+    if (!MEDIA_PURGE_DRY_RUN.value() && !cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; reporting only')
+    }
+    const stats = await purgeMedia({
+      db: getFirestore(),
+      destroy: cloudinaryDestroyer({
+        fetch,
+        cloudName,
+        apiKey: CLOUDINARY_API_KEY.value(),
+        secret: CLOUDINARY_API_SECRET.value(),
+      }),
+      dryRun,
+    })
+    const { wouldDelete, ...counts } = stats
+    console.log(`[media] purge ${JSON.stringify(counts)}`)
+    // Public ids name a family and a random file, nothing of what is in it.
+    if (wouldDelete?.length) console.log(`[media] would delete: ${wouldDelete.join(' ')}`)
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Access control — see docs/plan-a-zugriffskontrolle.md

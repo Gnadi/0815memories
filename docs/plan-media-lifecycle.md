@@ -5,7 +5,7 @@ upload signature can store anything there, and nothing the app does ever
 removes a file again. This plan reorganises uploads so that every file has an
 owner, a reason to exist, and an end.
 
-Phases 1 to 3 are built; the rest is not yet. Each claim about the code points at a
+Phases 1 to 4 are built; phase 5 is not yet. Each claim about the code points at a
 file.
 
 ## What is wrong today
@@ -82,7 +82,7 @@ mediaAssets/{assetId}
   refs left becomes `detached`. An id whose ledger entry belongs to another
   family is ignored, so one family cannot keep another's files alive or touch
   them.
-- **A schedule deletes.** `pending` older than 24 hours (an abandoned editor)
+- **A schedule deletes.** `pending` older than a week (an abandoned editor)
   and `detached` older than 30 days (time to notice a mistake) are destroyed on
   Cloudinary, then removed from the ledger. Only assets in the ledger are ever
   deleted; a file the ledger does not know is never touched.
@@ -163,20 +163,27 @@ before phase 4.
   trigger's logic on what Firestore made of it.
 - Not tracked: files from before the ledger (their ids have another shape),
   and the Black Box migration, which only moves such files.
-- For phase 4: a file uploaded in an editor left open for more than a day
-  before saving is `pending` past the cut-off. The cut-off should be longer
-  than any editor stays open, or `pending` files should be checked against
-  Cloudinary's upload time rather than the signature's.
+- For phase 4: a file uploaded in an editor left open for a long time
+  before saving stays `pending` until the save. Phase 4 therefore waits a week
+  before it deletes a pending file, not a day.
 
-### Phase 4 — Deletion, first as a dry run
+### Phase 4 — Deletion, first as a dry run (done)
 
-- `purgeMedia` (`onSchedule`, daily), logic in `functions/mediaPurge.js`:
-  selects due `pending` and `detached` entries, destroys them on Cloudinary in
-  batches (original and thumbnail are separate entries, so both go), and
-  removes the entries whose destroy succeeded.
-- It ships with `MEDIA_PURGE_DRY_RUN=true`: it logs what it would delete and
-  deletes nothing. It is switched on only after a few weeks of logs show
-  nothing that is still in use.
+- `purgeUnusedMedia` (`onSchedule`, daily at 04:15 Europe/Berlin), logic in
+  `functions/mediaPurge.js`: selects `pending` entries older than 7 days and
+  `detached` ones older than 30 (two composite indexes on `mediaAssets` in
+  `firestore.indexes.json`), at most 500 of each per run.
+- Each file is read again right before it goes, and kept if a document picked
+  it up since the query. Cloudinary's Admin API destroys them a hundred at a
+  time per resource type (original and thumbnail are separate entries, so both
+  go); `not_found` counts as gone. An entry leaves the ledger, and its bytes
+  the family's usage, only once Cloudinary confirmed, in a transaction that
+  checks once more that it is still due. A refused destroy changes nothing,
+  so the next run tries again.
+- It ships with `MEDIA_PURGE_DRY_RUN=true` and only logs the public ids it
+  would delete. It also needs `CLOUDINARY_CLOUD_NAME`; without it, it reports
+  only. It is switched on only after a few weeks of logs show nothing that is
+  still in use.
 
 ### Phase 5 — Files from before the ledger
 

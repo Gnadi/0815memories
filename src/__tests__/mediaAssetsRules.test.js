@@ -17,6 +17,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
 import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, signUpload } from '../../functions/mediaSigning.js'
 import { recordUpload } from '../../functions/mediaNotification.js'
+import { purgeMedia } from '../../functions/mediaPurge.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -105,5 +106,31 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
     await assertFails(getDoc(doc(admin, MEDIA_RATES, ADMIN)))
     await assertFails(setDoc(doc(admin, MEDIA_RATES, ADMIN), { windowStart: 0, count: 0 }))
     await assertFails(deleteDoc(doc(admin, MEDIA_RATES, ADMIN)))
+  })
+
+  it('finds what is due with real queries, and deletes only that', async () => {
+    const DAY = 24 * 60 * 60 * 1000
+    const now = Date.now()
+    const entry = (id, data) => db.collection(MEDIA_ASSETS).doc(id).set({
+      familyId: FAMILY, publicId: `kaydo/${FAMILY}/${id}`, resourceType: 'raw', refs: [], ...data,
+    })
+    await entry('old-pending', { state: 'pending', createdAt: new Date(now - 8 * DAY) })
+    await entry('new-pending', { state: 'pending', createdAt: new Date(now - 1 * DAY) })
+    await entry('old-detached', { state: 'detached', createdAt: new Date(now - 90 * DAY), detachedAt: new Date(now - 31 * DAY), bytes: 10 })
+    await entry('in-use', { state: 'attached', refs: ['memories/m1'], createdAt: new Date(now - 90 * DAY) })
+    await db.collection(MEDIA_USAGE).doc(FAMILY).set({ bytes: 50, files: 3 })
+
+    const destroyed = []
+    const stats = await purgeMedia({
+      db,
+      dryRun: false,
+      destroy: async (_type, ids) => { destroyed.push(...ids); return new Set(ids) },
+    })
+
+    expect(stats).toMatchObject({ due: 2, deleted: 2 })
+    expect(destroyed.sort()).toEqual([`kaydo/${FAMILY}/old-detached`, `kaydo/${FAMILY}/old-pending`])
+    const left = (await db.collection(MEDIA_ASSETS).get()).docs.map((d) => d.id).sort()
+    expect(left).toEqual(['in-use', 'new-pending'])
+    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 40, files: 2 })
   })
 })

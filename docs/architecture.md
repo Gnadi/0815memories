@@ -128,6 +128,7 @@ the top of `functions/index.js`.
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
 | `cloudinaryNotification` | HTTP, from Cloudinary | records a stored file's size and its family's usage |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
+| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
