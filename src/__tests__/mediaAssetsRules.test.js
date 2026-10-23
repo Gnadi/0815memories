@@ -15,12 +15,14 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from '
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
-import { MEDIA_ASSETS, signUpload } from '../../functions/mediaSigning.js'
+import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, signUpload } from '../../functions/mediaSigning.js'
+import { recordUpload } from '../../functions/mediaNotification.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'fam-a'
 const ADMIN = 'uid-admin'
+const LIMITS = { uploadsPerHour: 100, familyBytes: 10 * 1024 * 1024 }
 
 let testEnv
 let adminApp
@@ -51,7 +53,7 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
   })
 
   const sign = () =>
-    signUpload({ db, apiKey: 'key', secret: 'secret' }, ADMIN, { familyId: FAMILY, kind: 'encrypted' })
+    signUpload({ db, apiKey: 'key', secret: 'secret', limits: LIMITS }, ADMIN, { familyId: FAMILY, kind: 'encrypted' })
 
   const assetIdOf = (publicId) => publicId.split('/').pop()
 
@@ -84,8 +86,24 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
 
   it('records nothing for a caller who is not an admin', async () => {
     await expect(
-      signUpload({ db, apiKey: 'key', secret: 'secret' }, 'uid-other', { familyId: FAMILY }),
+      signUpload({ db, apiKey: 'key', secret: 'secret', limits: LIMITS }, 'uid-other', { familyId: FAMILY }),
     ).rejects.toMatchObject({ code: 'permission-denied' })
     expect((await db.collection(MEDIA_ASSETS).get()).size).toBe(0)
+  })
+
+  it('keeps the quota counters closed, so nobody lifts their own limit', async () => {
+    const { publicId } = await sign()
+    expect(await recordUpload({ db }, { notification_type: 'upload', public_id: publicId, bytes: 2048 })).toBe('recorded')
+    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 2048, files: 1 })
+    expect((await db.collection(MEDIA_RATES).doc(ADMIN).get()).data().count).toBe(1)
+
+    const admin = testEnv
+      .authenticatedContext(ADMIN, { familyId: FAMILY, role: 'admin', email_verified: true })
+      .firestore()
+    await assertFails(getDoc(doc(admin, MEDIA_USAGE, FAMILY)))
+    await assertFails(setDoc(doc(admin, MEDIA_USAGE, FAMILY), { bytes: 0, files: 0 }))
+    await assertFails(getDoc(doc(admin, MEDIA_RATES, ADMIN)))
+    await assertFails(setDoc(doc(admin, MEDIA_RATES, ADMIN), { windowStart: 0, count: 0 }))
+    await assertFails(deleteDoc(doc(admin, MEDIA_RATES, ADMIN)))
   })
 })

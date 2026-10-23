@@ -5,7 +5,7 @@ upload signature can store anything there, and nothing the app does ever
 removes a file again. This plan reorganises uploads so that every file has an
 owner, a reason to exist, and an end.
 
-Phase 1 is built; the rest is not yet. Each claim about the code points at a
+Phases 1 and 2 are built; the rest is not yet. Each claim about the code points at a
 file.
 
 ## What is wrong today
@@ -113,17 +113,25 @@ before phase 4.
 - The Vercel endpoint stays until the new client has been live for a release,
   then goes, together with `CLOUDINARY_API_SECRET` on Vercel.
 
-### Phase 2 — Uploads report their size
+### Phase 2 — Uploads report their size (done)
 
-- `signUpload` adds `notification_url` to the parameters it signs.
-- `cloudinaryNotification` (`onRequest`): verifies Cloudinary's signature on
-  the notification, then writes `bytes` to the ledger entry named by the
-  `public_id`. An unknown `public_id` is logged and ignored.
-- With sizes known, `signUpload` enforces the family's storage quota and the
-  per-uid rate. Limits are parameters (`defineString`), so they change without
-  a deploy of code.
-- The upload error the user sees for a refused quota gets its own string in
-  `src/locales/en/` and `src/locales/de/`.
+- `signUpload` adds `notification_url` to the parameters it signs, outside the
+  emulator.
+- `cloudinaryNotification` (`onRequest`, `functions/mediaNotification.js`):
+  verifies Cloudinary's signature over the raw body (SHA-1 or SHA-256, at most
+  a day old), then writes `bytes` to the ledger entry named by the `public_id`
+  and adds it to `mediaUsage/{familyId}`, once per file. An unknown
+  `public_id` is logged and ignored.
+- `signUpload` checks, in the transaction that records the file, the admin's
+  uploads this hour (`mediaRates/{uid}`, a fixed window) and the family's
+  stored bytes. The limits are parameters with generous defaults —
+  `MEDIA_UPLOADS_PER_HOUR` (600) and `MEDIA_FAMILY_STORAGE_MB` (10240) — so
+  they change without a change of code. A refusal is `resource-exhausted` with
+  the reason, and the browser says which limit was reached
+  (`upload.rateLimited`, `upload.storageFull`).
+- Usage counts only files signed since phase 1. What a family stored before is
+  counted once phase 5 has an inventory of it.
+- `mediaUsage` and `mediaRates` are closed to clients like the ledger.
 
 ### Phase 3 — Documents declare their media
 
@@ -180,7 +188,8 @@ phase 4 leaves them alone — correct, but it means old orphans stay.
   the app today, so the period only matters if one is built.
 - **Quota sizes.** Uploads per uid per hour, and bytes per family. They depend
   on the Cloudinary plan, and should be generous enough that a family
-  importing a holiday never notices them.
+  importing a holiday never notices them. The defaults (600 uploads an hour,
+  10 GB a family) are a starting point.
 - **Signup.** Quotas limit what one account can store. They do not limit how
   many accounts someone opens. If that becomes a problem, the next step is
   founding a family by invitation or waiting list, which is a product decision

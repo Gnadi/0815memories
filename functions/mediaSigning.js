@@ -17,6 +17,14 @@
 import { createHash, randomBytes } from 'node:crypto'
 
 export const MEDIA_ASSETS = 'mediaAssets'
+// Per family: the bytes and files Cloudinary has reported for it
+// (functions/mediaNotification.js). Only files signed since the ledger began
+// are counted; what a family stored before is not in it.
+export const MEDIA_USAGE = 'mediaUsage'
+// Per admin: how many uploads they were signed in the current hour.
+export const MEDIA_RATES = 'mediaRates'
+
+export const RATE_WINDOW_MS = 60 * 60 * 1000
 
 // What the browser may ask for. Family content is ciphertext, which Cloudinary
 // cannot decode, so it goes up as `raw`. The exception is a picture shown
@@ -31,10 +39,15 @@ export const UPLOAD_KINDS = {
 const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
 
 export class SigningError extends Error {
-  /** @param {'unauthenticated'|'invalid-argument'|'permission-denied'} code */
-  constructor(code, message) {
+  /**
+   * @param {'unauthenticated'|'invalid-argument'|'permission-denied'|'resource-exhausted'} code
+   * @param {string} message
+   * @param {{ reason: 'rate'|'storage' }} [details]  sent to the browser with a refused quota
+   */
+  constructor(code, message, details) {
     super(message)
     this.code = code
+    this.details = details
   }
 }
 
@@ -58,6 +71,28 @@ export function cloudinarySignature(params, secret) {
   return createHash('sha1').update(`${joined}${secret}`).digest('hex')
 }
 
+/**
+ * Whether one more upload is allowed, and the admin's rate after it.
+ *
+ * The rate is a fixed window that starts with the first upload after the
+ * previous one ran out — simple, and an hour is long enough that its edges do
+ * not matter. Storage counts what Cloudinary has reported: a file still being
+ * uploaded is not in it yet, which the rate bounds.
+ *
+ * @param {{ rate?: { windowStart?: number, count?: number } | null, usage?: { bytes?: number } | null }} state
+ * @param {number} now
+ * @param {{ uploadsPerHour: number, familyBytes: number }} limits
+ * @returns {{ allowed: true, rate: { windowStart: number, count: number } } | { allowed: false, reason: 'rate'|'storage' }}
+ */
+export function checkQuota({ rate, usage }, now, limits) {
+  const current = rate && Number.isFinite(rate.windowStart) && now - rate.windowStart < RATE_WINDOW_MS
+  const windowStart = current ? rate.windowStart : now
+  const count = current ? (Number(rate.count) || 0) : 0
+  if (count >= limits.uploadsPerHour) return { allowed: false, reason: 'rate' }
+  if ((Number(usage?.bytes) || 0) >= limits.familyBytes) return { allowed: false, reason: 'storage' }
+  return { allowed: true, rate: { windowStart, count: count + 1 } }
+}
+
 /** Random, URL-safe, and long enough that nobody guesses another file's id. */
 const defaultRandomId = () => randomBytes(16).toString('hex')
 
@@ -70,13 +105,17 @@ const defaultRandomId = () => randomBytes(16).toString('hex')
  * the right family: a later phase deletes files that no document of their own
  * family uses.
  *
- * @param {{ db: any, apiKey: string, secret: string, now?: () => number, randomId?: () => string }} deps
+ * Quotas are checked in the same transaction that records the file, so two
+ * uploads at once cannot both take the last one. With `notificationUrl`,
+ * Cloudinary reports the file's size there once it is stored.
+ *
+ * @param {{ db: any, apiKey: string, secret: string, limits: { uploadsPerHour: number, familyBytes: number }, notificationUrl?: string, now?: () => number, randomId?: () => string }} deps
  * @param {string|undefined} uid  the caller, from the verified ID token
  * @param {{ familyId?: unknown, kind?: unknown }} data
  * @returns {Promise<{ apiKey: string, signature: string, resourceType: string, publicId: string, params: Record<string, string|number> }>}
  */
 export async function signUpload(deps, uid, data) {
-  const { db, apiKey, secret, now = Date.now, randomId = defaultRandomId } = deps
+  const { db, apiKey, secret, limits, notificationUrl, now = Date.now, randomId = defaultRandomId } = deps
   if (!uid) throw new SigningError('unauthenticated', 'Sign in first')
 
   const familyId = typeof data?.familyId === 'string' ? data.familyId : ''
@@ -94,20 +133,39 @@ export async function signUpload(deps, uid, data) {
   const assetId = randomId()
   const publicId = `${kind.prefix}/${familyId}/${assetId}`
   const createdAt = new Date(now())
+  const rateRef = db.collection(MEDIA_RATES).doc(uid)
+  const usageRef = db.collection(MEDIA_USAGE).doc(familyId)
+  const assetRef = db.collection(MEDIA_ASSETS).doc(assetId)
 
-  // Written before the signature leaves, so there is no file the ledger does
-  // not know about. An entry whose upload never happens stays pending, and is
-  // what the clean-up of abandoned uploads will remove.
-  await db.collection(MEDIA_ASSETS).doc(assetId).set({
-    familyId,
-    uid,
-    kind: kindName,
-    publicId,
-    resourceType: kind.resourceType,
-    state: 'pending',
-    refs: [],
-    createdAt,
+  const quota = await db.runTransaction(async (tx) => {
+    const [rate, usage] = await Promise.all([tx.get(rateRef), tx.get(usageRef)])
+    const decision = checkQuota(
+      { rate: rate.exists ? rate.data() : null, usage: usage.exists ? usage.data() : null },
+      createdAt.getTime(),
+      limits,
+    )
+    if (!decision.allowed) return decision
+
+    tx.set(rateRef, decision.rate)
+    // Written before the signature leaves, so there is no file the ledger does
+    // not know about. An entry whose upload never happens stays pending, and is
+    // what the clean-up of abandoned uploads will remove.
+    tx.set(assetRef, {
+      familyId,
+      uid,
+      kind: kindName,
+      publicId,
+      resourceType: kind.resourceType,
+      state: 'pending',
+      refs: [],
+      createdAt,
+    })
+    return decision
   })
+
+  if (!quota.allowed) {
+    throw new SigningError('resource-exhausted', 'Upload limit reached', { reason: quota.reason })
+  }
 
   // Signed uploads overwrite by default, so `overwrite` is signed as false: a
   // second upload with the same signature lands on the same public_id and
@@ -119,6 +177,7 @@ export async function signUpload(deps, uid, data) {
     tags: `family:${familyId}`,
     timestamp: Math.floor(createdAt.getTime() / 1000),
   }
+  if (notificationUrl) params.notification_url = notificationUrl
 
   return {
     apiKey,

@@ -2,6 +2,11 @@ import { auth, functions } from '../config/firebase'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { readStored } from './authStorage'
 
+// Thrown when signUpload refuses for a quota; `reason` is 'rate' (too many
+// uploads this hour) or 'storage' (the family's space is used up). Matched on
+// `code`, like UPLOAD_TOO_LARGE in encryptedUpload.js.
+export const UPLOAD_QUOTA = 'upload/quota'
+
 /**
  * Ask the signUpload Cloud Function for permission to upload one file
  * (functions/mediaSigning.js), as the signed-in admin of the family this
@@ -25,7 +30,13 @@ export async function fetchUploadSignature(kind = 'encrypted') {
   try {
     const { data } = await httpsCallable(functions, 'signUpload')({ familyId, kind })
     return data
-  } catch {
+  } catch (error) {
+    if (error?.code === 'functions/resource-exhausted') {
+      const quota = new Error('Upload limit reached')
+      quota.code = UPLOAD_QUOTA
+      quota.reason = error.details?.reason === 'storage' ? 'storage' : 'rate'
+      throw quota
+    }
     throw new Error('Failed to get upload signature')
   }
 }

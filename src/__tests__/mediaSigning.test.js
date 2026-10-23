@@ -7,39 +7,40 @@
  * uploads of any kind for an hour. Now it names one file, and that file is in
  * the ledger before the browser uploads it.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { createHash } from 'node:crypto'
 import {
+  checkQuota,
   cloudinarySignature,
   signUpload,
   SigningError,
   MEDIA_ASSETS,
+  MEDIA_RATES,
+  MEDIA_USAGE,
+  RATE_WINDOW_MS,
 } from '../../functions/mediaSigning.js'
+import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const FAMILY = 'fam-1'
 const ADMIN = 'uid-admin'
 const NOW = Date.parse('2026-10-23T10:00:00Z')
 
-function deps({ family = { adminUids: [ADMIN] } } = {}) {
-  const written = []
+const LIMITS = { uploadsPerHour: 3, familyBytes: 1000 }
+
+function deps({ family = { adminUids: [ADMIN] }, seed = {}, ...overrides } = {}) {
+  const db = fakeAdminFirestore({ ...(family ? { [`families/${FAMILY}`]: family } : {}), ...seed })
   return {
-    written,
-    db: {
-      doc: (path) => ({
-        get: async () => (path === `families/${FAMILY}` && family
-          ? { exists: true, data: () => family }
-          : { exists: false, data: () => null }),
-      }),
-      collection: (name) => ({
-        doc: (id) => ({ set: vi.fn(async (data) => { written.push({ name, id, data }) }) }),
-      }),
-    },
+    db,
     apiKey: 'api-key',
     secret: 'api-secret',
+    limits: LIMITS,
     now: () => NOW,
     randomId: () => 'abc123',
+    ...overrides,
   }
 }
+
+const ledger = (d) => d.db.collectionData(MEDIA_ASSETS)
 
 describe('cloudinarySignature', () => {
   it('signs the parameters sorted by name, as Cloudinary documents it', () => {
@@ -64,10 +65,8 @@ describe('signUpload', () => {
     })
     expect(signed.signature).toBe(cloudinarySignature(signed.params, 'api-secret'))
 
-    expect(d.written).toEqual([{
-      name: MEDIA_ASSETS,
-      id: 'abc123',
-      data: {
+    expect(ledger(d)).toEqual({
+      abc123: {
         familyId: FAMILY,
         uid: ADMIN,
         kind: 'encrypted',
@@ -77,7 +76,7 @@ describe('signUpload', () => {
         refs: [],
         createdAt: new Date(NOW),
       },
-    }])
+    })
   })
 
   it('signs every parameter the browser will send, and nothing else', async () => {
@@ -97,7 +96,7 @@ describe('signUpload', () => {
     const signed = await signUpload(d, ADMIN, { familyId: FAMILY, kind: 'public' })
     expect(signed.resourceType).toBe('image')
     expect(signed.publicId).toBe('kaydo/public/fam-1/abc123')
-    expect(d.written[0].data.kind).toBe('public')
+    expect(ledger(d).abc123.kind).toBe('public')
   })
 
   it('accepts an admin of a family from before adminUids', async () => {
@@ -117,21 +116,76 @@ describe('signUpload', () => {
     const error = await signUpload(d, uid, data).catch((e) => e)
     expect(error).toBeInstanceOf(SigningError)
     expect(error.code).toBe(code)
-    expect(d.written).toEqual([])
+    expect(ledger(d)).toEqual({})
   })
 
   it('refuses a family that does not exist', async () => {
     const d = deps({ family: null })
     await expect(signUpload(d, ADMIN, { familyId: FAMILY })).rejects.toMatchObject({ code: 'permission-denied' })
-    expect(d.written).toEqual([])
+    expect(ledger(d)).toEqual({})
   })
 
   it('gives every upload its own id', async () => {
-    const d = deps()
-    delete d.randomId
+    const d = deps({ randomId: undefined })
     const a = await signUpload(d, ADMIN, { familyId: FAMILY })
     const b = await signUpload(d, ADMIN, { familyId: FAMILY })
     expect(a.publicId).toMatch(/^kaydo\/fam-1\/[0-9a-f]{32}$/)
     expect(a.publicId).not.toBe(b.publicId)
+  })
+
+  it('has Cloudinary report the stored file, when there is somewhere to report to', async () => {
+    const url = 'https://europe-west3-p.cloudfunctions.net/cloudinaryNotification'
+    const { params, signature } = await signUpload(deps({ notificationUrl: url }), ADMIN, { familyId: FAMILY })
+    expect(params.notification_url).toBe(url)
+    expect(signature).toBe(cloudinarySignature(params, 'api-secret'))
+  })
+
+  it('counts the upload against the admin', async () => {
+    const d = deps()
+    await signUpload(d, ADMIN, { familyId: FAMILY })
+    await signUpload({ ...d, randomId: () => 'def456' }, ADMIN, { familyId: FAMILY })
+    expect(d.db.collectionData(MEDIA_RATES)[ADMIN]).toEqual({ windowStart: NOW, count: 2 })
+  })
+
+  it('refuses past the hourly limit, and records nothing', async () => {
+    const d = deps({ seed: { [`${MEDIA_RATES}/${ADMIN}`]: { windowStart: NOW - 1000, count: 3 } } })
+    const error = await signUpload(d, ADMIN, { familyId: FAMILY }).catch((e) => e)
+    expect(error).toBeInstanceOf(SigningError)
+    expect(error.code).toBe('resource-exhausted')
+    expect(error.details).toEqual({ reason: 'rate' })
+    expect(ledger(d)).toEqual({})
+    expect(d.db.collectionData(MEDIA_RATES)[ADMIN].count).toBe(3)
+  })
+
+  it('refuses a family whose storage is used up', async () => {
+    const d = deps({ seed: { [`${MEDIA_USAGE}/${FAMILY}`]: { bytes: 1000, files: 4 } } })
+    const error = await signUpload(d, ADMIN, { familyId: FAMILY }).catch((e) => e)
+    expect(error.code).toBe('resource-exhausted')
+    expect(error.details).toEqual({ reason: 'storage' })
+    expect(ledger(d)).toEqual({})
+  })
+})
+
+describe('checkQuota', () => {
+  const limits = { uploadsPerHour: 2, familyBytes: 100 }
+
+  it('starts a window with the first upload', () => {
+    expect(checkQuota({}, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
+  })
+
+  it('counts inside the window and refuses at the limit', () => {
+    const rate = { windowStart: NOW - 10, count: 1 }
+    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW - 10, count: 2 } })
+    expect(checkQuota({ rate: { ...rate, count: 2 } }, NOW, limits)).toEqual({ allowed: false, reason: 'rate' })
+  })
+
+  it('starts over once the window has run out', () => {
+    const rate = { windowStart: NOW - RATE_WINDOW_MS, count: 2 }
+    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
+  })
+
+  it('refuses once the family has reached its storage', () => {
+    expect(checkQuota({ usage: { bytes: 99 } }, NOW, limits).allowed).toBe(true)
+    expect(checkQuota({ usage: { bytes: 100 } }, NOW, limits)).toEqual({ allowed: false, reason: 'storage' })
   })
 })

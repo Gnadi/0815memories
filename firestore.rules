@@ -257,6 +257,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // What the upload quotas count: a family's stored bytes, and an admin's
+    // uploads this hour. Kept by signUpload and cloudinaryNotification; a
+    // client that could write them could lift its own limits.
+    match /mediaUsage/{familyId} {
+      allow read, write: if false;
+    }
+    match /mediaRates/{uid} {
+      allow read, write: if false;
+    }
+
     // Admins subcollection — display metadata for the Manage Admins UI AND
     // the proof of redemption for the invite flow (via `viaInvite`).
     //

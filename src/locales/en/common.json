@@ -102,7 +102,9 @@
   "upload": {
     "failed": "Upload failed. Please try again.",
     "tooLarge": "This file is {{size}} — the limit is {{limit}} per file. Please use a shorter or more compressed clip.",
-    "videoTooLong": "Video must be {{seconds}} seconds or shorter."
+    "videoTooLong": "Video must be {{seconds}} seconds or shorter.",
+    "rateLimited": "You've uploaded a lot in the last hour. Please wait a while and try again.",
+    "storageFull": "Your family's storage space is used up, so nothing more can be uploaded right now."
   },
   "dictation": {
     "start": "Dictate",

@@ -12,7 +12,8 @@ vi.mock('../utils/authStorage', () => ({
 }))
 vi.mock('firebase/functions', () => ({ httpsCallable }))
 
-import { fetchUploadSignature, signedUploadForm, signedUploadUrl } from '../utils/uploadSignature'
+import { fetchUploadSignature, signedUploadForm, signedUploadUrl, UPLOAD_QUOTA } from '../utils/uploadSignature'
+import { uploadErrorMessage } from '../hooks/useMediaUploader'
 
 const SIGNED = {
   apiKey: 'k',
@@ -49,6 +50,20 @@ describe('fetchUploadSignature', () => {
     await expect(fetchUploadSignature()).rejects.toThrow('Failed to get upload signature')
   })
 
+  it.each([
+    ['rate', 'rate'],
+    ['storage', 'storage'],
+    [undefined, 'rate'],
+  ])('reports a refused quota (%s) so the person can be told why', async (reason, expected) => {
+    callable.mockRejectedValue(Object.assign(new Error('Upload limit reached'), {
+      code: 'functions/resource-exhausted',
+      details: reason ? { reason } : undefined,
+    }))
+    const error = await fetchUploadSignature().catch((e) => e)
+    expect(error.code).toBe(UPLOAD_QUOTA)
+    expect(error.reason).toBe(expected)
+  })
+
   it('asks for nothing without a signed-in user', async () => {
     mockAuth.currentUser = null
     await expect(fetchUploadSignature()).rejects.toThrow('Sign in to upload')
@@ -81,5 +96,13 @@ describe('the signed upload', () => {
       signature: 'sig',
     })
     expect(form.get('file').name).toBe('encrypted.dat')
+  })
+})
+
+describe('uploadErrorMessage for a quota', () => {
+  const t = (key) => key
+  it('says which limit was reached', () => {
+    expect(uploadErrorMessage({ code: UPLOAD_QUOTA, reason: 'rate' }, t)).toBe('upload.rateLimited')
+    expect(uploadErrorMessage({ code: UPLOAD_QUOTA, reason: 'storage' }, t)).toBe('upload.storageFull')
   })
 })

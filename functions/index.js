@@ -18,11 +18,11 @@
  *   firebase deploy --only functions
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https'
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
-import { defineSecret, defineString } from 'firebase-functions/params'
+import { defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
@@ -34,6 +34,7 @@ import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMon
 import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
+import { recordUpload, verifyNotification } from './mediaNotification.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -278,6 +279,25 @@ export const createPrintCheckout = onCall(
 const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
 const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
 
+// Generous on purpose: a family importing a holiday should never meet them.
+// Each photo is two uploads, the original and its thumbnail. The storage limit
+// depends on the Cloudinary plan, which every family shares.
+const MEDIA_UPLOADS_PER_HOUR = defineInt('MEDIA_UPLOADS_PER_HOUR', {
+  default: 600,
+  description: 'Uploads one admin may be signed per hour',
+})
+const MEDIA_FAMILY_STORAGE_MB = defineInt('MEDIA_FAMILY_STORAGE_MB', {
+  default: 10240,
+  description: 'Cloudinary storage one family may use, in MB',
+})
+
+// Where Cloudinary reports each stored file (cloudinaryNotification below).
+// Not in the emulator: Cloudinary cannot reach it there.
+const notificationUrl = () =>
+  process.env.FUNCTIONS_EMULATOR === 'true' || !process.env.GCLOUD_PROJECT
+    ? ''
+    : `https://europe-west3-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/cloudinaryNotification`
+
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
  * `mediaAssets` ledger before it exists. Replaces api/cloudinary-sign.
@@ -287,14 +307,67 @@ export const signUpload = onCall(
   async (request) => {
     try {
       return await signMediaUpload(
-        { db: getFirestore(), apiKey: CLOUDINARY_API_KEY.value(), secret: CLOUDINARY_API_SECRET.value() },
+        {
+          db: getFirestore(),
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+          limits: {
+            uploadsPerHour: MEDIA_UPLOADS_PER_HOUR.value(),
+            familyBytes: MEDIA_FAMILY_STORAGE_MB.value() * 1024 * 1024,
+          },
+          notificationUrl: notificationUrl(),
+        },
         request.auth?.uid,
         request.data,
       )
     } catch (error) {
-      if (error instanceof SigningError) throw new HttpsError(error.code, error.message)
+      if (error instanceof SigningError) throw new HttpsError(error.code, error.message, error.details)
       console.error('[media] signing failed', error)
       throw new HttpsError('internal', 'Could not sign the upload')
+    }
+  },
+)
+
+/**
+ * Cloudinary's report that a signed file is stored — see
+ * functions/mediaNotification.js. Public by necessity, so it believes nothing
+ * without Cloudinary's signature, and answers 200 to anything it chose to
+ * ignore: an error makes Cloudinary retry, which only an error of ours is
+ * worth.
+ */
+export const cloudinaryNotification = onRequest(
+  { secrets: [CLOUDINARY_API_SECRET] },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).end()
+      return
+    }
+    const verified = verifyNotification(
+      req.rawBody,
+      req.get('X-Cld-Timestamp'),
+      req.get('X-Cld-Signature'),
+      CLOUDINARY_API_SECRET.value(),
+    )
+    if (!verified) {
+      res.status(401).end()
+      return
+    }
+
+    let payload
+    try {
+      payload = JSON.parse(req.rawBody.toString('utf8'))
+    } catch {
+      res.status(200).json({ result: 'ignored' })
+      return
+    }
+
+    try {
+      const result = await recordUpload({ db: getFirestore() }, payload)
+      if (result === 'unknown') console.warn(`[media] notification for an unknown file ${payload.public_id}`)
+      res.status(200).json({ result })
+    } catch (error) {
+      console.error('[media] recording an upload failed', error)
+      res.status(500).end()
     }
   },
 )
