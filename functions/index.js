@@ -300,7 +300,7 @@ const notificationUrl = () =>
 
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
- * `mediaAssets` ledger before it exists. Replaces api/cloudinary-sign.
+ * `mediaAssets` ledger before it exists.
  */
 export const signUpload = onCall(
   { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY] },

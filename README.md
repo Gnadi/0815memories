@@ -122,7 +122,7 @@ else does.
    - Deploy the Cloud Functions with `firebase deploy --only functions` (needs the Blaze plan). Viewer login is one of them, so the app is not fully usable without this step
    - Push notifications additionally need a Web Push certificate: Firebase Console → Cloud Messaging → Web Push certificates, then `VITE_FIREBASE_VAPID_KEY`. See `docs/plan-notifications.md` for how the pieces fit together
 
-4. Set up Cloudinary. Uploads are signed by the `signUpload` Cloud Function: store the API key and secret with `firebase functions:secrets:set CLOUDINARY_API_KEY` and `firebase functions:secrets:set CLOUDINARY_API_SECRET`. Cloudinary reports each stored file's size to the `cloudinaryNotification` function, whose URL every signature carries; the limits it feeds are the `MEDIA_UPLOADS_PER_HOUR` and `MEDIA_FAMILY_STORAGE_MB` parameters. Until every client has moved to it, the older `api/cloudinary-sign.js` Vercel function still signs for clients from before; it needs the same key and secret as server-side env vars in your Vercel project, and checks the caller by asking Firestore in the project named in `VITE_FIREBASE_PROJECT_ID` (or `FIREBASE_PROJECT_ID`).
+4. Set up Cloudinary. Uploads are signed by the `signUpload` Cloud Function: store the API key and secret with `firebase functions:secrets:set CLOUDINARY_API_KEY` and `firebase functions:secrets:set CLOUDINARY_API_SECRET`. Cloudinary reports each stored file's size to the `cloudinaryNotification` function, whose URL every signature carries; the limits it feeds are the `MEDIA_UPLOADS_PER_HOUR` and `MEDIA_FAMILY_STORAGE_MB` parameters. Vercel needs neither.
 
 5. Start the dev server:
    ```bash

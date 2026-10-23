@@ -160,7 +160,7 @@ service cloud.firestore {
       allow read: if isFamilyMember(familyId);
       // Finding your own family: `adminUids array-contains <you>`, or the
       // oldest families' `adminUid == <you>` — the lookups AuthContext makes at
-      // sign-in, and api/cloudinary-sign makes for an admin without a claim.
+      // sign-in for an admin without a claim.
       //
       // The read rule above cannot answer them. A query is checked against its
       // filters, not document by document, so `familyId` has no value there and

@@ -2,9 +2,9 @@
  * Upload signatures for Cloudinary — the first phase of
  * docs/plan-media-lifecycle.md.
  *
- * api/cloudinary-sign signed only `folder` and `timestamp`. Cloudinary accepts
- * a timestamp for an hour, so one signature allowed any number of uploads of
- * any resource type in that hour, and nothing recorded what was uploaded or for
+ * api/cloudinary-sign, the Vercel function this replaced, signed only `folder`
+ * and `timestamp`. Cloudinary accepts a timestamp for an hour, so one signature
+ * allowed any number of uploads of any resource type in that hour, and nothing recorded what was uploaded or for
  * whom. Here the server picks the file's `public_id` and signs it, so one
  * signature is one file, and it writes that file into the `mediaAssets` ledger
  * before the browser has sent a byte. Later phases attach ledger entries to the

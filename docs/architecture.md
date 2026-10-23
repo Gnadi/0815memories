@@ -17,8 +17,6 @@ Browser (React SPA + service worker)
  ├── Firestore ─────────── all data; firestore.rules decide every read and write
  ├── Cloud Functions ───── viewer login, admin claims, public mirror, push,
  │   (functions/, europe-west3)  upload signatures (signUpload, admins only)
- ├── Vercel function ───── api/cloudinary-sign: the old upload signatures, kept
- │                         for clients from before signUpload
  └── Cloudinary ────────── media, stored as encrypted `raw` files
 ```
 
@@ -182,7 +180,7 @@ Build and delivery details that affect many changes:
   service worker (`scripts/shellPrecache.mjs`); pages and the signed-in
   translations load on demand. CI reports the shell's size on every PR.
 - **Hosting** is Vercel (`vercel.json`): the SPA rewrite, cache headers,
-  security headers, and `api/` as serverless functions.
+  security headers. Everything server-side is a Cloud Function.
 
 ## The demo
 

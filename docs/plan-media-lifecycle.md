@@ -10,8 +10,8 @@ file.
 
 ## What is wrong today
 
-**A signature is a blank cheque.** `api/cloudinary-sign.js` signs only `folder`
-and `timestamp`. Cloudinary accepts a timestamp for an hour, so one signature
+**A signature is a blank cheque.** `api/cloudinary-sign.js` (removed after
+phase 2) signs only `folder` and `timestamp`. Cloudinary accepts a timestamp for an hour, so one signature
 is good for any number of uploads in that hour, of any `resource_type` (it is
 part of the URL, not of the signature), encrypted or not: without a query the
 endpoint signs the plain `image/upload` into `kaydo/`, which is what
@@ -110,8 +110,10 @@ before phase 4.
   `public_id` they were given.
 - `mediaAssets` is `allow read, write: if false` in `firestore.rules`, with a
   test in `src/__tests__/mediaAssetsRules.test.js` (added to `test:rules`).
-- The Vercel endpoint stays until the new client has been live for a release,
-  then goes, together with `CLOUDINARY_API_SECRET` on Vercel.
+- The Vercel endpoint is gone. Clients update themselves (`autoUpdate`,
+  `skipWaiting`, `clientsClaim`), so only a tab left open across the deploy
+  still asks it, and gets a failed upload until it reloads. The Cloudinary
+  variables on Vercel can be deleted.
 
 ### Phase 2 — Uploads report their size (done)
 
