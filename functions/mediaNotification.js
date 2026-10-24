@@ -33,8 +33,10 @@ const sameHex = (a, b) => {
 
 /**
  * Is this body what Cloudinary sent? Its signature is the hash of the body,
- * the timestamp header and the API secret — SHA-1, or SHA-256 for accounts set
- * to it, so both are accepted.
+ * the timestamp header and the API secret, in the digest the account is set
+ * to: SHA-1 unless Cloudinary was asked to change it, SHA-256 if it was. So
+ * both are accepted here — unlike uploads, which we sign ourselves and sign
+ * with SHA-256 (functions/mediaSigning.js).
  *
  * @param {Buffer|string|undefined} rawBody  the bytes as received, not re-serialised JSON
  * @param {string|undefined} timestamp  X-Cld-Timestamp, in seconds

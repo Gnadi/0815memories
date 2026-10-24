@@ -45,7 +45,7 @@ const ledger = (d) => d.db.collectionData(MEDIA_ASSETS)
 describe('cloudinarySignature', () => {
   it('signs the parameters sorted by name, as Cloudinary documents it', () => {
     expect(cloudinarySignature({ timestamp: 1315060510, public_id: 'sample_image' }, 'abcd'))
-      .toBe(createHash('sha1').update('public_id=sample_image&timestamp=1315060510abcd').digest('hex'))
+      .toBe(createHash('sha256').update('public_id=sample_image&timestamp=1315060510abcd').digest('hex'))
   })
 })
 

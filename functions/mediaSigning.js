@@ -60,15 +60,20 @@ function adminUidsOf(data) {
 
 /**
  * Cloudinary's signature: the parameters sorted by name, joined as
- * `key=value&…`, the API secret appended, SHA-1 in hex.
+ * `key=value&…`, the API secret appended, hashed and in hex.
  * https://cloudinary.com/documentation/authentication_signatures
+ *
+ * SHA-256 rather than the SDKs' default SHA-1: Cloudinary accepts either
+ * digest on every account without any setting (it is what the SDKs'
+ * `signature_algorithm: 'sha256'` does), and SHA-1 is a broken hash that
+ * code scanning rightly flags next to a secret.
  */
 export function cloudinarySignature(params, secret) {
   const joined = Object.keys(params)
     .sort()
     .map((key) => `${key}=${params[key]}`)
     .join('&')
-  return createHash('sha1').update(`${joined}${secret}`).digest('hex')
+  return createHash('sha256').update(`${joined}${secret}`).digest('hex')
 }
 
 /**
