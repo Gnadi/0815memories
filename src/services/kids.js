@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const CHILDREN = 'children'
 
@@ -63,9 +64,11 @@ export function subscribeKids(familyId, key, onData, onError) {
 }
 
 export async function addKid(familyId, key, kid) {
-  const encrypted = await encryptFields(key, serialize(kid), KID_ENCRYPTED_FIELDS)
+  const plain = serialize(kid)
+  const encrypted = await encryptFields(key, plain, KID_ENCRYPTED_FIELDS)
   await addDoc(collection(db, CHILDREN), {
     ...encrypted,
+    ...mediaRefsForCreate(plain),
     familyId,
     createdAt: serverTimestamp(),
   })
@@ -73,11 +76,12 @@ export async function addKid(familyId, key, kid) {
 
 /** `null` for birthTime or birthPlace removes it. */
 export async function updateKid(key, id, updates) {
-  const encrypted = await encryptFields(key, serialize(updates), KID_ENCRYPTED_FIELDS)
+  const plain = serialize(updates)
+  const encrypted = await encryptFields(key, plain, KID_ENCRYPTED_FIELDS)
   for (const field of CLEARABLE_FIELDS) {
     if (encrypted[field] === null) encrypted[field] = deleteField()
   }
-  await updateDoc(doc(db, CHILDREN, id), encrypted)
+  await updateDoc(doc(db, CHILDREN, id), { ...encrypted, ...mediaRefsForUpdate(plain) })
 }
 
 export async function deleteKid(id) {

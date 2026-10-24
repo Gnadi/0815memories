@@ -23,6 +23,7 @@ vi.mock('firebase/firestore', () => ({
   // A collection ref with no id argument stands in for the auto-id ref addBox
   // takes to name both halves of the capsule.
   collection: vi.fn((_db, name) => ({ name })),
+  deleteField: vi.fn(() => ({ kind: 'deleteField' })),
   doc: vi.fn((_dbOrRef, name, id) =>
     typeof name === 'string' ? { name, id } : { name: _dbOrRef?.name, id: 'generated' },
   ),

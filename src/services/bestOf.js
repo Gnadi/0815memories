@@ -30,6 +30,7 @@ import { auth, db } from '../config/firebase'
 import { decryptJSON, encryptJSON } from '../utils/encryption'
 import { monthRange } from '../utils/bestOf'
 import { subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate } from './mediaRefs'
 import { decryptMemory } from './memories'
 import { decryptMoment } from './moments'
 
@@ -40,7 +41,7 @@ const LIST_LIMIT = 24
 
 export const bestOfId = (familyId, month) => `${familyId}_${month}`
 
-async function decryptBestOf(key, data) {
+export async function decryptBestOf(key, data) {
   if (!key) return data
   return { ...data, doc: typeof data.doc === 'string' ? await decryptJSON(key, data.doc) : data.doc }
 }
@@ -112,7 +113,9 @@ export async function getMonthEntries(familyId, key, month) {
 
 /**
  * The document as it is written — exactly these fields, which the rules
- * insist on: nothing about the story outside the encrypted `doc`.
+ * insist on: nothing about the story outside the encrypted `doc`, except the
+ * ids of the photos in it (services/mediaRefs.js), so they are not deleted
+ * while the story still shows them.
  */
 export async function bestOfDocument(familyId, key, bestOf) {
   return {
@@ -120,6 +123,7 @@ export async function bestOfDocument(familyId, key, bestOf) {
     month: bestOf.month,
     version: bestOf.version,
     doc: await encryptJSON(key, bestOf),
+    ...mediaRefsForCreate({ doc: bestOf }),
     createdByUid: auth?.currentUser?.uid || null,
     createdAt: serverTimestamp(),
   }

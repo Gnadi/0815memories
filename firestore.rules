@@ -160,7 +160,7 @@ service cloud.firestore {
       allow read: if isFamilyMember(familyId);
       // Finding your own family: `adminUids array-contains <you>`, or the
       // oldest families' `adminUid == <you>` — the lookups AuthContext makes at
-      // sign-in, and api/cloudinary-sign makes for an admin without a claim.
+      // sign-in for an admin without a claim.
       //
       // The read rule above cannot answer them. A query is checked against its
       // filters, not document by document, so `familyId` has no value there and
@@ -246,6 +246,29 @@ service cloud.firestore {
     // trigger through the Admin SDK — see functions/slugs.js. Clients only ever
     // see the result, as familyPublic.familySlug.
     match /familySlugs/{slug} {
+      allow read, write: if false;
+    }
+
+    // Every file uploaded to Cloudinary: which family and admin it belongs to,
+    // and later which documents use it. Written only by the signUpload function
+    // and its successors through the Admin SDK (functions/mediaSigning.js);
+    // what decides whether a file is deleted must not be writable by a client.
+    match /mediaAssets/{assetId} {
+      allow read, write: if false;
+    }
+
+    // What the upload quotas count: a family's stored bytes, and an admin's
+    // uploads this hour. Kept by signUpload and cloudinaryNotification; a
+    // client that could write them could lift its own limits.
+    match /mediaUsage/{familyId} {
+      allow read, write: if false;
+    }
+    match /mediaRates/{uid} {
+      allow read, write: if false;
+    }
+    // The weekly inventory of files from before the ledger, for the operator
+    // (functions/mediaInventory.js).
+    match /mediaReports/{reportId} {
       allow read, write: if false;
     }
 
@@ -590,10 +613,13 @@ service cloud.firestore {
     // can file one under another's name. The story lives in `doc`, encrypted
     // as a single string, and nothing else may ride along: the fields are
     // listed, and `doc` must not start the way plaintext JSON does — the same
-    // backstop memoryContentOk() is for `contentRich`.
+    // backstop memoryContentOk() is for `contentRich`. `mediaRefs` names the
+    // photos the story shows (src/services/mediaRefs.js), so they are not
+    // deleted while it does.
     function bestOfOk(bestOfId) {
       let d = request.resource.data;
-      return d.keys().hasOnly(['familyId', 'month', 'version', 'doc', 'createdByUid', 'createdAt'])
+      return d.keys().hasOnly(['familyId', 'month', 'version', 'doc', 'createdByUid', 'createdAt', 'mediaRefs'])
+        && (!('mediaRefs' in d) || d.mediaRefs is map)
         && d.familyId is string
         && d.month is string
         && d.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')

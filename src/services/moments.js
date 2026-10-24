@@ -19,6 +19,7 @@ import {
 import { auth, db } from '../config/firebase'
 import { decryptStringArray } from '../utils/encryption'
 import { subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const MOMENTS = 'moments'
 
@@ -51,6 +52,7 @@ export function subscribeMoments(familyId, key, { pageSize }, onData, onError) {
 export async function addMoment(familyId, moment) {
   await addDoc(collection(db, MOMENTS), {
     ...moment,
+    ...mediaRefsForCreate(moment),
     familyId,
     createdByUid: auth?.currentUser?.uid || null,
     date: serverTimestamp(),
@@ -58,7 +60,7 @@ export async function addMoment(familyId, moment) {
 }
 
 export async function updateMoment(id, updates) {
-  await updateDoc(doc(db, MOMENTS, id), updates)
+  await updateDoc(doc(db, MOMENTS, id), { ...updates, ...mediaRefsForUpdate(updates) })
 }
 
 export async function deleteMoment(id) {

@@ -306,8 +306,8 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'families', OTHER_FAMILY)))
     })
 
-    // The lookup AuthContext makes at sign-in, and api/cloudinary-sign for an
-    // admin without a claim. The read rule cannot answer a query — its get()
+    // The lookup AuthContext makes at sign-in for an admin without a claim
+    // (api/cloudinary-sign, since removed, made it too). The read rule cannot answer a query — its get()
     // needs a concrete familyId — so this was refused for everyone, and an admin
     // without a claim could neither sign in on a new device nor upload.
     it('finds their own family by adminUids, with or without a claim', async () => {

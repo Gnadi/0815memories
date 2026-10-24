@@ -10,14 +10,14 @@ vi.mock('../utils/imageThumbnail', () => ({
   // it must never add to the upload count asserted below.
   createTinyPreview: vi.fn(async () => 'data:image/webp;base64,AAA'),
 }))
-vi.mock('../config/cloudinary', () => ({
-  CLOUDINARY_CLOUD_NAME: 'demo',
-}))
 // Signing is covered by uploadSignature.test.js; here every fetch is an upload.
 vi.mock('../utils/uploadSignature', () => ({
   fetchUploadSignature: vi.fn(async () => ({
-    timestamp: 1, signature: 'sig', folder: 'kaydo/encrypted', apiKey: 'k',
+    apiKey: 'k', signature: 'sig', resourceType: 'raw', publicId: 'kaydo/fam/abc',
+    params: { overwrite: 'false', public_id: 'kaydo/fam/abc', tags: 'family:fam', timestamp: 1 },
   })),
+  signedUploadUrl: () => 'https://api.cloudinary.com/v1_1/demo/raw/upload',
+  signedUploadForm: () => new FormData(),
 }))
 
 import { createThumbnail } from '../utils/imageThumbnail'

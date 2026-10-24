@@ -15,6 +15,7 @@ import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { needsThumbs, needsTinyPreviews } from '../utils/mediaThumbs'
 import { devError } from '../utils/devLog'
+import { mediaRefsForUpdate } from './mediaRefs'
 
 // Collections whose documents carry an `images` array.
 export const MIGRATABLE_COLLECTIONS = ['memories', 'moments']
@@ -151,7 +152,10 @@ async function buildDerivatives(images, encryptionKey, { wantThumbs, wantTiny })
  * Write `thumbs` and nothing else, and only if `images` is still exactly what
  * the thumbnails were built from. An admin editing the same document elsewhere
  * wins: we discard our work rather than persist an array pointing at the wrong
- * photos. No other field is read for the write or touched by it.
+ * photos. No other field is read for the write or touched by it, apart from
+ * the entry `mediaRefs` keeps for `thumbs` (services/mediaRefs.js). A write
+ * that is discarded leaves its uploads unattached, and the clean-up of
+ * abandoned uploads removes them.
  *
  * @returns {Promise<boolean>} whether the write went through
  */
@@ -182,7 +186,7 @@ export async function commitThumbs(collectionName, docId, expectedImages, deriva
     if (thumbsTiny && !hasTiny) update.thumbsTiny = thumbsTiny
     if (Object.keys(update).length === 0) return
 
-    tx.update(ref, update)
+    tx.update(ref, { ...update, ...(update.thumbs ? mediaRefsForUpdate({ thumbs: update.thumbs }) : {}) })
     written = true
   })
   return written

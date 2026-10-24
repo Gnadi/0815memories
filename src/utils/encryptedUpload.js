@@ -3,9 +3,8 @@
 // eslint-disable-next-line no-restricted-imports
 import { encryptBlob, encryptText } from './encryption'
 import { createThumbnail, createTinyPreview } from './imageThumbnail'
-import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
-import { fetchUploadSignature } from './uploadSignature'
+import { fetchUploadSignature, signedUploadForm, signedUploadUrl } from './uploadSignature'
 import { isDemoMode } from '../demo/demoMode'
 
 // Thrown before anything is encrypted or sent when the file cannot possibly fit
@@ -38,21 +37,14 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
   const encryptedBuffer = await encryptBlob(encryptionKey, blob)
   const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
 
-  // 2. Get signed upload credentials for raw resource type
-  const { timestamp, signature, folder, apiKey } = await fetchUploadSignature('?resource_type=raw')
+  // 2. Get a signature for this one file (a raw resource)
+  const signed = await fetchUploadSignature('encrypted')
 
   // 3. Upload encrypted blob to Cloudinary as raw
-  const formData = new FormData()
-  formData.append('file', encryptedBlob, 'encrypted.dat')
-  formData.append('timestamp', String(timestamp))
-  formData.append('signature', signature)
-  formData.append('api_key', apiKey)
-  formData.append('folder', folder)
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
-    { method: 'POST', body: formData }
-  )
+  const response = await fetch(signedUploadUrl(signed), {
+    method: 'POST',
+    body: signedUploadForm(encryptedBlob, 'encrypted.dat', signed),
+  })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))

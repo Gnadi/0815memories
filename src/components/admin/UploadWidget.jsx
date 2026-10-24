@@ -1,10 +1,9 @@
 import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Image as ImageIcon } from 'lucide-react'
-import { CLOUDINARY_CLOUD_NAME } from '../../config/cloudinary'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
-import { fetchUploadSignature } from '../../utils/uploadSignature'
+import { fetchUploadSignature, signedUploadForm, signedUploadUrl } from '../../utils/uploadSignature'
 import { devError } from '../../utils/devLog'
 
 /**
@@ -30,19 +29,11 @@ export default function UploadWidget({ onUpload, currentUrl, unencrypted = false
       // The demo uploads nothing; encryptAndUpload keeps the file in the tab.
       if (unencrypted && !isDemo) {
         // Plain Cloudinary upload (no encryption)
-        const { timestamp, signature, folder, apiKey } = await fetchUploadSignature()
-
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('timestamp', String(timestamp))
-        formData.append('signature', signature)
-        formData.append('api_key', apiKey)
-        formData.append('folder', folder)
-
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-          { method: 'POST', body: formData }
-        )
+        const signed = await fetchUploadSignature('public')
+        const response = await fetch(signedUploadUrl(signed), {
+          method: 'POST',
+          body: signedUploadForm(file, '', signed),
+        })
         if (!response.ok) throw new Error(t('upload.uploadFailed'))
         const data = await response.json()
         setPreview(data.secure_url)
