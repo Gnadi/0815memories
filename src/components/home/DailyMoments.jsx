@@ -4,6 +4,7 @@ import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { objectPositionAt } from '../../utils/mediaFocus'
 import BestOfCircle from '../bestof/BestOfCircle'
 
 /**
@@ -57,6 +58,7 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
                     thumbSrc={thumbAt(moment, 0)}
                     tinyPreview={tinyPreviewAt(moment, 0)}
                     alt={moment.caption}
+                    style={{ objectPosition: objectPositionAt(moment, 0) }}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                 ) : moment.videos?.length > 0 ? (

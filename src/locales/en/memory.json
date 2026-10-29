@@ -165,5 +165,14 @@
     "videoHint": "Drag videos to change their order.",
     "videoLabel": "Video {{position}} of {{count}}. Drag, or use the arrow keys, to move it.",
     "videoRemove": "Remove video"
+  },
+  "focus": {
+    "title": "Choose the visible part",
+    "hint": "Photos are cropped to fit their frame. Tap or drag on the photo to choose what stays in view.",
+    "adjust": "Choose the visible part of this photo",
+    "value": "{{x}}% from left, {{y}}% from top",
+    "reset": "Centre",
+    "done": "Done",
+    "cancel": "Close"
   }
 }

@@ -17,6 +17,7 @@ import CrossfadeImage, { FADE_MS } from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { objectPositionAt } from '../../utils/mediaFocus'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useCloseOnBack from '../../hooks/useCloseOnBack'
 
@@ -41,6 +42,7 @@ function buildMediaItems(moment) {
       url,
       thumbUrl: thumbAt(moment, i),
       tinyPreview: tinyPreviewAt(moment, i),
+      position: objectPositionAt(moment, i),
     })),
     ...videos.map((v) => ({ type: 'video', url: v.url })),
   ]
@@ -465,6 +467,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
         src={isVideo ? '' : currentUrl}
         thumbSrc={isVideo ? '' : currentThumb}
         tinyPreview={isVideo ? '' : currentTiny}
+        position={isVideo ? undefined : currentItem?.position}
         hold={isVideo && !videoShown}
         alt={moment.caption}
         className={className}

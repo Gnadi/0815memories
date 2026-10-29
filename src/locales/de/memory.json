@@ -165,5 +165,14 @@
     "videoHint": "Ziehe Videos, um ihre Reihenfolge zu ändern.",
     "videoLabel": "Video {{position}} von {{count}}. Ziehen oder mit den Pfeiltasten verschieben.",
     "videoRemove": "Video entfernen"
+  },
+  "focus": {
+    "title": "Bildausschnitt wählen",
+    "hint": "Fotos werden passend zugeschnitten. Tippe oder ziehe auf dem Foto, um festzulegen, was sichtbar bleibt.",
+    "adjust": "Bildausschnitt dieses Fotos wählen",
+    "value": "{{x}} % von links, {{y}} % von oben",
+    "reset": "Mitte",
+    "done": "Fertig",
+    "cancel": "Schließen"
   }
 }
