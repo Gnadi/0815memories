@@ -5,9 +5,11 @@ import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
 import { thumbsFor, buildThumbs, tinyPreviewsUpdate } from '../../utils/mediaThumbs'
+import { buildFocus } from '../../utils/mediaFocus'
 import { momentFormToMemoryDraft } from '../../utils/entryConversion'
 import EntryTypeSwitch from './EntryTypeSwitch'
 import SortableMediaTiles from './SortableMediaTiles'
+import FocusPicker from './FocusPicker'
 import DictationField from '../../components/DictationField'
 import { appendDictation } from '../../hooks/useDictation'
 
@@ -19,6 +21,7 @@ function buildInitialImages(moment) {
       preview: url,
       url,
       thumbUrl: thumbs[i] || '',
+      focus: (Array.isArray(moment.focus) && moment.focus.length === moment.images.length && moment.focus[i]) || '',
       uploading: false,
     }))
   }
@@ -54,6 +57,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
     addVideo,
     removeImage,
     moveImage,
+    setImages,
     removeVideo,
     moveVideo,
     videoError,
@@ -74,6 +78,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
   const [mediaError, setMediaError] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [focusingId, setFocusingId] = useState(null)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const videoFileInputRef = useRef(null)
@@ -118,12 +123,15 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
     setSaving(true)
     try {
       const thumbs = buildThumbs(readyImages)
+      const focus = buildFocus(readyImages, isEditing)
       const data = {
         ...form,
         images: readyImages.map((img) => img.url),
         // Additive, positionally aligned with `images`; omitted when no image
         // has a thumbnail.
         ...(thumbs ? { thumbs } : {}),
+        // Which part of each photo stays in view when a frame crops it.
+        ...(focus ? { focus } : {}),
         ...tinyPreviewsUpdate(readyImages, isEditing ? moment.images || [] : null),
         videos: readyVideos.map((v) => ({ url: v.url, publicId: v.publicId })),
       }
@@ -182,6 +190,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
               items={images}
               onRemove={removeImage}
               onMove={moveImage}
+              onAdjust={setFocusingId}
               className={mediaError ? 'p-2 ring-2 ring-kaydo rounded-xl' : ''}
             >
               {/* Add photo button */}
@@ -338,6 +347,17 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
           </button>
         </form>
       </div>
+
+      {focusingId && (
+        <FocusPicker
+          item={images.find((img) => img.id === focusingId)}
+          onClose={() => setFocusingId(null)}
+          onSave={(focus) => {
+            setImages((prev) => prev.map((img) => (img.id === focusingId ? { ...img, focus } : img)))
+            setFocusingId(null)
+          }}
+        />
+      )}
 
       <input
         ref={fileInputRef}

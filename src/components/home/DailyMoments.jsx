@@ -4,6 +4,7 @@ import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { focusStyleAt } from '../../utils/mediaFocus'
 import BestOfCircle from '../bestof/BestOfCircle'
 
 /**
@@ -50,13 +51,14 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
             className="flex flex-col items-center gap-1.5 flex-shrink-0"
           >
             <div className="story-ring">
-              <div className="story-ring-inner relative">
+              <div className="story-ring-inner relative overflow-hidden">
                 {moment.images?.[0] ? (
                   <EncryptedImage
                     src={moment.images[0]}
                     thumbSrc={thumbAt(moment, 0)}
                     tinyPreview={tinyPreviewAt(moment, 0)}
                     alt={moment.caption}
+                    style={focusStyleAt(moment, 0)}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                 ) : moment.videos?.length > 0 ? (
