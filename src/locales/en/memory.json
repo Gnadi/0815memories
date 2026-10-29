@@ -173,6 +173,8 @@
     "value": "{{x}}% from left, {{y}}% from top",
     "reset": "Centre",
     "done": "Done",
-    "cancel": "Close"
+    "cancel": "Close",
+    "badge": "Crop",
+    "tileHint": "Tap “Crop” on a photo to choose which part stays visible."
   }
 }

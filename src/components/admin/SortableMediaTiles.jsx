@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { X, Video, Crosshair } from 'lucide-react'
+import { X, Video, Crop } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import SortableMediaGroup from './SortableMediaGroup'
@@ -73,9 +73,10 @@ function MediaTile({ item, kind, index, items, onRemove, onMove, onAdjust }) {
           onClick={() => onAdjust(item.id)}
           {...stopDrag}
           aria-label={t('focus.adjust')}
-          className="absolute bottom-1 left-1 w-6 h-6 bg-bark/70 rounded-full flex items-center justify-center text-white hover:bg-bark"
+          className="absolute bottom-1 left-1 right-1 h-6 bg-bark/75 rounded-lg flex items-center justify-center gap-1 text-white text-[10px] font-medium hover:bg-bark"
         >
-          <Crosshair className="w-3.5 h-3.5" />
+          <Crop className="w-3 h-3" />
+          {t('focus.badge')}
         </button>
       )}
       {!item.uploading && (
@@ -125,6 +126,9 @@ export default function SortableMediaTiles({ items, kind, onRemove, onMove, onAd
       </SortableMediaGroup>
       {items.length > 1 && (
         <p className="text-xs text-bark-muted mt-1.5">{t(`mediaOrder.${kind}Hint`)}</p>
+      )}
+      {kind === 'photo' && onAdjust && items.length > 0 && (
+        <p className="text-xs text-bark-muted mt-1">{t('focus.tileHint')}</p>
       )}
     </>
   )

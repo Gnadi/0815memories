@@ -173,6 +173,8 @@
     "value": "{{x}} % von links, {{y}} % von oben",
     "reset": "Mitte",
     "done": "Fertig",
-    "cancel": "Schließen"
+    "cancel": "Schließen",
+    "badge": "Ausschnitt",
+    "tileHint": "Tippe auf „Ausschnitt“ bei einem Foto, um festzulegen, welcher Teil sichtbar bleibt."
   }
 }
