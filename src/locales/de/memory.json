@@ -167,14 +167,15 @@
     "videoRemove": "Video entfernen"
   },
   "focus": {
-    "title": "Bildausschnitt wählen",
-    "hint": "Fotos werden passend zugeschnitten. Tippe oder ziehe auf dem Foto, um festzulegen, was sichtbar bleibt.",
+    "title": "Ausschnitt und Zoom wählen",
+    "hint": "Fotos werden passend zugeschnitten. Tippe oder ziehe auf dem Foto, um festzulegen, was sichtbar bleibt – und zoome bei Bedarf hinein.",
     "adjust": "Bildausschnitt dieses Fotos wählen",
     "value": "{{x}} % von links, {{y}} % von oben",
     "reset": "Mitte",
     "done": "Fertig",
     "cancel": "Schließen",
     "badge": "Ausschnitt",
-    "tileHint": "Tippe auf „Ausschnitt“ bei einem Foto, um festzulegen, welcher Teil sichtbar bleibt."
+    "tileHint": "Tippe auf „Ausschnitt“ bei einem Foto, um festzulegen, welcher Teil sichtbar bleibt und wie stark es gezoomt wird.",
+    "zoom": "Zoom"
   }
 }

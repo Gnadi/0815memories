@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
-import { CENTER_FOCUS, formatFocus, parseFocus } from '../../utils/mediaFocus'
+import { CENTER_FOCUS, MAX_ZOOM, focusStyle, formatFocus, parseFocus } from '../../utils/mediaFocus'
 
 // The shapes a moment photo is cropped to: the story on a phone and the moments
 // grid are tall, the viewer on a desktop is 4:5.
@@ -55,7 +55,7 @@ export default function FocusPicker({ item, onSave, onClose }) {
     }))
   }
 
-  const position = `${point.x}% ${point.y}%`
+  const style = focusStyle(point)
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -95,12 +95,28 @@ export default function FocusPicker({ item, onSave, onClose }) {
                 <Picture
                   item={item}
                   className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                  style={{ objectPosition: position }}
+                  style={style}
                 />
               </div>
             ))}
           </div>
         </div>
+
+        <label className="block">
+          <span className="flex justify-between text-sm font-medium text-bark mb-1">
+            {t('focus.zoom')}
+            <span className="text-bark-muted font-normal">{point.zoom.toFixed(1)}×</span>
+          </span>
+          <input
+            type="range"
+            min="1"
+            max={MAX_ZOOM}
+            step="0.1"
+            value={point.zoom}
+            onChange={(e) => setPoint((p) => ({ ...p, zoom: Number(e.target.value) }))}
+            className="w-full accent-kaydo"
+          />
+        </label>
 
         <div className="flex gap-3">
           <button

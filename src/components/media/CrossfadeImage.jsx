@@ -26,7 +26,7 @@ export const ORIGINAL_DWELL_MS = 300
  * changes drops its old picture before the new one is decoded, and on a dark
  * story background that gap is a black frame on every switch.
  */
-const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, position, onDecoded }) {
+const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, focus, onDecoded }) {
   const imgRef = useRef(null)
 
   // Hold the decrypted blob for as long as this layer shows it. The hook that
@@ -64,7 +64,7 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, p
       // border around the frame.
       style={{
         opacity: ready ? 1 : 0,
-        objectPosition: position,
+        ...focus,
         ...(blurred ? { filter: 'blur(12px)', transform: 'scale(1.08)' } : null),
       }}
     />
@@ -85,8 +85,8 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, p
  * been looked at for a moment, downscaled to the frame it fills (displayCopy.js).
  * `tinyPreview` is the blur-up shown while neither is ready.
  *
- * `position` is the photo's focus point (utils/mediaFocus.js): the part that
- * stays in view when the frame crops it.
+ * `focus` is the photo's style from utils/mediaFocus.js: the part that stays
+ * in view when the frame crops it, and the zoom.
  *
  * `src` empty means there is nothing here to show. With `hold`, whatever is on
  * screen stays up (a video about to cover it has no frame yet); without it, the
@@ -109,7 +109,7 @@ function CrossfadeImage({
   hold = false,
   alt = '',
   fit = 'object-cover',
-  position,
+  focus,
   className = '',
   onSettled,
   onShown,
@@ -248,7 +248,7 @@ function CrossfadeImage({
           blurred={layer.quality === TINY}
           alt={layer === speaking ? alt : ''}
           fit={fit}
-          position={position}
+          focus={focus}
           onDecoded={markDecoded}
         />
       ))}

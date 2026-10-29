@@ -4,14 +4,13 @@ import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import SortableMediaGroup from './SortableMediaGroup'
 import { useSortableMedia, stopDrag } from './useSortableMedia'
-import { parseFocus } from '../../utils/mediaFocus'
+import { focusStyle, parseFocus } from '../../utils/mediaFocus'
 
 // pointer-events-none on the previews keeps the browser's own image drag and
 // long-press menu from hijacking the gesture meant for reordering.
 function Preview({ item, kind }) {
   const className = 'w-20 h-20 rounded-xl object-cover pointer-events-none'
-  const point = parseFocus(item.focus)
-  const style = point ? { objectPosition: `${point.x}% ${point.y}%` } : undefined
+  const style = focusStyle(parseFocus(item.focus))
   const local = item.preview?.startsWith('blob:')
   if (kind === 'video') {
     return local ? (
@@ -26,10 +25,15 @@ function Preview({ item, kind }) {
       />
     )
   }
-  return local ? (
-    <img src={item.preview} alt="" draggable={false} className={className} style={style} />
-  ) : (
-    <EncryptedImage src={item.preview} draggable={false} className={className} style={style} />
+  // Clipped here, so a zoomed photo cannot spill over its neighbours.
+  return (
+    <div className="w-20 h-20 rounded-xl overflow-hidden">
+      {local ? (
+        <img src={item.preview} alt="" draggable={false} className={className} style={style} />
+      ) : (
+        <EncryptedImage src={item.preview} draggable={false} className={className} style={style} />
+      )}
+    </div>
   )
 }
 
