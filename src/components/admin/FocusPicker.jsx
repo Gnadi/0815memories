@@ -33,10 +33,11 @@ export default function FocusPicker({ item, onSave, onClose }) {
     const rect = areaRef.current.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const clamp = (n) => Math.min(100, Math.max(0, n))
-    setPoint({
+    setPoint((p) => ({
+      ...p,
       x: clamp(((e.clientX - rect.left) / rect.width) * 100),
       y: clamp(((e.clientY - rect.top) / rect.height) * 100),
-    })
+    }))
   }
   const handlePointerDown = (e) => {
     e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -50,6 +51,7 @@ export default function FocusPicker({ item, onSave, onClose }) {
     if (!step) return
     e.preventDefault()
     setPoint((p) => ({
+      ...p,
       x: Math.min(100, Math.max(0, p.x + step[0])),
       y: Math.min(100, Math.max(0, p.y + step[1])),
     }))
