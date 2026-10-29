@@ -284,11 +284,14 @@ export default function JournalEntryPage() {
 
           {/* Emotion: one row that scrolls sideways on a phone, rather than a
               block of chips pushing the text off the screen. */}
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
               {t('editor.emotionLabel')}
             </legend>
-            <div className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+            {/* overflow-x-auto turns overflow-y into auto as well, which made the
+                row itself scroll vertically; overflow-y-hidden and pan-x keep it
+                to the sideways scroll. */}
+            <div className="-mx-4 px-4 flex gap-2 overflow-x-auto overflow-y-hidden touch-pan-x pb-1 sm:flex-wrap sm:overflow-visible sm:touch-auto">
               {EMOTIONS.map((em) => {
                 const selected = form.emotion === em.key
                 return (
