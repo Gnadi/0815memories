@@ -297,3 +297,31 @@ describe('memory', () => {
     expect(releases.get('a-thumb')).toHaveBeenCalled()
   })
 })
+
+describe('photos that do not match the frame', () => {
+  // jsdom lays nothing out, so the frame (a 9:16 story) and the photo's own size
+  // are set by hand.
+  function sized(naturalWidth, naturalHeight) {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(360)
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(640)
+    vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(naturalWidth)
+    vi.spyOn(HTMLImageElement.prototype, 'naturalHeight', 'get').mockReturnValue(naturalHeight)
+  }
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows a landscape photo whole, on a blurred copy of itself, instead of cropping it', async () => {
+    sized(4000, 3000)
+    await showA()
+    const [backdrop, photo] = document.querySelectorAll('img')
+    expect(photo.className).toContain('object-contain')
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true')
+    expect(backdrop.style.filter).toContain('blur')
+  })
+
+  it('still fills the frame when the crop would be small', async () => {
+    sized(1080, 1800)
+    await showA()
+    expect(document.querySelectorAll('img')).toHaveLength(1)
+    expect(document.querySelector('img').className).toContain('object-cover')
+  })
+})

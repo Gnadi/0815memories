@@ -20,6 +20,11 @@ export const FADE_MS = 200
 // them in the prefetch lane.
 export const ORIGINAL_DWELL_MS = 300
 
+// How far a photo's shape may differ from the frame's before it is shown whole
+// instead of filling it: a ratio of 0.85 to 1.18 crops at most about 15%.
+const MAX_CROP_RATIO_LOW = 0.85
+const MAX_CROP_RATIO_HIGH = 1.18
+
 /**
  * One image in the stack. It stays transparent until the browser has decoded
  * it, and only then fades in. That order is the whole point: an <img> whose src
@@ -28,6 +33,12 @@ export const ORIGINAL_DWELL_MS = 300
  */
 const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, onDecoded }) {
   const imgRef = useRef(null)
+  // Filling the frame crops whatever does not match its shape, and a landscape
+  // photo in a portrait story lost half its picture. Where the crop would be
+  // small the photo still fills; otherwise it is shown whole, on a blurred copy
+  // of itself. Only the default fit is adjusted: callers that ask for another
+  // one (the collage boxes) get exactly that.
+  const [whole, setWhole] = useState(false)
 
   // Hold the decrypted blob for as long as this layer shows it. The hook that
   // decrypted it has usually moved on to the next slide by the time this layer
@@ -39,7 +50,13 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, o
     if (!img) return
     let cancelled = false
     const done = () => {
-      if (!cancelled) onDecoded(id)
+      if (cancelled) return
+      const frame = img.parentElement
+      if (fit === 'object-cover' && !blurred && frame && img.naturalWidth && frame.clientHeight) {
+        const ratio = (img.naturalWidth / img.naturalHeight) / (frame.clientWidth / frame.clientHeight)
+        setWhole(ratio < MAX_CROP_RATIO_LOW || ratio > MAX_CROP_RATIO_HIGH)
+      }
+      onDecoded(id)
     }
     // A rejection means this image will never decode (a format this browser
     // cannot read). Showing the failure is better than holding the previous
@@ -49,24 +66,38 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, o
     return () => {
       cancelled = true
     }
-  }, [id, url, onDecoded])
+  }, [id, url, onDecoded, fit, blurred])
 
+  const imgClass = 'absolute inset-0 w-full h-full pointer-events-none select-none transition-opacity duration-200 ease-out motion-reduce:transition-none'
   return (
-    <img
-      ref={imgRef}
-      src={url}
-      alt={alt}
-      aria-hidden={alt ? undefined : 'true'}
-      draggable={false}
-      decoding="async"
-      className={`absolute inset-0 w-full h-full ${fit} pointer-events-none select-none transition-opacity duration-200 ease-out motion-reduce:transition-none`}
-      // scale hides the blur's soft edges, which would otherwise show as a pale
-      // border around the frame.
-      style={{
-        opacity: ready ? 1 : 0,
-        ...(blurred ? { filter: 'blur(12px)', transform: 'scale(1.08)' } : null),
-      }}
-    />
+    <>
+      {whole && (
+        <img
+          src={url}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          decoding="async"
+          className={`${imgClass} object-cover`}
+          style={{ opacity: ready ? 1 : 0, filter: 'blur(28px) brightness(0.7)', transform: 'scale(1.15)' }}
+        />
+      )}
+      <img
+        ref={imgRef}
+        src={url}
+        alt={alt}
+        aria-hidden={alt ? undefined : 'true'}
+        draggable={false}
+        decoding="async"
+        className={`${imgClass} ${whole ? 'object-contain' : fit}`}
+        // scale hides the blur's soft edges, which would otherwise show as a pale
+        // border around the frame.
+        style={{
+          opacity: ready ? 1 : 0,
+          ...(blurred ? { filter: 'blur(12px)', transform: 'scale(1.08)' } : null),
+        }}
+      />
+    </>
   )
 })
 
