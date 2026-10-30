@@ -68,6 +68,7 @@ async function countOnce(db, ledgerId, bytes) {
     tx.set(usageRef, {
       bytes: (Number(current.bytes) || 0) + bytes,
       files: (Number(current.files) || 0) + 1,
+      unsized: Number(current.unsized) || 0,
     })
     return true
   })

@@ -18,7 +18,7 @@
  *   firebase deploy --only functions
  */
 
-import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https'
+import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
@@ -34,7 +34,7 @@ import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMon
 import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
-import { recordUpload, verifyNotification } from './mediaNotification.js'
+import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
 import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
@@ -293,18 +293,20 @@ const MEDIA_FAMILY_STORAGE_MB = defineInt('MEDIA_FAMILY_STORAGE_MB', {
   default: 10240,
   description: 'Cloudinary storage one family may use, in MB',
 })
+// The largest file Cloudinary accepts on the plan (10 MB for raw files on the
+// free one, which every encrypted upload is). A file whose size is not looked
+// up yet counts against the family's storage at this size; see checkQuota in
+// functions/mediaSigning.js.
+const MEDIA_MAX_FILE_MB = defineInt('MEDIA_MAX_FILE_MB', {
+  default: 10,
+  description: "Cloudinary's largest file on the plan, in MB",
+})
 
-// Public ids reach the log from requests and from Cloudinary's answers. Only
-// the characters a public id has are kept, so none can forge a log line, and
-// they go as arguments, never inside the message, which is a format string.
+// Public ids and document paths reach the log from Cloudinary's answers and
+// from documents clients wrote. Only the characters a public id has are kept,
+// so none can forge a log line, and they go as arguments, never inside the
+// message, which is a format string.
 const loggable = (value) => String(value).replace(/[^A-Za-z0-9_./~:-]/g, '').slice(0, 300)
-
-// Where Cloudinary reports each stored file (cloudinaryNotification below).
-// Not in the emulator: Cloudinary cannot reach it there.
-const notificationUrl = () =>
-  process.env.FUNCTIONS_EMULATOR === 'true' || !process.env.GCLOUD_PROJECT
-    ? ''
-    : `https://europe-west3-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/cloudinaryNotification`
 
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
@@ -322,8 +324,8 @@ export const signUpload = onCall(
           limits: {
             uploadsPerHour: MEDIA_UPLOADS_PER_HOUR.value(),
             familyBytes: MEDIA_FAMILY_STORAGE_MB.value() * 1024 * 1024,
+            maxFileBytes: MEDIA_MAX_FILE_MB.value() * 1024 * 1024,
           },
-          notificationUrl: notificationUrl(),
         },
         request.auth?.uid,
         request.data,
@@ -332,50 +334,6 @@ export const signUpload = onCall(
       if (error instanceof SigningError) throw new HttpsError(error.code, error.message, error.details)
       console.error('[media] signing failed', error)
       throw new HttpsError('internal', 'Could not sign the upload')
-    }
-  },
-)
-
-/**
- * Cloudinary's report that a signed file is stored — see
- * functions/mediaNotification.js. Public by necessity, so it believes nothing
- * without Cloudinary's signature, and answers 200 to anything it chose to
- * ignore: an error makes Cloudinary retry, which only an error of ours is
- * worth.
- */
-export const cloudinaryNotification = onRequest(
-  { secrets: [CLOUDINARY_API_SECRET] },
-  async (req, res) => {
-    if (req.method !== 'POST') {
-      res.status(405).end()
-      return
-    }
-    const verified = verifyNotification(
-      req.rawBody,
-      req.get('X-Cld-Timestamp'),
-      req.get('X-Cld-Signature'),
-      CLOUDINARY_API_SECRET.value(),
-    )
-    if (!verified) {
-      res.status(401).end()
-      return
-    }
-
-    let payload
-    try {
-      payload = JSON.parse(req.rawBody.toString('utf8'))
-    } catch {
-      res.status(200).json({ result: 'ignored' })
-      return
-    }
-
-    try {
-      const result = await recordUpload({ db: getFirestore() }, payload)
-      if (result === 'unknown') console.warn('[media] notification for an unknown file:', loggable(payload.public_id))
-      res.status(200).json({ result })
-    } catch (error) {
-      console.error('[media] recording an upload failed', error)
-      res.status(500).end()
     }
   },
 )
@@ -409,15 +367,17 @@ const MEDIA_PURGE_DRY_RUN = defineBoolean('MEDIA_PURGE_DRY_RUN', {
   description: 'Only report the Cloudinary files the daily clean-up would delete',
 })
 // The account's cloud name, as in the browser's VITE_CLOUDINARY_CLOUD_NAME.
-// Without it the clean-up can only report, and the inventory does not run.
+// Without it no size is looked up, the clean-up can only report, and the
+// inventory does not run.
 const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
   default: '',
   description: 'Cloudinary cloud name, for deleting unused files',
 })
 
 /**
- * Delete the Cloudinary files nothing uses any more — see
- * functions/mediaPurge.js. A dry run until MEDIA_PURGE_DRY_RUN is false.
+ * Once a day: look up the sizes of new files (functions/mediaSizes.js), then
+ * delete the files nothing uses any more (functions/mediaPurge.js). The
+ * deleting is a dry run until MEDIA_PURGE_DRY_RUN is false.
  */
 export const purgeUnusedMedia = onSchedule(
   {
@@ -429,8 +389,21 @@ export const purgeUnusedMedia = onSchedule(
   async () => {
     const cloudName = CLOUDINARY_CLOUD_NAME.value()
     const dryRun = MEDIA_PURGE_DRY_RUN.value() || !cloudName
-    if (!MEDIA_PURGE_DRY_RUN.value() && !cloudName) {
-      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; reporting only')
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no sizes looked up, nothing deleted')
+    } else {
+      // Before the clean-up, so a file it deletes gives back its real size
+      // rather than its estimate.
+      const sizes = await syncMediaSizes({
+        db: getFirestore(),
+        lookup: cloudinarySizer({
+          fetch,
+          cloudName,
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+        }),
+      })
+      console.log(`[media] sizes ${JSON.stringify(sizes)}`)
     }
     const stats = await purgeMedia({
       db: getFirestore(),

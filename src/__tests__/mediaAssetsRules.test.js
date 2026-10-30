@@ -16,7 +16,7 @@ import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
 import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, signUpload } from '../../functions/mediaSigning.js'
-import { recordUpload } from '../../functions/mediaNotification.js'
+import { syncMediaSizes } from '../../functions/mediaSizes.js'
 import { purgeMedia } from '../../functions/mediaPurge.js'
 import { inventoryLegacyMedia, MEDIA_REPORTS } from '../../functions/mediaInventory.js'
 
@@ -24,7 +24,7 @@ import { inventoryLegacyMedia, MEDIA_REPORTS } from '../../functions/mediaInvent
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'fam-a'
 const ADMIN = 'uid-admin'
-const LIMITS = { uploadsPerHour: 100, familyBytes: 10 * 1024 * 1024 }
+const LIMITS = { uploadsPerHour: 100, familyBytes: 10 * 1024 * 1024, maxFileBytes: 1024 * 1024 }
 
 let testEnv
 let adminApp
@@ -95,8 +95,11 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
 
   it('keeps the quota counters closed, so nobody lifts their own limit', async () => {
     const { publicId } = await sign()
-    expect(await recordUpload({ db }, { notification_type: 'upload', public_id: publicId, bytes: 2048 })).toBe('recorded')
-    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 2048, files: 1 })
+    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 0, files: 0, unsized: 1 })
+    // The daily lookup, with a real `bytes == null` query.
+    const sizes = await syncMediaSizes({ db, lookup: async () => new Map([[publicId, 2048]]) })
+    expect(sizes).toMatchObject({ unsized: 1, recorded: 1 })
+    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 2048, files: 1, unsized: 0 })
     expect((await db.collection(MEDIA_RATES).doc(ADMIN).get()).data().count).toBe(1)
 
     const admin = testEnv
@@ -132,7 +135,7 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
     expect(destroyed.sort()).toEqual([`kaydo/${FAMILY}/old-detached`, `kaydo/${FAMILY}/old-pending`])
     const left = (await db.collection(MEDIA_ASSETS).get()).docs.map((d) => d.id).sort()
     expect(left).toEqual(['in-use', 'new-pending'])
-    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 40, files: 2 })
+    expect((await db.collection(MEDIA_USAGE).doc(FAMILY).get()).data()).toEqual({ bytes: 40, files: 2, unsized: 0 })
   })
 
   it('runs the legacy inventory with real queries, and keeps its report from clients', async () => {

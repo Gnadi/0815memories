@@ -40,9 +40,9 @@ Most interesting to us:
   content or media reaching Cloudinary or Firestore unencrypted, or a key
   leaking
 - **Upload signing** — `functions/mediaSigning.js`,
-  `functions/mediaNotification.js`: a signature for anyone who is not an admin
-  of the family, one that uploads more than the one file it names, or a way
-  around the upload limits
+  `functions/mediaSizes.js`: a signature for anyone who is not an admin of the
+  family, one that uploads more than the one file it names, or a way around
+  the upload limits
 - **Cross-site scripting** — through memories, rich text, or the login page
   designer's custom HTML and CSS
 - **The workflows** — `.github/workflows/`: anything that exposes a secret or

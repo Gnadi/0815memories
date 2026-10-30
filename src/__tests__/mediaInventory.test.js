@@ -48,14 +48,14 @@ describe('inventoryLegacyMedia', () => {
       unclaimedSample: ['raw/kaydo/encrypted/lost.dat', 'image/kaydo/header'],
       familiesNotIndexed: 1,
     })
-    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2 })
+    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2, unsized: 0 })
     expect(db.collectionData(MEDIA_ASSETS)[CLAIMED].bytes).toBe(40)
     expect(db.collectionData(MEDIA_REPORTS)['2026-10-26']).toMatchObject({ unclaimed: 2, createdAt: new Date(NOW) })
 
     // A second run counts nothing twice.
     const again = await inventoryLegacyMedia({ db, list, now: () => NOW })
     expect(again.newlyCounted).toBe(0)
-    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2 })
+    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2, unsized: 0 })
   })
 
   it('deletes nothing', async () => {

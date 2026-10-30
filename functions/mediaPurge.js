@@ -115,10 +115,14 @@ async function forget(db, id, now) {
     const entry = snap.data()
     if (!isDue(entry, now)) return 'raced'
 
-    const bytes = Number(entry.bytes)
+    // A file with a size gives it back; one whose size was never known (an
+    // upload that never happened, as a rule) gives back the estimate it was
+    // counted at. An entry from before either was counted gives back nothing.
+    const sized = typeof entry.bytes === 'number' && Number.isFinite(entry.bytes)
+    const unsized = entry.bytes === null
     let usage = null
     let usageRef = null
-    if (Number.isFinite(bytes) && entry.familyId) {
+    if ((sized || unsized) && entry.familyId) {
       usageRef = db.collection(MEDIA_USAGE).doc(entry.familyId)
       const usageSnap = await tx.get(usageRef)
       usage = usageSnap.exists ? usageSnap.data() : null
@@ -127,8 +131,9 @@ async function forget(db, id, now) {
     tx.delete(ref)
     if (usage) {
       tx.set(usageRef, {
-        bytes: Math.max(0, (Number(usage.bytes) || 0) - bytes),
-        files: Math.max(0, (Number(usage.files) || 0) - 1),
+        bytes: Math.max(0, (Number(usage.bytes) || 0) - (sized ? entry.bytes : 0)),
+        files: Math.max(0, (Number(usage.files) || 0) - (sized ? 1 : 0)),
+        unsized: Math.max(0, (Number(usage.unsized) || 0) - (unsized ? 1 : 0)),
       })
     }
     return 'forgotten'

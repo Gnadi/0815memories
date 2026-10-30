@@ -25,7 +25,7 @@ const FAMILY = 'fam-1'
 const ADMIN = 'uid-admin'
 const NOW = Date.parse('2026-10-23T10:00:00Z')
 
-const LIMITS = { uploadsPerHour: 3, familyBytes: 1000 }
+const LIMITS = { uploadsPerHour: 3, familyBytes: 1000, maxFileBytes: 100 }
 
 function deps({ family = { adminUids: [ADMIN] }, seed = {}, ...overrides } = {}) {
   const db = fakeAdminFirestore({ ...(family ? { [`families/${FAMILY}`]: family } : {}), ...seed })
@@ -74,9 +74,12 @@ describe('signUpload', () => {
         resourceType: 'raw',
         state: 'pending',
         refs: [],
+        bytes: null,
         createdAt: new Date(NOW),
       },
     })
+    // Counted at the largest a file can be until its size is looked up.
+    expect(d.db.collectionData(MEDIA_USAGE)[FAMILY]).toEqual({ bytes: 0, files: 0, unsized: 1 })
   })
 
   it('signs every parameter the browser will send, and nothing else', async () => {
@@ -133,13 +136,6 @@ describe('signUpload', () => {
     expect(a.publicId).not.toBe(b.publicId)
   })
 
-  it('has Cloudinary report the stored file, when there is somewhere to report to', async () => {
-    const url = 'https://europe-west3-p.cloudfunctions.net/cloudinaryNotification'
-    const { params, signature } = await signUpload(deps({ notificationUrl: url }), ADMIN, { familyId: FAMILY })
-    expect(params.notification_url).toBe(url)
-    expect(signature).toBe(cloudinarySignature(params, 'api-secret'))
-  })
-
   it('counts the upload against the admin', async () => {
     const d = deps()
     await signUpload(d, ADMIN, { familyId: FAMILY })
@@ -164,10 +160,20 @@ describe('signUpload', () => {
     expect(error.details).toEqual({ reason: 'storage' })
     expect(ledger(d)).toEqual({})
   })
+
+  it('stops a family before uploads whose sizes are not known yet could overrun it', async () => {
+    // 1000 bytes allowed, 100 the largest file: nine uploads still unsized leave
+    // room for exactly one more, however small they turn out.
+    const d = deps({ seed: { [`${MEDIA_USAGE}/${FAMILY}`]: { bytes: 0, files: 0, unsized: 9 } } })
+    await signUpload(d, ADMIN, { familyId: FAMILY })
+    const error = await signUpload({ ...d, randomId: () => 'def456' }, ADMIN, { familyId: FAMILY }).catch((e) => e)
+    expect(error.details).toEqual({ reason: 'storage' })
+    expect(d.db.collectionData(MEDIA_USAGE)[FAMILY]).toEqual({ bytes: 0, files: 0, unsized: 10 })
+  })
 })
 
 describe('checkQuota', () => {
-  const limits = { uploadsPerHour: 2, familyBytes: 100 }
+  const limits = { uploadsPerHour: 2, familyBytes: 100, maxFileBytes: 10 }
 
   it('starts a window with the first upload', () => {
     expect(checkQuota({}, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
@@ -184,8 +190,13 @@ describe('checkQuota', () => {
     expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
   })
 
-  it('refuses once the family has reached its storage', () => {
-    expect(checkQuota({ usage: { bytes: 99 } }, NOW, limits).allowed).toBe(true)
-    expect(checkQuota({ usage: { bytes: 100 } }, NOW, limits)).toEqual({ allowed: false, reason: 'storage' })
+  it('refuses an upload that could take the family past its storage', () => {
+    expect(checkQuota({ usage: { bytes: 90 } }, NOW, limits).allowed).toBe(true)
+    expect(checkQuota({ usage: { bytes: 91 } }, NOW, limits)).toEqual({ allowed: false, reason: 'storage' })
+  })
+
+  it('counts a file whose size is not known yet at the largest a file can be', () => {
+    expect(checkQuota({ usage: { bytes: 50, unsized: 4 } }, NOW, limits).allowed).toBe(true)
+    expect(checkQuota({ usage: { bytes: 50, unsized: 5 } }, NOW, limits)).toEqual({ allowed: false, reason: 'storage' })
   })
 })

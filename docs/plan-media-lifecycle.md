@@ -58,7 +58,7 @@ mediaAssets/{assetId}
   familyId, uid          who uploaded it, for which family
   publicId, resourceType where it is on Cloudinary
   kind                   'encrypted' | 'public' (the login header)
-  bytes                  from Cloudinary's upload notification
+  bytes                  looked up on Cloudinary once a day; null until then
   state                  'pending' | 'attached' | 'detached'
   refs                   document paths that reference it
   createdAt, detachedAt
@@ -117,15 +117,8 @@ before phase 4.
   still asks it, and gets a failed upload until it reloads. The Cloudinary
   variables on Vercel can be deleted.
 
-### Phase 2 — Uploads report their size (done)
+### Phase 2 — Limits, and the sizes behind them (done)
 
-- `signUpload` adds `notification_url` to the parameters it signs, outside the
-  emulator.
-- `cloudinaryNotification` (`onRequest`, `functions/mediaNotification.js`):
-  verifies Cloudinary's signature over the raw body (SHA-1 or SHA-256, at most
-  a day old), then writes `bytes` to the ledger entry named by the `public_id`
-  and adds it to `mediaUsage/{familyId}`, once per file. An unknown
-  `public_id` is logged and ignored.
 - `signUpload` checks, in the transaction that records the file, the admin's
   uploads this hour (`mediaRates/{uid}`, a fixed window) and the family's
   stored bytes. The limits are parameters with generous defaults —
@@ -133,6 +126,21 @@ before phase 4.
   they change without a change of code. A refusal is `resource-exhausted` with
   the reason, and the browser says which limit was reached
   (`upload.rateLimited`, `upload.storageFull`).
+- A file's size is not known when it is signed. Each signature adds one to
+  `mediaUsage/{familyId}.unsized`, and the storage check counts every such
+  file at `MEDIA_MAX_FILE_MB` (10 by default: Cloudinary's cap per raw file on
+  the free plan, which Cloudinary enforces however the browser was changed).
+  So the limit can refuse an upload a little early, never let one through
+  that takes the family past it.
+- `purgeUnusedMedia` looks the real sizes up once a day before it cleans up
+  (`functions/mediaSizes.js`): the entries with `bytes == null`, a hundred at a
+  time through the Admin API. A size found goes onto its entry and into
+  `bytes`/`files`, and takes one off `unsized`; a file Cloudinary does not have
+  keeps its estimate until the clean-up removes its entry after a week.
+- The first version had Cloudinary report each size to a public
+  `cloudinaryNotification` function after every upload. Its signature check
+  refused Cloudinary's reports in production, and it was a public endpoint
+  for a delay the quota no longer depended on, so the daily lookup replaced it.
 - Usage counts only files signed since phase 1. What a family stored before is
   counted once phase 5 has an inventory of it.
 - `mediaUsage` and `mediaRates` are closed to clients like the ledger.

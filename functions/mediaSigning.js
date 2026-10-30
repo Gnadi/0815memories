@@ -17,9 +17,10 @@
 import { createHash, randomBytes } from 'node:crypto'
 
 export const MEDIA_ASSETS = 'mediaAssets'
-// Per family: the bytes and files Cloudinary has reported for it
-// (functions/mediaNotification.js). Only files signed since the ledger began
-// are counted; what a family stored before is not in it.
+// Per family: `bytes` and `files`, the size of every file whose size is known
+// (functions/mediaSizes.js asks Cloudinary for it), and `unsized`, the files
+// signed whose size is not known yet. Files from before the ledger are counted
+// once the inventory has found them (functions/mediaInventory.js).
 export const MEDIA_USAGE = 'mediaUsage'
 // Per admin: how many uploads they were signed in the current hour.
 export const MEDIA_RATES = 'mediaRates'
@@ -81,12 +82,19 @@ export function cloudinarySignature(params, secret) {
  *
  * The rate is a fixed window that starts with the first upload after the
  * previous one ran out — simple, and an hour is long enough that its edges do
- * not matter. Storage counts what Cloudinary has reported: a file still being
- * uploaded is not in it yet, which the rate bounds.
+ * not matter.
  *
- * @param {{ rate?: { windowStart?: number, count?: number } | null, usage?: { bytes?: number } | null }} state
+ * Storage counts every file whose size is not known yet as if it were as large
+ * as a file can be (`maxFileBytes`, the plan's cap per file, which Cloudinary
+ * enforces however the browser was changed). Sizes are only looked up once a
+ * day, and an admin can sign hundreds of uploads in an hour: counting them at
+ * their smallest would let a family overrun its storage by a day's worth.
+ * Counting them at their largest can refuse an upload a little early, never
+ * let one through too late, and the daily lookup puts the real sizes in.
+ *
+ * @param {{ rate?: { windowStart?: number, count?: number } | null, usage?: { bytes?: number, unsized?: number } | null }} state
  * @param {number} now
- * @param {{ uploadsPerHour: number, familyBytes: number }} limits
+ * @param {{ uploadsPerHour: number, familyBytes: number, maxFileBytes: number }} limits
  * @returns {{ allowed: true, rate: { windowStart: number, count: number } } | { allowed: false, reason: 'rate'|'storage' }}
  */
 export function checkQuota({ rate, usage }, now, limits) {
@@ -94,7 +102,8 @@ export function checkQuota({ rate, usage }, now, limits) {
   const windowStart = current ? rate.windowStart : now
   const count = current ? (Number(rate.count) || 0) : 0
   if (count >= limits.uploadsPerHour) return { allowed: false, reason: 'rate' }
-  if ((Number(usage?.bytes) || 0) >= limits.familyBytes) return { allowed: false, reason: 'storage' }
+  const stored = (Number(usage?.bytes) || 0) + (Number(usage?.unsized) || 0) * limits.maxFileBytes
+  if (stored + limits.maxFileBytes > limits.familyBytes) return { allowed: false, reason: 'storage' }
   return { allowed: true, rate: { windowStart, count: count + 1 } }
 }
 
@@ -111,16 +120,15 @@ const defaultRandomId = () => randomBytes(16).toString('hex')
  * family uses.
  *
  * Quotas are checked in the same transaction that records the file, so two
- * uploads at once cannot both take the last one. With `notificationUrl`,
- * Cloudinary reports the file's size there once it is stored.
+ * uploads at once cannot both take the last one.
  *
- * @param {{ db: any, apiKey: string, secret: string, limits: { uploadsPerHour: number, familyBytes: number }, notificationUrl?: string, now?: () => number, randomId?: () => string }} deps
+ * @param {{ db: any, apiKey: string, secret: string, limits: { uploadsPerHour: number, familyBytes: number, maxFileBytes: number }, now?: () => number, randomId?: () => string }} deps
  * @param {string|undefined} uid  the caller, from the verified ID token
  * @param {{ familyId?: unknown, kind?: unknown }} data
  * @returns {Promise<{ apiKey: string, signature: string, resourceType: string, publicId: string, params: Record<string, string|number> }>}
  */
 export async function signUpload(deps, uid, data) {
-  const { db, apiKey, secret, limits, notificationUrl, now = Date.now, randomId = defaultRandomId } = deps
+  const { db, apiKey, secret, limits, now = Date.now, randomId = defaultRandomId } = deps
   if (!uid) throw new SigningError('unauthenticated', 'Sign in first')
 
   const familyId = typeof data?.familyId === 'string' ? data.familyId : ''
@@ -151,7 +159,13 @@ export async function signUpload(deps, uid, data) {
     )
     if (!decision.allowed) return decision
 
+    const current = usage.exists ? usage.data() : {}
     tx.set(rateRef, decision.rate)
+    tx.set(usageRef, {
+      bytes: Number(current.bytes) || 0,
+      files: Number(current.files) || 0,
+      unsized: (Number(current.unsized) || 0) + 1,
+    })
     // Written before the signature leaves, so there is no file the ledger does
     // not know about. An entry whose upload never happens stays pending, and is
     // what the clean-up of abandoned uploads will remove.
@@ -163,6 +177,9 @@ export async function signUpload(deps, uid, data) {
       resourceType: kind.resourceType,
       state: 'pending',
       refs: [],
+      // null until the daily lookup finds the file on Cloudinary
+      // (functions/mediaSizes.js), which queries for exactly this.
+      bytes: null,
       createdAt,
     })
     return decision
@@ -182,7 +199,6 @@ export async function signUpload(deps, uid, data) {
     tags: `family:${familyId}`,
     timestamp: Math.floor(createdAt.getTime() / 1000),
   }
-  if (notificationUrl) params.notification_url = notificationUrl
 
   return {
     apiKey,

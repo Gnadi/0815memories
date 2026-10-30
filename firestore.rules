@@ -258,8 +258,8 @@ service cloud.firestore {
     }
 
     // What the upload quotas count: a family's stored bytes, and an admin's
-    // uploads this hour. Kept by signUpload and cloudinaryNotification; a
-    // client that could write them could lift its own limits.
+    // uploads this hour. Kept by signUpload and the daily clean-up; a client
+    // that could write them could lift its own limits.
     match /mediaUsage/{familyId} {
       allow read, write: if false;
     }

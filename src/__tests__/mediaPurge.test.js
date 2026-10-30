@@ -88,7 +88,17 @@ describe('purgeMedia', () => {
     expect(stats).toMatchObject({ due: 2, deleted: 2, kept: 0, failed: 0, raced: 0 })
     expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('a')}`, `kaydo/fam-1/${hex('b')}`])
     expect(Object.keys(ledger(db)).sort()).toEqual([hex('c'), hex('d'), hex('e')])
-    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 600, files: 3 })
+    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 600, files: 3, unsized: 0 })
+  })
+
+  it('gives back the estimate of an upload that never happened', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      pending('a', 10, { bytes: null }),
+      [`${MEDIA_USAGE}/fam-1`, { bytes: 500, files: 2, unsized: 3 }],
+    ]))
+    // Cloudinary never had it.
+    await run(db, vi.fn(async (_type, ids) => new Set(ids)))
+    expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 500, files: 2, unsized: 2 })
   })
 
   it('destroys each resource type on its own', async () => {

@@ -126,9 +126,8 @@ the top of `functions/index.js`.
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
-| `cloudinaryNotification` | HTTP, from Cloudinary | records a stored file's size and its family's usage |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
-| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
+| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger; counts claimed ones, reports the rest, deletes nothing |
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
