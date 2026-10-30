@@ -39,7 +39,7 @@ import { LANDING_PATHS } from '../i18n'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
-import { SCREENSHOTS, screenshotPath, screenshotSize } from '../components/landing/screenshots'
+import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
 import usePWAInstall from '../hooks/usePWAInstall'
 
@@ -256,6 +256,9 @@ export default function LandingPage({ lng }) {
         <div className="relative flex items-center justify-center">
           <BrowserFrame
             {...shot('homeDesktop')}
+            srcSet={screenshotSrcSet(SCREENSHOTS.homeDesktop, lang)}
+            // The frame is at most max-w-xl wide, and the page's width below that.
+            sizes="(min-width: 640px) 576px, 100vw"
             alt={t('screens.homeAlt')}
             priority
             className="w-full max-w-xl lg:rotate-1"

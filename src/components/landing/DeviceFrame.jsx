@@ -16,7 +16,7 @@
  * there is something to show. In one column the card has no neighbour, and
  * the frame shows the top of it in the shape of the other desktop shots.
  */
-export function BrowserFrame({ src, alt, width, height, className = '', priority = false, fill = false }) {
+export function BrowserFrame({ src, srcSet, sizes, alt, width, height, className = '', priority = false, fill = false }) {
   return (
     <figure className={`rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white ${fill ? 'flex flex-col md:flex-1' : ''} ${className}`}>
       {/* Title bar */}
@@ -35,6 +35,8 @@ export function BrowserFrame({ src, alt, width, height, className = '', priority
       <div className={fill ? 'relative aspect-[8/5] md:aspect-auto md:flex-1 md:min-h-[16rem]' : undefined}>
         <img
           src={src}
+          srcSet={srcSet}
+          sizes={sizes}
           alt={alt}
           width={width}
           height={height}
