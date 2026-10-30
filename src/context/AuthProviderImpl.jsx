@@ -1,0 +1,503 @@
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import {
+  onAuthStateChanged, signInWithEmailAndPassword,
+  signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
+  signInWithCustomToken, sendPasswordResetEmail, sendEmailVerification,
+} from 'firebase/auth'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, functions, resetFirestore } from '../config/firebase'
+import { generateSlug } from '../utils/familySlug'
+import { backfillAdminUids, createFamily, findAdminFamilies, isSlugAvailable } from '../services/family'
+import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
+import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
+import { terminateDecryptPool } from '../utils/decryptPool'
+import {
+  readStored, writeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
+  isSessionOnly, moveStoredSession,
+} from '../utils/authStorage'
+import { devWarn } from '../utils/devLog'
+import { removeFCMToken } from '../utils/notifications'
+import { isDemoMode, exitDemo } from '../demo/demoMode'
+import { useFamilyKey } from './useFamilyKey'
+import { AuthContext } from './AuthContext'
+import { signupAccount } from './signupAccount'
+
+// Read once per page load, as everything else of the demo reads it: entering
+// and leaving it are hard navigations (demo/demoMode.js).
+const DEMO = isDemoMode()
+
+/**
+ * An error whose message is meant for the person reading the screen.
+ *
+ * The viewer-login messages are written to be safe to display: an
+ * authentication failure always reads the same, so the endpoint cannot be used
+ * to find out which families exist, and only the throttle and "service
+ * unreachable" say anything more. LoginPage replaces every other error with a
+ * generic line — which is right for Firebase Auth errors, whose raw text would
+ * leak whether an account exists — so these have to be marked.
+ */
+function userFacingError(message) {
+  const err = new Error(message)
+  err.userFacing = true
+  return err
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null) // Firebase user — admin *or* viewer
+  // Whether the admin's email address is confirmed. Kept apart from `user`:
+  // Firebase updates the same User object in place when it learns of the
+  // confirmation, which React would not see.
+  const [emailVerified, setEmailVerified] = useState(false)
+  // The role comes from the ID token, never from the client.
+  //
+  // This used to be `isAdmin = !!user`, which was correct only while viewers
+  // had no Firebase session at all. They have one now, so that test would make
+  // every viewer an administrator and wave them straight through
+  // ProtectedRoute's adminOnly gate.
+  //
+  // 'viewer' is only ever minted by the viewerLogin function, so anything else
+  // holding a session is an admin — including an admin whose claim the sync
+  // trigger has not written yet.
+  const [role, setRole] = useState(null)
+  const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
+  // What "Stay logged in" says for the open session, for the settings switch.
+  const [stayLoggedIn, setStayLoggedInState] = useState(() => !isSessionOnly())
+  const [loading, setLoading] = useState(true)
+  const firebaseReady = !!(auth && db)
+
+  // Defined before the effects that depend on it: the dependency array is read
+  // during render, so a `const` declared further down would be in its TDZ.
+  const resolveFamilyId = useCallback(async (uid, preferredId = null) => {
+    const families = await findAdminFamilies(uid)
+    if (families.length === 0) return null
+    // Someone can be an admin of more than one family. Which one the session
+    // bound to used to be whichever document Firestore listed first — which
+    // could differ from the family the token's claim names, and so from what
+    // onAuthStateChanged had just set. The claim's family wins, then the one
+    // they own.
+    const { id, data } =
+      families.find((f) => f.id === preferredId) ??
+      families.find((f) => f.data.adminUid === uid) ??
+      families[0]
+    // Lazy migration: if the owner logs in before the family has an `adminUids`
+    // array, backfill it now so subsequent rule checks use the new shape.
+    if (data.adminUid === uid && !Array.isArray(data.adminUids)) {
+      try {
+        await backfillAdminUids(id, uid)
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('Lazy adminUids migration failed:', err)
+      }
+    }
+    setFamilyId(id)
+    writeStored('fh_familyId', id)
+    return id
+  }, [])
+
+  // Read role and family straight off the ID token. Both are set by the server
+  // — the viewerLogin function for viewers, the syncAdminClaims trigger for
+  // admins — so neither can be forged by editing localStorage.
+  const applyClaims = useCallback(async (firebaseUser, { force = false } = {}) => {
+    if (!firebaseUser) {
+      setRole(null)
+      return null
+    }
+    let claims = null
+    try {
+      claims = (await firebaseUser.getIdTokenResult(force)).claims ?? {}
+    } catch (err) {
+      devWarn('Could not read auth claims:', err)
+    }
+    if (!claims) {
+      // Fail closed. An unreadable token means the role is unknown, and unknown
+      // must not resolve to 'admin' — that is the direction that hands a viewer
+      // the admin UI. They stay signed in with no privileges until the next
+      // auth event, which a reload provides.
+      setRole(null)
+      return null
+    }
+    setRole(claims.role === 'viewer' ? 'viewer' : 'admin')
+
+    const claimFamily = typeof claims.familyId === 'string' ? claims.familyId : null
+    if (claimFamily) {
+      setFamilyId(claimFamily)
+      writeStored('fh_familyId', claimFamily)
+    }
+    return claimFamily
+  }, [])
+
+  // The claim is written by a Firestore trigger, so it lands a moment after the
+  // family document does. Nothing blocks on it — firestore.rules still accepts
+  // the adminUids path — but picking it up promptly keeps the two in step, and
+  // is what the rules will rely on once that fallback is retired.
+  const pollForFamilyClaim = useCallback(async (firebaseUser) => {
+    for (const delay of [1200, 2500, 5000]) {
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      const claimFamily = await applyClaims(firebaseUser, { force: true })
+      if (claimFamily) return
+    }
+  }, [applyClaims])
+
+  // The key and the card style, from the family document — see useFamilyKey.
+  const refreshClaims = useCallback((firebaseUser) => applyClaims(firebaseUser, { force: true }), [applyClaims])
+  const {
+    encryptionKey, keyLoading, keyError, memoryCardStyle, adoptKey, forgetKey,
+  } = useFamilyKey(familyId, user, refreshClaims)
+
+  useEffect(() => {
+    if (DEMO) {
+      // The demo family (demo/index.js): an admin session made up in the
+      // browser, over a database that lives in this tab. The family is only set
+      // once that database is installed, so nothing queries ahead of it.
+      let cancelled = false
+      import('../demo')
+        .then(({ startDemo }) => startDemo())
+        .then((session) => {
+          if (cancelled) return
+          setUser(session.user)
+          setEmailVerified(true)
+          setRole('admin')
+          setFamilyId(session.familyId)
+        })
+        .catch((err) => devWarn('Could not start the demo:', err))
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (!auth) {
+      setLoading(false)
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser)
+      setEmailVerified(!!firebaseUser?.emailVerified)
+      try {
+        const claimFamily = await applyClaims(firebaseUser)
+        // Admins from before the claim migration have no familyId in their token.
+        // The adminUids lookup stays as the fallback for exactly them.
+        if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
+          await resolveFamilyId(firebaseUser.uid)
+        }
+      } catch (err) {
+        // Offline, or a query the rules refused. Either way the app has to
+        // leave the spinner: an unsettled `loading` held every protected page
+        // behind it until a reload happened to succeed.
+        devWarn('Could not resolve the family for this session:', err?.code, err?.message)
+      } finally {
+        setLoading(false)
+      }
+    })
+
+    return unsubscribe
+  }, [resolveFamilyId, applyClaims])
+
+  // Explicitly bind the session to a family without going through a lookup.
+  // Used right after invite redemption, where the new admin's UID has just been
+  // added to the family but a fresh resolveFamilyId() query may race the write
+  // (or the onAuthStateChanged-triggered lookup already ran before the write).
+  const setActiveFamilyId = useCallback((id) => {
+    if (!id) return
+    setFamilyId(id)
+    writeStored('fh_familyId', id)
+  }, [])
+
+  // `remember` is the "Stay logged in" box, on by default. It decides how long
+  // the session outlives the window — see utils/authStorage.
+  //
+  // The password is no longer checked here. It is checked by the viewerLogin
+  // Cloud Function, which holds the only readable copy of the hash and answers
+  // with a custom token carrying a `familyId` claim. That claim is what
+  // firestore.rules reads — which is the whole reason a viewer can now be told
+  // apart from a stranger.
+  const loginAsViewer = useCallback(async (password, viewerFamilyId, { remember = true } = {}) => {
+    if (!auth || !functions) throw userFacingError('Firebase not configured — add env vars and reload')
+    if (!viewerFamilyId) throw userFacingError('No family link provided')
+
+    // Chosen before the sign-in: setPersistence only applies to sessions opened
+    // after it resolves, and it decides where the refresh token is written.
+    setSessionOnly(!remember)
+    setStayLoggedInState(remember)
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    } catch (err) {
+      devWarn('Could not set auth persistence:', err)
+    }
+
+    let token
+    try {
+      const result = await httpsCallable(functions, 'viewerLogin')({
+        familyId: viewerFamilyId,
+        password,
+        // A device that signed in before is not locked out by other people's
+        // wrong guesses — see functions/viewerLogin.js.
+        deviceToken: readViewerDevice(viewerFamilyId) || undefined,
+      })
+      token = result?.data?.token
+      if (result?.data?.deviceToken) writeViewerDevice(viewerFamilyId, result.data.deviceToken)
+    } catch (err) {
+      // The function answers every *authentication* failure identically, so the
+      // endpoint cannot be used to find out which families exist. But not every
+      // failure is an authentication failure, and collapsing all of them into
+      // "Invalid password" hid a 403 from the callable behind a message that
+      // sent people looking for a typo. Only permission-denied — the one the
+      // function raises deliberately — is reported as a wrong password.
+      devWarn('Viewer login failed:', err?.code, err?.message)
+      if (err?.code === 'functions/resource-exhausted') {
+        throw userFacingError('Too many attempts — please wait a moment and try again')
+      }
+      if (err?.code === 'functions/permission-denied') {
+        throw userFacingError('Invalid password')
+      }
+      throw userFacingError('Could not reach the login service — please try again')
+    }
+    if (!token) throw userFacingError('Invalid password')
+
+    await signInWithCustomToken(auth, token)
+    // onAuthStateChanged reads the claim and sets the family; this write just
+    // gets it into storage before the first render.
+    setFamilyId(viewerFamilyId)
+    writeStored('fh_familyId', viewerFamilyId)
+  }, [])
+
+  const loginAsAdmin = useCallback(async (email, password, { remember = true } = {}) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    // Must precede the sign-in: setPersistence decides where the SDK writes the
+    // refresh token, and it only applies to sessions opened after it resolves.
+    // Local persistence (the default we now state explicitly) survives a browser
+    // restart; session persistence dies with the window, matching the storage
+    // side below. A browser that denies IndexedDB rejects here — the sign-in is
+    // still worth attempting, it just falls back to the SDK's in-memory default.
+    setSessionOnly(!remember)
+    setStayLoggedInState(remember)
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('Could not set auth persistence:', err)
+    }
+    const result = await signInWithEmailAndPassword(auth, email, password)
+    const claimFamily = await result.user
+      .getIdTokenResult()
+      .then(({ claims }) => (typeof claims?.familyId === 'string' ? claims.familyId : null))
+      .catch(() => null)
+    // No family lists this account: its signup stopped before the address was
+    // confirmed, or another admin removed it. It stays signed in, and
+    // ProtectedRoute sends it to /signup to confirm the address and found a
+    // family. Signing it out, as this used to, left an account whose address
+    // was taken and that could never be finished.
+    await resolveFamilyId(result.user.uid, claimFamily)
+  }, [resolveFamilyId])
+
+  // "Forgot password" for admins. Firebase sends the mail and its own page sets
+  // the new password, so the reset link never passes through this app. Nothing
+  // else changes with the password: the family key is stored in the family
+  // document, not derived from it, and Firebase ends the account's other
+  // sessions once the password is changed.
+  //
+  // The answer must not tell a stranger whether an account exists. Firebase
+  // says so only with auth/user-not-found, and only where the project's email
+  // enumeration protection is off, so that code reads as success here, and the
+  // page shows the same neutral line for both. Errors that do not depend on
+  // the account (a malformed address, the throttle, no network) still throw.
+  const sendAdminPasswordReset = useCallback(async (email, language) => {
+    if (!auth) throw new Error('Firebase not configured — add env vars and reload')
+    // The language of the email, from the templates set in the Firebase console.
+    if (language) auth.languageCode = language
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (err) {
+      if (err?.code === 'auth/user-not-found') return
+      throw err
+    }
+  }, [])
+
+  // Creating an admin account is two steps with the mailbox in between.
+  //
+  // A password reset goes to the address the account was registered with, so
+  // an account whose address nobody confirmed belongs to whoever reads that
+  // mailbox. firestore.rules therefore lets an account found a family, or
+  // redeem an invite, only once Firebase has confirmed its address. signup()
+  // creates the account and sends the confirmation mail; createOwnFamily()
+  // founds the family once the address is confirmed.
+  const signup = useCallback(async (email, password, displayName, familyName, language) => {
+    await signupAccount(email, password, displayName, familyName, language)
+    // Set here as well as through setSessionOnly: the switch in the settings
+    // reads this state, not the storage.
+    setStayLoggedInState(true)
+    setEmailVerified(false)
+  }, [])
+
+  const sendVerificationEmail = useCallback(async (language) => {
+    const current = auth?.currentUser
+    if (!current) throw new Error('Not signed in')
+    if (language) auth.languageCode = language
+    await sendEmailVerification(current)
+  }, [])
+
+  // Asks Firebase whether the address has been confirmed since, and if so
+  // fetches a fresh ID token: the rules read `email_verified` from the token,
+  // and the one the session holds was issued before the confirmation.
+  const checkEmailVerified = useCallback(async () => {
+    const current = auth?.currentUser
+    if (!current) return false
+    await current.reload()
+    const verified = !!auth.currentUser?.emailVerified
+    if (verified) await auth.currentUser.getIdToken(true)
+    setEmailVerified(verified)
+    return verified
+  }, [])
+
+  // The second step of signup(), for a signed-in account that belongs to no
+  // family yet.
+  const createOwnFamily = useCallback(async (familyName) => {
+    const current = auth?.currentUser
+    if (!current || !db) throw new Error('Not signed in')
+    if (!(await checkEmailVerified())) {
+      const err = new Error('The email address is not confirmed yet')
+      err.code = 'email-not-verified'
+      throw err
+    }
+
+    // ProtectedRoute also sends an admin here whose family lookup failed, say
+    // offline on a new device. Such an account is bound to its family again
+    // rather than handed a second one.
+    if (await resolveFamilyId(current.uid)) return
+
+    const name = familyName || (current.displayName ? current.displayName + "'s Family" : '')
+    const slug = generateSlug(name)
+    if (!slug) throw new Error('Family name produces an invalid URL — please use letters or numbers')
+
+    const available = await isSlugAvailable(slug)
+    if (!available) throw new Error('This family name is already taken — please choose another')
+
+    // Generate a per-family encryption key
+    const { key, jwk } = await generateEncryptionKey()
+
+    // Create the family document with the encryption key
+    const newFamilyId = await createFamily({ uid: current.uid, name, slug, encryptionKeyJwk: jwk })
+    // The key was just generated here, so there is nothing to load.
+    adoptKey(newFamilyId, key)
+    setFamilyId(newFamilyId)
+    writeStored('fh_familyId', newFamilyId)
+    // Not awaited: the app is usable immediately via the adminUids rule path,
+    // and the claim only has to arrive before that path is retired.
+    pollForFamilyClaim(current)
+  }, [checkEmailVerified, resolveFamilyId, pollForFamilyClaim, adoptKey])
+
+  // "Wrong address": deletes an account that belongs to no family yet, so the
+  // address can be typed again. Nothing is lost — there is no family to lose.
+  // Firebase refuses to delete an account signed in long ago; signing out is
+  // the fallback, and such an account can still be finished later.
+  const discardNewAccount = useCallback(async () => {
+    const current = auth?.currentUser
+    if (!current || familyId) return
+    try {
+      await current.delete()
+    } catch (err) {
+      devWarn('Could not delete the unfinished account:', err?.code)
+      await signOut(auth)
+    }
+    setRole(null)
+    clearStoredSession()
+  }, [familyId])
+
+  // "Stay logged in", changed from the settings for the session already open.
+  // setPersistence on a signed-in user moves the user to the new store, so the
+  // Firebase token and the family binding keep expiring together.
+  const setStayLoggedIn = useCallback(async (remember) => {
+    if (DEMO || !auth) return
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    moveStoredSession(!remember)
+    setStayLoggedInState(remember)
+  }, [])
+
+  const logout = useCallback(async () => {
+    // The demo has no Firebase session, token or cache to clear: leaving it is
+    // a fresh start of the tab outside the demo.
+    if (DEMO) {
+      exitDemo('/')
+      return
+    }
+
+    // Before signing out, while the rules still accept the write: a shared
+    // device should stop receiving this family's notifications.
+    await removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err))
+
+    if (user && auth) {
+      await signOut(auth)
+      // The SDK's persistence mode is sticky for the life of the page, and the
+      // storage side is about to be reset to "remembered" by clearStoredSession.
+      // Without this, a session-only login followed by a logout and then any
+      // sign-in that does not go through loginAsAdmin — invite redemption calls
+      // createUserWithEmailAndPassword directly — would leave the token dying
+      // with the window while the family binding sat in localStorage.
+      try {
+        await setPersistence(auth, browserLocalPersistence)
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('Could not reset auth persistence:', err)
+      }
+    }
+    setRole(null)
+    setFamilyId(null)
+    forgetKey()
+    // Decrypted media outlives the session otherwise: the object URLs stay
+    // resolvable for as long as the tab is open.
+    clearDecryptedMediaCache()
+    clearDecryptedTextCache()
+    // The workers hold the family key; tearing them down drops it with the session.
+    terminateDecryptPool()
+    clearStoredSession()
+    setStayLoggedInState(true)
+    // Firestore keeps documents in memory past their listeners (config/firebase);
+    // the family document among them carries the key. A fresh instance holds none.
+    await resetFirestore()
+  }, [user, forgetKey])
+
+  // A viewer holds a Firebase session too now, so presence of `user` no longer
+  // says anything about privilege — only the role claim does.
+  const isAuthenticated = !!user
+  const isViewer = role === 'viewer'
+  const isAdmin = !!user && role === 'admin'
+
+  // A fresh object literal here re-renders every consumer in the app on any
+  // state change, and hands each of them new function identities to depend on.
+  const value = useMemo(() => ({
+    user,
+    isViewer,
+    isAdmin,
+    isAuthenticated,
+    isDemo: DEMO,
+    familyId,
+    encryptionKey,
+    memoryCardStyle,
+    loading,
+    keyLoading,
+    keyError,
+    firebaseReady,
+    loginAsViewer,
+    loginAsAdmin,
+    sendAdminPasswordReset,
+    signup,
+    emailVerified,
+    sendVerificationEmail,
+    checkEmailVerified,
+    createOwnFamily,
+    discardNewAccount,
+    logout,
+    setActiveFamilyId,
+    stayLoggedIn,
+    setStayLoggedIn,
+  }), [
+    user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
+    memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
+    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, signup, emailVerified,
+    sendVerificationEmail, checkEmailVerified, createOwnFamily, discardNewAccount,
+    logout, setActiveFamilyId,
+    stayLoggedIn, setStayLoggedIn,
+  ])
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}

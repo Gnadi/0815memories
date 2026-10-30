@@ -11,6 +11,7 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
+    { "source": "/.well-known/(.*)", "destination": "/.well-known/$1" },
     { "source": "/de", "destination": "/de.html" },
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
@@ -29,6 +30,18 @@
       "source": "/icons/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/screenshots/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=31536000" }
       ]
     },
     {

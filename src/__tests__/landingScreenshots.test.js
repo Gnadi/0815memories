@@ -15,6 +15,8 @@ import {
   SCREENSHOT_LANGUAGES,
   screenshotPath,
   screenshotSize,
+  screenshotSrcSet,
+  smallScreenshotPath,
 } from '../components/landing/screenshots'
 import { demoTarget } from '../demo/demoMode'
 
@@ -31,6 +33,28 @@ describe('landing page screenshots', () => {
       })
     }
   }
+
+  // The smaller file of a picture is what a phone downloads, so it has to be
+  // the same picture, scaled, or the srcset's width descriptors lie.
+  for (const lang of SCREENSHOT_LANGUAGES) {
+    for (const [key, shot] of Object.entries(SCREENSHOTS).filter(([, s]) => s.small)) {
+      it(`${key} has its smaller file in ${lang}, in the same shape`, async () => {
+        const file = join(ROOT, 'public', smallScreenshotPath(shot, lang))
+        expect(existsSync(file), file).toBe(true)
+        const { width, height } = await sharp(file).metadata()
+        const full = screenshotSize(shot, lang)
+        expect(width).toBe(shot.small)
+        expect(height).toBe(Math.round((full.height * shot.small) / full.width))
+      })
+    }
+  }
+
+  it('offers the smaller file next to the full one, and only where there is one', () => {
+    expect(screenshotSrcSet(SCREENSHOTS.homeDesktop, 'de')).toBe(
+      '/screenshots/de/home-desktop-800.webp 800w, /screenshots/de/home-desktop.webp 1200w',
+    )
+    expect(screenshotSrcSet(SCREENSHOTS.blackbox, 'en')).toBeUndefined()
+  })
 
   it('names only screenshots that are listed', () => {
     const page = readFileSync(join(ROOT, 'src', 'pages', 'LandingPage.jsx'), 'utf8')

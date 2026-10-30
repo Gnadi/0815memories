@@ -36,7 +36,8 @@ vi.mock('../demo/demoMode', async (importOriginal) => ({
   exitDemo: vi.fn(),
 }))
 
-const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { AuthProvider } = await import('../context/AuthProviderImpl')
+const { useAuth } = await import('../context/AuthContext')
 const { useMemories } = await import('../hooks/useMemories')
 const { exitDemo } = await import('../demo/demoMode')
 const { db } = await import('../config/firebase')
