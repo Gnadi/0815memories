@@ -6,6 +6,7 @@ import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { rememberFeedMemory } from '../../utils/feedPosition'
 import { resolvePolaroidBorder, isLightPolaroidColor, getPolaroidFramePattern } from './polaroidBorder'
 
 const WIDTH_PRESETS = {
@@ -64,7 +65,11 @@ export default function MemoryCardPolaroid({ memory, onEdit, onDelete }) {
   return (
     <div
       className={`cursor-pointer relative ${showMenu ? 'z-30' : ''}`}
-      onClick={() => navigate(`/memory/${memory.id}`)}
+      data-memory-id={memory.id}
+      onClick={() => {
+        rememberFeedMemory(memory.id)
+        navigate(`/memory/${memory.id}`)
+      }}
       style={{ transform: 'rotate(-1.2deg)', transition: 'transform 200ms' }}
     >
       <div
