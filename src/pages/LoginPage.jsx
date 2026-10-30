@@ -379,11 +379,14 @@ export default function LoginPage() {
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
             : <FamilyIllustration />}
+          {/* The photo or illustration can be light, so the white text sits on a
+              dark gradient to stay readable whatever the family uploaded. */}
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               {t('login.asideTitle')}
             </h2>
-            <p className="text-base opacity-90 drop-shadow">
+            <p className="text-base drop-shadow">
               {t('login.asideBody')}
             </p>
           </div>
