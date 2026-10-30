@@ -16,6 +16,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const SCRAPBOOKS = 'scrapbooks'
 
@@ -68,9 +69,11 @@ export function getScrapbook(familyId, key, id) {
 }
 
 export async function addScrapbook(familyId, key, data) {
-  const encrypted = await encryptScrapbook(key, withPageCount(data))
+  const plain = withPageCount(data)
+  const encrypted = await encryptScrapbook(key, plain)
   const ref = await addDoc(collection(db, SCRAPBOOKS), {
     ...encrypted,
+    ...mediaRefsForCreate(plain),
     familyId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -79,9 +82,11 @@ export async function addScrapbook(familyId, key, data) {
 }
 
 export async function updateScrapbook(key, id, data) {
-  const encrypted = await encryptScrapbook(key, withPageCount(data))
+  const plain = withPageCount(data)
+  const encrypted = await encryptScrapbook(key, plain)
   await updateDoc(doc(db, SCRAPBOOKS, id), {
     ...encrypted,
+    ...mediaRefsForUpdate(plain),
     updatedAt: serverTimestamp(),
   })
 }

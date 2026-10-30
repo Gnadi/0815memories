@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const runTransaction = vi.fn()
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn((_db, name) => ({ name })),
+  deleteField: vi.fn(() => ({ kind: 'deleteField' })),
   doc: vi.fn((_db, name, id) => ({ name, id })),
   getDocs: vi.fn(),
   limit: vi.fn((n) => ({ limit: n })),
@@ -94,7 +95,17 @@ describe('commitThumbs', () => {
 
     expect(await commitThumbs('memories', 'm1', ['a.enc'], ['a-t.enc'])).toBe(true)
     expect(update).toHaveBeenCalledTimes(1)
-    expect(update.mock.calls[0][1]).toEqual({ thumbs: ['a-t.enc'] })
+    // …and the entry mediaRefs keeps for it, which an id from before the
+    // ledger leaves empty.
+    expect(update.mock.calls[0][1]).toEqual({ thumbs: ['a-t.enc'], 'mediaRefs.thumbs': { kind: 'deleteField' } })
+  })
+
+  it('declares the thumbnails it writes, so they are not taken for abandoned uploads', async () => {
+    const thumb = `https://res.cloudinary.com/demo/raw/upload/v1/kaydo/fam1/${'a'.repeat(32)}`
+    const update = withStoredDoc({ images: ['a.enc'], familyId: 'fam1' })
+
+    expect(await commitThumbs('memories', 'm1', ['a.enc'], [thumb])).toBe(true)
+    expect(update.mock.calls[0][1]['mediaRefs.thumbs']).toEqual([`kaydo/fam1/${'a'.repeat(32)}`])
   })
 
   it('writes nothing when images changed under us', async () => {

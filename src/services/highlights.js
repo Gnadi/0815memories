@@ -18,6 +18,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const HIGHLIGHTS = 'highlights'
 
@@ -56,6 +57,7 @@ export async function addHighlight(familyId, key, data) {
   const encrypted = await encryptHighlight(key, data)
   const ref = await addDoc(collection(db, HIGHLIGHTS), {
     ...encrypted,
+    ...mediaRefsForCreate(data),
     familyId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -67,6 +69,7 @@ export async function updateHighlight(key, id, data) {
   const encrypted = await encryptHighlight(key, data)
   await updateDoc(doc(db, HIGHLIGHTS, id), {
     ...encrypted,
+    ...mediaRefsForUpdate(data),
     updatedAt: serverTimestamp(),
   })
 }

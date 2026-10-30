@@ -2,7 +2,8 @@
  * Firebase Cloud Functions — Kaydo
  *
  * Push notifications (this file's first half) and access control (the second),
- * with the daily clean-up of printed-book files between them.
+ * with the daily clean-up of printed-book files and the signing of media
+ * uploads between them.
  * Everything runs in europe-west3, set once at the top: setGlobalOptions only
  * reaches v2 functions, and only those defined after the call.
  *
@@ -21,7 +22,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
-import { defineSecret, defineString } from 'firebase-functions/params'
+import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
@@ -32,6 +33,11 @@ import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
+import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
+import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
+import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
+import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -260,6 +266,192 @@ export const createPrintCheckout = onCall(
       console.error('[print] checkout failed', error)
       throw new HttpsError('internal', 'Could not create the checkout')
     }
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Media uploads — see functions/mediaSigning.js and docs/plan-media-lifecycle.md
+// ---------------------------------------------------------------------------
+
+// From Cloudinary's console (Settings > API Keys), both in Secret Manager:
+// `firebase functions:secrets:set CLOUDINARY_API_SECRET`, and the same for
+// CLOUDINARY_API_KEY. The key is not secret — it goes to the browser with every
+// signature — but a string parameter without a default stops the emulator from
+// loading any function, viewer login included, and a default would let a
+// deploy go out without one.
+const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
+const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
+
+// Generous on purpose: a family importing a holiday should never meet them.
+// Each photo is two uploads, the original and its thumbnail. The storage limit
+// depends on the Cloudinary plan, which every family shares.
+const MEDIA_UPLOADS_PER_HOUR = defineInt('MEDIA_UPLOADS_PER_HOUR', {
+  default: 600,
+  description: 'Uploads one admin may be signed per hour',
+})
+const MEDIA_FAMILY_STORAGE_MB = defineInt('MEDIA_FAMILY_STORAGE_MB', {
+  default: 10240,
+  description: 'Cloudinary storage one family may use, in MB',
+})
+// The largest file Cloudinary accepts on the plan (10 MB for raw files on the
+// free one, which every encrypted upload is). A file whose size is not looked
+// up yet counts against the family's storage at this size; see checkQuota in
+// functions/mediaSigning.js.
+const MEDIA_MAX_FILE_MB = defineInt('MEDIA_MAX_FILE_MB', {
+  default: 10,
+  description: "Cloudinary's largest file on the plan, in MB",
+})
+
+// Public ids and document paths reach the log from Cloudinary's answers and
+// from documents clients wrote. Only the characters a public id has are kept,
+// so none can forge a log line, and they go as arguments, never inside the
+// message, which is a format string.
+const loggable = (value) => String(value).replace(/[^A-Za-z0-9_./~:-]/g, '').slice(0, 300)
+
+/**
+ * Sign one Cloudinary upload for an admin, and record the file in the
+ * `mediaAssets` ledger before it exists.
+ */
+export const signUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY] },
+  async (request) => {
+    try {
+      return await signMediaUpload(
+        {
+          db: getFirestore(),
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+          limits: {
+            uploadsPerHour: MEDIA_UPLOADS_PER_HOUR.value(),
+            familyBytes: MEDIA_FAMILY_STORAGE_MB.value() * 1024 * 1024,
+            maxFileBytes: MEDIA_MAX_FILE_MB.value() * 1024 * 1024,
+          },
+        },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof SigningError) throw new HttpsError(error.code, error.message, error.details)
+      console.error('[media] signing failed', error)
+      throw new HttpsError('internal', 'Could not sign the upload')
+    }
+  },
+)
+
+/**
+ * Attach files to the documents that use them, and let go of the ones a
+ * document stopped using — see functions/mediaRefs.js.
+ *
+ * One trigger for every top-level collection rather than one per media
+ * collection: a collection that starts carrying media is one line in
+ * MEDIA_COLLECTIONS, not a new function to deploy. Writes elsewhere return
+ * before reading anything.
+ */
+export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', async (event) => {
+  const { collection, docId } = event.params
+  if (!MEDIA_COLLECTIONS.includes(collection)) return
+  const before = event.data?.before?.exists ? event.data.before.data() : null
+  const after = event.data?.after?.exists ? event.data.after.data() : null
+  if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
+
+  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  if (stats.attached || stats.detached || stats.ignored) {
+    console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
+  }
+})
+
+// The clean-up deletes for real only once this is set to false, after its
+// logs have shown for a while that it would delete nothing still in use.
+const MEDIA_PURGE_DRY_RUN = defineBoolean('MEDIA_PURGE_DRY_RUN', {
+  default: true,
+  description: 'Only report the Cloudinary files the daily clean-up would delete',
+})
+// The account's cloud name, as in the browser's VITE_CLOUDINARY_CLOUD_NAME.
+// Without it no size is looked up, the clean-up can only report, and the
+// inventory does not run.
+const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
+  default: '',
+  description: 'Cloudinary cloud name, for deleting unused files',
+})
+
+/**
+ * Once a day: look up the sizes of new files (functions/mediaSizes.js), then
+ * delete the files nothing uses any more (functions/mediaPurge.js). The
+ * deleting is a dry run until MEDIA_PURGE_DRY_RUN is false.
+ */
+export const purgeUnusedMedia = onSchedule(
+  {
+    schedule: '15 4 * * *',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    const dryRun = MEDIA_PURGE_DRY_RUN.value() || !cloudName
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no sizes looked up, nothing deleted')
+    } else {
+      // Before the clean-up, so a file it deletes gives back its real size
+      // rather than its estimate.
+      const sizes = await syncMediaSizes({
+        db: getFirestore(),
+        lookup: cloudinarySizer({
+          fetch,
+          cloudName,
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+        }),
+      })
+      console.log(`[media] sizes ${JSON.stringify(sizes)}`)
+    }
+    const stats = await purgeMedia({
+      db: getFirestore(),
+      destroy: cloudinaryDestroyer({
+        fetch,
+        cloudName,
+        apiKey: CLOUDINARY_API_KEY.value(),
+        secret: CLOUDINARY_API_SECRET.value(),
+      }),
+      dryRun,
+    })
+    const { wouldDelete, ...counts } = stats
+    console.log(`[media] purge ${JSON.stringify(counts)}`)
+    // Public ids name a family and a random file, nothing of what is in it.
+    if (wouldDelete?.length) console.log('[media] would delete:', wouldDelete.map(loggable).join(' '))
+  },
+)
+
+/**
+ * Weekly inventory of the files from before the ledger — see
+ * functions/mediaInventory.js. Counts the claimed ones into their families'
+ * usage and reports the unclaimed ones in `mediaReports/<date>` and the log.
+ * Deletes nothing.
+ */
+export const reportLegacyMedia = onSchedule(
+  {
+    schedule: '15 5 * * 1',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no inventory')
+      return
+    }
+    const { unclaimedSample, ...counts } = await inventoryLegacyMedia({
+      db: getFirestore(),
+      list: cloudinaryLister({
+        fetch,
+        cloudName,
+        apiKey: CLOUDINARY_API_KEY.value(),
+        secret: CLOUDINARY_API_SECRET.value(),
+      }),
+    })
+    console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
+    if (unclaimedSample.length) console.log('[media] unclaimed, for example:', unclaimedSample.map(loggable).join(' '))
   },
 )
 

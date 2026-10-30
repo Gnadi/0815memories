@@ -197,6 +197,20 @@
     "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
     "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
   },
+  "mediaIndex": {
+    "label": "Fotos und Videos erfassen",
+    "description": "Kaydo merkt sich jetzt, welche gespeicherten Dateien noch verwendet werden, damit Dateien, die niemand mehr braucht, aufgeräumt werden können. Beiträge, die davor gespeichert wurden, sagen das noch nicht. Hier werden sie einmal durchgegangen und es wird vermerkt — dabei wird nichts heruntergeladen, verändert oder gelöscht.",
+    "never": "Noch nicht erledigt.",
+    "lastRun": "Zuletzt erledigt am {{date}}.",
+    "start": "Jetzt erfassen",
+    "stop": "Abbrechen",
+    "progress": "{{done}} von {{total}}",
+    "done": "Fertig: {{updated}} Beitrag/Beiträge vermerkt.",
+    "stopped": "Abgebrochen nach {{done}} von {{total}}. Du kannst jederzeit weitermachen.",
+    "partial": "{{failed}} Beitrag/Beiträge konnten nicht erfasst werden. Du kannst es gefahrlos erneut versuchen.",
+    "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
+    "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
+  },
   "admins": {
     "label": "Admins verwalten",
     "description": "Erstelle einen einmaligen Einladungslink, um eine weitere Admin-Person hinzuzufügen. Sie legt ihr eigenes Passwort fest. Jede Admin-Person ist nur an diese Familie gebunden.",

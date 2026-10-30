@@ -18,6 +18,9 @@ export function uploadErrorMessage(err, t) {
       limit: formatBytes(err.limit ?? MAX_PLAINTEXT_BYTES),
     })
   }
+  if (err?.code === 'upload/quota') {
+    return t(err.reason === 'storage' ? 'upload.storageFull' : 'upload.rateLimited')
+  }
   return t('upload.failed')
 }
 

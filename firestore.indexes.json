@@ -132,6 +132,22 @@
         { "fieldPath": "ritualId", "order": "ASCENDING" },
         { "fieldPath": "periodStart", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "mediaAssets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mediaAssets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "detachedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

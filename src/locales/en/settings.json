@@ -197,6 +197,20 @@
     "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
     "error": "Something went wrong. You can safely try again."
   },
+  "mediaIndex": {
+    "label": "Index your photos and videos",
+    "description": "Kaydo now keeps track of which stored files are still in use, so files nobody needs any more can be cleared away. Posts saved before that don't say which files they use yet. This goes through them once and notes it — nothing is downloaded, changed or deleted.",
+    "never": "Not done yet.",
+    "lastRun": "Last done on {{date}}.",
+    "start": "Index now",
+    "stop": "Stop",
+    "progress": "{{done}} of {{total}}",
+    "done": "Done: {{updated}} post(s) noted.",
+    "stopped": "Stopped after {{done}} of {{total}}. You can carry on any time.",
+    "partial": "{{failed}} post(s) could not be indexed. You can safely try again.",
+    "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
+    "error": "Something went wrong. You can safely try again."
+  },
   "admins": {
     "label": "Manage Admins",
     "description": "Generate a one-time invite link to add another admin. They'll set their own password. Each admin is bound to this family only.",

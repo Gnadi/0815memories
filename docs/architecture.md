@@ -15,9 +15,8 @@ Browser (React SPA + service worker)
  ├── Firebase Auth ─────── admins: email/password
  │                         viewers: custom token from viewerLogin
  ├── Firestore ─────────── all data; firestore.rules decide every read and write
- ├── Cloud Functions ───── viewer login, admin claims, public mirror, push
- │   (functions/, europe-west3)
- ├── Vercel function ───── api/cloudinary-sign: upload signatures, admins only
+ ├── Cloud Functions ───── viewer login, admin claims, public mirror, push,
+ │   (functions/, europe-west3)  upload signatures and the media ledger
  └── Cloudinary ────────── media, stored as encrypted `raw` files
 ```
 
@@ -135,6 +134,10 @@ the top of `functions/index.js`.
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
+| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
+| `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
+| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
+| `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger; counts claimed ones, reports the rest, deletes nothing |
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
@@ -178,6 +181,12 @@ The NAS export decrypts through the services for the same reason
 (`services/nasExport.js`). The one exception is the blur-up preview, which
 `utils/encryptedUpload.js` encrypts as it makes it.
 
+A service that writes media also writes `mediaRefs`, from the plaintext,
+through `services/mediaRefs.js`: the server keeps a ledger of uploaded files
+and cannot read rich text to see which are in use (`docs/plan-media-lifecycle.md`).
+A collection that starts holding media is added to `MEDIA_COLLECTIONS` in
+`functions/mediaRefs.js` as well.
+
 Build and delivery details that affect many changes:
 
 - **Pre-rendering.** `vite-react-ssg` renders the landing page to static
@@ -190,7 +199,7 @@ Build and delivery details that affect many changes:
   service worker (`scripts/shellPrecache.mjs`); pages and the signed-in
   translations load on demand. CI reports the shell's size on every PR.
 - **Hosting** is Vercel (`vercel.json`): the SPA rewrite, cache headers,
-  security headers, and `api/` as serverless functions.
+  security headers. Everything server-side is a Cloud Function.
 
 ## The demo
 

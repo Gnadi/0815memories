@@ -24,6 +24,7 @@ import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { emptyKeepsakes } from '../utils/ourYear'
 import { subscribeDecrypted, subscribeDecryptedDocument } from './decrypted'
+import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 export const RITUALS = 'ourYearRituals'
 export const CHAPTERS = 'ourYearChapters'
@@ -175,6 +176,7 @@ export async function addChapter(key, ritual, data) {
   const encrypted = await encryptChapter(key, data)
   const ref = await addDoc(collection(db, CHAPTERS), {
     ...encrypted,
+    ...mediaRefsForCreate(data),
     familyId: ritual.familyId,
     ritualId: ritual.id,
     participantUids: ritual.participantUids,
@@ -195,7 +197,7 @@ export async function addChapter(key, ritual, data) {
 
 export async function updateChapter(key, id, data) {
   const encrypted = await encryptChapter(key, data)
-  await updateDoc(doc(db, CHAPTERS, id), { ...encrypted, updatedAt: serverTimestamp() })
+  await updateDoc(doc(db, CHAPTERS, id), { ...encrypted, ...mediaRefsForUpdate(data), updatedAt: serverTimestamp() })
 }
 
 export async function closeChapter(id) {

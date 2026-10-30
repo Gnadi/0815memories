@@ -124,6 +124,12 @@ describe.skipIf(!EMULATOR)('best-of', () => {
       await assertFails(put(asAdmin(), `${FAMILY}_2026-09`, bestOf(FAMILY, '2026-09', { title: 'Best of September' })))
     })
 
+    it('takes the ids of the photos the story shows, as a map and nothing else', async () => {
+      const mediaRefs = { doc: [`kaydo/${FAMILY}/${'a'.repeat(32)}`] }
+      await assertSucceeds(put(asAdmin(), `${FAMILY}_2026-09`, bestOf(FAMILY, '2026-09', { mediaRefs })))
+      await assertFails(put(asAdmin(), `${FAMILY}_2026-10`, bestOf(FAMILY, '2026-10', { mediaRefs: 'kaydo/x' })))
+    })
+
     it('leaves viewers and other families out', async () => {
       await assertFails(put(asViewer(), `${FAMILY}_2026-09`, bestOf(FAMILY, '2026-09')))
       await assertFails(put(asAdmin(OTHER_ADMIN, OTHER_FAMILY), `${FAMILY}_2026-09`, bestOf(FAMILY, '2026-09')))
