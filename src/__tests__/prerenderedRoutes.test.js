@@ -32,3 +32,16 @@ describe('pre-rendered pages', () => {
     expect(sitemap).toContain(`hreflang="${lng}" href="${url}"`)
   })
 })
+
+// Lighthouse's Agentic Browsing audit asks for /.well-known/ai-catalog.json,
+// and the catch-all answered it with the landing page's HTML and a 200, which
+// it reports as "ARD manifest is invalid". Kaydo publishes no catalog, so what
+// is not a file there has to be a 404, as /assets is.
+describe('/.well-known', () => {
+  it('is answered from files only, ahead of the catch-all', () => {
+    const index = vercel.rewrites.findIndex((r) => r.source === '/.well-known/(.*)')
+    expect(index).toBeGreaterThan(-1)
+    expect(vercel.rewrites[index].destination).toBe('/.well-known/$1')
+    expect(index).toBeLessThan(catchAll)
+  })
+})
