@@ -19,6 +19,7 @@ import {
 import { auth, db } from '../config/firebase'
 import { decryptStringArray } from '../utils/encryption'
 import { subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const MOMENTS = 'moments'
 
@@ -55,6 +56,7 @@ export async function addMoment(familyId, moment) {
     createdByUid: auth?.currentUser?.uid || null,
     date: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'moment' })
 }
 
 export async function updateMoment(id, updates) {

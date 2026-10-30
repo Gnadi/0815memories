@@ -15,6 +15,7 @@
 import { addDoc, collection, serverTimestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { buildFeedbackDocument } from '../constants/feedback'
+import { trackEvent } from './usage'
 
 export async function sendFeedback(familyId, { uid = null, role = null } = {}, input) {
   if (!db) throw new Error('Firebase not configured')
@@ -39,4 +40,5 @@ export async function sendFeedback(familyId, { uid = null, role = null } = {}, i
     status: 'new',
     createdAt: serverTimestamp(),
   })
+  trackEvent('feedback_sent')
 }

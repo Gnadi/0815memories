@@ -16,6 +16,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const SCRAPBOOKS = 'scrapbooks'
 
@@ -75,6 +76,7 @@ export async function addScrapbook(familyId, key, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'scrapbook' })
   return ref.id
 }
 

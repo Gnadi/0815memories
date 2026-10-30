@@ -17,6 +17,7 @@ import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const JOURNALS = 'journals'
 
@@ -88,6 +89,7 @@ export async function addJournal(familyId, childId, key, entry) {
     childId,
     createdAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'journal_entry' })
 }
 
 /**

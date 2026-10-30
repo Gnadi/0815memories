@@ -18,6 +18,7 @@ import {
 import { devWarn } from '../utils/devLog'
 import { removeFCMToken } from '../utils/notifications'
 import { isDemoMode, exitDemo } from '../demo/demoMode'
+import { setUsageContext, trackEvent } from '../services/usage'
 import { useFamilyKey } from './useFamilyKey'
 
 const AuthContext = createContext(null)
@@ -25,6 +26,10 @@ const AuthContext = createContext(null)
 // Read once per page load, as everything else of the demo reads it: entering
 // and leaving it are hard navigations (demo/demoMode.js).
 const DEMO = isDemoMode()
+
+// Wrong guesses since the page loaded, so the first success can say how many
+// it took. A failed login cannot be recorded as it happens: nobody is signed in.
+let failedViewerLogins = 0
 
 /**
  * An error whose message is meant for the person reading the screen.
@@ -143,6 +148,11 @@ export function AuthProvider({ children }) {
     encryptionKey, keyLoading, keyError, memoryCardStyle, adoptKey, forgetKey,
   } = useFamilyKey(familyId, user, refreshClaims)
 
+  // Who the usage log is recording for. Signing out empties it.
+  useEffect(() => {
+    setUsageContext({ familyId: user ? familyId : null, role })
+  }, [user, familyId, role])
+
   useEffect(() => {
     if (DEMO) {
       // The demo family (demo/index.js): an admin session made up in the
@@ -246,6 +256,7 @@ export function AuthProvider({ children }) {
       // sent people looking for a typo. Only permission-denied — the one the
       // function raises deliberately — is reported as a wrong password.
       devWarn('Viewer login failed:', err?.code, err?.message)
+      failedViewerLogins += 1
       if (err?.code === 'functions/resource-exhausted') {
         throw userFacingError('Too many attempts — please wait a moment and try again')
       }
@@ -257,6 +268,9 @@ export function AuthProvider({ children }) {
     if (!token) throw userFacingError('Invalid password')
 
     await signInWithCustomToken(auth, token)
+    // Queued until the claims are read and the session knows its family.
+    trackEvent('viewer_login_succeeded', failedViewerLogins > 0 ? { tries: failedViewerLogins + 1 } : undefined)
+    failedViewerLogins = 0
     // onAuthStateChanged reads the claim and sets the family; this write just
     // gets it into storage before the first render.
     setFamilyId(viewerFamilyId)

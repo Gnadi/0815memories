@@ -27,6 +27,11 @@
     "off": "Du wirst abgemeldet, sobald du den Browser schließt. Gut für ein Gerät, das auch andere benutzen.",
     "failed": "Das hat nicht geklappt. Bitte versuche es erneut."
   },
+  "usage": {
+    "label": "Nutzungsstatistik",
+    "on": "Kaydo merkt sich anonym, welche Bereiche genutzt werden und wo etwas nicht klappt, damit wir die App verbessern können. Nie Inhalte, Texte, Namen oder Fotos.",
+    "off": "Auf diesem Gerät wird nichts über die Nutzung erfasst."
+  },
   "panel": {
     "title": "Admin-Einstellungen"
   },

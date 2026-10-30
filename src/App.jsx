@@ -28,6 +28,8 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import InviteRedeemPage from './pages/InviteRedeemPage'
+import { trackEvent } from './services/usage'
+import { featureForPath } from './constants/usageEvents'
 
 // Every page below needs translation namespaces that are not in the startup
 // bundle. Waiting for them here — inside the boundary React already suspends
@@ -205,6 +207,19 @@ function RevealPage() {
   return null
 }
 
+// Records which feature a page belongs to, once per visit to it, for the usage
+// log (services/usage.js). Only the feature's name leaves, never the path: a
+// path carries the ids of content. Signed-out pages are not features, and the
+// log drops events until someone is signed in.
+function UsageRouteTracker() {
+  const { pathname } = useLocation()
+  const feature = featureForPath(pathname)
+  useEffect(() => {
+    if (feature) trackEvent('feature_opened', { feature })
+  }, [feature])
+  return null
+}
+
 // Vercel's analytics and speed insights scripts are only served on Vercel
 // deployments; on localhost, the preview server, or any other host they 404
 // and log console errors. Gate them to real hosts so they stay silent locally
@@ -331,6 +346,7 @@ function Layout() {
         <AdminMobileBottomNav />
         <PWAInstallPrompt />
         <AppNotifications />
+        <UsageRouteTracker />
         <SiteAnalytics />
       </AuthProvider>
     </I18nextProvider>

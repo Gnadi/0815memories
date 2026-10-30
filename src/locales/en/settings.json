@@ -27,6 +27,11 @@
     "off": "You will be logged out when you close the browser. Good for a device other people use too.",
     "failed": "That didn't work. Please try again."
   },
+  "usage": {
+    "label": "Usage statistics",
+    "on": "Kaydo notes, without names, which areas are used and where something goes wrong, so we can improve the app. Never content, text, names or photos.",
+    "off": "Nothing about how the app is used is recorded on this device."
+  },
   "panel": {
     "title": "Admin Settings"
   },

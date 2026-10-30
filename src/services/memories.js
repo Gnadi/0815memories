@@ -19,6 +19,7 @@ import { auth, db } from '../config/firebase'
 import { decryptFields, decryptStringArray, encryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const MEMORIES = 'memories'
 const MOMENTS = 'moments'
@@ -116,6 +117,7 @@ export async function addMemory(familyId, key, memory) {
     createdByUid: createdByUid(),
     createdAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'memory' })
 }
 
 export async function updateMemory(key, id, updates) {

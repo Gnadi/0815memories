@@ -18,6 +18,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const HIGHLIGHTS = 'highlights'
 
@@ -60,6 +61,7 @@ export async function addHighlight(familyId, key, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'highlight' })
   return ref.id
 }
 

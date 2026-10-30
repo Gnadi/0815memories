@@ -19,6 +19,7 @@ import { db } from '../config/firebase'
 import { decryptFields, decryptJSON, encryptFields, encryptJSON } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const RECIPES = 'recipes'
 
@@ -136,11 +137,13 @@ export async function getRecipeLineage(familyId, key, rootId, { viewer = false }
 
 export async function addRecipe(familyId, key, data) {
   const encrypted = await encryptRecipe(key, data)
-  return addDoc(collection(db, RECIPES), {
+  const ref = await addDoc(collection(db, RECIPES), {
     ...encrypted,
     familyId,
     createdAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'recipe' })
+  return ref
 }
 
 /**

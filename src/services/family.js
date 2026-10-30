@@ -22,6 +22,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
+import { trackEvent } from './usage'
 
 const FAMILIES = 'families'
 const FAMILY_PUBLIC = 'familyPublic'
@@ -59,6 +60,8 @@ export async function createFamily({ uid, name, slug, encryptionKeyJwk }) {
     encryptionKeyJwk,
     createdAt: serverTimestamp(),
   })
+  // Queued until the session knows its new family (services/usage.js).
+  trackEvent('family_created')
   return ref.id
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { trackEvent } from '../services/usage'
 
 function isStandalone() {
   if (typeof window === 'undefined') return false
@@ -38,6 +39,7 @@ if (typeof window !== 'undefined') {
     update({ deferredPrompt: e })
   })
   window.addEventListener('appinstalled', () => {
+    trackEvent('pwa_installed')
     update({ installed: true, deferredPrompt: null })
   })
 }

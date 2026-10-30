@@ -33,6 +33,7 @@ import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { devError } from '../utils/devLog'
 import { subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const BLACKBOX = 'blackbox'
 const BLACKBOX_CONTENT = 'blackboxContent'
@@ -101,6 +102,7 @@ export async function addBox(familyId, key, box) {
   })
   batch.set(doc(db, BLACKBOX_CONTENT, ref.id), { ...encryptedContent, familyId })
   await batch.commit()
+  trackEvent('item_created', { kind: 'vault_capsule' })
   return ref.id
 }
 

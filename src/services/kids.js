@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const CHILDREN = 'children'
 
@@ -69,6 +70,7 @@ export async function addKid(familyId, key, kid) {
     familyId,
     createdAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'child' })
 }
 
 /** `null` for birthTime or birthPlace removes it. */

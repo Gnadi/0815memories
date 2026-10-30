@@ -23,6 +23,7 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { generateInviteToken, INVITE_TTL_MS } from '../utils/inviteToken'
+import { trackEvent } from './usage'
 
 const FAMILIES = 'families'
 
@@ -68,6 +69,7 @@ export async function createInvite(familyId, createdBy) {
     redeemedBy: null,
     redeemedAt: null,
   })
+  trackEvent('invite_created')
   return token
 }
 

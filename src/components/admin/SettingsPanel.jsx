@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug } from '../../utils/familySlug'
 import { getFamily, isSlugAvailable, updateFamily } from '../../services/family'
+import { trackEvent } from '../../services/usage'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
@@ -78,6 +79,7 @@ export default function SettingsPanel() {
         familyId,
         password: newPassword,
       })
+      trackEvent('viewer_password_set')
       setNewPassword('')
       setMessage(t('password.updated'))
       setTimeout(() => setMessage(''), 3000)

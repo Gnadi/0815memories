@@ -930,6 +930,69 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Usage events — the app's own record of what is used and where people get
+    // stuck. Same shape of rule as feedback, for the same reasons: write-only
+    // for every family member (viewers are most of the people in a family's
+    // space), unreadable and immutable for everyone, and unencrypted because it
+    // is addressed to whoever runs Kaydo — which is why the shape is strict.
+    //
+    // Nothing in a document can carry content: a name from a fixed list, at
+    // most three short labels, no user id. Limits mirror
+    // src/constants/usageEvents.js; the event names are compared by a test.
+    // `expireAt` feeds a Firestore TTL policy (docs/usage-tracking.md). The
+    // window is wide because the client cannot know this server's clock.
+    function usagePropOk(props, key) {
+      return props.get(key, '') is string && props.get(key, '').size() <= 40;
+    }
+
+    function usageEventShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['familyId', 'role', 'name', 'props', 'lang',
+                               'standalone', 'session', 'createdAt', 'expireAt'])
+        && d.name in [
+             'session_started',
+             'family_created',
+             'invite_created',
+             'viewer_password_set',
+             'viewer_login_succeeded',
+             'item_created',
+             'feature_opened',
+             'upload_rejected',
+             'upload_failed',
+             'error_shown',
+             'push_permission',
+             'pwa_installed',
+             'feedback_sent',
+           ]
+        && d.props is map
+        && d.props.size() <= 3
+        && d.props.keys().hasOnly(['feature', 'kind', 'reason', 'area', 'result', 'tries'])
+        && usagePropOk(d.props, 'feature')
+        && usagePropOk(d.props, 'kind')
+        && usagePropOk(d.props, 'reason')
+        && usagePropOk(d.props, 'area')
+        && usagePropOk(d.props, 'result')
+        && usagePropOk(d.props, 'tries')
+        && d.lang is string && d.lang.size() <= 16
+        && d.standalone is bool
+        && d.session is string && d.session.size() <= 32
+        && d.createdAt == request.time
+        && d.expireAt is timestamp
+        && d.expireAt > request.time + duration.value(60, 'd')
+        && d.expireAt < request.time + duration.value(120, 'd')
+        && d.role in ['admin', 'viewer']
+        // As with feedback: a viewer cannot sign an event as an admin.
+        && (tokenRole() != 'viewer' || d.role == 'viewer');
+    }
+
+    match /usageEvents/{eventId} {
+      allow create: if request.auth != null
+                    && request.resource.data.familyId is string
+                    && isFamilyMember(request.resource.data.familyId)
+                    && usageEventShapeOk();
+      allow read, update, delete: if false;
+    }
+
     // The `notificationsQueue` collection that used to live here is gone. The
     // client no longer composes push notifications: it wrote the plaintext
     // title of an otherwise encrypted memory into a Firestore document, and it

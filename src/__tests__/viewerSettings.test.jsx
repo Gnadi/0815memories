@@ -182,3 +182,22 @@ describe('installing the app', () => {
     expect(screen.getByText('Kaydo is installed on this device.')).toBeInTheDocument()
   })
 })
+
+describe('the usage statistics switch', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('is on by default and open to a viewer', () => {
+    renderPage()
+    expect(screen.getByRole('switch', { name: 'Usage statistics' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('switches off for this device, and stays off after a reload', () => {
+    renderPage()
+    fireEvent.click(screen.getByRole('switch', { name: 'Usage statistics' }))
+    expect(screen.getByRole('switch', { name: 'Usage statistics' })).toHaveAttribute('aria-checked', 'false')
+
+    cleanup()
+    renderPage()
+    expect(screen.getByRole('switch', { name: 'Usage statistics' })).toHaveAttribute('aria-checked', 'false')
+  })
+})

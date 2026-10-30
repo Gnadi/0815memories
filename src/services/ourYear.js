@@ -24,6 +24,7 @@ import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { emptyKeepsakes } from '../utils/ourYear'
 import { subscribeDecrypted, subscribeDecryptedDocument } from './decrypted'
+import { trackEvent } from './usage'
 
 export const RITUALS = 'ourYearRituals'
 export const CHAPTERS = 'ourYearChapters'
@@ -190,6 +191,7 @@ export async function addChapter(key, ritual, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'our_year_chapter' })
   return ref.id
 }
 

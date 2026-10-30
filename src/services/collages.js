@@ -17,6 +17,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
+import { trackEvent } from './usage'
 
 const COLLAGES = 'collages'
 
@@ -63,6 +64,7 @@ export async function addCollage(familyId, key, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  trackEvent('item_created', { kind: 'collage' })
   return ref.id
 }
 

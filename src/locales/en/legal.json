@@ -101,6 +101,8 @@
           "Account data: your name, email address, and the credentials you use to sign in.",
           "Content you create: photos, videos, audio recordings, journals, recipes, and other memories you choose to upload, along with information you add such as captions, dates, and the family members you share with.",
           "Technical data: information your device sends automatically, such as device type, browser, and basic log data needed to operate and secure the Service.",
+          "Reach measurement: our pages run Vercel Web Analytics and Vercel Speed Insights. They count page views and measure load times.",
+          "Usage statistics: during the test phase we record which areas of the app are opened and which features are used (for example “recipe created”), and when an error occurs (for example an upload that is too large). An entry holds only the family identifier, the role (admin or viewer), the name of the event, the language and a random identifier for the visit. Never content, titles, names, file names, user IDs or keys. The entries are kept in our own database, no other provider is involved, and they are deleted after 90 days. Nothing is stored on your device for this, except your choice if you switch the recording off. You can switch the recording off for your device in the settings. The legal basis is our legitimate interest in a working, improving app (Art. 6(1)(f) GDPR).",
           "We collect only what we need to provide the Service and do not sell your personal data."
         ]
       },

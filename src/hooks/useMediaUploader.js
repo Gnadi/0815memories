@@ -7,6 +7,7 @@ import {
   formatBytes,
 } from '../constants/media'
 import { devError } from '../utils/devLog'
+import { trackEvent } from '../services/usage'
 
 // Turns whatever the upload pipeline threw into something a person can act on.
 // Anything else would leave the user staring at a spinner that ends in nothing,
@@ -19,6 +20,13 @@ export function uploadErrorMessage(err, t) {
     })
   }
   return t('upload.failed')
+}
+
+// Which of the two it was matters: a file over the cap is the family's to fix,
+// anything else is ours.
+function trackUploadError(err, kind) {
+  if (err?.code === 'upload/too-large') trackEvent('upload_rejected', { kind, reason: 'too_large' })
+  else trackEvent('upload_failed', { kind })
 }
 
 // Probes a local video file for its duration without uploading. Returns 0 on
@@ -75,6 +83,7 @@ export function useMediaUploader(encryptionKey, {
     setImageError('')
 
     if (file.size > MAX_PLAINTEXT_BYTES) {
+      trackEvent('upload_rejected', { kind: 'image', reason: 'too_large' })
       setImageError(
         t('upload.tooLarge', {
           size: formatBytes(file.size),
@@ -107,6 +116,7 @@ export function useMediaUploader(encryptionKey, {
       return { id: tempId, url, publicId, thumbUrl, thumbPublicId, tinyPreview }
     } catch (err) {
       devError('Image upload failed:', err)
+      trackUploadError(err, 'image')
       setImages((prev) => prev.filter((img) => img.id !== tempId))
       setImageError(uploadErrorMessage(err, t))
       return null
@@ -119,6 +129,7 @@ export function useMediaUploader(encryptionKey, {
 
     const duration = await getVideoDuration(file)
     if (duration > maxVideoDurationSec) {
+      trackEvent('upload_rejected', { kind: 'video', reason: 'too_long' })
       setVideoError(t('upload.videoTooLong', { seconds: maxVideoDurationSec }))
       return null
     }
@@ -127,6 +138,7 @@ export function useMediaUploader(encryptionKey, {
     // tens of megabytes, well past Cloudinary's raw cap. Checked here so the
     // message appears immediately rather than after a doomed upload.
     if (file.size > MAX_PLAINTEXT_BYTES) {
+      trackEvent('upload_rejected', { kind: 'video', reason: 'too_large' })
       setVideoError(
         t('upload.tooLarge', {
           size: formatBytes(file.size),
@@ -151,6 +163,7 @@ export function useMediaUploader(encryptionKey, {
       return { id: tempId, url, publicId }
     } catch (err) {
       devError('Video upload failed:', err)
+      trackUploadError(err, 'video')
       setVideos((prev) => prev.filter((v) => v.id !== tempId))
       setVideoError(uploadErrorMessage(err, t))
       return null

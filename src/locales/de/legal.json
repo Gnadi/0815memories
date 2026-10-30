@@ -101,6 +101,8 @@
           "Kontodaten: dein Name, deine E-Mail-Adresse und die Zugangsdaten, mit denen du dich anmeldest.",
           "Von dir erstellte Inhalte: Fotos, Videos, Audioaufnahmen, Tagebücher, Rezepte und andere Erinnerungen, die du hochlädst, samt Angaben wie Bildunterschriften, Daten und den Familienmitgliedern, mit denen du teilst.",
           "Technische Daten: Informationen, die dein Gerät automatisch übermittelt, etwa Gerätetyp, Browser und grundlegende Protokolldaten, die für Betrieb und Sicherheit des Dienstes erforderlich sind.",
+          "Reichweitenmessung: Auf unseren Seiten laufen Vercel Web Analytics und Vercel Speed Insights. Sie zählen Seitenaufrufe und messen Ladezeiten.",
+          "Nutzungsstatistik: Während der Testphase erfassen wir, welche Bereiche der App geöffnet und welche Funktionen genutzt werden (zum Beispiel „Rezept angelegt“), und wenn ein Fehler auftritt (zum Beispiel ein zu großer Upload). Ein Eintrag enthält nur die Familienkennung, die Rolle (Admin oder Zuschauer), den Namen des Ereignisses, die Sprache und eine zufällige Kennung für den Besuch. Nie Inhalte, Titel, Namen, Dateinamen, Nutzer-IDs oder Schlüssel. Die Einträge liegen in unserer eigenen Datenbank, es gibt keinen weiteren Anbieter, und sie werden nach 90 Tagen gelöscht. Auf deinem Gerät wird dafür nichts gespeichert, außer deiner Entscheidung, falls du die Erfassung abschaltest. In den Einstellungen kannst du die Erfassung für dein Gerät abschalten. Rechtsgrundlage ist unser berechtigtes Interesse an einer funktionierenden und verbesserten App (Art. 6 Abs. 1 lit. f DSGVO).",
           "Wir erheben nur, was wir zur Bereitstellung des Dienstes benötigen, und verkaufen deine personenbezogenen Daten nicht."
         ]
       },

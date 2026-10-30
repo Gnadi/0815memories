@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../KaydoLogo'
 import { useAuth } from '../../context/AuthContext'
+import { trackEvent } from '../../services/usage'
 
 /**
  * What ProtectedRoute shows instead of the app when the family's key will not
@@ -10,6 +12,12 @@ import { useAuth } from '../../context/AuthContext'
 export default function FamilyKeyError({ reason }) {
   const { t } = useTranslation('common')
   const { logout } = useAuth()
+
+  // The one failure that locks a family out of its own content, so the one to
+  // hear about without waiting for a phone call.
+  useEffect(() => {
+    trackEvent('error_shown', { area: 'family_key', reason })
+  }, [reason])
 
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-6 text-center">

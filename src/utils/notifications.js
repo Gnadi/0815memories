@@ -2,6 +2,7 @@ import i18n from '../i18n'
 import { removeDeviceToken, saveDeviceToken } from '../services/pushTokens'
 import { devWarn } from './devLog'
 import { getMessagingInstance, auth, db } from '../config/firebase'
+import { trackEvent } from '../services/usage'
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
 
@@ -82,6 +83,7 @@ export async function requestAndSaveFCMToken(familyId) {
   if (Notification.permission === 'denied') return null
 
   const permission = await Notification.requestPermission()
+  trackEvent('push_permission', { result: permission })
   if (permission !== 'granted') return null
 
   // Both the SDK and the messaging instance are fetched here rather than at
