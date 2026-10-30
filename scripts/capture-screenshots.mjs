@@ -21,7 +21,7 @@ import sharp from 'sharp'
 import { mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SCREENSHOTS, SCREENSHOT_LANGUAGES, screenshotPath } from '../src/components/landing/screenshots.js'
+import { SCREENSHOTS, SCREENSHOT_LANGUAGES, screenshotPath, smallScreenshotPath } from '../src/components/landing/screenshots.js'
 
 const BASE = process.env.CAPTURE_BASE_URL || 'http://localhost:5173'
 
@@ -33,6 +33,11 @@ async function save(png, shot, lang) {
   await mkdir(dirname(dest), { recursive: true })
   const info = await sharp(png).resize({ width: shot.out, withoutEnlargement: true }).webp({ quality: 82 }).toFile(dest)
   console.log(`  ✔ ${screenshotPath(shot, lang)}  ${info.width}×${info.height}`)
+  if (shot.small) {
+    const smallDest = join(PUBLIC_DIR, smallScreenshotPath(shot, lang))
+    const small = await sharp(png).resize({ width: shot.small }).webp({ quality: 82 }).toFile(smallDest)
+    console.log(`  ✔ ${smallScreenshotPath(shot, lang)}  ${small.width}×${small.height}`)
+  }
 }
 
 // Every page of a demo tab carries the demo banner. It says nothing about the

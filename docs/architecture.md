@@ -48,10 +48,19 @@ anything the client can edit:
   `families/{id}/secrets/auth`, with rate limiting, and returns a custom token
   with `role: 'viewer'`. Viewers can read and never write.
 
-On the client, `src/context/AuthContext.jsx` works out the role and the
+On the client, `src/context/AuthProviderImpl.jsx` works out the role and the
 family, and `useFamilyKey` next to it the encryption key, from the family
 document. `ProtectedRoute` in `src/App.jsx` guards routes:
 `protect()` admits any member, `protectAdmin()` admins only.
+
+Firebase is not in the startup bundle. `AuthProvider` in
+`src/context/AuthContext.jsx` is a shell: on the pre-rendered pages (the
+landing page, the legal pages) with nobody signed in, it hands out a
+signed-out state and nothing else loads. On every other path, and wherever a
+session is stored, it loads `AuthProviderImpl` and Firebase with it. The
+landing page's claim form loads what it needs when it is used
+(`context/signupAccount.js`). `startupFirebaseGuard.test.js` keeps the
+startup files from importing Firebase again.
 
 A family is addressed by its slug: `<slug>.kaydo.app` in production and
 `/family/<slug>` anywhere (`src/utils/familySlug.js`). Before sign-in, the
@@ -144,7 +153,7 @@ The functions are deployed by hand for now (README, *Getting started*).
 | `services/` | Firestore reads and writes per area, with their encryption (`memories.js`, …) — see below |
 | `hooks/` | React state on top of the services: live lists, writers (`useMemories`, …) |
 | `utils/` | encryption, uploads, rendering (canvas, PDF, video), slug handling |
-| `context/` | the session: `AuthContext.jsx` (sign-in, role, family), `useFamilyKey.js` (the key, from the family document) |
+| `context/` | the session: `AuthProviderImpl.jsx` (sign-in, role, family), `AuthContext.jsx` (the context, `useAuth`, and the shell that loads the former only where needed), `useFamilyKey.js` (the key, from the family document) |
 | `config/` | the Firebase and Cloudinary clients; emulator switch; `firestore.js`, the one door to Firestore |
 | `demo/` | the demo family: flag, in-memory database, content, banner |
 | `constants/` | shared constants, some mirrored in `firestore.rules` |
@@ -211,7 +220,7 @@ built at the two seams everything already passes through:
   `src/demo/demoDatabase.js`, an in-memory implementation of the part of the
   Firestore API the app uses, including the read rules a visitor can see
   from the outside: the Vault's and Our Year's time locks.
-- **The session.** `AuthContext` loads `src/demo/index.js`, which installs
+- **The session.** `AuthProviderImpl` loads `src/demo/index.js`, which installs
   the database, filled by `src/demo/demoFamily.js` with the family in the
   interface language, and signs in its owner as an admin. The family has no
   encryption key, the only one allowed to, so the app writes its content as

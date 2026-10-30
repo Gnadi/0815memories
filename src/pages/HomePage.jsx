@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/layout/Sidebar'
@@ -14,6 +14,7 @@ import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
 import { useAuth } from '../context/AuthContext'
+import { takeFeedMemory } from '../utils/feedPosition'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -59,6 +60,17 @@ export default function HomePage() {
     setShowMomentModal(false)
     setEditingMoment(null)
   }
+
+  // Coming back from a memory, jump to its card instead of the top. Taken once
+  // the feed has rendered; a card that is gone (deleted, past the page size)
+  // just leaves the page at the top.
+  useEffect(() => {
+    if (loading) return
+    const id = takeFeedMemory()
+    if (!id) return
+    const card = document.querySelector(`[data-memory-id="${CSS.escape(id)}"]`)
+    card?.scrollIntoView({ block: 'center' })
+  }, [loading])
 
   if (loading) {
     return (

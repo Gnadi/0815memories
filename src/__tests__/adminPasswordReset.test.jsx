@@ -57,7 +57,7 @@ vi.mock('../utils/encryption', () => ({
 vi.mock('../components/media/useDecryptedMedia', () => ({ clearDecryptedMediaCache: vi.fn() }))
 vi.mock('../utils/decryptPool', () => ({ terminateDecryptPool: vi.fn() }))
 
-const { AuthProvider } = await import('../context/AuthContext')
+const { AuthProvider } = await import('../context/AuthProviderImpl')
 const { default: LoginForm } = await import('../components/auth/LoginForm')
 
 function authError(code) {

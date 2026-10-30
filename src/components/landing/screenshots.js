@@ -10,11 +10,15 @@
  * the page of the demo family it shows. Best-of and print dialog are taken
  * by clicking through instead (`path: null`).
  *
+ * `small` is the width of a second, smaller file of the same picture, for a
+ * screenshot a phone shows much narrower than it is (the hero): it is offered
+ * next to the full one in a srcset, and named <name>-<small>.webp.
+ *
  * This module is imported by Node as well, so it stays plain JavaScript with
  * no imports of its own.
  */
 export const SCREENSHOTS = {
-  homeDesktop: { name: 'home-desktop', path: '/home', viewport: [1280, 800], out: 1200, width: 1200, height: 750 },
+  homeDesktop: { name: 'home-desktop', path: '/home', viewport: [1280, 800], out: 1200, width: 1200, height: 750, small: 800 },
   homeMobile: { name: 'home-mobile', path: '/home', viewport: [390, 844], out: 440, width: 440, height: 952 },
   blackbox: { name: 'blackbox-desktop', path: '/blackbox', viewport: [1280, 800], out: 1200, width: 1200, height: 750 },
   journal: { name: 'journal-desktop', path: '/journal/demo-emma', viewport: [1280, 800], out: 1200, width: 1200, height: 750 },
@@ -46,4 +50,19 @@ export function screenshotPath(shot, lang) {
 export function screenshotSize(shot, lang) {
   const height = typeof shot.height === 'number' ? shot.height : (shot.height[lang] ?? shot.height.en)
   return { width: shot.width, height }
+}
+
+// The smaller file's path, and its size: the full picture scaled to `small`.
+export function smallScreenshotPath(shot, lang) {
+  return screenshotPath(shot, lang).replace(/\.webp$/, `-${shot.small}.webp`)
+}
+
+/**
+ * The `srcset` of a picture that has a smaller file, undefined for one that
+ * has not. The sizes are the files' real widths, so the browser can choose by
+ * what the screen needs: a phone takes the small file, a wide one the full.
+ */
+export function screenshotSrcSet(shot, lang) {
+  if (!shot.small) return undefined
+  return `${smallScreenshotPath(shot, lang)} ${shot.small}w, ${screenshotPath(shot, lang)} ${shot.width}w`
 }

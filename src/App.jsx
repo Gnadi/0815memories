@@ -11,23 +11,16 @@ import i18n, { ensureAppTranslations, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
-import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
-import NotificationPrompt from './components/NotificationPrompt'
-import { isPushOptedOut, listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
-import { devError } from './utils/devLog'
 
 import { getSubdomainSlug } from './utils/familySlug'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
 import { demoTarget, enterDemo, exitDemo } from './demo/demoMode'
 
-// Eagerly loaded — public pages served on first visit
+// Eagerly loaded — the pre-rendered landing page, served on first visit
 import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
-import InviteRedeemPage from './pages/InviteRedeemPage'
 
 // Every page below needs translation namespaces that are not in the startup
 // bundle. Waiting for them here — inside the boundary React already suspends
@@ -38,6 +31,16 @@ const lazyPage = (loader) =>
     const [module] = await Promise.all([loader(), ensureAppTranslations()])
     return module
   })
+
+// Signing in, signing up and redeeming an invite all talk to Firebase, which
+// the landing page does not load (context/AuthContext.jsx). They need only the
+// translations that are in the startup bundle, so these are plain lazy pages.
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SignupPage = lazy(() => import('./pages/SignupPage'))
+const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
+const AppNotifications = lazy(() => import('./components/AppNotifications'))
+// The bar is for admins only, and brings the scrapbook layout presets with it.
+const AdminMobileBottomNav = lazy(() => import('./components/layout/AdminMobileBottomNav'))
 
 // Lazy loaded — protected pages, only needed after authentication
 const LegalPage = lazyPage(() => import('./pages/LegalPage'))
@@ -227,77 +230,6 @@ function SiteAnalytics() {
   ) : null
 }
 
-// Handles push notification prompt + in-app foreground toast.
-// Must be inside AuthProvider to access familyId.
-function AppNotifications() {
-  const { familyId, isAuthenticated: signedIn, isDemo } = useAuth()
-  // A demo tab has no Firebase, so nothing to register for push or hear from.
-  const isAuthenticated = signedIn && !isDemo
-  const { t } = useTranslation('common')
-  const [toast, setToast] = useState(null)
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    // The messaging SDK is code-split, so subscribing resolves a tick later.
-    // Unsubscribing before then still has to work.
-    let unsub = null
-    let cancelled = false
-    listenForegroundMessages(({ title, body }) => {
-      setToast({ title, body })
-      setTimeout(() => setToast(null), 5000)
-    }).then((fn) => {
-      if (cancelled) fn()
-      else unsub = fn
-    })
-    return () => {
-      cancelled = true
-      unsub?.()
-    }
-  }, [isAuthenticated])
-
-  // Silently refresh the FCM token on each app load when the user already
-  // granted notification permission (covers return visits where the prompt
-  // won't show again because permission is no longer 'default'). It also keeps
-  // the token document's `lang` and `uid` current — the server reads both when
-  // it composes a notification. A device switched off in the settings stays
-  // off, and a language switch is written right away rather than on the next
-  // load, or notifications would keep arriving in the old language.
-  useEffect(() => {
-    if (!isAuthenticated || !familyId) return
-    if (typeof window === 'undefined' || !('Notification' in window)) return
-    const refresh = () => {
-      if (Notification.permission !== 'granted' || isPushOptedOut()) return
-      requestAndSaveFCMToken(familyId).catch((err) => devError('FCM token refresh failed:', err))
-    }
-    refresh()
-    i18n.on('languageChanged', refresh)
-    return () => i18n.off('languageChanged', refresh)
-  }, [isAuthenticated, familyId])
-
-  return (
-    <>
-      {isAuthenticated && <NotificationPrompt familyId={familyId} />}
-
-      {/* In-app toast for foreground push messages */}
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm bg-bark text-warm-white rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3 animate-fade-in">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-snug">{toast.title}</p>
-            {toast.body && <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.body}</p>}
-          </div>
-          <button
-            onClick={() => setToast(null)}
-            className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity mt-0.5"
-            aria-label={t('actions.dismiss')}
-          >
-            ×
-          </button>
-        </div>
-      )}
-    </>
-  )
-}
-
 // Keeps the <html lang> attribute in sync with the active language. The static
 // pre-rendered "/" stays "en" (no window during pre-render); this updates it
 // client-side after hydration and on every language change.
@@ -315,6 +247,29 @@ function HtmlLangSync() {
   return null
 }
 
+// Rendered for admins only: nobody else sees the bar, so nobody else downloads it.
+function AdminNavSlot() {
+  const { isAdmin } = useAuth()
+  if (!isAdmin) return null
+  return (
+    <Suspense fallback={null}>
+      <AdminMobileBottomNav />
+    </Suspense>
+  )
+}
+
+// Push notifications are for signed-in members; a signed-out visit never loads
+// them (or the Firestore code they bring).
+function SignedInChrome() {
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) return null
+  return (
+    <Suspense fallback={null}>
+      <AppNotifications />
+    </Suspense>
+  )
+}
+
 // Root layout: providers + global UI shared by every route. The active route's
 // element renders into <Outlet />. Replaces the old <BrowserRouter>/<Routes> tree
 // so vite-react-ssg can drive the data router and pre-render static routes.
@@ -328,9 +283,9 @@ function Layout() {
           <Outlet />
           <RevealPage />
         </Suspense>
-        <AdminMobileBottomNav />
+        <AdminNavSlot />
         <PWAInstallPrompt />
-        <AppNotifications />
+        <SignedInChrome />
         <SiteAnalytics />
       </AuthProvider>
     </I18nextProvider>

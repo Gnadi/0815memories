@@ -1,14 +1,16 @@
 import { useTranslation } from 'react-i18next'
-import { X, Video } from 'lucide-react'
+import { X, Video, Crop } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import SortableMediaGroup from './SortableMediaGroup'
 import { useSortableMedia, stopDrag } from './useSortableMedia'
+import { focusStyle, parseFocus } from '../../utils/mediaFocus'
 
 // pointer-events-none on the previews keeps the browser's own image drag and
 // long-press menu from hijacking the gesture meant for reordering.
 function Preview({ item, kind }) {
   const className = 'w-20 h-20 rounded-xl object-cover pointer-events-none'
+  const style = focusStyle(parseFocus(item.focus))
   const local = item.preview?.startsWith('blob:')
   if (kind === 'video') {
     return local ? (
@@ -23,14 +25,19 @@ function Preview({ item, kind }) {
       />
     )
   }
-  return local ? (
-    <img src={item.preview} alt="" draggable={false} className={className} />
-  ) : (
-    <EncryptedImage src={item.preview} draggable={false} className={className} />
+  // Clipped here, so a zoomed photo cannot spill over its neighbours.
+  return (
+    <div className="w-20 h-20 rounded-xl overflow-hidden">
+      {local ? (
+        <img src={item.preview} alt="" draggable={false} className={className} style={style} />
+      ) : (
+        <EncryptedImage src={item.preview} draggable={false} className={className} style={style} />
+      )}
+    </div>
   )
 }
 
-function MediaTile({ item, kind, index, items, onRemove, onMove }) {
+function MediaTile({ item, kind, index, items, onRemove, onMove, onAdjust }) {
   const { t } = useTranslation('memory')
   const count = items.length
   const { setRef, handleProps, style, isDragging, isOver } = useSortableMedia(item.id, {
@@ -64,6 +71,18 @@ function MediaTile({ item, kind, index, items, onRemove, onMove }) {
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         </div>
       )}
+      {kind === 'photo' && onAdjust && !item.uploading && (
+        <button
+          type="button"
+          onClick={() => onAdjust(item.id)}
+          {...stopDrag}
+          aria-label={t('focus.adjust')}
+          className="absolute bottom-1 left-1 right-1 h-6 bg-bark/75 rounded-lg flex items-center justify-center gap-1 text-white text-[10px] font-medium hover:bg-bark"
+        >
+          <Crop className="w-3 h-3" />
+          {t('focus.badge')}
+        </button>
+      )}
       {!item.uploading && (
         <button
           type="button"
@@ -80,11 +99,14 @@ function MediaTile({ item, kind, index, items, onRemove, onMove }) {
 }
 
 /**
+ * `onAdjust(id)`, on photos, adds a button to each tile for picking which part
+ * of the photo stays in view.
+ *
  * The photo or video thumbnails of the post dialogs, in the order they will
  * be saved. `kind` is 'photo' or 'video'. `children` renders after the tiles
  * (the add and camera buttons) and is not draggable.
  */
-export default function SortableMediaTiles({ items, kind, onRemove, onMove, className = '', children }) {
+export default function SortableMediaTiles({ items, kind, onRemove, onMove, onAdjust, className = '', children }) {
   const { t } = useTranslation('memory')
 
   return (
@@ -100,6 +122,7 @@ export default function SortableMediaTiles({ items, kind, onRemove, onMove, clas
               items={items}
               onRemove={onRemove}
               onMove={onMove}
+              onAdjust={onAdjust}
             />
           ))}
           {children}
@@ -107,6 +130,9 @@ export default function SortableMediaTiles({ items, kind, onRemove, onMove, clas
       </SortableMediaGroup>
       {items.length > 1 && (
         <p className="text-xs text-bark-muted mt-1.5">{t(`mediaOrder.${kind}Hint`)}</p>
+      )}
+      {kind === 'photo' && onAdjust && items.length > 0 && (
+        <p className="text-xs text-bark-muted mt-1">{t('focus.tileHint')}</p>
       )}
     </>
   )
