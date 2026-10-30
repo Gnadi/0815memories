@@ -19,7 +19,6 @@ const STARTUP = [
   'src/context/AuthContext.jsx',
   'src/pages/LandingPage.jsx',
   'src/components/layout/ProtectedRoute.jsx',
-  'src/components/layout/AdminMobileBottomNav.jsx',
   'src/components/PWAInstallPrompt.jsx',
 ]
 
@@ -37,7 +36,7 @@ describe('startup bundle boundary', () => {
 
   it('the pages that talk to Firebase are lazy in the route table', () => {
     const src = readFileSync('src/App.jsx', 'utf8')
-    for (const page of ['LoginPage', 'SignupPage', 'InviteRedeemPage']) {
+    for (const page of ['LoginPage', 'SignupPage', 'InviteRedeemPage', 'AdminMobileBottomNav']) {
       expect(src).toMatch(new RegExp(`const ${page} = lazy\\(`))
     }
   })

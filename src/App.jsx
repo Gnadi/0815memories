@@ -11,7 +11,6 @@ import i18n, { ensureAppTranslations, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
-import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 
@@ -40,6 +39,8 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const SignupPage = lazy(() => import('./pages/SignupPage'))
 const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
 const AppNotifications = lazy(() => import('./components/AppNotifications'))
+// The bar is for admins only, and brings the scrapbook layout presets with it.
+const AdminMobileBottomNav = lazy(() => import('./components/layout/AdminMobileBottomNav'))
 
 // Lazy loaded — protected pages, only needed after authentication
 const LegalPage = lazyPage(() => import('./pages/LegalPage'))
@@ -246,6 +247,17 @@ function HtmlLangSync() {
   return null
 }
 
+// Rendered for admins only: nobody else sees the bar, so nobody else downloads it.
+function AdminNavSlot() {
+  const { isAdmin } = useAuth()
+  if (!isAdmin) return null
+  return (
+    <Suspense fallback={null}>
+      <AdminMobileBottomNav />
+    </Suspense>
+  )
+}
+
 // Push notifications are for signed-in members; a signed-out visit never loads
 // them (or the Firestore code they bring).
 function SignedInChrome() {
@@ -271,7 +283,7 @@ function Layout() {
           <Outlet />
           <RevealPage />
         </Suspense>
-        <AdminMobileBottomNav />
+        <AdminNavSlot />
         <PWAInstallPrompt />
         <SignedInChrome />
         <SiteAnalytics />
