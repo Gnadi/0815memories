@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { shellPrecache } from './scripts/shellPrecache.mjs'
+import { inlineStylesheet } from './scripts/inlineCss.mjs'
 
 export default defineConfig({
   test: {
@@ -15,8 +17,13 @@ export default defineConfig({
     // Stamp each pre-rendered page with the path it was built for. index.html's
     // inline script compares it with the URL to tell a page served its own HTML
     // from one served another page's as the SPA fallback (see
-    // src/utils/prehydrationCover.js).
-    onPageRendered: (path, html) => html.replace('<html', `<html data-prerendered="${path}"`),
+    // src/utils/prehydrationCover.js). The stylesheet goes into the page, so the
+    // first paint does not wait for a second request (scripts/inlineCss.mjs).
+    onPageRendered: (path, html) =>
+      inlineStylesheet(
+        html.replace('<html', `<html data-prerendered="${path}"`),
+        (href) => readFileSync(fileURLToPath(new URL(`./dist${href}`, import.meta.url)), 'utf8'),
+      ),
   },
   build: {
     // The pre-rendered landing page ("/") paints from HTML + CSS alone. Vite's
