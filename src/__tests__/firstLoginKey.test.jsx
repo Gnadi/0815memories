@@ -93,7 +93,8 @@ vi.mock('../utils/decryptPool', () => ({
   decryptBlobOffThread: vi.fn(),
 }))
 
-const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { AuthProvider } = await import('../context/AuthProviderImpl')
+const { useAuth } = await import('../context/AuthContext')
 const { importEncryptionKey } = await import('../utils/encryption')
 const { default: EncryptedImage } = await import('../components/media/EncryptedImage')
 

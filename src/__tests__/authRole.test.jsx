@@ -64,7 +64,8 @@ vi.mock('../utils/encryption', () => ({
 vi.mock('../components/media/useDecryptedMedia', () => ({ clearDecryptedMediaCache: vi.fn() }))
 vi.mock('../utils/decryptPool', () => ({ terminateDecryptPool: vi.fn() }))
 
-const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { AuthProvider } = await import('../context/AuthProviderImpl')
+const { useAuth } = await import('../context/AuthContext')
 const { getDocs } = await import('firebase/firestore')
 
 /** A signed-in user whose ID token carries the given claims. */

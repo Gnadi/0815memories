@@ -41,7 +41,6 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
 import { SCREENSHOTS, screenshotPath, screenshotSize } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
-import { isSlugAvailable } from '../services/family'
 import usePWAInstall from '../hooks/usePWAInstall'
 
 function OctocatIcon({ className }) {
@@ -64,7 +63,7 @@ function OctocatIcon({ className }) {
 // so a global switch would leak into the page being built next to this one.
 export default function LandingPage({ lng }) {
   const navigate = useNavigate()
-  const { isAuthenticated, isAdmin, signup, firebaseReady } = useAuth()
+  const { isAuthenticated, isAdmin, firebaseReady } = useAuth()
   const { t, i18n } = useTranslation('landing', { lng })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { canInstall, promptInstall } = usePWAInstall()
@@ -238,7 +237,6 @@ export default function LandingPage({ lng }) {
           <ClaimFamilyName
             navigate={navigate}
             isAuthenticated={isAuthenticated}
-            signup={signup}
             firebaseReady={firebaseReady}
             lng={lng}
           />
@@ -984,7 +982,7 @@ export default function LandingPage({ lng }) {
  * `<slug>.kaydo.app` is available, and — if it is — create the account inline
  * without leaving the landing page.
  */
-function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng }) {
+function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
   const { t, i18n } = useTranslation('landing', { lng })
   const [familyName, setFamilyName] = useState('')
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
@@ -1016,6 +1014,9 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng
     }
     setStatus('checking')
     try {
+      // Loaded now rather than with the page: Firestore is most of what a
+      // visitor who only reads the landing page would otherwise download.
+      const { isSlugAvailable } = await import('../services/family')
       const available = await isSlugAvailable(slug)
       setStatus(available ? 'available' : 'taken')
     } catch {
@@ -1035,7 +1036,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady, lng
 
     setSubmitting(true)
     try {
-      await signup(email, password, displayName, familyName, lng || i18n.resolvedLanguage)
+      const { signupAccount } = await import('../context/signupAccount')
+      await signupAccount(email, password, displayName, familyName, lng || i18n.resolvedLanguage)
       // The family is founded once the address is confirmed, on /signup.
       navigate('/signup', { state: { familyName } })
     } catch (err) {

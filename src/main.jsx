@@ -3,6 +3,7 @@ import './index.css'
 import './i18n' // initialize i18next (runs in both Node pre-render and browser)
 import { routes } from './App.jsx'
 import { PRERENDERED_PATHS } from './prerenderedRoutes'
+import { preloadAuthProvider } from './context/AuthContext'
 
 // None of our routes define a data loader, yet vite-react-ssg attaches a hidden
 // loader to every route on server-rendered pages. On the first client-side
@@ -43,6 +44,9 @@ export const createRoot = ViteReactSSG(
     // Register the PWA service worker only in the browser, never during the
     // Node pre-render pass.
     if (isClient) {
+      // Firebase is not part of the startup bundle (context/AuthContext.jsx);
+      // where it will be needed, fetch it now rather than when React asks.
+      preloadAuthProvider()
       import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }))
     }
   },

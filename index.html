@@ -27,8 +27,10 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/pwa-192x192.png" />
 
     <!-- Performance hints -->
-    <link rel="preconnect" href="https://firestore.googleapis.com" />
-    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+    <!-- No preconnect to Firebase: it is not loaded for a signed-out visit to
+         the landing page (src/context/AuthContext.jsx), and two idle
+         connections would only compete with the page's own files on a slow
+         link. -->
     <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
 

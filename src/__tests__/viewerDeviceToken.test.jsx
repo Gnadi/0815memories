@@ -57,7 +57,8 @@ vi.mock('../components/media/useDecryptedMedia', () => ({ clearDecryptedMediaCac
 vi.mock('../utils/decryptPool', () => ({ terminateDecryptPool: vi.fn() }))
 vi.mock('../utils/notifications', () => ({ removeFCMToken: vi.fn(async () => {}) }))
 
-const { AuthProvider, useAuth } = await import('../context/AuthContext')
+const { AuthProvider } = await import('../context/AuthProviderImpl')
+const { useAuth } = await import('../context/AuthContext')
 
 let auth
 function Capture() {
