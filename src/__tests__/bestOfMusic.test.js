@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { TRACKS, arrangement, barMs, createSoundtrack, trackForMonth } from '../utils/bestOfMusic'
+import { TRACKS, TRACK_ORDER, arrangement, barMs, beatMs, createSoundtrack, trackForMonth } from '../utils/bestOfMusic'
 
 // jsdom has no Web Audio, so this stands in for it. It is strict where
 // browsers are strict (a non-finite value, a negative time, an exponential
@@ -157,13 +157,18 @@ const master = (context) => context.nodes.find((node) => node.outputs.includes(c
 const connected = (context) => context.nodes.filter((node) => node.outputs.length)
 const loopSeconds = (trackId) => (TRACKS[trackId].bars * barMs(trackId)) / 1000
 
-const PITCHED = new Set(['pad', 'keys', 'pluck', 'bass'])
+const PITCHED = new Set(['pad', 'keys', 'pluck', 'bass', 'string', 'bell', 'pizz', 'arp'])
 const DRUMS = new Set(['kick', 'shaker', 'clap'])
 // Pitch classes, C = 0, written out independently of the tracks.
 const SCALES = {
   warm: [2, 4, 6, 7, 9, 11, 1], // D major
   bright: [7, 9, 11, 0, 2, 4, 6], // G major
   calm: [5, 7, 9, 10, 0, 2, 4], // F major
+  folk: [0, 2, 4, 5, 7, 9, 11], // C major
+  lofi: [10, 0, 2, 3, 5, 7, 9], // B♭ major
+  waltz: [9, 11, 1, 2, 4, 6, 8], // A major
+  pop: [0, 2, 4, 5, 7, 9, 11], // C major
+  playful: [3, 5, 7, 8, 10, 0, 2], // E♭ major
 }
 
 describe('arrangement', () => {
@@ -179,13 +184,14 @@ describe('arrangement', () => {
 
   it('is one loop of the track, in order', () => {
     for (const id of Object.keys(TRACKS)) {
-      const { bpm, bars, events } = arrangement(id)
+      const { bpm, bars, meter, events } = arrangement(id)
       expect(bpm).toBe(TRACKS[id].bpm)
       expect(bars).toBe(TRACKS[id].bars)
+      expect(meter).toBe(TRACKS[id].meter ?? 4)
       expect(events.length).toBeGreaterThan(0)
       for (const [index, event] of events.entries()) {
         expect(event.beat).toBeGreaterThanOrEqual(0)
-        expect(event.beat).toBeLessThan(bars * 4)
+        expect(event.beat).toBeLessThan(bars * meter)
         if (index) expect(event.beat).toBeGreaterThanOrEqual(events[index - 1].beat)
         expect(event.length).toBeGreaterThan(0)
         expect(event.velocity).toBeGreaterThan(0)
@@ -196,10 +202,14 @@ describe('arrangement', () => {
       // into — a note struck there, or one held through it, as the calm
       // track's pad is.
       for (let bar = 0; bar < bars; bar++) {
-        const downbeat = bar * 4
+        const downbeat = bar * meter
         expect(events.some((event) => event.beat <= downbeat && downbeat < event.beat + event.length)).toBe(true)
       }
     }
+  })
+
+  it('has a scale written out for every track', () => {
+    expect(Object.keys(SCALES).sort()).toEqual(Object.keys(TRACKS).sort())
   })
 
   it('stays in key', () => {
@@ -225,10 +235,32 @@ describe('arrangement', () => {
 })
 
 describe('trackForMonth', () => {
-  it('is calm in winter, bright in summer and warm in between', () => {
-    expect(['2026-12', '2027-01', '2026-02'].map(trackForMonth)).toEqual(['calm', 'calm', 'calm'])
-    expect(['2026-06', '2026-07', '2026-08'].map(trackForMonth)).toEqual(['bright', 'bright', 'bright'])
-    expect(['2026-03', '2026-05', '2026-09', '2026-11'].map(trackForMonth)).toEqual(['warm', 'warm', 'warm', 'warm'])
+  const months = (from, count) => Array.from({ length: count }, (_, i) => {
+    const year = from + Math.floor(i / 12)
+    return `${year}-${String((i % 12) + 1).padStart(2, '0')}`
+  })
+
+  it('takes every track in turn, so eight months in a row all sound different', () => {
+    expect([...TRACK_ORDER].sort()).toEqual(Object.keys(TRACKS).sort())
+    const run = months(2026, 36)
+    for (let i = 0; i + 8 <= run.length; i++) {
+      expect(new Set(run.slice(i, i + 8).map(trackForMonth)).size).toBe(8)
+    }
+  })
+
+  it('plays something else in the same month a year later', () => {
+    for (const month of months(2026, 24)) {
+      const [year, rest] = month.split('-')
+      expect(trackForMonth(`${Number(year) + 1}-${rest}`)).not.toBe(trackForMonth(month))
+    }
+  })
+
+  it('never puts two quiet tracks next to each other', () => {
+    const quiet = new Set(['calm', 'lofi', 'waltz'])
+    TRACK_ORDER.forEach((id, i) => {
+      const next = TRACK_ORDER[(i + 1) % TRACK_ORDER.length]
+      expect(quiet.has(id) && quiet.has(next)).toBe(false)
+    })
   })
 
   it('is warm for anything that is not a month', () => {
@@ -238,12 +270,15 @@ describe('trackForMonth', () => {
   })
 })
 
-describe('barMs', () => {
-  it('is four beats at the track’s tempo', () => {
+describe('barMs and beatMs', () => {
+  it('is a beat at the track’s tempo, and a bar of its meter', () => {
     for (const [id, track] of Object.entries(TRACKS)) {
-      expect(barMs(id)).toBeCloseTo((4 * 60000) / track.bpm, 6)
+      expect(beatMs(id)).toBeCloseTo(60000 / track.bpm, 6)
+      expect(barMs(id)).toBeCloseTo(((track.meter ?? 4) * 60000) / track.bpm, 6)
     }
+    expect(barMs('waltz')).toBeCloseTo(3 * beatMs('waltz'), 6)
     expect(barMs('nonsense')).toBe(barMs('warm'))
+    expect(beatMs('nonsense')).toBe(beatMs('warm'))
   })
 })
 
@@ -295,6 +330,21 @@ describe('createSoundtrack', () => {
         elapse(context, loopSeconds(id) + 1)
         soundtrack.stop({ fadeMs: 0 })
       }).not.toThrow()
+    }
+  })
+
+  it('makes a guitar string once per pitch, and plays it at that pitch', () => {
+    const context = new FakeAudioContext()
+    createSoundtrack(context, 'folk').start()
+    elapse(context, loopSeconds('folk') + 1)
+    const pitches = new Set(arrangement('folk').events.filter((e) => e.voice === 'string').map((e) => e.midi))
+    // The reverb's impulse and the noise, and one buffer per pitch.
+    expect(context.buffers).toBe(2 + pitches.size)
+    const strings = notes(context).filter((node) => node.kind === 'bufferSource' && node.buffer?.length === 2.5 * 8000)
+    expect(strings.length).toBeGreaterThan(pitches.size)
+    for (const node of strings) {
+      expect(node.playbackRate.value).toBeGreaterThan(0.9)
+      expect(node.playbackRate.value).toBeLessThan(1.1)
     }
   })
 

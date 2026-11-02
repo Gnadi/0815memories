@@ -23,9 +23,12 @@
  * who opens a best-of nobody has saved yet sees what an admin would save.
  */
 import { thumbAt, tinyPreviewAt } from './mediaThumbs'
+import { MOTIONS, styleAt, styleOf } from './bestOfStyle'
+
+export { MOTIONS }
 
 /** Bumped when the composition changes enough that a saved best-of is stale. */
-export const BEST_OF_VERSION = 1
+export const BEST_OF_VERSION = 2
 
 /**
  * Fewer photos and clips than this, or no photo among them, and a month has no
@@ -48,19 +51,23 @@ const MAX_COLLAGE = 4
 // month" visited once, would only show that there was not much to say.
 const MIN_BUSIEST_DAY = 4
 const MIN_PLACE_ENTRIES = 2
+const MIN_WEEKEND = 4
+const MIN_STREAK = 4
+const MIN_THEME_ENTRIES = 3
 
-export const AWARDS = ['place', 'busiestDay', 'story']
+// Every award a month can earn. It shows three at most, and which three goes
+// round from month to month (buildBestOf), so a family whose every month has
+// a place, a full day and a story does not get the same three each time.
+export const AWARDS = ['place', 'busiestDay', 'story', 'weekend', 'streak', 'theme']
 
-// How a single photo moves, in turn, so no two in a row move the same way.
-export const MOTIONS = ['zoomIn', 'panLeft', 'zoomOut', 'panRight', 'panUp']
-
-// Which collage a beat of so many photos becomes, in turn: three photos are
-// a trio, then polaroids, then a film strip, and round again.
-const LAYOUTS = {
-  2: ['duo'],
-  3: ['trio', 'polaroids', 'strip'],
-  4: ['grid', 'polaroids', 'strip'],
-}
+// The extra cards (utils/bestOfStyle.js) need a little to say: a calendar of
+// two days kept, a "place of the month" list of one place, a month that began
+// and ended on the same day.
+const MIN_CALENDAR_DAYS = 3
+const MIN_RHYTHM_ENTRIES = 5
+const RHYTHM_SHARE = 0.5
+const MAX_PLACES = 3
+const YEAR_AGO_PHOTOS = 3
 
 // ── Months ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +90,15 @@ export function parseMonthKey(key) {
   return match ? { year: Number(match[1]), month: Number(match[2]) - 1 } : null
 }
 
+/**
+ * The style the best-of of a month is told in (utils/bestOfStyle.js): each
+ * month the next one, so no two months in a row look alike.
+ */
+export function styleForMonth(key) {
+  const parsed = parseMonthKey(key)
+  return parsed ? styleAt(parsed.year * 12 + parsed.month) : 'classic'
+}
+
 /** [start, end) of the month, local time. */
 export function monthRange(key) {
   const { year, month } = parseMonthKey(key)
@@ -102,7 +118,7 @@ export function currentBestOfMonth(now = new Date()) {
   return monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1))
 }
 
-const dayKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+export const dayKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 
 function toDate(value) {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
@@ -271,55 +287,197 @@ function mostFrequent(values) {
     .map(([key, count]) => ({ value: firstSeen.get(key), key, count }))
 }
 
-/** Each award the month earned, each with a different photo. */
-export function chooseAwards(media, scores) {
+/** The day after `key` ('YYYY-MM-DD'), as a key. */
+function nextDay(key) {
+  const [y, m, d] = key.split('-').map(Number)
+  return dayKey(new Date(y, m - 1, d + 1))
+}
+
+/** The Saturday of the weekend `item` was on, as a key, or null on a weekday. */
+function weekendOf(item) {
+  const weekday = item.date.getDay()
+  if (weekday === 6) return item.day
+  if (weekday !== 0) return null
+  return dayKey(new Date(item.date.getFullYear(), item.date.getMonth(), item.date.getDate() - 1))
+}
+
+/**
+ * Each award the month earned, each with a different photo: three at most,
+ * tried in `order`, so the first ones in it that the month earned are the
+ * ones it gets.
+ */
+export function chooseAwards(media, scores, order = AWARDS) {
   const photos = media.filter((m) => m.type === 'image')
   const used = new Set()
   const awards = []
-  const free = (list) => list.filter((p) => !used.has(p.url))
-  const award = (id, item, detail = {}) => {
-    if (!item || awards.length >= MAX_AWARDS) return
+  const best = (list) => list.filter((p) => !used.has(p.url)).sort(byScore(scores))[0]
+
+  const earners = {
+    // The place of the month: where the most entries were made.
+    place() {
+      const places = new Map()
+      for (const p of media) if (p.location && !places.has(p.entryId)) places.set(p.entryId, p.location)
+      const [top] = mostFrequent([...places.values()])
+      if (!top || top.count < MIN_PLACE_ENTRIES) return null
+      const there = best(photos.filter((p) => p.location.toLocaleLowerCase() === top.key))
+      return there && [there, { place: top.value, entries: top.count }]
+    },
+
+    // The busiest day: the most photos and clips on one day.
+    busiestDay() {
+      const [busiest] = mostFrequent(media.map((m) => m.day))
+      if (!busiest || busiest.count < MIN_BUSIEST_DAY) return null
+      const that = best(photos.filter((p) => p.day === busiest.key))
+      const clips = media.filter((m) => m.day === busiest.key && m.type === 'video').length
+      return that && [that, { day: busiest.key, count: busiest.count, videos: clips }]
+    },
+
+    // The story of the month: the memory marked as featured, or else the one
+    // with the most photos — someone thought it worth a whole album.
+    story() {
+      const memories = new Map()
+      for (const p of photos) {
+        if (p.source !== 'memory') continue
+        if (!memories.has(p.entryId)) memories.set(p.entryId, [])
+        memories.get(p.entryId).push(p)
+      }
+      const [top] = [...memories.values()]
+        .map((list) => ({ list, featured: list.some((p) => p.featured) }))
+        .filter(({ list, featured }) => featured || list.length >= 3)
+        .sort((a, b) => b.featured - a.featured || b.list.length - a.list.length || byUrl(a.list[0], b.list[0]))
+      const cover = top && best(top.list)
+      return cover && [cover, { caption: cover.caption || '' }]
+    },
+
+    // The weekend of the month: the Saturday and Sunday with the most photos
+    // and clips.
+    weekend() {
+      const [top] = mostFrequent(media.map(weekendOf).filter(Boolean))
+      if (!top || top.count < MIN_WEEKEND) return null
+      const days = new Set([top.key, nextDay(top.key)])
+      const that = best(photos.filter((p) => days.has(p.day)))
+      return that && [that, { from: top.key, to: nextDay(top.key), count: top.count }]
+    },
+
+    // The longest run of days in a row with something kept on every one.
+    streak() {
+      const days = [...new Set(media.map((m) => m.day))].sort()
+      let run = []
+      let longest = []
+      for (const day of days) {
+        run = run.length && nextDay(run[run.length - 1]) === day ? [...run, day] : [day]
+        if (run.length > longest.length) longest = run
+      }
+      if (longest.length < MIN_STREAK) return null
+      const inRun = new Set(longest)
+      const that = best(photos.filter((p) => inRun.has(p.day)))
+      return that && [that, { from: longest[0], to: longest[longest.length - 1], days: longest.length }]
+    },
+
+    // The theme of the month: the category or label the most entries had.
+    theme() {
+      const byEntry = new Map()
+      for (const m of media) if (!byEntry.has(m.entryId)) byEntry.set(m.entryId, m)
+      const [top] = mostFrequent([...byEntry.values()].flatMap((e) => e.themes))
+      if (!top || top.count < MIN_THEME_ENTRIES) return null
+      const that = best(photos.filter((p) => p.themes.some((t) => t.toLocaleLowerCase() === top.key)))
+      return that && [that, { theme: top.value, entries: top.count }]
+    },
+  }
+
+  for (const id of order) {
+    if (awards.length >= MAX_AWARDS) break
+    const earned = earners[id]?.()
+    if (!earned) continue
+    const [item, detail] = earned
     used.add(item.url)
     awards.push({ award: id, item, detail })
   }
+  return awards
+}
 
-  // The place of the month: where the most entries were made.
+/** AWARDS, starting from a different one for each month. */
+export function awardOrder(month) {
+  const parsed = parseMonthKey(month)
+  const start = parsed ? (parsed.year * 12 + parsed.month) % AWARDS.length : 0
+  return [...AWARDS.slice(start), ...AWARDS.slice(0, start)]
+}
+
+// ── The extra cards ─────────────────────────────────────────────────────────
+
+/** The days of the month something was kept on, as day numbers. */
+export function chooseCalendar(media) {
+  const days = [...new Set(media.map((m) => Number(m.day.slice(8))))].sort((a, b) => a - b)
+  return days.length >= MIN_CALENDAR_DAYS ? days : null
+}
+
+// When the family shared, from moments that carry a time. A memory's date is
+// often only a day, which would read as midnight.
+const PARTS_OF_DAY = [[5, 'morning'], [12, 'afternoon'], [17, 'evening'], [22, 'night']]
+
+function partOfDay(date) {
+  const hour = date.getHours()
+  let part = 'night'
+  for (const [from, name] of PARTS_OF_DAY) if (hour >= from) part = name
+  return part
+}
+
+const hasTime = (date) => date.getHours() || date.getMinutes() || date.getSeconds()
+
+/**
+ * What the month's rhythm was, if it had one: a part of the day that half the
+ * moments with a time were shared in, or else the weekend, if half of all
+ * entries were made on one. { fact, share, item } or null.
+ */
+export function chooseRhythm(media, scores) {
+  const entries = new Map()
+  for (const m of media) if (!entries.has(m.entryId)) entries.set(m.entryId, m)
+  const all = [...entries.values()]
+  const photoOf = (keep) => media.filter((m) => m.type === 'image' && keep(m)).sort(byScore(scores))[0] || null
+
+  const timed = all.filter((e) => e.source === 'moment' && hasTime(e.date))
+  if (timed.length >= MIN_RHYTHM_ENTRIES) {
+    const [top] = mostFrequent(timed.map((e) => partOfDay(e.date)))
+    const share = top.count / timed.length
+    if (share >= RHYTHM_SHARE) {
+      return { fact: top.value, share, item: photoOf((m) => m.source === 'moment' && hasTime(m.date) && partOfDay(m.date) === top.value) }
+    }
+  }
+  if (all.length >= MIN_RHYTHM_ENTRIES) {
+    const weekend = all.filter((e) => weekendOf(e)).length
+    const share = weekend / all.length
+    // Two days of seven: half of everything on them is a lot.
+    if (share >= RHYTHM_SHARE) return { fact: 'weekend', share, item: photoOf((m) => weekendOf(m)) }
+  }
+  return null
+}
+
+/** Up to three places of the month, by how many entries were made there. */
+export function choosePlaces(media, scores) {
   const places = new Map()
   for (const p of media) if (p.location && !places.has(p.entryId)) places.set(p.entryId, p.location)
-  const [topPlace] = mostFrequent([...places.values()])
-  if (topPlace && topPlace.count >= MIN_PLACE_ENTRIES) {
-    const there = free(photos)
-      .filter((p) => p.location.toLocaleLowerCase() === topPlace.key)
-      .sort(byScore(scores))
-    award('place', there[0], { place: topPlace.value, entries: topPlace.count })
-  }
+  const top = mostFrequent([...places.values()]).slice(0, MAX_PLACES)
+  if (top.length < 2) return null
+  const photos = media.filter((m) => m.type === 'image').sort(byScore(scores))
+  return top.map(({ value, key, count }) => ({
+    place: value,
+    entries: count,
+    item: photos.find((p) => p.location.toLocaleLowerCase() === key) || null,
+  }))
+}
 
-  // The busiest day: the most photos and clips on one day.
-  const [busiest] = mostFrequent(media.map((m) => m.day))
-  if (busiest && busiest.count >= MIN_BUSIEST_DAY) {
-    const that = free(photos).filter((p) => p.day === busiest.key).sort(byScore(scores))
-    const clips = media.filter((m) => m.day === busiest.key && m.type === 'video').length
-    award('busiestDay', that[0], { day: busiest.key, count: busiest.count, videos: clips })
-  }
+/** The month's first and last photo, when they are from different days. */
+export function chooseBookends(media) {
+  const photos = media.filter((m) => m.type === 'image')
+  const [first] = photos
+  const last = photos[photos.length - 1]
+  return first && last && first.day !== last.day ? [first, last] : null
+}
 
-  // The story of the month: the memory marked as featured, or else the one
-  // with the most photos — someone thought it worth a whole album.
-  const memories = new Map()
-  for (const p of photos) {
-    if (p.source !== 'memory') continue
-    if (!memories.has(p.entryId)) memories.set(p.entryId, [])
-    memories.get(p.entryId).push(p)
-  }
-  const stories = [...memories.values()]
-    .map((list) => ({ list, featured: list.some((p) => p.featured) }))
-    .filter(({ list, featured }) => featured || list.length >= 3)
-    .sort((a, b) => b.featured - a.featured || b.list.length - a.list.length || byUrl(a.list[0], b.list[0]))
-  if (stories[0]) {
-    const [cover] = free(stories[0].list).sort(byScore(scores))
-    award('story', cover, { caption: cover?.caption || '' })
-  }
-
-  return awards
+/** 'YYYY-MM' of the same month a year before. */
+export function sameMonthLastYear(key) {
+  const parsed = parseMonthKey(key)
+  return parsed ? `${parsed.year - 1}-${pad(parsed.month + 1)}` : null
 }
 
 // ── Themes ──────────────────────────────────────────────────────────────────
@@ -455,19 +613,24 @@ function sharedLocation(items) {
 
 /**
  * The best-of of `month`, or null when there is too little to make one.
+ * `lastYear` holds the entries of the same month a year before, for a look
+ * back at it; without them there is none.
  *
- * @param {{ month: string, memories: object[], moments: object[] }} input
+ * @param {{ month: string, memories: object[], moments: object[],
+ *           lastYear?: { memories: object[], moments: object[] } }} input
  */
-export function buildBestOf({ month, memories = [], moments = [] }) {
+export function buildBestOf({ month, memories = [], moments = [], lastYear = null }) {
   const media = collectMedia({ memories, moments })
   if (!hasEnoughForBestOf(media)) return null
 
+  const style = styleForMonth(month)
+  const { motions: moves, layouts: layoutsBySize, order, features } = styleOf(style)
   const photos = media.filter((m) => m.type === 'image')
   const videos = media.filter((m) => m.type === 'video')
   const scores = new Map(photos.map((p) => [p.url, scorePhoto(p)]))
   const ranked = [...photos].sort(byScore(scores))
 
-  const awards = chooseAwards(media, scores)
+  const awards = chooseAwards(media, scores, awardOrder(month))
   const used = new Set(awards.map((a) => a.item.url))
 
   // The cover leads the opening card and the moments row: the best photo, which
@@ -475,12 +638,15 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   const cover = ranked[0]
 
   // The month's moments, in the order they happened, with a few clips among
-  // them. Single photos and collages take turns at their moves and layouts.
+  // them. Single photos and collages take turns at the moves and layouts of
+  // the month's style, single photos starting from a different move each
+  // month, so that even a style's second outing does not open the same way.
   const beats = chooseBeats(photos, scores, used)
   const clips = spread(videos, MAX_VIDEOS)
   for (const clip of clips) used.add(clip.url)
 
-  let motions = 0
+  const { year = 0, month: monthIndex = 0 } = parseMonthKey(month) || {}
+  let motions = year + monthIndex
   const turns = { 2: 0, 3: 0, 4: 0 }
   let lastLayout = null
   const photoSlide = (item, kind = 'photo') => ({
@@ -489,13 +655,13 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
     caption: item.caption,
     location: item.location,
     day: item.day,
-    motion: MOTIONS[motions++ % MOTIONS.length],
+    motion: moves[motions++ % moves.length],
   })
   const beatSlide = (beat) => {
     if (beat.length === 1) return photoSlide(beat[0])
     // Sizes take their turns apart, and polaroids and strips come in two of
     // them, so a collage of three after one of four could repeat its layout.
-    const layouts = LAYOUTS[beat.length]
+    const layouts = layoutsBySize[beat.length]
     let layout = layouts[turns[beat.length]++ % layouts.length]
     if (layout === lastLayout && layouts.length > 1) layout = layouts[turns[beat.length]++ % layouts.length]
     lastLayout = layout
@@ -528,44 +694,94 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
     .slice(0, EXTRA_PHOTOS)
     .sort(byDate)
 
-  const slides = [
-    // The opening card's floating photos: the best few, whatever else they are.
-    { kind: 'intro', media: ranked.slice(0, 6).map(slideMedia) },
+  // The cards, each as a list of slides, put in the order of the style below.
+  const intro = [{ kind: 'intro', media: ranked.slice(0, 6).map(slideMedia) }]
+  const count = [{
+    kind: 'count',
+    photos: photos.length,
+    videos: videos.length,
+    media: slideMedia(ranked[1] ?? cover),
+  }]
+  const themesCard = themes.length
+    ? [{ kind: 'themes', themes: themes.map((t) => t.theme), media: themes.map((t) => slideMedia(t.item)) }]
+    : []
+  const awardSlides = (next) => [
+    { kind: 'awardIntro', award: next.award, media: slideMedia(next.item) },
     {
-      kind: 'count',
-      photos: photos.length,
-      videos: videos.length,
-      media: slideMedia(ranked[1] ?? cover),
+      kind: 'award',
+      award: next.award,
+      media: slideMedia(next.item),
+      caption: next.item.caption,
+      location: next.item.location,
+      day: next.item.day,
+      ...next.detail,
     },
   ]
-  if (themes.length) {
-    slides.push({ kind: 'themes', themes: themes.map((t) => t.theme), media: themes.map((t) => slideMedia(t.item)) })
-  }
 
-  // Awards between the runs of moments, the way an award show breaks for the
-  // next category: a run, an award, a run, an award.
-  split(sequence, awards.length + 1).forEach((run, i) => {
-    for (const step of run) slides.push(step.slide())
-    const next = awards[i]
-    if (next) {
-      slides.push({ kind: 'awardIntro', award: next.award, media: slideMedia(next.item) })
-      slides.push({
-        kind: 'award',
-        award: next.award,
-        media: slideMedia(next.item),
-        caption: next.item.caption,
-        location: next.item.location,
-        day: next.item.day,
-        ...next.detail,
-      })
-    }
-  })
+  // The extra cards of the style, where the month has what they need. Their
+  // photos repeat ones the story shows elsewhere, which is fine on a card
+  // that sums the month up.
+  const wanted = new Set(features)
+  const stats = []
+  const calendar = wanted.has('calendar') && chooseCalendar(media)
+  if (calendar) stats.push({ kind: 'calendar', days: calendar })
+  const rhythm = wanted.has('rhythm') && chooseRhythm(media, scores)
+  if (rhythm) {
+    stats.push({ kind: 'rhythm', fact: rhythm.fact, percent: Math.round(rhythm.share * 100), media: slideMedia(rhythm.item) })
+  }
+  const places = wanted.has('places') && choosePlaces(media, scores)
+  if (places) {
+    stats.push({
+      kind: 'places',
+      places: places.map(({ place, entries }) => ({ place, entries })),
+      media: places.map((p) => slideMedia(p.item)),
+    })
+  }
+  const ends = wanted.has('bookends') && chooseBookends(media)
+  const bookends = ends
+    ? [{ kind: 'bookends', media: ends.map(slideMedia), days: ends.map((p) => p.day), captions: ends.map((p) => p.caption) }]
+    : []
+
+  // The same month a year before: a few of its best photos, in the order
+  // they were taken.
+  const yearAgo = []
+  const before = lastYear ? collectMedia(lastYear) : []
+  const beforePhotos = before.filter((m) => m.type === 'image')
+  if (beforePhotos.length) {
+    const beforeScores = new Map(beforePhotos.map((p) => [p.url, scorePhoto(p)]))
+    yearAgo.push({
+      kind: 'yearAgo',
+      month: sameMonthLastYear(month),
+      photos: beforePhotos.length,
+      videos: before.length - beforePhotos.length,
+      media: [...beforePhotos].sort(byScore(beforeScores)).slice(0, YEAR_AGO_PHOTOS).sort(byDate).map(slideMedia),
+    })
+  }
 
   // The first of them is the card's own photo; the rest follow it.
-  if (extras.length) {
-    slides.push(photoSlide(extras[0], 'dontForget'))
-    for (const item of extras.slice(1)) slides.push(photoSlide(item))
+  const ending = extras.length ? [photoSlide(extras[0], 'dontForget'), ...extras.slice(1).map((item) => photoSlide(item))] : []
+
+  // The moments with the awards between their runs, the way an award show
+  // breaks for the next category: a run, an award, a run, an award. Made only
+  // when it is needed, since every slide made takes its turn at the moves.
+  const interleaved = () => split(sequence, awards.length + 1).flatMap((run, i) => [
+    ...run.map((step) => step.slide()),
+    ...(awards[i] ? awardSlides(awards[i]) : []),
+  ])
+
+  let body
+  if (order === 'countdown') {
+    // Through the moments without a break, the month's other numbers after
+    // them, and the awards all together at the end, one after another.
+    const moments = sequence.map((step) => step.slide())
+    body = [...count, ...themesCard, ...moments, ...stats, ...bookends, ...awards.flatMap(awardSlides)]
+  } else if (order === 'numbersLast') {
+    // The moments and awards first, the month in numbers at the end.
+    body = [...themesCard, ...interleaved(), ...bookends, ...count, ...stats]
+  } else {
+    body = [...count, ...stats, ...themesCard, ...interleaved(), ...bookends]
   }
+  const slides = [...intro, ...body, ...yearAgo, ...ending]
 
   const closing = [cover, ...beats.flat().filter((p) => p !== cover)].slice(0, 4)
   slides.push({ kind: 'outro', media: closing.map(slideMedia) })
@@ -573,6 +789,7 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   return {
     version: BEST_OF_VERSION,
     month,
+    style,
     cover: slideMedia(cover),
     counts: { photos: photos.length, videos: videos.length },
     awards: awards.map((a) => a.award),

@@ -6,6 +6,11 @@
     "title": "Best of",
     "open": "Watch the best of {{month}}"
   },
+  "intro": {
+    "lookBack": "A look back",
+    "masthead": "Best of",
+    "issue": "The {{month}} issue"
+  },
   "count": {
     "photos_one": "photo",
     "photos_other": "photos",
@@ -14,7 +19,10 @@
   "awardIntro": {
     "place": "and the place of the month is…",
     "busiestDay": "and the busiest day of the month was…",
-    "story": "and the story of the month is…"
+    "story": "and the story of the month is…",
+    "weekend": "and the weekend of the month was…",
+    "streak": "and the longest streak of the month was…",
+    "theme": "and the theme of the month is…"
   },
   "award": {
     "place": "Place of the month",
@@ -24,9 +32,44 @@
     "entries_other": "{{count}} moments shared here",
     "dayPhotos_one": "{{count}} photo in one day",
     "dayPhotos_other": "{{count}} photos in one day",
-    "dayMedia": "{{count}} photos and videos in one day"
+    "dayMedia": "{{count}} photos and videos in one day",
+    "weekend": "Weekend of the month",
+    "streak": "Longest streak",
+    "theme": "Theme of the month",
+    "weekendMedia_one": "{{count}} photo or video that weekend",
+    "weekendMedia_other": "{{count}} photos and videos that weekend",
+    "streakDays_one": "{{count}} day in a row",
+    "streakDays_other": "{{count}} days in a row",
+    "themeEntries_one": "{{count}} moment on this theme",
+    "themeEntries_other": "{{count}} moments on this theme"
   },
   "dontForget": "and don't forget about…",
+  "calendar": {
+    "title": "On {{count}} of {{total}} days",
+    "body": "you kept something"
+  },
+  "rhythm": {
+    "morning": "You were early birds",
+    "afternoon": "The afternoons were yours",
+    "evening": "The evenings were yours",
+    "night": "You were night owls",
+    "weekend": "Weekends were your thing",
+    "share": "of your moments"
+  },
+  "places": {
+    "title": "Where you were",
+    "entries_one": "{{count}} moment",
+    "entries_other": "{{count}} moments"
+  },
+  "bookends": {
+    "first": "This is how {{month}} began…",
+    "last": "…and how it ended"
+  },
+  "yearAgo": {
+    "title": "A year ago…",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos"
+  },
   "outro": {
     "seeYou": "See you next month!",
     "watchAgain": "Watch again",

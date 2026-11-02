@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import useCountUp from './useCountUp'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, RotateCcw, Trophy } from 'lucide-react'
 import useDecryptedMedia from '../media/useDecryptedMedia'
 import CrossfadeImage from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
-import { MOTIONS } from '../../utils/bestOf'
+import { motionClass, titleOf } from './bestOfLooks'
 
 /**
  * The slides of a best-of, one component per kind (utils/bestOf.js makes the
@@ -59,7 +60,7 @@ export function SlideImage({ media, className = '', style, onReady }) {
 
 // A photo that fills the slide: the thumbnail first, then the original once it
 // has been looked at for a moment — the moments viewer's stage does both.
-function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
+export function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
   return (
     <div className={`absolute inset-0 ${className}`}>
       <CrossfadeImage
@@ -67,7 +68,7 @@ function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
         thumbSrc={media?.thumbUrl || ''}
         tinyPreview={media?.tiny || ''}
         alt={alt}
-        className="absolute inset-0 w-full h-full bg-[#141a2e]"
+        className="absolute inset-0 w-full h-full bg-[var(--bo-dark)]"
         onSettled={onReady}
       />
     </div>
@@ -94,7 +95,7 @@ const FLOATING = [
 export function IntroSlide({ slide, labels, onReady }) {
   const photos = slide.media || []
   return (
-    <div className="absolute inset-0 bg-[#141a2e] overflow-hidden">
+    <div className="absolute inset-0 bg-[var(--bo-dark)] overflow-hidden">
       {FLOATING.slice(0, photos.length).map((spot, i) => (
         <div
           key={i}
@@ -129,30 +130,13 @@ export function IntroSlide({ slide, labels, onReady }) {
 
 // ── The month in numbers ────────────────────────────────────────────────────
 
-function useCountUp(target, durationMs = 1400) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    let frame
-    const start = performance.now()
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / durationMs)
-      // Ease out: fast at first, settling on the number.
-      setValue(Math.round(target * (1 - Math.pow(1 - t, 3))))
-      if (t < 1) frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [target, durationMs])
-  return value
-}
-
 export function CountSlide({ slide, onReady }) {
   const { t, i18n } = useTranslation('bestOf')
   const total = (slide.photos || 0) + (slide.videos || 0)
   const shown = useCountUp(total)
   const label = slide.videos > 0 ? t('count.photosAndVideos') : t('count.photos', { count: slide.photos })
   return (
-    <div className="absolute inset-0 overflow-hidden bg-cream">
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)]">
       <div
         className="bestof-rise absolute left-[2%] right-[-8%] top-[30%] bottom-[-6%] rounded-[2rem] overflow-hidden shadow-2xl"
         style={{ '--bestof-tilt': '2deg', '--bestof-tilt-from': '8deg' }}
@@ -181,10 +165,10 @@ const THEME_CARDS = [
   { left: 76, top: 21, width: 34, height: 24, tilt: 9, delay: 0.3 },
 ]
 
-export function ThemesSlide({ slide, labels, onReady }) {
+export function ThemesSlide({ slide, labels, look, onReady }) {
   const media = slide.media || []
   return (
-    <div className="absolute inset-0 overflow-hidden bg-warm-white bg-gradient-to-b to-cream-dark">
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[var(--bo-light)] to-[var(--bo-light-2)]">
       {THEME_CARDS.map((card, i) => media[i] && (
         <div
           key={i}
@@ -201,11 +185,11 @@ export function ThemesSlide({ slide, labels, onReady }) {
           <SlideImage media={media[i]} onReady={i === 0 ? onReady : undefined} />
         </div>
       ))}
-      <div className="absolute inset-x-6 top-[54%] text-center text-bark">
+      <div className="absolute inset-x-6 top-[54%] text-center text-[var(--bo-ink)]">
         {slide.themes.map((theme, i) => (
           <p
             key={theme}
-            className="bestof-text text-3xl sm:text-4xl font-semibold leading-snug break-words"
+            className={`bestof-text text-3xl sm:text-4xl leading-snug break-words ${titleOf(look, 'font-semibold')}`}
             style={{ animationDelay: `${0.3 + i * 0.25}s` }}
           >
             {theme}
@@ -244,15 +228,10 @@ export function Caption({ caption, meta, children }) {
   )
 }
 
-// The camera move utils/bestOf.js chose, so that photo after photo does not
-// push in the same way. One this version does not know — from a best-of saved
-// by a newer one — gets the push in.
-const motionOf = (slide) => `bestof-motion-${MOTIONS.includes(slide.motion) ? slide.motion : 'zoomIn'}`
-
 export function PhotoSlide({ slide, labels, onReady }) {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
-      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} alt={slide.caption || ''} />
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
+      <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
       <BottomShade />
       <Caption caption={slide.caption} meta={labels.meta(slide)} />
     </div>
@@ -286,13 +265,13 @@ export function VideoSlide({ slide, labels, muted, videoRef, onReady, onProgress
 
 // ── Awards ──────────────────────────────────────────────────────────────────
 
-export function AwardIntroSlide({ slide, onReady }) {
+export function AwardIntroSlide({ slide, look, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(26px) brightness(0.55)', transform: 'scale(1.2)' }} />
       <div className="absolute inset-0 flex items-center justify-center px-8">
-        <p className="bestof-text text-white text-center text-[2rem] sm:text-4xl font-semibold leading-tight drop-shadow-lg">
+        <p className={`bestof-text text-white text-center text-[2rem] sm:text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`}>
           {t(`awardIntro.${slide.award}`)}
         </p>
       </div>
@@ -300,10 +279,12 @@ export function AwardIntroSlide({ slide, onReady }) {
   )
 }
 
-function AwardDetail({ slide, labels }) {
+// What an award was given for. On a light card (`light`) it goes without the
+// shadows that keep it readable over a photo.
+export function AwardDetail({ slide, labels, light = false }) {
   const { t } = useTranslation('bestOf')
-  const big = 'bestof-text text-3xl sm:text-4xl font-bold leading-tight drop-shadow-lg break-words'
-  const small = 'bestof-text mt-1 text-sm text-white/85 drop-shadow'
+  const big = `bestof-text text-3xl sm:text-4xl font-bold leading-tight break-words ${light ? '' : 'drop-shadow-lg'}`
+  const small = `bestof-text mt-1 text-sm ${light ? 'text-[var(--bo-ink-soft)]' : 'text-white/85 drop-shadow'}`
   switch (slide.award) {
     case 'place':
       return (
@@ -323,6 +304,27 @@ function AwardDetail({ slide, labels }) {
       )
     case 'story':
       return slide.caption ? <p className={big} style={{ animationDelay: '0.8s' }}>{slide.caption}</p> : null
+    case 'weekend':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{labels.range(slide.from, slide.to)}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{t('award.weekendMedia', { count: slide.count })}</p>
+        </>
+      )
+    case 'streak':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{t('award.streakDays', { count: slide.days })}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{labels.range(slide.from, slide.to)}</p>
+        </>
+      )
+    case 'theme':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{slide.theme}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{t('award.themeEntries', { count: slide.entries })}</p>
+        </>
+      )
     default:
       return (
         <>
@@ -336,12 +338,12 @@ function AwardDetail({ slide, labels }) {
 export function AwardSlide({ slide, labels, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <FullPhoto media={slide.media} onReady={onReady} className="bestof-reveal" alt={t(`award.${slide.award}`)} />
       <BottomShade />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
-        <span className="bestof-badge inline-flex items-center gap-2 rounded-full bg-warm-white text-bark px-4 py-2 text-sm font-bold shadow-lg mb-3">
-          <Trophy className="w-4 h-4 text-amber-500" aria-hidden="true" />
+        <span className="bestof-badge inline-flex items-center gap-2 rounded-full bg-[var(--bo-badge)] text-[var(--bo-badge-ink)] px-4 py-2 text-sm font-bold shadow-lg mb-3">
+          <Trophy className="w-4 h-4 text-[var(--bo-trophy)]" aria-hidden="true" />
           {t(`award.${slide.award}`)}
         </span>
         <AwardDetail slide={slide} labels={labels} />
@@ -352,15 +354,15 @@ export function AwardSlide({ slide, labels, onReady }) {
 
 // ── The end ─────────────────────────────────────────────────────────────────
 
-export function DontForgetSlide({ slide, labels, onReady }) {
+export function DontForgetSlide({ slide, labels, look, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#141a2e]">
-      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} />
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
+      <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} />
       <BottomShade />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-12 text-white pointer-events-none">
         <p className="bestof-text text-lg text-white/90 drop-shadow">{t('dontForget')}</p>
-        <p className="bestof-text mt-1 text-4xl font-semibold leading-tight drop-shadow-lg" style={{ animationDelay: '0.4s' }}>
+        <p className={`bestof-text mt-1 text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`} style={{ animationDelay: '0.4s' }}>
           {labels.title}
         </p>
       </div>
@@ -368,25 +370,42 @@ export function DontForgetSlide({ slide, labels, onReady }) {
   )
 }
 
-const OUTRO_CARDS = [
-  { left: 6, top: 15, width: 42, height: 26, tilt: -7, delay: 0 },
-  { left: 50, top: 12, width: 44, height: 28, tilt: 5, delay: 0.15 },
-  { left: 14, top: 36, width: 34, height: 19, tilt: 4, delay: 0.3 },
-  { left: 52, top: 38, width: 38, height: 18, tilt: -5, delay: 0.45 },
-]
+// The closing card's photos, laid out as the look asks: scattered cards, a
+// pile of prints, or a straight grid.
+const OUTRO_CARDS = {
+  cards: [
+    { left: 6, top: 15, width: 42, height: 26, tilt: -7, delay: 0 },
+    { left: 50, top: 12, width: 44, height: 28, tilt: 5, delay: 0.15 },
+    { left: 14, top: 36, width: 34, height: 19, tilt: 4, delay: 0.3 },
+    { left: 52, top: 38, width: 38, height: 18, tilt: -5, delay: 0.45 },
+  ],
+  stack: [
+    { left: 20, top: 14, width: 58, height: 36, tilt: -9, delay: 0 },
+    { left: 23, top: 15, width: 56, height: 35, tilt: 6, delay: 0.2 },
+    { left: 21, top: 16, width: 57, height: 35, tilt: -3, delay: 0.4 },
+    { left: 22, top: 17, width: 56, height: 34, tilt: 2, delay: 0.6 },
+  ],
+  grid: [
+    { left: 6, top: 13, width: 43, height: 21, tilt: 0, delay: 0 },
+    { left: 51, top: 13, width: 43, height: 21, tilt: 0, delay: 0.12 },
+    { left: 6, top: 35.5, width: 43, height: 21, tilt: 0, delay: 0.24 },
+    { left: 51, top: 35.5, width: 43, height: 21, tilt: 0, delay: 0.36 },
+  ],
+}
 
 // Buttons here sit above the viewer's tap zones; a press on them is theirs.
 const own = { onPointerDown: (e) => e.stopPropagation(), onPointerUp: (e) => e.stopPropagation() }
 
-export function OutroSlide({ slide, labels, onReady, onRestart, onRemake }) {
+export function OutroSlide({ slide, labels, look, onReady, onRestart, onRemake }) {
   const { t } = useTranslation('bestOf')
   const media = slide.media || []
+  const cards = OUTRO_CARDS[look?.outro] || OUTRO_CARDS.cards
   return (
-    <div className="absolute inset-0 overflow-hidden bg-cream">
-      {OUTRO_CARDS.map((card, i) => media[i] && (
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)]" data-outro={look?.outro || 'cards'}>
+      {cards.map((card, i) => media[i] && (
         <div
           key={i}
-          className="bestof-drop absolute rounded-3xl overflow-hidden shadow-xl"
+          className={`bestof-drop absolute overflow-hidden shadow-xl ${look?.outro === 'grid' ? 'rounded-xl' : 'rounded-3xl'}`}
           style={{
             left: `${card.left}%`,
             top: `${card.top}%`,
@@ -400,15 +419,15 @@ export function OutroSlide({ slide, labels, onReady, onRestart, onRemake }) {
         </div>
       ))}
       {!media.some(Boolean) && <ReadyNow onReady={onReady} />}
-      <div className="absolute inset-x-6 top-[60%] text-center text-bark">
-        <p className="bestof-text text-4xl sm:text-5xl font-bold leading-tight" style={{ animationDelay: '0.5s' }}>{labels.title}</p>
-        <p className="bestof-text mt-2 text-lg text-bark-light" style={{ animationDelay: '0.7s' }}>{t('outro.seeYou')}</p>
+      <div className="absolute inset-x-6 top-[60%] text-center text-[var(--bo-ink)]">
+        <p className={`bestof-text text-4xl sm:text-5xl leading-tight ${titleOf(look)}`} style={{ animationDelay: '0.5s' }}>{labels.title}</p>
+        <p className="bestof-text mt-2 text-lg text-[var(--bo-ink-soft)]" style={{ animationDelay: '0.7s' }}>{t('outro.seeYou')}</p>
         <div className="relative z-30 mt-8 flex flex-col items-center gap-3">
           <button
             type="button"
             {...own}
             onClick={onRestart}
-            className="inline-flex items-center gap-2 rounded-full bg-bark text-white px-6 py-3 text-sm font-semibold shadow-lg hover:bg-bark-light"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--bo-ink)] text-[var(--bo-light)] px-6 py-3 text-sm font-semibold shadow-lg hover:opacity-85"
           >
             <RotateCcw className="w-4 h-4" aria-hidden="true" />
             {t('outro.watchAgain')}
@@ -419,7 +438,7 @@ export function OutroSlide({ slide, labels, onReady, onRestart, onRemake }) {
               {...own}
               onClick={onRemake}
               title={t('outro.remakeHint', { month: labels.monthName })}
-              className="inline-flex items-center gap-2 rounded-full border border-cream-dark bg-warm-white text-bark-light px-5 py-2.5 text-sm font-medium hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--bo-light-2)] bg-[var(--bo-light)] text-[var(--bo-ink-soft)] px-5 py-2.5 text-sm font-medium hover:bg-[var(--bo-light-2)]"
             >
               <RefreshCw className="w-4 h-4" aria-hidden="true" />
               {t('outro.remake')}

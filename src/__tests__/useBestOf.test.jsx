@@ -6,9 +6,14 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 
 vi.mock('../config/firebase', () => ({ db: { type: 'test' }, auth: null }))
 
-const h = vi.hoisted(() => ({ saved: new Map(), entries: null, listeners: new Set() }))
+const h = vi.hoisted(() => ({ saved: new Map(), entries: null, lastYear: null, listeners: new Set() }))
 
-const getMonthEntries = vi.fn(async () => h.entries)
+// The month asked for, and the same month a year before.
+const getMonthEntries = vi.fn(async (familyId, key, month) => {
+  if (month !== '2025-09') return h.entries
+  if (h.lastYear instanceof Error) throw h.lastYear
+  return h.lastYear ?? { memories: [], moments: [] }
+})
 const saveBestOf = vi.fn(async (familyId, key, bestOf) => {
   h.saved.set(bestOf.month, bestOf)
   for (const listener of h.listeners) listener()
@@ -42,6 +47,7 @@ const family = { familyId: 'fam', encryptionKey: null }
 beforeEach(() => {
   h.saved.clear()
   h.entries = SEPTEMBER
+  h.lastYear = null
   getMonthEntries.mockClear()
   saveBestOf.mockClear()
 })
@@ -68,8 +74,20 @@ describe('makeBestOf', () => {
       makeBestOf({ ...family, month: '2026-09', isAdmin: true }),
     ])
     expect(first).toBe(second)
-    expect(getMonthEntries).toHaveBeenCalledTimes(1)
+    // The month and the same month a year before, once each.
+    expect(getMonthEntries.mock.calls.map((call) => call[2])).toEqual(['2026-09', '2025-09'])
     expect(saveBestOf).toHaveBeenCalledTimes(1)
+  })
+
+  it('looks back at the same month a year before, and goes without when it cannot read it', async () => {
+    h.lastYear = { memories: [], moments: [{ id: 'old', date: new Date(2025, 8, 4, 12), caption: 'old', images: ['o1'] }] }
+    const withIt = await makeBestOf({ ...family, month: '2026-09', isAdmin: false })
+    expect(withIt.slides.find((s) => s.kind === 'yearAgo')).toMatchObject({ month: '2025-09', photos: 1 })
+
+    h.lastYear = new Error('offline')
+    const without = await makeBestOf({ ...family, month: '2026-09', isAdmin: false })
+    expect(without).not.toBeNull()
+    expect(without.slides.some((s) => s.kind === 'yearAgo')).toBe(false)
   })
 
   it('makes nothing of a month with too little, and saves nothing', async () => {
@@ -106,7 +124,7 @@ describe('useBestOfMonth', () => {
     getMonthEntries.mockClear()
 
     act(() => result.current.remake())
-    await waitFor(() => expect(getMonthEntries).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(getMonthEntries).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(saveBestOf).toHaveBeenCalledTimes(2)
   })

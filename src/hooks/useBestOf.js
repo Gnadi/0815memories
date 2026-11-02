@@ -7,6 +7,7 @@ import {
   collectMedia,
   currentBestOfMonth,
   hasEnoughForBestOf,
+  sameMonthLastYear,
   slideMedia,
 } from '../utils/bestOf'
 import { devError } from '../utils/devLog'
@@ -37,8 +38,16 @@ export function makeBestOf({ familyId, encryptionKey, month, isAdmin }) {
   const key = `${familyId}_${month}`
   if (!makings.has(key)) {
     const promise = (async () => {
-      const { memories, moments } = await getMonthEntries(familyId, encryptionKey, month)
-      const bestOf = buildBestOf({ month, memories, moments })
+      // The same month a year before, for the look back at it. A month that
+      // cannot be read is a best-of without that card, not no best-of.
+      const [{ memories, moments }, lastYear] = await Promise.all([
+        getMonthEntries(familyId, encryptionKey, month),
+        getMonthEntries(familyId, encryptionKey, sameMonthLastYear(month)).catch((err) => {
+          devError('Reading last year’s month for the best-of failed', err)
+          return null
+        }),
+      ])
+      const bestOf = buildBestOf({ month, memories, moments, lastYear })
       if (bestOf && isAdmin) {
         // Not saving is no reason not to show it: it will be made again next time.
         await saveBestOf(familyId, encryptionKey, bestOf).catch((err) => devError('Saving the best-of failed', err))

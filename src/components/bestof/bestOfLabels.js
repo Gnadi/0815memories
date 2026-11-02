@@ -1,4 +1,4 @@
-import { monthDate } from '../../utils/bestOf'
+import { isMonthKey, monthDate } from '../../utils/bestOf'
 
 /**
  * The words a best-of is shown with, in the reader's language. The best-of
@@ -14,6 +14,12 @@ export function bestOfLabels(month, lang, t) {
   }
   return {
     monthName,
+    // For the diary's calendar page: how many days, which weekday the first
+    // falls on with the week starting on Monday, and the weekdays' initials.
+    daysInMonth: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
+    firstWeekday: (date.getDay() + 6) % 7,
+    // 1 January 2024 was a Monday.
+    weekdays: Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })),
     monthYear: date.toLocaleDateString(lang, { month: 'long', year: 'numeric' }),
     // "SEPT", "SEP": the opening card's big word, without the abbreviation's dot.
     monthShort: date.toLocaleDateString(lang, { month: 'short' }).replace(/\.$/, '').toUpperCase(),
@@ -21,6 +27,11 @@ export function bestOfLabels(month, lang, t) {
     title: t('title', { month: monthName }),
     circle: t('circle', { month: date.toLocaleDateString(lang, { month: 'short' }) }),
     longDay: (day) => (day ? formatDay(day, { weekday: 'long', day: 'numeric', month: 'long' }) : ''),
+    shortDay: (day) => (day ? formatDay(day, { day: 'numeric', month: 'short' }) : ''),
+    // "11 – 12 Oct" for a weekend or a run of days.
+    range: (from, to) => [from, to].filter(Boolean).map((day) => formatDay(day, { day: 'numeric', month: 'short' })).join(' – '),
+    // "September 2025", for the look back at another month.
+    monthYearOf: (key) => (isMonthKey(key) ? monthDate(key).toLocaleDateString(lang, { month: 'long', year: 'numeric' }) : ''),
     // "14 Sep · Zell am See" under a photo.
     meta: (slide) =>
       [slide.day && formatDay(slide.day, { day: 'numeric', month: 'short' }), slide.location].filter(Boolean).join(' · '),

@@ -43,7 +43,7 @@ vi.mock('../utils/audioContext', async (importOriginal) => ({
 vi.mock('../utils/bestOfMusic', () => ({
   trackForMonth: () => 'warm',
   // 120 bpm: a beat is 500 ms.
-  barMs: () => 2000,
+  beatMs: () => 500,
   createSoundtrack: (context, track) => {
     const soundtrack = {
       track,
@@ -58,6 +58,8 @@ vi.mock('../utils/bestOfMusic', () => ({
 }))
 
 import BestOfViewer from '../components/bestof/BestOfViewer'
+import { LOOKS, TRANSITION_MS } from '../components/bestof/bestOfLooks'
+import { STYLE_ORDER } from '../utils/bestOfStyle'
 
 const media = (url) => ({ url, thumbUrl: `${url}-t` })
 
@@ -433,6 +435,179 @@ describe('BestOfViewer', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Music on' }))
       expect(audio.soundtracks).toHaveLength(1)
       expect(audio.soundtracks[0].pause).toHaveBeenCalled()
+    })
+  })
+
+  describe('looks', () => {
+    const styled = (style) => ({ ...BEST_OF, style })
+    // The slides on stage, not what the look lays over them.
+    const leavingCount = () => stage().querySelectorAll(':scope > div.absolute.inset-0:not(.z-10)').length
+    const controls = () => screen.getByText('Best of September').parentElement
+
+    it('has the classic look without a style, or with one it does not know', () => {
+      for (const style of [undefined, 'someday-a-new-style']) {
+        render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+        expect(screen.getByText('SEP')).toBeInTheDocument()
+        expect(stage().style.getPropertyValue('--bo-dark')).toBe(LOOKS.classic.colors.dark)
+        tap(0.8)
+        expect(current().className).toContain('bestof-enter-fade')
+        cleanup()
+      }
+    })
+
+    it.each(STYLE_ORDER)('opens and plays a best-of in the %s look', (style) => {
+      const look = LOOKS[style]
+      render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+      expect(stage().dataset.style).toBe(style)
+      expect(stage().style.getPropertyValue('--bo-accent')).toBe(look.colors.accent)
+      expect(kind()).toBe('intro')
+      // Every opening card names the month, one way or another.
+      expect(within(current()).queryAllByText(/^(SEP|September|September 2026)$/).length).toBeGreaterThan(0)
+
+      tap(0.8)
+      expect(kind()).toBe('count')
+      expect(current().className).toContain(`bestof-enter-${look.transition}`)
+      expect(current().style.animationDuration).toBe(`${TRANSITION_MS[look.transition]}ms`)
+      // The slide being left stays until the look's transition is over.
+      act(() => vi.advanceTimersByTime(TRANSITION_MS[look.transition] - 100))
+      expect(leavingCount()).toBe(2)
+      act(() => vi.advanceTimersByTime(200))
+      expect(leavingCount()).toBe(1)
+
+      tapUntil('outro')
+      expect(current().querySelector('[data-outro]').dataset.outro).toBe(look.outro)
+    })
+
+    it('frames a film in black bars, and keeps its controls white on its dark cards', () => {
+      render(<BestOfViewer bestOf={styled('cinema')} onClose={() => {}} />)
+      expect(screen.getByTestId('bestof-letterbox')).toBeInTheDocument()
+      tapUntil('count')
+      expect(controls().className).toContain('text-white')
+      cleanup()
+      render(<BestOfViewer bestOf={styled('polaroid')} onClose={() => {}} />)
+      expect(screen.queryByTestId('bestof-letterbox')).toBeNull()
+      tapUntil('count')
+      expect(controls().className).not.toContain('text-white')
+    })
+
+    it('throws confetti for an award in the festival look, and nowhere else', () => {
+      render(<BestOfViewer bestOf={styled('festival')} onClose={() => {}} />)
+      tapUntil('awardIntro')
+      expect(screen.queryByTestId('bestof-confetti')).toBeNull()
+      tap(0.8)
+      expect(kind()).toBe('award')
+      expect(screen.getByTestId('bestof-confetti')).toBeInTheDocument()
+      cleanup()
+      render(<BestOfViewer bestOf={styled('magazine')} onClose={() => {}} />)
+      tapUntil('award')
+      expect(screen.queryByTestId('bestof-confetti')).toBeNull()
+    })
+
+    it('lays the diary’s paper over its light cards only', () => {
+      render(<BestOfViewer bestOf={styled('diary')} onClose={() => {}} />)
+      expect(stage().querySelector('.bestof-paper')).toBeNull()
+      expect(screen.getByTestId('bestof-calendar')).toBeInTheDocument()
+      tap(0.8)
+      expect(kind()).toBe('count')
+      expect(stage().querySelector('.bestof-paper')).not.toBeNull()
+      // Its photos are a diary's pages too…
+      tap(0.8)
+      expect(kind()).toBe('photo')
+      expect(stage().querySelector('.bestof-paper')).not.toBeNull()
+      // …but its collages are not.
+      tap(0.8)
+      expect(kind()).toBe('collage')
+      expect(stage().querySelector('.bestof-paper')).toBeNull()
+    })
+
+    it.each(STYLE_ORDER)('draws the photos, the count and the awards of the %s look its own way', (style) => {
+      const { variants } = LOOKS[style]
+      render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+      for (const kind of ['count', 'photo', 'awardIntro', 'award']) {
+        tapUntil(kind)
+        expect(current().querySelector('[data-variant]')?.dataset.variant).toBe(variants[kind] ?? 'classic')
+      }
+      // Whatever the look, the slide still says what it is about.
+      expect(within(current()).getByText('Zell am See')).toBeInTheDocument()
+    })
+
+    it('draws a slide the classic way in a variant it does not know', () => {
+      const look = { ...LOOKS.magazine, variants: { photo: 'someday-a-new-frame' } }
+      LOOKS.someday = look
+      try {
+        render(<BestOfViewer bestOf={styled('someday')} onClose={() => {}} />)
+        tapUntil('photo')
+        expect(current().querySelector('[data-variant]').dataset.variant).toBe('classic')
+        expect(within(current()).getByText('At the lake')).toBeInTheDocument()
+      } finally {
+        delete LOOKS.someday
+      }
+    })
+  })
+
+  describe('extra cards', () => {
+    const CARDS = {
+      ...BEST_OF,
+      style: 'magazine',
+      slides: [
+        { kind: 'intro', media: [media('a')] },
+        { kind: 'calendar', days: [3, 4, 20] },
+        { kind: 'rhythm', fact: 'evening', percent: 64, media: media('b') },
+        { kind: 'places', places: [{ place: 'Zell am See', entries: 3 }, { place: 'Home', entries: 1 }], media: [media('c'), media('d')] },
+        { kind: 'bookends', media: [media('e'), media('f')], days: ['2026-09-01', '2026-09-30'], captions: ['', ''] },
+        { kind: 'awardIntro', award: 'streak', media: media('g') },
+        { kind: 'award', award: 'streak', media: media('g'), from: '2026-09-07', to: '2026-09-11', days: 5 },
+        { kind: 'award', award: 'weekend', media: media('h'), from: '2026-09-05', to: '2026-09-06', count: 9 },
+        { kind: 'award', award: 'theme', media: media('i'), theme: 'Garden', entries: 4 },
+        { kind: 'yearAgo', month: '2025-09', photos: 14, videos: 0, media: [media('j'), media('k')] },
+        { kind: 'outro', media: [media('a')] },
+      ],
+    }
+
+    it('shows the calendar, the rhythm, the places and the first and last moment', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tap(0.8)
+      expect(kind()).toBe('calendar')
+      expect(within(current()).getByText('On 3 of 30 days')).toBeInTheDocument()
+      expect(current().querySelectorAll('[data-kept]')).toHaveLength(3)
+      // A light card: the controls go dark.
+      expect(screen.getByText('Best of September').parentElement.className).not.toContain('text-white')
+
+      tap(0.8)
+      expect(within(current()).getByText('The evenings were yours')).toBeInTheDocument()
+      expect(within(current()).getByText('64%')).toBeInTheDocument()
+      expect(within(current()).getByText('of your moments')).toBeInTheDocument()
+
+      tap(0.8)
+      expect(within(current()).getByText('Where you were')).toBeInTheDocument()
+      expect(within(current()).getByText('Zell am See')).toBeInTheDocument()
+      expect(within(current()).getByText('3 moments')).toBeInTheDocument()
+
+      tap(0.8)
+      expect(within(current()).getByText('This is how September began…')).toBeInTheDocument()
+      expect(within(current()).getByText('…and how it ended')).toBeInTheDocument()
+    })
+
+    it('announces and shows the new awards', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tapUntil('awardIntro')
+      expect(within(current()).getByText('and the longest streak of the month was…')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Longest streak')).toBeInTheDocument()
+      expect(within(current()).getByText('5 days in a row')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Weekend of the month')).toBeInTheDocument()
+      expect(within(current()).getByText('9 photos and videos that weekend')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Theme of the month')).toBeInTheDocument()
+      expect(within(current()).getByText('Garden')).toBeInTheDocument()
+    })
+
+    it('looks back at the same month a year before', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tapUntil('yearAgo')
+      expect(within(current()).getByText('A year ago…')).toBeInTheDocument()
+      expect(within(current()).getByText('September 2025 · 14 photos')).toBeInTheDocument()
     })
   })
 })
