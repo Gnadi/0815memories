@@ -28,6 +28,7 @@ import {
   VideoSlide,
 } from './BestOfSlides'
 import { CollageSlide } from './BestOfCollage'
+import { BookendsSlide, CalendarSlide, PlacesSlide, RhythmSlide, YearAgoSlide } from './BestOfCards'
 import './bestOf.css'
 
 const SLIDES = {
@@ -40,13 +41,18 @@ const SLIDES = {
   awardIntro: AwardIntroSlide,
   award: AwardSlide,
   dontForget: DontForgetSlide,
+  calendar: CalendarSlide,
+  rhythm: RhythmSlide,
+  places: PlacesSlide,
+  bookends: BookendsSlide,
+  yearAgo: YearAgoSlide,
   outro: OutroSlide,
 }
 
 // Slides drawn on white, which want the controls in dark — unless the look
 // draws them dark too, as the cinema's does. Which opening card is light
 // depends on the look.
-const LIGHT_SLIDES = new Set(['count', 'themes', 'outro'])
+const LIGHT_SLIDES = new Set(['count', 'themes', 'calendar', 'yearAgo', 'outro'])
 
 function isLight(slide, look) {
   if (!slide || look.darkSurfaces) return false
@@ -66,6 +72,11 @@ const SLIDE_BEATS = {
   awardIntro: 4,
   award: 8,
   dontForget: 4,
+  calendar: 10,
+  rhythm: 7,
+  places: 10,
+  bookends: 10,
+  yearAgo: 9,
   outro: 12,
 }
 

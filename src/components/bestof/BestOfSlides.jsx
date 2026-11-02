@@ -324,6 +324,27 @@ function AwardDetail({ slide, labels }) {
       )
     case 'story':
       return slide.caption ? <p className={big} style={{ animationDelay: '0.8s' }}>{slide.caption}</p> : null
+    case 'weekend':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{labels.range(slide.from, slide.to)}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{t('award.weekendMedia', { count: slide.count })}</p>
+        </>
+      )
+    case 'streak':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{t('award.streakDays', { count: slide.days })}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{labels.range(slide.from, slide.to)}</p>
+        </>
+      )
+    case 'theme':
+      return (
+        <>
+          <p className={big} style={{ animationDelay: '0.8s' }}>{slide.theme}</p>
+          <p className={small} style={{ animationDelay: '1s' }}>{t('award.themeEntries', { count: slide.entries })}</p>
+        </>
+      )
     default:
       return (
         <>

@@ -8,20 +8,54 @@ rendered video:
 
 | Slide | What it shows |
 | --- | --- |
-| `intro` | the month's name among floating photos |
+| `intro` | the month's name, in the opening card of the month's look |
 | `count` | how many photos and videos the month had |
 | `themes` | the month's most used categories and labels, or places |
-| `photo` | a single photo with a camera move: zoom in or out, a pan |
-| `collage` | an album, or one day's snapshots, as an animated collage: `duo`, `trio`, `grid`, `polaroids`, `strip` |
+| `photo` | a single photo with a camera move: zoom in or out, a pan, a diagonal, a tilt |
+| `collage` | an album, or one day's snapshots, as an animated collage: `duo`, `trio`, `grid`, `polaroids`, `strip`, `mosaic`, `diagonal`, `pinboard` |
 | `video` | a clip, muted under the music |
 | `awardIntro`, `award` | "and the place of the month is…", then the winner |
+| `calendar` | the month's calendar, the days something was kept on lighting up |
+| `rhythm` | when the family shared: mornings, evenings, the weekend… |
+| `places` | up to three places of the month, with a photo each |
+| `bookends` | the month's first and last photo: "this is how it began… and how it ended" |
+| `yearAgo` | a few photos of the same month a year before |
 | `dontForget` | "and don't forget about…", photos that did not make it |
 | `outro` | the end card: watch again, or (admins) put it together again |
 
 The awards are **place of the month** (where the most entries were made),
-**busiest day** (four photos and clips or more) and **story of the month**
-(the featured memory, or the one with the most photos) — only when earned,
-each with its own photo.
+**busiest day** (four photos and clips or more), **story of the month** (the
+featured memory, or the one with the most photos), **weekend of the month**
+(four or more on one Saturday and Sunday), **longest streak** (four days in a
+row or more) and **theme of the month** (a category or label on three entries
+or more) — only when earned, each with its own photo, three at most. Which
+three goes round: each month starts from a different one (`awardOrder`).
+
+## A different best-of every month
+
+So that one month's best-of is not a rerun of the last, each month is told in
+one of seven styles, taken in turn (`styleForMonth`, `utils/bestOfStyle.js`):
+*polaroid*, *cinema*, *magazine*, *festival*, *diary*, *mosaic* and *minimal*.
+Seven does not go into twelve, so the same month a year later has another one.
+The style is saved with the story, so the whole family sees the same.
+
+A style decides the composition: its camera moves, the collages its moments
+become, its extra cards (`calendar`, `rhythm`, `places`, `bookends`, where the
+month has what they need) and the order of the story — the month in numbers
+first and the awards between the moments; or straight into the moments with the
+awards all together at the end; or the numbers at the end. Its look
+(`components/bestof/bestOfLooks.js`) decides the rest: the colours, which the
+slides draw with as CSS custom properties; the opening card (floating photos,
+a pile of polaroids, a film's title, a magazine cover, a calendar page torn off,
+a mosaic of tiles, the name cut out of a photo); the closing card; how one slide
+comes in over the last (a fade, a slide, a zoom, a wipe, a blur, a dip through
+black); and what it lays over the story — a film's black bars, a diary's paper,
+confetti for an award. A best-of saved before there were styles keeps the look
+it had.
+
+The look back at the same month a year before reads that month's memories and
+moments too, when the best-of is made; a month that cannot be read is a
+best-of without that card.
 
 ## No image analysis
 
@@ -67,19 +101,27 @@ saved best-of stays reachable from the row above the moments grid.
 
 The slides are React components animated with CSS (`components/bestof/`,
 `bestOf.css`): photos drift and zoom, collage tiles slide, pop and drop into
-place, and the viewer crossfades from one slide to the next. Everything stops
+place, and one slide comes in over the next as the month's look has it.
+Everything stops
 while the story is held or the page is hidden, and nothing moves for someone
 who has asked their system for reduced motion — for them the film strip, the
 one layout that needs motion to show all its photos, is a still collage.
 
 The music is synthesized in the browser with the Web Audio API
-(`utils/bestOfMusic.js`), in one of three moods, each a short loop:
+(`utils/bestOfMusic.js`): eight tracks, each a short loop, taken in turn month
+by month (`trackForMonth`) — eight, so the same month a year later sounds
+different too, and at a different pace from the seven styles, so a style comes
+back with other music:
 
-- *warm*, for spring and autumn: electric-piano arpeggios over a pad, a round
-  bass, and the softest kick and shaker;
-- *bright*, for summer: a marimba-like motif over a pad, a bass in eighths, a
-  kick, a clap on two and four and a shaker;
-- *calm*, for winter: long pads, a held bass and a few piano notes, no drums.
+- *warm*: electric-piano arpeggios over a pad, a round bass, the softest kick
+  and shaker;
+- *pop*: a synth arpeggio in sixteenths, an octave bass, four on the floor;
+- *calm*: long pads, a held bass and a few piano notes, no drums;
+- *folk*: a picked guitar (a Karplus–Strong string) over a quiet pad;
+- *lofi*: swung, rolled electric-piano chords and a walking bass;
+- *bright*: a marimba-like motif, a bass in eighths, a clap on two and four;
+- *waltz*: a music box over a bass and pizzicato, in three;
+- *playful*: a glockenspiel tune with pizzicato on the off-beats.
 
 There are no audio files: nothing to license, nothing to download, nothing
 fetched from anyone. Slides last a whole number of beats of the month's track,

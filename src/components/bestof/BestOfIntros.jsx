@@ -71,7 +71,7 @@ function TitleIntro({ slide, labels, onReady }) {
       </div>
       {!first && <ReadyNow onReady={onReady} />}
       <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 text-center text-white">
-        <p className="bestof-text text-sm tracking-[0.5em] text-[var(--bo-accent)]" style={{ animationDelay: '0.3s' }}>
+        <p className="bestof-text text-sm tracking-[0.5em] text-[var(--bo-highlight)]" style={{ animationDelay: '0.3s' }}>
           {labels.year}
         </p>
         <p className="bestof-title mt-3 text-5xl sm:text-6xl font-semibold uppercase leading-none drop-shadow-lg" style={{ animationDelay: '0.6s' }}>
@@ -103,7 +103,7 @@ function CoverIntro({ slide, labels, onReady }) {
           {t('intro.masthead')}
         </p>
         <span
-          className="bestof-badge mt-3 inline-block bg-[var(--bo-accent)] px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-white"
+          className="bestof-badge mt-3 inline-block bg-[var(--bo-accent)] px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[var(--bo-on-accent)]"
         >
           {t('intro.issue', { month: labels.monthYear })}
         </span>
@@ -137,7 +137,7 @@ function CalendarIntro({ slide, labels, look, onReady }) {
         data-testid="bestof-calendar"
         className="bestof-tear absolute left-[9%] right-[9%] top-[15%] rounded-2xl bg-[var(--bo-light)] text-[var(--bo-ink)] shadow-2xl overflow-hidden"
       >
-        <div className="bg-[var(--bo-accent)] py-3 text-center text-sm font-bold tracking-[0.4em] text-white">{labels.year}</div>
+        <div className="bg-[var(--bo-accent)] py-3 text-center text-sm font-bold tracking-[0.4em] text-[var(--bo-on-accent)]">{labels.year}</div>
         <p className={`pt-4 text-center text-4xl ${titleOf(look)}`}>{labels.monthName}</p>
         <div className="grid grid-cols-7 gap-y-1.5 px-4 pt-4 pb-6 text-center text-xs tabular-nums">
           {(labels.weekdays || []).map((day, i) => (
@@ -198,7 +198,7 @@ function MosaicIntro({ slide, labels, onReady }) {
         <p className="bestof-pop font-display uppercase leading-none drop-shadow-lg" style={{ fontSize: 'min(22vw, 7rem)', animationDelay: '0.9s' }}>
           {labels.monthShort}
         </p>
-        <p className="bestof-text mt-1 text-sm font-semibold tracking-[0.4em] text-[var(--bo-accent)]" style={{ animationDelay: '1.3s' }}>
+        <p className="bestof-text mt-1 text-sm font-semibold tracking-[0.4em] text-[var(--bo-highlight)]" style={{ animationDelay: '1.3s' }}>
           {labels.year}
         </p>
       </div>

@@ -4,8 +4,14 @@ import {
   MIN_BEST_OF_MEDIA,
   MOTIONS,
   buildBestOf,
+  AWARDS,
+  awardOrder,
   chooseAwards,
   chooseBeats,
+  chooseBookends,
+  chooseCalendar,
+  choosePlaces,
+  chooseRhythm,
   chooseThemes,
   collectMedia,
   currentBestOfMonth,
@@ -14,6 +20,7 @@ import {
   monthKey,
   monthRange,
   parseMonthKey,
+  sameMonthLastYear,
   scorePhoto,
   styleForMonth,
 } from '../utils/bestOf'
@@ -157,11 +164,84 @@ describe('chooseAwards', () => {
     }
     const list = collectMedia(busy)
     const awards = chooseAwards(list, scoresOf(list))
-    expect(awards.map((a) => a.award)).toEqual(['busiestDay', 'story'])
+    // 5 September 2026 is a Saturday, so the day is the weekend's too.
+    expect(awards.map((a) => a.award)).toEqual(['busiestDay', 'story', 'weekend'])
     expect(awards[0].detail).toEqual({ day: '2026-09-05', count: 4, videos: 0 })
+    expect(awards[2].detail).toEqual({ from: '2026-09-05', to: '2026-09-06', count: 4 })
 
     const quiet = collectMedia({ moments: [moment('a', 1, ['a']), moment('b', 2, ['b'])] })
     expect(chooseAwards(quiet, scoresOf(quiet))).toEqual([])
+  })
+
+  it('finds the longest run of days and the theme of the month', () => {
+    const list = collectMedia({
+      moments: [7, 8, 9, 10, 11, 20].map((d) => moment(`s${d}`, d, [`s${d}`], { category: d < 10 ? 'Garden' : '' })),
+    })
+    const awards = chooseAwards(list, scoresOf(list), ['streak', 'theme'])
+    expect(awards.map((a) => a.award)).toEqual(['streak', 'theme'])
+    expect(awards[0].detail).toEqual({ from: '2026-09-07', to: '2026-09-11', days: 5 })
+    expect(awards[1].detail).toEqual({ theme: 'Garden', entries: 3 })
+    expect(awards[1].item.themes).toContain('Garden')
+    expect(new Set(awards.map((a) => a.item.url)).size).toBe(2)
+  })
+
+  it('gives three at most, the first ones of the order the month earned', () => {
+    const list = collectMedia({
+      memories: [memory('trip', 5, ['t1', 't2', 't3', 't4'], { location: 'Lake', category: 'Trip' })],
+      moments: [6, 7, 8].map((d) => moment(`m${d}`, d, [`m${d}`], { location: 'Lake', category: 'Trip' })),
+    })
+    const all = AWARDS.map((id) => chooseAwards(list, scoresOf(list), [id]).length)
+    expect(all.filter(Boolean).length).toBeGreaterThan(3)
+    const awards = chooseAwards(list, scoresOf(list), [...AWARDS].reverse())
+    expect(awards).toHaveLength(3)
+    expect(awards.map((a) => a.award)).toEqual([...AWARDS].reverse().filter((id, i) => all[AWARDS.length - 1 - i]).slice(0, 3))
+  })
+
+  it('starts from a different award each month', () => {
+    const firsts = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'].map((m) => awardOrder(m)[0])
+    expect(new Set(firsts).size).toBe(AWARDS.length)
+    for (const m of ['2026-01', 'nonsense']) expect([...awardOrder(m)].sort()).toEqual([...AWARDS].sort())
+  })
+})
+
+describe('the extra cards', () => {
+  it('marks the days something was kept, and only with a few of them', () => {
+    expect(chooseCalendar(collectMedia(september()))).toEqual([3, 4, 10, 12, 14, 20, 25, 28])
+    expect(chooseCalendar(collectMedia({ moments: [moment('a', 1, ['a']), moment('b', 2, ['b'])] }))).toBeNull()
+  })
+
+  it('finds the part of the day the family shared in, from moments with a time', () => {
+    const at = (d, h) => ({ ...moment(`t${d}`, d, [`t${d}`]), date: new Date(2026, 8, d, h, 15) })
+    const evenings = collectMedia({ moments: [at(1, 19), at(2, 20), at(3, 18), at(4, 9), at(8, 21)] })
+    expect(chooseRhythm(evenings, scoresOf(evenings))).toMatchObject({ fact: 'evening', share: 0.8 })
+    expect(chooseRhythm(evenings, scoresOf(evenings)).item.url).not.toBe('t4')
+
+    // Memories carry a day, not a time: a month of them says nothing about
+    // the evening, only, here, about the weekend.
+    const weekends = collectMedia({ memories: [5, 6, 12, 13, 15].map((d) => memory(`w${d}`, d, [`w${d}`])) })
+    expect(chooseRhythm(weekends, scoresOf(weekends))).toMatchObject({ fact: 'weekend', share: 0.8 })
+
+    const spread = collectMedia({ memories: [1, 2, 3, 5, 9].map((d) => memory(`s${d}`, d, [`s${d}`])) })
+    expect(chooseRhythm(spread, scoresOf(spread))).toBeNull()
+  })
+
+  it('lists up to three places, most visited first, a photo each', () => {
+    const media = collectMedia(september())
+    const places = choosePlaces(media, scoresOf(media))
+    expect(places.map((p) => [p.place, p.entries])).toEqual([['Zell am See', 2], ['Home', 1], ['Schmittenhöhe', 1]])
+    for (const p of places) expect(p.item.location).toBe(p.place)
+    const one = collectMedia({ moments: [moment('a', 1, ['a'], { location: 'Home' })] })
+    expect(choosePlaces(one, scoresOf(one))).toBeNull()
+  })
+
+  it('takes the first and last photo of the month', () => {
+    expect(chooseBookends(collectMedia(september())).map((p) => p.url)).toEqual(['lake1', 'm4'])
+    expect(chooseBookends(collectMedia({ moments: [moment('a', 1, ['a', 'b'])] }))).toBeNull()
+  })
+
+  it('names the same month a year before', () => {
+    expect(sameMonthLastYear('2026-01')).toBe('2025-01')
+    expect(sameMonthLastYear('nope')).toBeNull()
   })
 })
 
@@ -254,16 +334,14 @@ describe('buildBestOf', () => {
 
     expect(bestOf).toMatchObject({ version: BEST_OF_VERSION, month: '2026-09', counts: { photos: 10, videos: 2 } })
     const kinds = bestOf.slides.map((s) => s.kind)
-    expect(kinds.slice(0, 3)).toEqual(['intro', 'count', 'themes'])
+    expect(kinds[0]).toBe('intro')
     expect(kinds.at(-1)).toBe('outro')
-    expect(kinds).toContain('video')
-    expect(kinds).toContain('collage')
+    for (const kind of ['count', 'themes', 'video', 'collage']) expect(kinds).toContain(kind)
 
     // Each award is announced, then shown.
-    const intro = kinds.indexOf('awardIntro')
-    expect(kinds[intro + 1]).toBe('award')
-    expect(bestOf.slides[intro + 1]).toMatchObject({ award: 'place', place: 'Zell am See' })
-    expect(bestOf.awards).toEqual(['place', 'story'])
+    expect(bestOf.awards).toEqual(['story', 'place'])
+    for (const [i, kind] of kinds.entries()) if (kind === 'awardIntro') expect(kinds[i + 1]).toBe('award')
+    expect(bestOf.slides.find((s) => s.award === 'place' && s.kind === 'award')).toMatchObject({ place: 'Zell am See' })
 
     // The moments between the cards run in the order they happened, up to the
     // last look at what did not make it.
@@ -364,6 +442,52 @@ describe('buildBestOf', () => {
     const layouts = buildBestOf({ month: '2026-09', memories }).slides.filter((s) => s.kind === 'collage').map((s) => s.layout)
     expect(layouts.length).toBeGreaterThan(3)
     for (let i = 1; i < layouts.length; i++) expect(layouts[i], layouts.join(', ')).not.toBe(layouts[i - 1])
+  })
+
+  it.each([
+    ['2026-07', 'classic', ['intro', 'count']],
+    ['2026-08', 'countdown', ['intro', 'count']],
+    ['2026-09', 'numbersLast', ['intro', 'themes']],
+  ])('puts %s together in its style’s order (%s)', (month, order, opening) => {
+    const shifted = september()
+    const into = (entry) => ({ ...entry, date: new Date(Number(month.slice(0, 4)), Number(month.slice(5)) - 1, entry.date.getDate()) })
+    const bestOf = buildBestOf({ month, memories: shifted.memories.map(into), moments: shifted.moments.map(into) })
+    expect(STYLES[bestOf.style].order).toBe(order)
+    const kinds = bestOf.slides.map((s) => s.kind)
+    expect(kinds.slice(0, opening.length)).toEqual(opening)
+    const firstMoment = kinds.findIndex((k) => ['photo', 'collage', 'video'].includes(k))
+    const firstAward = kinds.indexOf('awardIntro')
+    if (order === 'countdown') {
+      // Every award after every moment of the run, one after another.
+      const lastMoment = kinds.lastIndexOf('collage')
+      expect(firstAward).toBeGreaterThan(lastMoment)
+      expect(kinds.slice(firstAward, firstAward + 4)).toEqual(['awardIntro', 'award', 'awardIntro', 'award'])
+    }
+    if (order === 'numbersLast') expect(kinds.indexOf('count')).toBeGreaterThan(firstMoment)
+    else expect(kinds.indexOf('count')).toBeLessThan(firstMoment)
+    // The style's extra cards, where the month had what they need.
+    for (const feature of STYLES[bestOf.style].features) {
+      if (feature !== 'rhythm') expect(kinds).toContain(feature)
+    }
+    expect(kinds).not.toContain('yearAgo')
+  })
+
+  it('looks back at the same month a year before, when it has photos', () => {
+    const lastYear = {
+      memories: [{ ...memory('old', 3, ['o1', 'o2', 'o3', 'o4']), date: new Date(2025, 8, 3) }],
+      moments: [{ ...moment('older', 9, ['o5'], { videos: [{ url: 'oclip' }] }), date: new Date(2025, 8, 9) }],
+    }
+    const bestOf = buildBestOf({ month: '2026-09', ...september(), lastYear })
+    const card = bestOf.slides.find((s) => s.kind === 'yearAgo')
+    expect(card).toMatchObject({ month: '2025-09', photos: 5, videos: 1 })
+    expect(card.media).toHaveLength(3)
+    // Near the end: after the moments, before the last look and the close.
+    const kinds = bestOf.slides.map((s) => s.kind)
+    expect(kinds.indexOf('yearAgo')).toBeGreaterThan(kinds.lastIndexOf('collage'))
+    expect(kinds.indexOf('yearAgo')).toBeLessThan(kinds.indexOf('outro'))
+
+    const empty = buildBestOf({ month: '2026-09', ...september(), lastYear: { memories: [], moments: [] } })
+    expect(empty.slides.some((s) => s.kind === 'yearAgo')).toBe(false)
   })
 
   it('never shows a photo twice in the run of the month', () => {

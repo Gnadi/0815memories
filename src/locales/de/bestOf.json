@@ -19,7 +19,10 @@
   "awardIntro": {
     "place": "und der Ort des Monats ist…",
     "busiestDay": "und der ereignisreichste Tag des Monats war…",
-    "story": "und die Geschichte des Monats ist…"
+    "story": "und die Geschichte des Monats ist…",
+    "weekend": "und das Wochenende des Monats war…",
+    "streak": "und die längste Serie des Monats war…",
+    "theme": "und das Thema des Monats ist…"
   },
   "award": {
     "place": "Ort des Monats",
@@ -29,9 +32,44 @@
     "entries_other": "{{count}} Momente hier geteilt",
     "dayPhotos_one": "{{count}} Foto an einem Tag",
     "dayPhotos_other": "{{count}} Fotos an einem Tag",
-    "dayMedia": "{{count}} Fotos und Videos an einem Tag"
+    "dayMedia": "{{count}} Fotos und Videos an einem Tag",
+    "weekend": "Wochenende des Monats",
+    "streak": "Längste Serie",
+    "theme": "Thema des Monats",
+    "weekendMedia_one": "{{count}} Foto oder Video an diesem Wochenende",
+    "weekendMedia_other": "{{count}} Fotos und Videos an diesem Wochenende",
+    "streakDays_one": "{{count}} Tag am Stück",
+    "streakDays_other": "{{count}} Tage am Stück",
+    "themeEntries_one": "{{count}} Moment zu diesem Thema",
+    "themeEntries_other": "{{count}} Momente zu diesem Thema"
   },
   "dontForget": "und nicht zu vergessen…",
+  "calendar": {
+    "title": "An {{count}} von {{total}} Tagen",
+    "body": "habt ihr etwas festgehalten"
+  },
+  "rhythm": {
+    "morning": "Ihr wart Frühaufsteher",
+    "afternoon": "Die Nachmittage gehörten euch",
+    "evening": "Die Abende gehörten euch",
+    "night": "Ihr wart Nachteulen",
+    "weekend": "Am liebsten am Wochenende",
+    "share": "eurer Momente"
+  },
+  "places": {
+    "title": "Wo ihr wart",
+    "entries_one": "{{count}} Moment",
+    "entries_other": "{{count}} Momente"
+  },
+  "bookends": {
+    "first": "So fing der {{month}} an…",
+    "last": "…und so hörte er auf"
+  },
+  "yearAgo": {
+    "title": "Vor einem Jahr…",
+    "photos_one": "{{count}} Foto",
+    "photos_other": "{{count}} Fotos"
+  },
   "outro": {
     "seeYou": "Bis nächsten Monat!",
     "watchAgain": "Nochmal ansehen",

@@ -514,4 +514,70 @@ describe('BestOfViewer', () => {
       expect(stage().querySelector('.bestof-paper')).toBeNull()
     })
   })
+
+  describe('extra cards', () => {
+    const CARDS = {
+      ...BEST_OF,
+      style: 'magazine',
+      slides: [
+        { kind: 'intro', media: [media('a')] },
+        { kind: 'calendar', days: [3, 4, 20] },
+        { kind: 'rhythm', fact: 'evening', percent: 64, media: media('b') },
+        { kind: 'places', places: [{ place: 'Zell am See', entries: 3 }, { place: 'Home', entries: 1 }], media: [media('c'), media('d')] },
+        { kind: 'bookends', media: [media('e'), media('f')], days: ['2026-09-01', '2026-09-30'], captions: ['', ''] },
+        { kind: 'awardIntro', award: 'streak', media: media('g') },
+        { kind: 'award', award: 'streak', media: media('g'), from: '2026-09-07', to: '2026-09-11', days: 5 },
+        { kind: 'award', award: 'weekend', media: media('h'), from: '2026-09-05', to: '2026-09-06', count: 9 },
+        { kind: 'award', award: 'theme', media: media('i'), theme: 'Garden', entries: 4 },
+        { kind: 'yearAgo', month: '2025-09', photos: 14, videos: 0, media: [media('j'), media('k')] },
+        { kind: 'outro', media: [media('a')] },
+      ],
+    }
+
+    it('shows the calendar, the rhythm, the places and the first and last moment', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tap(0.8)
+      expect(kind()).toBe('calendar')
+      expect(within(current()).getByText('On 3 of 30 days')).toBeInTheDocument()
+      expect(current().querySelectorAll('[data-kept]')).toHaveLength(3)
+      // A light card: the controls go dark.
+      expect(screen.getByText('Best of September').parentElement.className).not.toContain('text-white')
+
+      tap(0.8)
+      expect(within(current()).getByText('The evenings were yours')).toBeInTheDocument()
+      expect(within(current()).getByText('64%')).toBeInTheDocument()
+      expect(within(current()).getByText('of your moments')).toBeInTheDocument()
+
+      tap(0.8)
+      expect(within(current()).getByText('Where you were')).toBeInTheDocument()
+      expect(within(current()).getByText('Zell am See')).toBeInTheDocument()
+      expect(within(current()).getByText('3 moments')).toBeInTheDocument()
+
+      tap(0.8)
+      expect(within(current()).getByText('This is how September began…')).toBeInTheDocument()
+      expect(within(current()).getByText('…and how it ended')).toBeInTheDocument()
+    })
+
+    it('announces and shows the new awards', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tapUntil('awardIntro')
+      expect(within(current()).getByText('and the longest streak of the month was…')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Longest streak')).toBeInTheDocument()
+      expect(within(current()).getByText('5 days in a row')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Weekend of the month')).toBeInTheDocument()
+      expect(within(current()).getByText('9 photos and videos that weekend')).toBeInTheDocument()
+      tap(0.8)
+      expect(within(current()).getByText('Theme of the month')).toBeInTheDocument()
+      expect(within(current()).getByText('Garden')).toBeInTheDocument()
+    })
+
+    it('looks back at the same month a year before', () => {
+      render(<BestOfViewer bestOf={CARDS} onClose={() => {}} />)
+      tapUntil('yearAgo')
+      expect(within(current()).getByText('A year ago…')).toBeInTheDocument()
+      expect(within(current()).getByText('September 2025 · 14 photos')).toBeInTheDocument()
+    })
+  })
 })

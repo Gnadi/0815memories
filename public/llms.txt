@@ -24,7 +24,7 @@ desktops as an app.
 ## Features
 
 - [Moments & Memories](https://kaydo.app/#features): A private feed of photos, videos and voice memos, daily moments, and a timeline by season and "on this day".
-- [Best of the month](https://kaydo.app/#features): On the 1st, last month comes back as a story set to music, put together from what the family wrote. No photo is analysed.
+- [Best of the month](https://kaydo.app/#features): On the 1st, last month comes back as a story set to music, put together from what the family wrote, in a look and with music of its own each month, and with a glance back at the same month a year ago. No photo is analysed.
 - [The Vault](https://kaydo.app/#features): Time capsules of letters, voice notes, photos and videos for one child or the whole family. They open on a chosen date, at a milestone, or, as a legacy, a year after their writer last checked in.
 - [Letters & Journals](https://kaydo.app/#features): Letters and a journal for each child, with a printable poster of the sky at the moment they were born.
 - [Recipe Tree](https://kaydo.app/#features): Family recipes with their versions and forks across generations.

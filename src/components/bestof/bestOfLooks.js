@@ -74,6 +74,8 @@ export const LOOKS = {
       ink: '#f4f1ea',
       inkSoft: '#b9b2a3',
       accent: '#d4af37',
+      // White on gold is hard to read.
+      onAccent: '#141210',
       badge: '#d4af37',
       badgeInk: '#141210',
     },
@@ -165,6 +167,8 @@ export const LOOKS = {
       ink: '#18181b',
       inkSoft: '#71717a',
       accent: '#18181b',
+      // Its accent is its ink, which would vanish on a dark card.
+      highlight: '#ffffff',
       badge: '#fafafa',
       badgeInk: '#18181b',
     },
@@ -194,6 +198,10 @@ export function lookVars(look) {
     '--bo-ink': c.ink,
     '--bo-ink-soft': c.inkSoft,
     '--bo-accent': c.accent,
+    // The accent as text on a dark card or photo.
+    '--bo-highlight': c.highlight || c.accent,
+    // Text on the accent.
+    '--bo-on-accent': c.onAccent || '#ffffff',
     '--bo-badge': c.badge,
     '--bo-badge-ink': c.badgeInk,
     // The trophy in the award's pill: the accent, unless the pill is the
