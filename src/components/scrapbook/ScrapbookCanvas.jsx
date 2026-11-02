@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, forwardRef } from 'react'
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import CanvasElement from './CanvasElement'
+import { snapToCenter } from './centerSnap'
 
 const CANVAS_W = 800
 const CANVAS_H = 600
@@ -36,6 +37,8 @@ export default forwardRef(function ScrapbookCanvas(
 ) {
   const containerRef = useRef(null)
   const [scale, setScale] = useState(1)
+  // Which centre lines the dragged element is sitting on, while it is dragged.
+  const [guides, setGuides] = useState(null)
 
   // Compute scale so canvas fits the available space, respecting both width
   // AND height so the whole editor fits on screen without scrolling.
@@ -62,16 +65,39 @@ export default forwardRef(function ScrapbookCanvas(
   })
   const sensors = useSensors(pointerSensor, touchSensor)
 
+  // Where a drag by `delta` (screen pixels) puts an element, pulled to the
+  // page's centre lines. The modifier below applies the same pull to the
+  // element on screen, so what is shown is what is dropped.
+  const dragTarget = (el, delta) => snapToCenter(
+    el, el.x + delta.x / scale, el.y + delta.y / scale, CANVAS_W, CANVAS_H,
+  )
+  const movable = (el) => !(el && el.type === 'photo' && !editable)
+
+  const snapModifier = ({ transform, active }) => {
+    const el = page.elements.find((e) => e.id === active?.id)
+    if (!el || !movable(el)) return transform
+    const target = dragTarget(el, transform)
+    return { ...transform, x: (target.x - el.x) * scale, y: (target.y - el.y) * scale }
+  }
+
+  const handleDragMove = ({ active, delta }) => {
+    const el = page.elements.find((e) => e.id === active?.id)
+    if (!el || !movable(el)) return
+    const { guides: next } = dragTarget(el, delta)
+    setGuides((prev) => (
+      prev && prev.vertical === next.vertical && prev.horizontal === next.horizontal ? prev : next
+    ))
+  }
+
   const handleDragEnd = ({ active, delta }) => {
+    setGuides(null)
     if (!active) return
     const el = page.elements.find((e) => e.id === active.id)
     if (!el) return
     // Photos with isSlot or with customize disabled do not move
-    if (el.type === 'photo' && !editable) return
-    onUpdateElement(active.id, {
-      x: el.x + delta.x / scale,
-      y: el.y + delta.y / scale,
-    })
+    if (!movable(el)) return
+    const { x, y } = dragTarget(el, delta)
+    onUpdateElement(active.id, { x, y })
   }
 
   const background = page.backgroundColor || '#FDF6EC'
@@ -106,7 +132,13 @@ export default forwardRef(function ScrapbookCanvas(
       {/* Wrapper sized to the scaled canvas dimensions so the scaled content
           keeps its layout footprint (transform doesn't affect layout). */}
       <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale, position: 'relative', boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)' }}>
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          modifiers={[snapModifier]}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setGuides(null)}
+        >
           <div
             ref={ref}
             style={{
@@ -134,6 +166,22 @@ export default forwardRef(function ScrapbookCanvas(
                   cropping={cropping && selectedId === el.id}
                 />
               ))}
+              {guides?.vertical && (
+                <div
+                  aria-hidden="true"
+                  data-testid="guide-vertical"
+                  className="absolute top-0 bottom-0 pointer-events-none bg-kaydo"
+                  style={{ left: CANVAS_W / 2 - 1, width: 2, zIndex: 2000 }}
+                />
+              )}
+              {guides?.horizontal && (
+                <div
+                  aria-hidden="true"
+                  data-testid="guide-horizontal"
+                  className="absolute left-0 right-0 pointer-events-none bg-kaydo"
+                  style={{ top: CANVAS_H / 2 - 1, height: 2, zIndex: 2000 }}
+                />
+              )}
             </div>
           </div>
         </DndContext>
