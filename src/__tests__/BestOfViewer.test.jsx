@@ -47,10 +47,8 @@ vi.mock('../utils/audioContext', async (importOriginal) => ({
 vi.mock('../utils/bestOfMusic', async (importOriginal) => ({
   untilBeat: (await importOriginal()).untilBeat,
   trackForMonth: () => 'warm',
-  // 120 bpm: a beat is 500 ms. The kick of the real warm track is there to
-  // pulse to.
+  // 120 bpm: a beat is 500 ms.
   beatMs: () => 500,
-  hasPulse: () => true,
   createSoundtrack: (context, track) => {
     const soundtrack = {
       track,
@@ -662,15 +660,6 @@ describe('BestOfViewer', () => {
       // Within a beat of now, either way.
       expect(Number(wait)).toBeGreaterThan(-150)
       expect(Number(wait)).toBeLessThan(500)
-    })
-
-    it('gives a little on every beat while the music plays, and not without it', () => {
-      music()
-      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
-      const pulse = current().querySelector(':scope > .bestof-pulse')
-      expect(pulse.style.animationDuration).toBe('500ms')
-      fireEvent.click(screen.getByRole('button', { name: 'Music off' }))
-      expect(current().querySelector(':scope > .bestof-pulse')).toBeNull()
     })
 
     it('shoots the look on its own film, and the classic look on none', () => {

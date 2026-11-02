@@ -13,7 +13,7 @@ import {
   suspendAudio,
   unlockAudio,
 } from '../../utils/audioContext'
-import { beatMs as beatMsOf, createSoundtrack, hasPulse, trackForMonth, untilBeat as untilBeatOf } from '../../utils/bestOfMusic'
+import { beatMs as beatMsOf, createSoundtrack, trackForMonth, untilBeat as untilBeatOf } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
 import { isLightSlide, lookOf, lookVars, montageBeats, transitionAt, transitionMs } from './bestOfLooks'
 import { MontageSlide } from './BestOfMontage'
@@ -464,10 +464,6 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     ? 'bg-[var(--bo-ink)]/10 hover:bg-[var(--bo-ink)]/20 text-[var(--bo-ink)]'
     : 'bg-black/30 hover:bg-black/60 text-white'
 
-  // Under a track with a kick, the slide gives a little on every beat — only
-  // while the music plays, and not for someone who asked for less motion.
-  const pulse = musicOn && hasPulse(track) && !still
-
   // The same element, under the same key, as it was while current — so the
   // slide being left keeps its state and motion while it makes its exit. The
   // cut is the look's: the new slide comes in its way, and the one being left
@@ -485,17 +481,13 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
         data-cut={current && leaving ? cut : undefined}
         aria-hidden={current ? undefined : 'true'}
       >
-        <div
-          className={`absolute inset-0 ${pulse && current ? 'bestof-pulse' : ''}`}
-          style={pulse && current ? { animationDuration: `${Math.round(beatMs)}ms` } : undefined}
-        >
-          <Slide
-            slide={shown}
-            labels={labels}
-            look={look}
-            beatMs={beatMs}
-            slideMs={Math.round(beatsOf(shown, still, beatMs) * beatMs)}
-            onReady={current ? markReady : noop}
+        <Slide
+          slide={shown}
+          labels={labels}
+          look={look}
+          beatMs={beatMs}
+          slideMs={Math.round(beatsOf(shown, still, beatMs) * beatMs)}
+          onReady={current ? markReady : noop}
           {...(shown.kind === 'video'
             ? {
               muted: true,
@@ -505,9 +497,8 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
               onFailed: current ? markClipFailed : noop,
             }
             : null)}
-            {...(shown.kind === 'outro' ? { onRestart: restart, onRemake } : null)}
-          />
-        </div>
+          {...(shown.kind === 'outro' ? { onRestart: restart, onRemake } : null)}
+        />
       </div>
     )
   }

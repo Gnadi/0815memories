@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { TRACKS, TRACK_ORDER, arrangement, barMs, beatMs, createSoundtrack, hasPulse, trackForMonth, untilBeat } from '../utils/bestOfMusic'
+import { TRACKS, TRACK_ORDER, arrangement, barMs, beatMs, createSoundtrack, trackForMonth, untilBeat } from '../utils/bestOfMusic'
 
 // jsdom has no Web Audio, so this stands in for it. It is strict where
 // browsers are strict (a non-finite value, a negative time, an exponential
@@ -278,15 +278,6 @@ describe('untilBeat', () => {
     expect(untilBeat(1149, 500)).toBe(-149)
     expect(untilBeat(1150, 500)).toBe(350)
     expect(untilBeat(-40, 500)).toBe(40)
-  })
-})
-
-describe('hasPulse', () => {
-  it('is there for the tracks with a kick, and not for the quiet ones', () => {
-    expect(hasPulse('warm')).toBe(true)
-    expect(hasPulse('pop')).toBe(true)
-    for (const id of ['calm', 'waltz']) expect(hasPulse(id)).toBe(false)
-    expect(hasPulse('nonsense')).toBe(hasPulse('warm'))
   })
 })
 

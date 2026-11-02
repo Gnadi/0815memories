@@ -405,14 +405,6 @@
 }
 .bestof-float3d { animation: bestof-float3d 6s ease-in-out infinite alternate; }
 
-/* The slide giving a little on the beat, under a track with a kick. The
-   viewer sets a beat's length; a cut falls on a beat, so the two agree. */
-@keyframes bestof-pulse {
-  0% { transform: scale(1.014); }
-  35%, 100% { transform: scale(1); }
-}
-.bestof-pulse { animation: bestof-pulse 0.6s ease-out infinite; }
-
 /* A camera tour of a grid of four: the whole, each photo close up in turn,
    the whole again. The viewer stretches it over the slide's time. A tile's
    centre is moved to the middle (translate first, then the scale). */
@@ -630,7 +622,6 @@
   .bestof-focus,
   .bestof-float,
   .bestof-float3d,
-  .bestof-pulse,
   .bestof-grid-tour,
   .bestof-kt-words,
   .bestof-kt-letters,

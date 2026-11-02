@@ -278,15 +278,6 @@ export function trackForMonth(monthKey) {
 }
 
 /**
- * Whether a track has a kick to pulse to: the story's photos give a little
- * on its beat (BestOfViewer.jsx), which under a track without drums would be
- * a beat nobody hears.
- */
-export function hasPulse(trackId) {
-  return Boolean(trackOf(trackId).parts.kick)
-}
-
-/**
  * How long from `elapsedMs` into a grid of beats `beatMs` apart until the
  * beat to keep to: the next one, or — when one went by less than 150 ms ago —
  * that one, as a negative time, how long ago it was. A slide ready a frame

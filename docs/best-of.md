@@ -127,8 +127,7 @@ The slides are React components animated with CSS (`components/bestof/`,
   while the old one makes its exit beneath it, over a beat or so.
 - **Nothing stands still.** Photos come into focus and keep moving; captions
   float against them; prints turn gently in space; a grid of four is toured
-  photo by photo. Under a track with a kick, the slide gives a little on every
-  beat while the music plays.
+  photo by photo.
 - **Words that move.** Captions and titles build up word by word, letter by
   letter, out from behind a mask, or written out by hand, as the look has it
   (`KineticText.jsx`); counts roll into place like a counter's wheels. The
