@@ -277,6 +277,18 @@ export function trackForMonth(monthKey) {
   return TRACK_ORDER[index]
 }
 
+/**
+ * How long from `elapsedMs` into a grid of beats `beatMs` apart until the
+ * beat to keep to: the next one, or — when one went by less than 150 ms ago —
+ * that one, as a negative time, how long ago it was. A slide ready a frame
+ * after a beat then starts as if on it, rather than wait a whole beat.
+ */
+export function untilBeat(elapsedMs, beatMs) {
+  if (elapsedMs < 0) return -elapsedMs
+  const into = elapsedMs % beatMs
+  return into < JUST_PASSED_MS ? -into : beatMs - into
+}
+
 /** One beat in milliseconds. The viewer times its slides in beats. */
 export function beatMs(trackId) {
   return 60000 / trackOf(trackId).bpm
@@ -350,6 +362,7 @@ const TICK_MS = 25
 // sounding at once.
 const LATE = 0.1
 const START_DELAY = 0.05
+const JUST_PASSED_MS = 150
 
 const MASTER_LEVEL = 0.75
 const FADE_IN = 1.5
@@ -389,12 +402,14 @@ const SILENT = Object.freeze({
   resume() {},
   stop() {},
   isPlaying: () => false,
+  untilNextBeat: () => null,
 })
 
 /**
  * A player for a track on the given context, looping until stopped:
- * { start(), pause(), resume(), stop({ fadeMs }), isPlaying() }. Without a
- * context every method does nothing, so the viewer need not check for one.
+ * { start(), pause(), resume(), stop({ fadeMs }), isPlaying(),
+ * untilNextBeat() }. Without a context every method does nothing, so the
+ * viewer need not check for one.
  *
  * pause() suspends the context itself: its clock stops, and the notes already
  * handed to it wait, to carry on exactly where they were on resume(). The
@@ -548,6 +563,12 @@ export function createSoundtrack(context, trackId) {
       else pending = setTimeout(teardown, delay)
     },
     isPlaying: () => state === 'playing',
+    // How long until the music's beat to keep to, in milliseconds (see
+    // untilBeat), so the story can cut on it: null while it is not playing.
+    untilNextBeat() {
+      if (state !== 'playing') return null
+      return untilBeat((context.currentTime - origin) * 1000, beat * 1000)
+    },
   }
 }
 

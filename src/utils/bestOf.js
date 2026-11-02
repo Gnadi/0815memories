@@ -28,7 +28,7 @@ import { MOTIONS, styleAt, styleOf } from './bestOfStyle'
 export { MOTIONS }
 
 /** Bumped when the composition changes enough that a saved best-of is stale. */
-export const BEST_OF_VERSION = 2
+export const BEST_OF_VERSION = 3
 
 /**
  * Fewer photos and clips than this, or no photo among them, and a month has no
@@ -44,7 +44,9 @@ export const MIN_BEST_OF_MEDIA = 6
 const MAX_BEATS = 8
 const MAX_VIDEOS = 3
 const MAX_AWARDS = 3
-const EXTRA_PHOTOS = 3
+const EXTRA_PHOTOS = 5
+// Fewer than this, and the last look is a photo or two rather than a montage.
+const MIN_MONTAGE = 3
 const MAX_COLLAGE = 4
 
 // An award has to be earned. A "busiest day" of two photos, or a "place of the
@@ -758,8 +760,15 @@ export function buildBestOf({ month, memories = [], moments = [], lastYear = nul
     })
   }
 
-  // The first of them is the card's own photo; the rest follow it.
-  const ending = extras.length ? [photoSlide(extras[0], 'dontForget'), ...extras.slice(1).map((item) => photoSlide(item))] : []
+  // The last look is a montage: the photos one after another in quick cuts,
+  // as a recap video ends. With only one or two, the first is the card's own
+  // photo and the other follows it.
+  let ending = []
+  if (extras.length >= MIN_MONTAGE) {
+    ending = [{ kind: 'montage', label: 'dontForget', media: extras.map(slideMedia), days: extras.map((p) => p.day) }]
+  } else if (extras.length) {
+    ending = [photoSlide(extras[0], 'dontForget'), ...extras.slice(1).map((item) => photoSlide(item))]
+  }
 
   // The moments with the awards between their runs, the way an award show
   // breaks for the next category: a run, an award, a run, an award. Made only

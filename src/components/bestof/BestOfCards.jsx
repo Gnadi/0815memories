@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BottomShade, SlideImage } from './BestOfSlides'
 import { titleOf } from './bestOfLooks'
+import KineticText from './KineticText'
 
 /**
  * The extra cards a style shows (utils/bestOfStyle.js) — the calendar of days
@@ -56,12 +57,12 @@ export function CalendarSlide({ slide, labels, look, onReady }) {
         </div>
       </div>
       <div className="absolute inset-x-6 top-[66%] text-center">
-        <p
-          className={`bestof-text text-3xl sm:text-4xl leading-tight ${titleOf(look)}`}
-          style={{ animationDelay: `${0.6 + kept.size * 0.12}s` }}
-        >
-          {t('calendar.title', { count: kept.size, total })}
-        </p>
+        <KineticText
+          text={t('calendar.title', { count: kept.size, total })}
+          look={look}
+          delay={0.6 + kept.size * 0.12}
+          className={`text-3xl sm:text-4xl leading-tight ${titleOf(look)}`}
+        />
         <p className="bestof-text mt-1 text-lg text-[var(--bo-ink-soft)]" style={{ animationDelay: `${0.8 + kept.size * 0.12}s` }}>
           {t('calendar.body')}
         </p>
@@ -94,9 +95,12 @@ export function RhythmSlide({ slide, look, onReady }) {
         <p className="bestof-text mt-1 text-base text-white/80 drop-shadow" style={{ animationDelay: '0.5s' }}>
           {t('rhythm.share')}
         </p>
-        <p className={`bestof-text mt-5 text-3xl sm:text-4xl leading-tight drop-shadow-lg ${titleOf(look)}`} style={{ animationDelay: '0.9s' }}>
-          {t(`rhythm.${fact}`)}
-        </p>
+        <KineticText
+          text={t(`rhythm.${fact}`)}
+          look={look}
+          delay={0.9}
+          className={`mt-5 text-3xl sm:text-4xl leading-tight drop-shadow-lg ${titleOf(look)}`}
+        />
       </div>
     </div>
   )
@@ -116,7 +120,7 @@ export function PlacesSlide({ slide, look, onReady }) {
       </div>
       {!media.some(Boolean) && <ReadyNow onReady={onReady} />}
       <div className="absolute inset-x-6 top-[20%]">
-        <p className={`bestof-text text-4xl leading-tight drop-shadow-lg ${titleOf(look)}`}>{t('places.title')}</p>
+        <KineticText text={t('places.title')} look={look} className={`text-4xl leading-tight drop-shadow-lg ${titleOf(look)}`} />
         <ol className="mt-8 space-y-4">
           {places.map((place, i) => (
             <li
@@ -142,7 +146,7 @@ export function PlacesSlide({ slide, look, onReady }) {
 
 // ── How the month began and ended ───────────────────────────────────────────
 
-export function BookendsSlide({ slide, labels, onReady }) {
+export function BookendsSlide({ slide, labels, look, onReady }) {
   const { t } = useTranslation('bestOf')
   const [first, last] = slide.media || []
   const [firstDay, lastDay] = slide.days || []
@@ -153,7 +157,7 @@ export function BookendsSlide({ slide, labels, onReady }) {
       </div>
       <BottomShade strength="from-black/75" />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-5 text-white pointer-events-none">
-        <p className="bestof-text text-2xl font-semibold leading-tight drop-shadow-lg" style={{ animationDelay: `${delay}s` }}>{line}</p>
+        <KineticText text={line} look={look} delay={delay} className="text-2xl font-semibold leading-tight drop-shadow-lg" />
         <p className="bestof-text mt-1 text-sm text-white/80 drop-shadow" style={{ animationDelay: `${delay + 0.2}s` }}>{labels.longDay(day)}</p>
       </div>
     </div>
@@ -200,7 +204,7 @@ export function YearAgoSlide({ slide, labels, look, onReady }) {
       ))}
       {media.length === 0 && <ReadyNow onReady={onReady} />}
       <div className="absolute inset-x-6 top-[70%] text-center">
-        <p className={`bestof-text text-4xl leading-tight ${titleOf(look)}`} style={{ animationDelay: '1.1s' }}>{t('yearAgo.title')}</p>
+        <KineticText text={t('yearAgo.title')} look={look} delay={1.1} className={`text-4xl leading-tight ${titleOf(look)}`} />
         <p className="bestof-text mt-1 text-lg text-[var(--bo-ink-soft)]" style={{ animationDelay: '1.3s' }}>
           {labels.monthYearOf(slide.month)}
           {slide.photos > 0 && ` · ${t('yearAgo.photos', { count: slide.photos })}`}

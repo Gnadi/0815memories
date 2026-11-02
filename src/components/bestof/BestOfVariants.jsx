@@ -14,6 +14,7 @@ import {
 } from './BestOfSlides'
 import { motionClass, variantOf } from './bestOfLooks'
 import useCountUp from './useCountUp'
+import KineticText, { RollingNumber } from './KineticText'
 
 /**
  * The slides each look draws its own way (bestOfLooks.js, `variants`), so
@@ -41,7 +42,7 @@ const delay = (seconds) => ({ animationDelay: `${seconds}s` })
 
 // A print on a table of its own photo, blurred, with the caption written on
 // the print. It leans one way or the other from day to day.
-function PrintPhoto({ slide, labels, onReady }) {
+function PrintPhoto({ slide, labels, look, onReady }) {
   const tilt = Number(slide.day?.slice(8) || 0) % 2 ? -3 : 2.5
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -49,12 +50,12 @@ function PrintPhoto({ slide, labels, onReady }) {
         <SlideImage media={slide.media} style={{ filter: 'blur(24px) brightness(0.45)' }} />
       </div>
       <div className="bestof-tile-drop absolute left-[8%] w-[84%] top-[14%]" style={{ '--bestof-tilt': `${tilt}deg` }}>
-        <div className="rounded-sm bg-warm-white p-[4%] shadow-2xl">
+        <div className="bestof-float3d rounded-sm bg-warm-white p-[4%] shadow-2xl">
           <div className="relative aspect-[4/5] overflow-hidden bg-cream-dark">
             <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
           </div>
           <div className="px-1 pt-3 pb-1 text-bark">
-            {slide.caption && <p className="bestof-text font-serif italic text-xl leading-snug" style={delay(0.6)}>{slide.caption}</p>}
+            <KineticText text={slide.caption} look={look} delay={0.6} className="font-serif italic text-xl leading-snug" />
             {labels.meta(slide) && <p className="bestof-text mt-0.5 text-sm text-bark-light" style={delay(0.8)}>{labels.meta(slide)}</p>}
           </div>
         </div>
@@ -65,7 +66,7 @@ function PrintPhoto({ slide, labels, onReady }) {
 
 // A film still: the date and place stamped in the corner like a camera's,
 // and the caption as a subtitle above the black bar.
-function SubtitlePhoto({ slide, labels, onReady }) {
+function SubtitlePhoto({ slide, labels, look, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
@@ -75,18 +76,19 @@ function SubtitlePhoto({ slide, labels, onReady }) {
           {labels.meta(slide)}
         </p>
       )}
-      {slide.caption && (
-        <p className="bestof-text absolute inset-x-8 bottom-[11%] text-center text-lg font-medium leading-snug text-[#fff6c8] [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]" style={delay(0.8)}>
-          {slide.caption}
-        </p>
-      )}
+      <KineticText
+        text={slide.caption}
+        look={look}
+        delay={0.8}
+        className="absolute inset-x-8 bottom-[11%] text-center text-lg font-medium leading-snug text-[#fff6c8] [text-shadow:0_1px_3px_rgb(0_0_0/0.9)]"
+      />
     </div>
   )
 }
 
 // A magazine page: the photo above, the headline and its kicker on the page
 // below.
-function PagePhoto({ slide, labels, onReady }) {
+function PagePhoto({ slide, labels, look, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <div className="absolute inset-x-0 top-0 h-[64%] overflow-hidden">
@@ -96,9 +98,12 @@ function PagePhoto({ slide, labels, onReady }) {
         {labels.meta(slide) && (
           <p className="bestof-text text-xs font-bold uppercase tracking-[0.25em] text-[var(--bo-accent)]" style={delay(0.3)}>{labels.meta(slide)}</p>
         )}
-        <p className="bestof-text mt-2 font-display uppercase leading-[0.95] text-[2.6rem] break-words" style={delay(0.5)}>
-          {slide.caption || labels.monthName}
-        </p>
+        <KineticText
+          text={slide.caption || labels.monthName}
+          look={look}
+          delay={0.5}
+          className="mt-2 font-display uppercase leading-[0.95] text-[2.6rem] break-words"
+        />
         <div className="bestof-tile-left mt-3 h-1 w-16 bg-[var(--bo-accent)]" style={delay(0.8)} />
       </div>
     </div>
@@ -106,7 +111,7 @@ function PagePhoto({ slide, labels, onReady }) {
 }
 
 // The caption as a sticker slapped onto the photo, at an angle.
-function StickerPhoto({ slide, labels, onReady }) {
+function StickerPhoto({ slide, labels, look, onReady }) {
   const meta = labels.meta(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -115,7 +120,7 @@ function StickerPhoto({ slide, labels, onReady }) {
       <div className="absolute inset-x-5 bottom-12 flex flex-col items-start gap-2 pointer-events-none">
         {slide.caption && (
           <span className="bestof-stamp rounded-2xl bg-[var(--bo-accent)] px-5 py-3 text-2xl font-black leading-tight text-[var(--bo-on-accent)] shadow-xl" style={{ '--bestof-tilt': '-3deg', ...delay(0.4) }}>
-            {slide.caption}
+            <KineticText as="span" text={slide.caption} look={look} delay={0.6} />
           </span>
         )}
         {meta && (
@@ -130,14 +135,14 @@ function StickerPhoto({ slide, labels, onReady }) {
 
 // A diary page: the day written at the top, the photo taped in, the caption
 // written under it.
-function JournalPhoto({ slide, labels, onReady }) {
+function JournalPhoto({ slide, labels, look, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <p className="bestof-text absolute inset-x-7 top-[14%] font-serif italic text-2xl border-b border-[var(--bo-ink)]/20 pb-1">
         {labels.longDay(slide.day)}
       </p>
       <div className="bestof-tile-pop absolute left-[9%] w-[82%] top-[23%]" style={delay(0.2)}>
-        <div className="relative bg-warm-white p-[3%] shadow-xl" style={{ rotate: '-1.5deg' }}>
+        <div className="bestof-float3d relative bg-warm-white p-[3%] shadow-xl" style={{ rotate: '-1.5deg' }}>
           <div className="relative aspect-[4/5] overflow-hidden bg-cream-dark">
             <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
           </div>
@@ -145,7 +150,7 @@ function JournalPhoto({ slide, labels, onReady }) {
         </div>
       </div>
       <div className="absolute inset-x-7 bottom-[7%]">
-        {slide.caption && <p className="bestof-text font-serif italic text-xl leading-snug" style={delay(0.7)}>{slide.caption}</p>}
+        <KineticText text={slide.caption} look={look} delay={0.7} className="font-serif italic text-xl leading-snug" />
         {slide.location && <p className="bestof-text mt-0.5 text-sm text-[var(--bo-ink-soft)]" style={delay(0.9)}>{slide.location}</p>}
       </div>
     </div>
@@ -157,7 +162,7 @@ function JournalPhoto({ slide, labels, onReady }) {
 const TILE_COLUMNS = 4
 const TILE_ROWS = 7
 
-function TilesPhoto({ slide, labels, onReady }) {
+function TilesPhoto({ slide, labels, look, onReady }) {
   const meta = labels.meta(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -174,7 +179,7 @@ function TilesPhoto({ slide, labels, onReady }) {
       <div className="absolute left-0 bottom-10 max-w-[85%] pointer-events-none">
         {slide.caption && (
           <p className="bestof-tile-left bg-[var(--bo-accent)] px-5 py-3 text-xl font-bold leading-snug text-[var(--bo-on-accent)]" style={delay(1)}>
-            {slide.caption}
+            <KineticText as="span" text={slide.caption} look={look} delay={1.2} />
           </p>
         )}
         {meta && (
@@ -186,14 +191,14 @@ function TilesPhoto({ slide, labels, onReady }) {
 }
 
 // A photo in a wide white mount, the caption small beneath it.
-function PassepartoutPhoto({ slide, labels, onReady }) {
+function PassepartoutPhoto({ slide, labels, look, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <div className="absolute left-[9%] right-[9%] top-[15%] bottom-[27%] overflow-hidden shadow-sm">
         <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
       </div>
       <div className="absolute inset-x-[9%] top-[76%]">
-        {slide.caption && <p className="bestof-text text-xl font-light leading-snug" style={delay(0.6)}>{slide.caption}</p>}
+        <KineticText text={slide.caption} look={look} delay={0.6} className="text-xl font-light leading-snug" />
         {labels.meta(slide) && (
           <p className="bestof-text mt-1 text-xs uppercase tracking-[0.25em] text-[var(--bo-ink-soft)]" style={delay(0.8)}>{labels.meta(slide)}</p>
         )}
@@ -222,6 +227,7 @@ function useCount(slide) {
     total,
     shown,
     text: shown.toLocaleString(i18n.language),
+    locale: i18n.language,
     label: slide.videos > 0 ? t('count.photosAndVideos') : t('count.photos', { count: slide.photos }),
   }
 }
@@ -259,7 +265,9 @@ function CounterCount({ slide, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <div className="absolute inset-0 scale-[1.15]">
-        <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(14px) brightness(0.3)' }} />
+        <div className="bestof-zoom absolute inset-0">
+          <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(14px) brightness(0.3)' }} />
+        </div>
       </div>
       {!slide.media && <ReadyNow onReady={onReady} />}
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center">
@@ -279,14 +287,16 @@ function CounterCount({ slide, onReady }) {
 // A magazine's big number: the figure running off the page, the photo in a
 // box beside it.
 function GiantCount({ slide, onReady }) {
-  const { text, label } = useCount(slide)
+  const { total, locale, label } = useCount(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <div className="bestof-tile-right absolute right-0 top-[15%] h-[40%] w-[58%] overflow-hidden">
         <SlideImage media={slide.media} onReady={onReady} />
       </div>
       {!slide.media && <ReadyNow onReady={onReady} />}
-      <p className="absolute left-4 top-[44%] font-display leading-[0.85] tabular-nums" style={{ fontSize: 'min(52vw, 15rem)' }}>{text}</p>
+      <p className="absolute left-4 top-[44%] font-display leading-[0.85] tabular-nums" style={{ fontSize: 'min(52vw, 15rem)' }}>
+        <RollingNumber value={total} locale={locale} />
+      </p>
       <p className="bestof-text absolute left-6 bottom-[10%] text-sm font-bold uppercase tracking-[0.3em] text-[var(--bo-accent)]" style={delay(0.8)}>
         {label}
       </p>
@@ -300,7 +310,9 @@ function BurstCount({ slide, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <div className="absolute inset-0 scale-[1.15] opacity-40">
-        <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(10px)' }} />
+        <div className="bestof-zoom absolute inset-0">
+          <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(10px)' }} />
+        </div>
       </div>
       {!slide.media && <ReadyNow onReady={onReady} />}
       <div className="bestof-rays absolute left-1/2 top-1/2 h-[160%] aspect-square -translate-x-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -359,7 +371,7 @@ function TallyCount({ slide, onReady }) {
 const MAX_SQUARES = 48
 
 function SquaresCount({ slide, onReady }) {
-  const { total, text, label } = useCount(slide)
+  const { total, locale, label } = useCount(slide)
   const squares = Math.min(total, MAX_SQUARES)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)] text-white">
@@ -370,7 +382,9 @@ function SquaresCount({ slide, onReady }) {
         ))}
       </div>
       <div className="absolute inset-x-8 bottom-[14%]">
-        <p className="font-display leading-none tabular-nums" style={{ fontSize: 'min(30vw, 9rem)' }}>{text}</p>
+        <p className="font-display leading-none tabular-nums" style={{ fontSize: 'min(30vw, 9rem)' }}>
+          <RollingNumber value={total} locale={locale} delay={0.4} />
+        </p>
         <p className="bestof-text mt-2 text-lg font-semibold text-[var(--bo-highlight)]" style={delay(0.8)}>{label}</p>
       </div>
     </div>
@@ -379,12 +393,14 @@ function SquaresCount({ slide, onReady }) {
 
 // Only the number, thin and large, and a line under it.
 function PlainCount({ slide, onReady }) {
-  const { text, label } = useCount(slide)
+  const { total, locale, label } = useCount(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <ReadyNow onReady={onReady} />
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex flex-col items-center">
-        <p className="font-extralight leading-none tabular-nums" style={{ fontSize: 'min(42vw, 12rem)' }}>{text}</p>
+        <p className="font-extralight leading-none tabular-nums" style={{ fontSize: 'min(42vw, 12rem)' }}>
+          <RollingNumber value={total} locale={locale} />
+        </p>
         <div className="bestof-tile-left mt-4 h-px w-24 bg-[var(--bo-ink)]" style={delay(0.6)} />
         <p className="bestof-text mt-4 text-sm uppercase tracking-[0.35em] text-[var(--bo-ink-soft)]" style={delay(0.8)}>{label}</p>
       </div>
@@ -576,28 +592,34 @@ function useAnnouncement(slide) {
 }
 
 // A spotlight sweeping the dark stage and settling on the words.
-function SpotlightIntro({ slide, onReady }) {
+function SpotlightIntro({ slide, look, onReady }) {
   const text = useAnnouncement(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
       <ReadyNow onReady={onReady} />
       <div className="bestof-spotlight absolute left-1/2 top-1/2 h-[70%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgb(255_244_200/0.35),transparent_65%)]" aria-hidden="true" />
-      <p className="bestof-text absolute inset-x-8 top-1/2 -translate-y-1/2 text-center text-2xl font-semibold uppercase leading-snug tracking-[0.12em] text-white" style={delay(1)}>
-        {text}
-      </p>
+      <KineticText
+        text={text}
+        look={look}
+        delay={1}
+        className="absolute inset-x-8 top-1/2 -translate-y-1/2 text-center text-2xl font-semibold uppercase leading-snug tracking-[0.12em] text-white"
+      />
     </div>
   )
 }
 
 // The words in big type on the accent, left aligned, like a headline.
-function AccentIntro({ slide, onReady }) {
+function AccentIntro({ slide, look, onReady }) {
   const text = useAnnouncement(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-accent)] text-[var(--bo-on-accent)]">
       <ReadyNow onReady={onReady} />
-      <p className="bestof-tile-left absolute inset-x-6 top-1/2 -translate-y-1/2 font-display uppercase leading-[0.95] text-5xl break-words">
-        {text}
-      </p>
+      <KineticText
+        text={text}
+        look={look}
+        mode="mask"
+        className="absolute inset-x-6 top-1/2 -translate-y-1/2 font-display uppercase leading-[0.95] text-5xl break-words"
+      />
     </div>
   )
 }
@@ -620,13 +642,13 @@ function RaysIntro({ slide, onReady }) {
 }
 
 // Written on the page, with a line drawn under it.
-function PaperIntro({ slide, onReady }) {
+function PaperIntro({ slide, look, onReady }) {
   const text = useAnnouncement(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <ReadyNow onReady={onReady} />
       <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 text-center">
-        <p className="bestof-text font-serif italic text-[2rem] leading-snug">{text}</p>
+        <KineticText text={text} look={look} className="font-serif italic text-[2rem] leading-snug" />
         <svg viewBox="0 0 200 12" className="mx-auto mt-3 w-40 text-[var(--bo-accent)]" aria-hidden="true">
           <path d="M2 8 C 50 2, 120 12, 198 4" className="bestof-draw" pathLength="1" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" style={delay(0.8)} />
         </svg>
@@ -636,12 +658,12 @@ function PaperIntro({ slide, onReady }) {
 }
 
 // Only the words, thin, on white.
-function PlainIntro({ slide, onReady }) {
+function PlainIntro({ slide, look, onReady }) {
   const text = useAnnouncement(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
       <ReadyNow onReady={onReady} />
-      <p className="bestof-text absolute inset-x-10 top-1/2 -translate-y-1/2 text-center text-3xl font-light leading-snug">{text}</p>
+      <KineticText text={text} look={look} className="absolute inset-x-10 top-1/2 -translate-y-1/2 text-center text-3xl font-light leading-snug" />
     </div>
   )
 }
@@ -662,7 +684,7 @@ function useAwardName(slide) {
 }
 
 // A rubber stamp landing on the photo.
-function StampAward({ slide, labels, onReady }) {
+function StampAward({ slide, labels, look, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -675,7 +697,7 @@ function StampAward({ slide, labels, onReady }) {
         {name}
       </span>
       <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
-        <AwardDetail slide={slide} labels={labels} />
+        <AwardDetail slide={slide} labels={labels} look={look} />
       </div>
     </div>
   )
@@ -683,7 +705,7 @@ function StampAward({ slide, labels, onReady }) {
 
 // Like a film's credits: the category in small gold capitals, the winner
 // large, centred over the still.
-function CreditsAward({ slide, labels, onReady }) {
+function CreditsAward({ slide, labels, look, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -693,7 +715,7 @@ function CreditsAward({ slide, labels, onReady }) {
       <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 text-center text-white pointer-events-none">
         <p className="bestof-text text-xs uppercase tracking-[0.45em] text-[var(--bo-highlight)]" style={delay(0.4)}>{name}</p>
         <div className="mt-4">
-          <AwardDetail slide={slide} labels={labels} />
+          <AwardDetail slide={slide} labels={labels} look={look} />
         </div>
       </div>
     </div>
@@ -701,7 +723,7 @@ function CreditsAward({ slide, labels, onReady }) {
 }
 
 // A banner across the top in the accent, sliding in.
-function BannerAward({ slide, labels, onReady }) {
+function BannerAward({ slide, labels, look, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -711,14 +733,14 @@ function BannerAward({ slide, labels, onReady }) {
         {name}
       </p>
       <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
-        <AwardDetail slide={slide} labels={labels} />
+        <AwardDetail slide={slide} labels={labels} look={look} />
       </div>
     </div>
   )
 }
 
 // A medal on a ribbon, swinging, above the winner.
-function MedalAward({ slide, labels, onReady }) {
+function MedalAward({ slide, labels, look, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -735,14 +757,14 @@ function MedalAward({ slide, labels, onReady }) {
       </div>
       <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
         <span className="bestof-badge mb-3 inline-block rounded-full bg-white px-4 py-1.5 text-sm font-black text-[var(--bo-dark)] shadow-lg">{name}</span>
-        <AwardDetail slide={slide} labels={labels} />
+        <AwardDetail slide={slide} labels={labels} look={look} />
       </div>
     </div>
   )
 }
 
 // The photo in a white mount, the award beneath it in small capitals.
-function BelowAward({ slide, labels, onReady }) {
+function BelowAward({ slide, labels, look, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)] text-[var(--bo-ink)]">
@@ -755,7 +777,7 @@ function BelowAward({ slide, labels, onReady }) {
           {name}
         </p>
         <div className="mt-2 font-light">
-          <AwardDetail slide={slide} labels={labels} light />
+          <AwardDetail slide={slide} labels={labels} look={look} light />
         </div>
       </div>
     </div>

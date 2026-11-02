@@ -5,7 +5,11 @@
    The media components and the music are stand-ins; decrypting and playing
    are theirs to test (bestOfMusic.test.js, BestOfCollage.test.jsx). */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act, within, configure } from '@testing-library/react'
+
+// Text is found as a reader finds it: words that move (KineticText.jsx) are
+// there once for readers and once, hidden from them, to be animated.
+configure({ defaultIgnore: 'script, style, [data-kinetic], [data-kinetic] *' })
 
 const prefetchDecryptedMedia = vi.fn(async () => 'blob:decrypted')
 vi.mock('../components/media/useDecryptedMedia', () => ({
@@ -29,7 +33,7 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 // The music: a context that exists once something has unlocked it, sleeps
 // that are only written down, and soundtracks that record what was asked of
 // them. The device's music choice is the real one, in localStorage.
-const audio = vi.hoisted(() => ({ context: null, soundtracks: [], sleeps: [] }))
+const audio = vi.hoisted(() => ({ context: null, soundtracks: [], sleeps: [], untilNextBeat: 0 }))
 vi.mock('../utils/audioContext', async (importOriginal) => ({
   ...(await importOriginal()),
   getAudioContext: () => audio.context,
@@ -40,7 +44,8 @@ vi.mock('../utils/audioContext', async (importOriginal) => ({
   resumeAudio: () => audio.context,
   suspendAudio: (afterMs) => audio.sleeps.push(afterMs),
 }))
-vi.mock('../utils/bestOfMusic', () => ({
+vi.mock('../utils/bestOfMusic', async (importOriginal) => ({
+  untilBeat: (await importOriginal()).untilBeat,
   trackForMonth: () => 'warm',
   // 120 bpm: a beat is 500 ms.
   beatMs: () => 500,
@@ -51,6 +56,8 @@ vi.mock('../utils/bestOfMusic', () => ({
       pause: vi.fn(),
       resume: vi.fn(),
       stop: vi.fn(),
+      // Where the music's next beat is, as the test sets it.
+      untilNextBeat: vi.fn(() => audio.untilNextBeat),
     }
     audio.soundtracks.push(soundtrack)
     return soundtrack
@@ -58,7 +65,7 @@ vi.mock('../utils/bestOfMusic', () => ({
 }))
 
 import BestOfViewer from '../components/bestof/BestOfViewer'
-import { LOOKS, TRANSITION_MS } from '../components/bestof/bestOfLooks'
+import { LOOKS, transitionMs } from '../components/bestof/bestOfLooks'
 import { STYLE_ORDER } from '../utils/bestOfStyle'
 
 const media = (url) => ({ url, thumbUrl: `${url}-t` })
@@ -111,6 +118,7 @@ beforeEach(() => {
   audio.context = null
   audio.soundtracks.length = 0
   audio.sleeps.length = 0
+  audio.untilNextBeat = 0
   localStorage.clear()
 })
 
@@ -204,8 +212,9 @@ describe('BestOfViewer', () => {
     render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
     // The opening card is eight beats: 4 s at 120 bpm.
     expect(screen.getByTestId('bestof-fill').style.animation).toContain('4000ms')
+    // A collage of two: eight beats; of four, twelve.
     tapUntil('collage')
-    expect(screen.getByTestId('bestof-fill').style.animation).toContain('6000ms')
+    expect(screen.getByTestId('bestof-fill').style.animation).toContain('4000ms')
   })
 
   it('gives a film strip the time its last frame needs to come in', () => {
@@ -227,7 +236,8 @@ describe('BestOfViewer', () => {
       render(<BestOfViewer bestOf={{ ...BEST_OF, slides: [BEST_OF.slides[0], strip, BEST_OF.slides.at(-1)] }} onClose={() => {}} />)
       tapUntil('collage')
       expect(current().querySelector('[data-layout]').dataset.layout).toBe('trio')
-      expect(screen.getByTestId('bestof-fill').style.animation).toContain('6000ms')
+      // Ten beats, a collage of three's time.
+      expect(screen.getByTestId('bestof-fill').style.animation).toContain('5000ms')
     } finally {
       window.matchMedia = matchMedia
     }
@@ -464,15 +474,24 @@ describe('BestOfViewer', () => {
       // Every opening card names the month, one way or another.
       expect(within(current()).queryAllByText(/^(SEP|September|September 2026)$/).length).toBeGreaterThan(0)
 
+      // The look's cuts take turns: the first cut is its first.
       tap(0.8)
       expect(kind()).toBe('count')
-      expect(current().className).toContain(`bestof-enter-${look.transition}`)
-      expect(current().style.animationDuration).toBe(`${TRANSITION_MS[look.transition]}ms`)
-      // The slide being left stays until the look's transition is over.
-      act(() => vi.advanceTimersByTime(TRANSITION_MS[look.transition] - 100))
+      const [first, second = first] = look.transitions
+      const firstMs = transitionMs(first, 500)
+      expect(current().dataset.cut).toBe(first)
+      expect(current().className).toContain(`bestof-enter-${first}`)
+      expect(current().style.animationDuration).toBe(`${firstMs}ms`)
+      // The slide being left makes its exit beneath it until the cut is over.
+      const leavingSlide = stage().querySelector(':scope > [aria-hidden="true"].bestof-exit')
+      expect(leavingSlide.className).toContain(`bestof-exit-${first}`)
+      act(() => vi.advanceTimersByTime(firstMs - 100))
       expect(leavingCount()).toBe(2)
       act(() => vi.advanceTimersByTime(200))
       expect(leavingCount()).toBe(1)
+
+      tap(0.8)
+      expect(current().dataset.cut).toBe(second)
 
       tapUntil('outro')
       expect(current().querySelector('[data-outro]').dataset.outro).toBe(look.outro)
@@ -609,5 +628,110 @@ describe('BestOfViewer', () => {
       expect(within(current()).getByText('A year ago…')).toBeInTheDocument()
       expect(within(current()).getByText('September 2025 · 14 photos')).toBeInTheDocument()
     })
+  })
+
+  describe('like a video', () => {
+    const music = () => { audio.context = { state: 'running' } }
+
+    it('starts a slide’s clock on the music’s beat, so the cut falls on one', () => {
+      music()
+      audio.untilNextBeat = 180
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      endClock()
+      expect(kind()).toBe('count')
+      // Its photo in, the clock waits for the beat.
+      for (const img of current().querySelectorAll('img')) fireEvent.load(img)
+      expect(screen.getByTestId('bestof-fill').style.animation).toContain('3000ms linear 180ms forwards')
+      cleanup()
+
+      // A beat that went by a moment ago: the clock starts as if on it.
+      audio.untilNextBeat = -90
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      endClock()
+      for (const img of current().querySelectorAll('img')) fireEvent.load(img)
+      expect(screen.getByTestId('bestof-fill').style.animation).toContain('3000ms linear -90ms forwards')
+    })
+
+    it('keeps a beat of its own without music', () => {
+      audio.untilNextBeat = null
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      endClock()
+      const [, wait] = /linear (-?\d+)ms/.exec(screen.getByTestId('bestof-fill').style.animation)
+      // Within a beat of now, either way.
+      expect(Number(wait)).toBeGreaterThan(-150)
+      expect(Number(wait)).toBeLessThan(500)
+    })
+
+    it('shoots the look on its own film, and the classic look on none', () => {
+      render(<BestOfViewer bestOf={{ ...BEST_OF, style: 'polaroid' }} onClose={() => {}} />)
+      const texture = screen.getByTestId('bestof-texture')
+      expect(texture.querySelector('.bestof-grain')).not.toBeNull()
+      expect(texture.querySelectorAll('.bestof-leak')).toHaveLength(2)
+      cleanup()
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      expect(screen.queryByTestId('bestof-texture')).toBeNull()
+    })
+
+    it('cuts a montage on the beat, and gives it the time its cuts need', () => {
+      const montage = { kind: 'montage', label: 'dontForget', media: [media('m1'), media('m2'), media('m3')], days: [] }
+      render(<BestOfViewer bestOf={{ ...BEST_OF, slides: [BEST_OF.slides[0], montage, BEST_OF.slides.at(-1)] }} onClose={() => {}} />)
+      tap(0.8)
+      expect(kind()).toBe('montage')
+      // At 120 bpm a photo is up for two beats, a second.
+      const shots = screen.getAllByTestId('bestof-shot')
+      expect(shots.map((shot) => shot.style.animationDelay)).toEqual(['0ms', '1000ms', '2000ms'])
+      // Three photos of two beats, and two to hold the last.
+      expect(screen.getByTestId('bestof-fill').style.animation).toContain('4000ms')
+      expect(within(current()).getByText('and don\'t forget about…')).toBeInTheDocument()
+    })
+
+    it('tours a grid of four over the slide’s time', () => {
+      const grid = { kind: 'collage', layout: 'grid', media: [media('f'), media('g'), media('h'), media('i')], day: '2026-09-07' }
+      render(<BestOfViewer bestOf={{ ...BEST_OF, slides: [BEST_OF.slides[0], grid, BEST_OF.slides.at(-1)] }} onClose={() => {}} />)
+      tap(0.8)
+      const tour = current().querySelector('.bestof-grid-tour')
+      expect(tour.style.animationDuration).toBe('6000ms')
+    })
+
+    it('builds its words up as they arrive, and reads them out whole', () => {
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      tapUntil('photo')
+      const caption = within(current()).getByText('At the lake')
+      expect(caption.className).toContain('sr-only')
+      const moving = caption.parentElement.querySelector('[data-kinetic]')
+      expect(moving.getAttribute('aria-hidden')).toBe('true')
+      expect([...moving.querySelectorAll('.bestof-kt-words')].map((word) => word.textContent)).toEqual(['At', 'the', 'lake'])
+    })
+
+    it('rolls the count into place digit by digit', () => {
+      render(<BestOfViewer bestOf={BEST_OF} onClose={() => {}} />)
+      tapUntil('count')
+      expect(within(current()).getByText('13')).toBeInTheDocument()
+      expect(within(current()).getByTestId('bestof-rolling').querySelectorAll('.bestof-roll')).toHaveLength(2)
+    })
+  })
+
+  it('crossfades every cut for someone who asked for less motion, keeping the slide being left beneath', () => {
+    const matchMedia = window.matchMedia
+    window.matchMedia = (query) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+    try {
+      render(<BestOfViewer bestOf={{ ...BEST_OF, style: 'cinema' }} onClose={() => {}} />)
+      tap(0.8)
+      tap(0.8)
+      expect(current().dataset.cut).toBe('fade')
+      expect(current().className).toContain('bestof-enter-fade')
+      expect(current().style.animationDuration).toBe('400ms')
+      const slidesOnStage = () => stage().querySelectorAll(':scope > div.absolute.inset-0:not(.z-10)').length
+      act(() => vi.advanceTimersByTime(350))
+      expect(slidesOnStage()).toBe(2)
+      act(() => vi.advanceTimersByTime(150))
+      expect(slidesOnStage()).toBe(1)
+    } finally {
+      window.matchMedia = matchMedia
+    }
   })
 })

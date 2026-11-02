@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { TRACKS, TRACK_ORDER, arrangement, barMs, beatMs, createSoundtrack, trackForMonth } from '../utils/bestOfMusic'
+import { TRACKS, TRACK_ORDER, arrangement, barMs, beatMs, createSoundtrack, trackForMonth, untilBeat } from '../utils/bestOfMusic'
 
 // jsdom has no Web Audio, so this stands in for it. It is strict where
 // browsers are strict (a non-finite value, a negative time, an exponential
@@ -270,6 +270,17 @@ describe('trackForMonth', () => {
   })
 })
 
+describe('untilBeat', () => {
+  it('is the time to the next beat, or how long ago one just went by', () => {
+    expect(untilBeat(0, 500)).toBe(-0)
+    expect(untilBeat(200, 500)).toBe(300)
+    expect(untilBeat(1100, 500)).toBe(-100)
+    expect(untilBeat(1149, 500)).toBe(-149)
+    expect(untilBeat(1150, 500)).toBe(350)
+    expect(untilBeat(-40, 500)).toBe(40)
+  })
+})
+
 describe('barMs and beatMs', () => {
   it('is a beat at the track’s tempo, and a bar of its meter', () => {
     for (const [id, track] of Object.entries(TRACKS)) {
@@ -346,6 +357,28 @@ describe('createSoundtrack', () => {
       expect(node.playbackRate.value).toBeGreaterThan(0.9)
       expect(node.playbackRate.value).toBeLessThan(1.1)
     }
+  })
+
+  it('says how long until its next beat while it plays, so the story can cut on it', () => {
+    const context = new FakeAudioContext()
+    const soundtrack = createSoundtrack(context, 'warm')
+    expect(soundtrack.untilNextBeat()).toBeNull()
+    soundtrack.start()
+    const beat = beatMs('warm')
+    // The music starts a moment after start(): its first beat is that far off.
+    expect(soundtrack.untilNextBeat()).toBeCloseTo(50, 0)
+    elapse(context, 0.3)
+    expect(soundtrack.untilNextBeat()).toBeCloseTo(50 + beat - 300, 0)
+    // A moment after a beat, it is that beat to keep to: how long ago it was.
+    context.currentTime = 0.05 + (2 * beat) / 1000 + 0.1
+    expect(soundtrack.untilNextBeat()).toBeCloseTo(-100, 0)
+    soundtrack.pause()
+    expect(soundtrack.untilNextBeat()).toBeNull()
+    soundtrack.resume()
+    expect(soundtrack.untilNextBeat()).not.toBeNull()
+    soundtrack.stop({ fadeMs: 0 })
+    expect(soundtrack.untilNextBeat()).toBeNull()
+    expect(createSoundtrack(null, 'warm').untilNextBeat()).toBeNull()
   })
 
   it('does not schedule twice when started twice', () => {

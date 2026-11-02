@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import { BottomShade, Caption, PhotoSlide, SlideImage } from './BestOfSlides'
+import { Montage } from './BestOfMontage'
 
 /**
  * A slide of several photos at once, in the layout utils/bestOf.js chose, and
@@ -22,6 +23,7 @@ const LAYOUT_SIZES = {
   mosaic: [3, 4],
   diagonal: [2, 3],
   pinboard: [3, 4],
+  montage: [3, 4],
 }
 
 // The strip is the one layout whose photos only come into view by moving, so
@@ -237,7 +239,7 @@ function Strip({ photos, onReady }) {
   )
 }
 
-export function CollageSlide({ slide, labels, onReady }) {
+export function CollageSlide({ slide, labels, look, beatMs, slideMs, onReady }) {
   const all = Array.isArray(slide.media) ? slide.media.filter(Boolean) : []
   const empty = all.length === 0
   const still = useMediaQuery('(prefers-reduced-motion: reduce)')
@@ -249,7 +251,7 @@ export function CollageSlide({ slide, labels, onReady }) {
 
   const layout = empty ? null : fittingLayout(slide.layout, all.length, still)
   if (layout === 'single') {
-    return <PhotoSlide slide={{ ...slide, media: all[0], motion: 'zoomIn' }} labels={labels} onReady={onReady} />
+    return <PhotoSlide slide={{ ...slide, media: all[0], motion: 'zoomIn' }} labels={labels} look={look} onReady={onReady} />
   }
   const photos = layout ? all.slice(0, LAYOUT_SIZES[layout][1]) : []
 
@@ -258,7 +260,13 @@ export function CollageSlide({ slide, labels, onReady }) {
       {layout === 'duo' && <Tiles spots={DUO} photos={photos} onReady={onReady} />}
       {layout === 'trio' && <Tiles spots={TRIO} photos={photos} onReady={onReady} />}
       {layout === 'grid' && (
-        <div className="bestof-grid-zoom absolute inset-0">
+        // A camera tour of the grid over the slide's time — the whole of it,
+        // then each photo close up in turn, then the whole again — or, without
+        // the time or with less motion asked for, a slow push in.
+        <div
+          className={`${slideMs && !still ? 'bestof-grid-tour' : 'bestof-grid-zoom'} absolute inset-0`}
+          style={slideMs && !still ? { animationDuration: `${slideMs}ms` } : undefined}
+        >
           <Tiles spots={GRID} photos={photos} rounded="rounded-2xl" onReady={onReady} />
         </div>
       )}
@@ -267,8 +275,9 @@ export function CollageSlide({ slide, labels, onReady }) {
       {layout === 'mosaic' && <Tiles spots={MOSAIC[photos.length]} photos={photos} rounded="rounded-2xl" onReady={onReady} />}
       {layout === 'diagonal' && <Tiles spots={DIAGONAL[photos.length]} photos={photos} onReady={onReady} />}
       {layout === 'pinboard' && <Pinboard photos={photos} onReady={onReady} />}
+      {layout === 'montage' && <Montage photos={photos} beatMs={beatMs} onReady={onReady} />}
       <BottomShade />
-      <Caption caption={slide.caption} meta={labels.meta(slide)} />
+      <Caption caption={slide.caption} meta={labels.meta(slide)} look={look} />
     </div>
   )
 }

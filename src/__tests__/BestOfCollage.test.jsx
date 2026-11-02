@@ -195,17 +195,19 @@ describe('CollageSlide', () => {
 describe('PhotoSlide', () => {
   const photo = (motion) => ({ kind: 'photo', media: media('c'), caption: 'At the lake', day: '2026-09-06', motion })
 
-  it.each(['zoomIn', 'zoomOut', 'panLeft', 'panRight', 'panUp'])('moves the photo by %s', (motion) => {
+  it.each(['zoomIn', 'zoomOut', 'panLeft', 'panRight', 'panUp', 'panDown', 'diagonal', 'tilt'])('moves the photo by %s', (motion) => {
     render(<PhotoSlide slide={photo(motion)} labels={labels} onReady={() => {}} />)
     const stage = document.querySelector('[data-kind="stage"]')
-    expect(stage.parentElement.className).toContain(`bestof-motion-${motion}`)
+    // The move is the camera's; inside it, the photo comes into focus.
+    expect(stage.parentElement.className).toContain('bestof-focus')
+    expect(stage.parentElement.parentElement.className).toContain(`bestof-motion-${motion}`)
     expect(screen.getByText('At the lake')).toBeInTheDocument()
   })
 
   it.each([['an unknown', 'spin'], ['no', undefined]])('pushes in for %s motion', (_, motion) => {
     render(<PhotoSlide slide={photo(motion)} labels={labels} onReady={() => {}} />)
     const stage = document.querySelector('[data-kind="stage"]')
-    expect(stage.parentElement.className).toContain('bestof-motion-zoomIn')
+    expect(stage.parentElement.parentElement.className).toContain('bestof-motion-zoomIn')
     expect(document.querySelector('[class*="bestof-motion-spin"]')).toBeNull()
   })
 })
