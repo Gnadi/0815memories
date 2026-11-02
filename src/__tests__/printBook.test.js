@@ -187,3 +187,16 @@ describe('createPrintPdf', () => {
     }
   })
 })
+
+describe('pagesToReachMinimum', () => {
+  it('counts the blank page and the back cover the print adds', async () => {
+    const { pagesToReachMinimum, printSequence } = await import('../utils/printBook')
+    for (const n of [1, 6, 7, 21, 22, 23, 30]) {
+      const added = pagesToReachMinimum(n)
+      expect(printSequence(new Array(n + added)).length).toBeGreaterThanOrEqual(24)
+      if (added > 0) expect(printSequence(new Array(n + added - 1)).length).toBeLessThan(24)
+    }
+    expect(pagesToReachMinimum(6)).toBe(16)
+    expect(pagesToReachMinimum(23)).toBe(0)
+  })
+})

@@ -48,3 +48,24 @@ describe('editorReducer undo history', () => {
     expect(state.pages[0].elements[1]).toMatchObject({ url: 'a.enc', offsetY: 0, fit: null })
   })
 })
+
+describe('ADD_PAGES', () => {
+  it('appends blank pages in the last page’s look, as one undo step', () => {
+    let state = editorReducer(start(), { type: 'ADD_PAGES', count: 3 })
+    expect(state.pages).toHaveLength(4)
+    expect(state.pages[3]).toMatchObject({ backgroundColor: '#fff', elements: [] })
+    state = editorReducer(state, { type: 'UNDO' })
+    expect(state.pages).toHaveLength(1)
+  })
+
+  it('spreads photos over the new pages and leaves the rest blank', () => {
+    const state = editorReducer(start(), { type: 'ADD_PAGES', count: 3, photoUrls: ['a', 'b', 'c', 'd'] })
+    const added = state.pages.slice(1).map((p) => p.elements.map((e) => e.url))
+    expect(added).toEqual([['a', 'b'], ['c'], ['d']])
+  })
+
+  it('adds nothing for a count of zero', () => {
+    const state = start()
+    expect(editorReducer(state, { type: 'ADD_PAGES', count: 0 })).toBe(state)
+  })
+})
