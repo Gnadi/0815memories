@@ -62,7 +62,7 @@ a photo the tiles lift off, or a photo in a wide white mount. The count is a
 pile of prints, a film's counter, a magazine's giant figure, a burst of rays,
 tally marks, a square for each photo, or a thin number alone. The themes, an
 award's announcement (a spotlight, a headline, a drumroll…) and the award
-itself (a stamp, credits, a banner, a medal…) change the same way. A variant
+itself (a stamp, credits, a banner, a badge…) change the same way. A variant
 this version does not know is drawn the classic way.
 
 The look back at the same month a year before reads that month's memories and
