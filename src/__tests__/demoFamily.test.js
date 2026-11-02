@@ -4,7 +4,7 @@
    loaded into the demo database, is in the state the demo promises: this
    week's moments, something "on this day", one capsule open and two sealed,
    and an Our Year chapter waiting for the visitor's answers. */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { existsSync } from 'node:fs'
 import { DEMO_CONTENT } from '../demo/demoContent'
 import {
@@ -33,6 +33,19 @@ function shape(value, path = '') {
   // memory without a quote, not a missing translation.
   return typeof value === 'string' ? (value ? 'text' : 'empty') : typeof value
 }
+
+// The family is built for NOW, and the demo database checks its rules against
+// the clock (a sealed letter opens at its time), so the clock reads NOW too.
+// Otherwise the test depends on the day it runs: the letter sealed until the
+// day the demo couple met, 24 days after NOW, opens in the real November.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(NOW)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 function load(language = 'en') {
   const { documents, visitor } = buildDemoFamily({ language, now: NOW })
