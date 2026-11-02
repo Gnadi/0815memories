@@ -270,6 +270,17 @@ export default function ScrapbookEditorPage() {
 
   const handleUndo = () => dispatch({ type: 'UNDO' })
   const handleAddPage = () => dispatch({ type: 'ADD_PAGE' })
+  // Photos from the family's memories that are not in the book yet, to fill up
+  // pages with. One per url, in the order the memories come.
+  const suggestedUrls = useMemo(() => {
+    const inBook = new Set(pages.flatMap((p) => p.elements.map((el) => el.url).filter(Boolean)))
+    return [...new Set((memoryPhotos || []).map((ph) => ph.url))].filter((url) => url && !inBook.has(url))
+  }, [pages, memoryPhotos])
+  const handleFillPages = (count, withPhotos = false) => dispatch({
+    type: 'ADD_PAGES',
+    count,
+    photoUrls: withPhotos ? suggestedUrls : [],
+  })
   const handleDeletePage = (pageIndex) => dispatch({ type: 'DELETE_PAGE', index: pageIndex })
   const handleSwitchPage = (pageIndex) => dispatch({ type: 'SWITCH_PAGE', index: pageIndex })
   const handleTitleChange = (newTitle) => dispatch({ type: 'SET_TITLE', title: newTitle })
@@ -527,6 +538,8 @@ export default function ScrapbookEditorPage() {
           title={title}
           sheets={printSequence(pages)}
           onRender={renderPrintFile}
+          onFillPages={handleFillPages}
+          suggestedPhotoCount={suggestedUrls.length}
           onClose={() => setPrintOpen(false)}
         />
       )}

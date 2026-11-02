@@ -217,7 +217,12 @@
     "checkoutFailed": "Die Druckdatei ist fertig, aber Peecho hat keine Kasse dafür geöffnet. Bitte versuche es gleich noch einmal.",
     "photosMissing": "Ein Foto auf Seite {{page}} konnte nicht geladen werden, deshalb wurde keine Druckdatei erstellt – ein gedrucktes Buch soll keine Lücke haben, wo ein Foto hingehört. Prüfe deine Verbindung und versuche es erneut.",
     "checkHeading": "Alle Seiten prüfen",
-    "checkBody": "Die Kasse von Peecho zeigt nur den Umschlag. Sieh dir hier vorher das ganze Buch an – genau diese Datei wird gedruckt."
+    "checkBody": "Die Kasse von Peecho zeigt nur den Umschlag. Sieh dir hier vorher das ganze Buch an – genau diese Datei wird gedruckt.",
+    "fillPages": "{{count}} leere Seiten hinzufügen",
+    "fillPages_one": "{{count}} leere Seite hinzufügen",
+    "fillWithPhotos": "{{count}} Seiten mit Fotos füllen",
+    "fillWithPhotosHint_one": "Nutzt {{count}} Foto aus euren Erinnerungen, das noch nicht im Buch ist; übrige Seiten bleiben leer.",
+    "fillWithPhotosHint_other": "Nutzt {{count}} Fotos aus euren Erinnerungen, die noch nicht im Buch sind; übrige Seiten bleiben leer."
   },
   "textBar": {
     "font": "Schriftart",

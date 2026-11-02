@@ -4,8 +4,10 @@ import { X, Loader2, Printer, LockOpen, Info, ExternalLink, RotateCcw, BookOpen 
 import {
   printConfig,
   HARDCOVER_MIN_PAGES,
+  pagesToReachMinimum,
   PRINT_FILE_RETENTION_DAYS,
 } from '../../utils/printBook'
+import { fillerCapacity } from '../../utils/autoScrapbook'
 import { uploadPrintFile } from '../../utils/printUpload'
 import { createPrintCheckout } from '../../utils/printCheckout'
 import { devError } from '../../utils/devLog'
@@ -24,10 +26,16 @@ import { isDemoMode } from '../../demo/demoMode'
  * rendered: it is the one time the app hands a family's photos to someone
  * outside it in readable form.
  *
+ * `onFillPages(count)` appends blank pages to the scrapbook, so a book short
+ * of the hardcover minimum can be filled up from here.
+ *
+ * `suggestedPhotoCount` is how many photos from the family's memories are not
+ * in the book yet; they can be used to fill the new pages.
+ *
  * `sheets` is the book as it will be printed (printSequence); `title` names
  * it at the checkout.
  */
-export default function PrintOrderModal({ familyId, title, sheets, onRender, onClose }) {
+export default function PrintOrderModal({ familyId, title, sheets, onRender, onFillPages, suggestedPhotoCount = 0, onClose }) {
   const { t, i18n } = useTranslation('scrapbook')
   // The demo shows what ordering involves and stops before anything is made:
   // the print file needs Firebase Storage and the checkout a Cloud Function,
@@ -52,6 +60,9 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
 
   const busy = phase === 'rendering' || phase === 'uploading' || phase === 'checkout'
   const pageCount = sheets.length
+  // Editor pages missing to reach the minimum, counting the blank page and the
+  // back cover printSequence adds.
+  const missingPages = pagesToReachMinimum(sheets.filter((sheet) => sheet.kind === 'page').length)
   const blankAdded = sheets.some((sheet) => sheet.kind === 'blank')
 
   const cm = (mm) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(mm / 10)
@@ -168,7 +179,36 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
               {pageCount < HARDCOVER_MIN_PAGES && (
                 <p className="px-3 py-2 rounded-xl bg-cream text-bark flex gap-2">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-kaydo" />
-                  <span>{t('print.tooFewPages', { min: HARDCOVER_MIN_PAGES, count: pageCount })}</span>
+                  <span>
+                    {t('print.tooFewPages', { min: HARDCOVER_MIN_PAGES, count: pageCount })}
+                    {onFillPages && missingPages > 0 && (
+                      <span className="mt-2 flex flex-wrap gap-2">
+                        {suggestedPhotoCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onFillPages(missingPages, true)}
+                            className="px-3 min-h-10 rounded-xl bg-kaydo text-white font-medium"
+                          >
+                            {t('print.fillWithPhotos', { count: missingPages })}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onFillPages(missingPages, false)}
+                          className={`px-3 min-h-10 rounded-xl font-medium ${
+                            suggestedPhotoCount > 0 ? 'border border-cream-dark text-bark' : 'bg-kaydo text-white'
+                          }`}
+                        >
+                          {t('print.fillPages', { count: missingPages })}
+                        </button>
+                        {suggestedPhotoCount > 0 && (
+                          <span className="basis-full text-xs text-bark-muted">
+                            {t('print.fillWithPhotosHint', { count: Math.min(suggestedPhotoCount, fillerCapacity(missingPages)) })}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </span>
                 </p>
               )}
 

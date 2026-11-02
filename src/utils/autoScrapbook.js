@@ -183,6 +183,32 @@ function truncate(text, max) {
   return `${text.slice(0, max - 1).trimEnd()}…`
 }
 
+// Filler pages stay airy: no more photos than this on one of them.
+const FILLER_PHOTOS_PER_PAGE = 3
+
+/**
+ * `count` pages for padding a book out, the photos spread over them evenly and
+ * in order. Photos beyond what fits are left unused; pages that get none stay
+ * blank. `background`/`pattern` match the page before, so a filler page does
+ * not stand out.
+ */
+export function fillerPages(count, urls = [], { background = '#FDF6EC', pattern = 'none' } = {}) {
+  const used = urls.slice(0, count * FILLER_PHOTOS_PER_PAGE)
+  const base = Math.floor(used.length / count)
+  const extra = used.length % count
+  let next = 0
+  return Array.from({ length: count }, (_, i) => {
+    const take = base + (i < extra ? 1 : 0)
+    const frames = FRAMES[take] || []
+    const elements = used.slice(next, next + take).map((url, j) => photo(url, ...frames[j], j + 1))
+    next += take
+    return { id: uid(), backgroundColor: background, backgroundPattern: pattern, elements, customizable: false }
+  })
+}
+
+/** How many photos `count` filler pages take. */
+export const fillerCapacity = (count) => count * FILLER_PHOTOS_PER_PAGE
+
 function entryPages(entry, formatDate, background) {
   const photos = entry.photos.slice(0, MAX_PHOTOS_PER_ENTRY)
   // Split evenly rather than 6 + 1, so no page is left with one lonely photo.

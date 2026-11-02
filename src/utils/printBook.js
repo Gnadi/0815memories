@@ -49,6 +49,17 @@ const MAX_CANVAS_AREA = 16_000_000
 export const HARDCOVER_MIN_PAGES = 24
 
 /**
+ * How many blank pages the editor needs to add for the printed book to reach
+ * HARDCOVER_MIN_PAGES. Asked of printSequence rather than worked out, so it
+ * stays right when the blank page or the back cover are counted differently.
+ */
+export function pagesToReachMinimum(pageCount) {
+  let added = 0
+  while (printSequence(new Array(pageCount + added)).length < HARDCOVER_MIN_PAGES) added += 1
+  return added
+}
+
+/**
  * How long a print file stays in Storage before the purgePrintFiles Cloud
  * Function deletes it. Mirrored by functions/printFiles.js; the order dialog
  * tells the admin this number.

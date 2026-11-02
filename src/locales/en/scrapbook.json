@@ -217,7 +217,12 @@
     "checkoutFailed": "The print file is ready, but Peecho did not open a checkout for it. Please try again in a moment.",
     "photosMissing": "A photo on page {{page}} could not be loaded, so no print file was made – a printed book should not have a gap where a photo belongs. Check your connection and try again.",
     "checkHeading": "Check every page",
-    "checkBody": "Peecho's checkout only shows the cover. Look through the whole book here first – this is exactly the file that will be printed."
+    "checkBody": "Peecho's checkout only shows the cover. Look through the whole book here first – this is exactly the file that will be printed.",
+    "fillPages": "Add {{count}} blank pages",
+    "fillPages_one": "Add {{count}} blank page",
+    "fillWithPhotos": "Fill {{count}} pages with photos",
+    "fillWithPhotosHint_one": "Uses {{count}} photo from your memories that is not in the book yet; pages left over stay blank.",
+    "fillWithPhotosHint_other": "Uses {{count}} photos from your memories that are not in the book yet; pages left over stay blank."
   },
   "textBar": {
     "font": "Font",

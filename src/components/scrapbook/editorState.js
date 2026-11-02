@@ -1,5 +1,7 @@
 // State of the scrapbook editor: the pages, the selection and the undo history.
 
+import { fillerPages } from '../../utils/autoScrapbook'
+
 const MAX_HISTORY = 20
 
 export function makeBlankPage() {
@@ -55,6 +57,19 @@ export function editorReducer(state, action) {
 
     case 'ADD_PAGE':
       return { ...withHistory([...pages, makeBlankPage()]), currentPageIndex: pages.length, selectedId: null }
+
+    // Pages at the end, e.g. to bring a book up to the print minimum: filled
+    // with `photoUrls` as far as they go, blank after that.
+    case 'ADD_PAGES': {
+      const count = Math.max(0, Math.floor(action.count) || 0)
+      if (count === 0) return state
+      const last = pages[pages.length - 1]
+      const filler = fillerPages(count, action.photoUrls || [], {
+        background: last?.backgroundColor,
+        pattern: last?.backgroundPattern,
+      })
+      return withHistory([...pages, ...filler])
+    }
 
     case 'DELETE_PAGE': {
       if (pages.length <= 1) return state
