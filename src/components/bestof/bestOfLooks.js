@@ -1,3 +1,5 @@
+import { MOTIONS } from '../../utils/bestOfStyle'
+
 /**
  * How each style of utils/bestOfStyle.js looks: its colours, its opening and
  * closing cards, how one slide gives way to the next, and what it lays over
@@ -46,6 +48,7 @@ export const LOOKS = {
     intro: 'stack',
     outro: 'stack',
     transition: 'slide',
+    variants: { photo: 'print', count: 'stack', award: 'stamp' },
     colors: {
       dark: '#2b2420',
       light: '#f4ece0',
@@ -67,6 +70,7 @@ export const LOOKS = {
     letterbox: true,
     // Its light cards are dark too, so the controls stay white on them.
     darkSurfaces: true,
+    variants: { photo: 'subtitle', count: 'counter', themes: 'titles', awardIntro: 'spotlight', award: 'credits' },
     colors: {
       dark: '#0b0b0d',
       light: '#121214',
@@ -87,6 +91,7 @@ export const LOOKS = {
     intro: 'cover',
     outro: 'grid',
     transition: 'wipe',
+    variants: { photo: 'page', count: 'giant', themes: 'list', awardIntro: 'accent', award: 'banner' },
     colors: {
       dark: '#111111',
       light: '#ffffff',
@@ -106,6 +111,7 @@ export const LOOKS = {
     outro: 'cards',
     transition: 'zoom',
     confetti: true,
+    variants: { photo: 'sticker', count: 'burst', themes: 'stickers', awardIntro: 'rays', award: 'medal' },
     colors: {
       dark: '#1d1340',
       light: '#fff4e6',
@@ -125,6 +131,7 @@ export const LOOKS = {
     outro: 'stack',
     transition: 'wipe',
     paper: true,
+    variants: { photo: 'journal', count: 'tally', themes: 'notes', awardIntro: 'paper', award: 'stamp' },
     colors: {
       dark: '#2a2620',
       light: '#f6efe0',
@@ -143,6 +150,7 @@ export const LOOKS = {
     intro: 'mosaic',
     outro: 'grid',
     transition: 'blur',
+    variants: { photo: 'tiles', count: 'squares', themes: 'tiles', awardIntro: 'accent', award: 'banner' },
     colors: {
       dark: '#10202a',
       light: '#eef6f5',
@@ -160,6 +168,7 @@ export const LOOKS = {
     intro: 'mask',
     outro: 'cards',
     transition: 'fade',
+    variants: { photo: 'passepartout', count: 'plain', themes: 'line', awardIntro: 'plain', award: 'below' },
     colors: {
       dark: '#18181b',
       light: '#fafafa',
@@ -179,6 +188,36 @@ export const LOOKS = {
 // Opening cards drawn on the look's light colour (BestOfIntros.jsx), so the
 // controls go dark over them.
 export const LIGHT_INTROS = new Set(['stack', 'mask'])
+
+// The slides a look draws its own way (BestOfVariants.jsx), by kind: a single
+// photo, the count, the themes, an award's announcement and the award. A kind
+// a look does not name is drawn the classic way. These are the variants drawn
+// on the look's light colour.
+const LIGHT_VARIANTS = {
+  photo: ['journal', 'passepartout'],
+  count: ['stack', 'giant', 'tally', 'plain'],
+  themes: ['list', 'notes', 'line'],
+  awardIntro: ['paper', 'plain'],
+  award: ['below'],
+}
+
+// The classic slides drawn on white.
+const LIGHT_SLIDES = new Set(['count', 'themes', 'calendar', 'yearAgo', 'outro'])
+
+/** The variant a look draws a slide in, or undefined for the classic one. */
+export const variantOf = (look, kind) => look?.variants?.[kind]
+
+/**
+ * Whether a slide is drawn on the look's light colour, so the controls go
+ * dark over it — never in a look that draws its light cards dark too.
+ */
+export function isLightSlide(slide, look) {
+  if (!slide || look.darkSurfaces) return false
+  if (slide.kind === 'intro') return LIGHT_INTROS.has(look.intro)
+  const variant = variantOf(look, slide.kind)
+  if (variant) return LIGHT_VARIANTS[slide.kind]?.includes(variant) ?? false
+  return LIGHT_SLIDES.has(slide.kind)
+}
 
 /** The look's hand for a title, or `fallback` without a look. */
 export const titleOf = (look, fallback = 'font-bold') => look?.title || fallback
@@ -209,3 +248,10 @@ export function lookVars(look) {
     '--bo-trophy': c.badge === c.accent ? c.badgeInk : c.accent,
   }
 }
+
+/**
+ * The camera move utils/bestOf.js chose, so that photo after photo does not
+ * push in the same way. One this version does not know — from a best-of saved
+ * by a newer one — gets the push in.
+ */
+export const motionClass = (slide) => `bestof-motion-${MOTIONS.includes(slide?.motion) ? slide.motion : 'zoomIn'}`

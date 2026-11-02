@@ -510,8 +510,38 @@ describe('BestOfViewer', () => {
       tap(0.8)
       expect(kind()).toBe('count')
       expect(stage().querySelector('.bestof-paper')).not.toBeNull()
+      // Its photos are a diary's pages too…
       tap(0.8)
+      expect(kind()).toBe('photo')
+      expect(stage().querySelector('.bestof-paper')).not.toBeNull()
+      // …but its collages are not.
+      tap(0.8)
+      expect(kind()).toBe('collage')
       expect(stage().querySelector('.bestof-paper')).toBeNull()
+    })
+
+    it.each(STYLE_ORDER)('draws the photos, the count and the awards of the %s look its own way', (style) => {
+      const { variants } = LOOKS[style]
+      render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+      for (const kind of ['count', 'photo', 'awardIntro', 'award']) {
+        tapUntil(kind)
+        expect(current().querySelector('[data-variant]')?.dataset.variant).toBe(variants[kind] ?? 'classic')
+      }
+      // Whatever the look, the slide still says what it is about.
+      expect(within(current()).getByText('Zell am See')).toBeInTheDocument()
+    })
+
+    it('draws a slide the classic way in a variant it does not know', () => {
+      const look = { ...LOOKS.magazine, variants: { photo: 'someday-a-new-frame' } }
+      LOOKS.someday = look
+      try {
+        render(<BestOfViewer bestOf={styled('someday')} onClose={() => {}} />)
+        tapUntil('photo')
+        expect(current().querySelector('[data-variant]').dataset.variant).toBe('classic')
+        expect(within(current()).getByText('At the lake')).toBeInTheDocument()
+      } finally {
+        delete LOOKS.someday
+      }
     })
   })
 

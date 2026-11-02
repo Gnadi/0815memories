@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import useCountUp from './useCountUp'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, RotateCcw, Trophy } from 'lucide-react'
 import useDecryptedMedia from '../media/useDecryptedMedia'
 import CrossfadeImage from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
-import { MOTIONS } from '../../utils/bestOf'
-import { titleOf } from './bestOfLooks'
+import { motionClass, titleOf } from './bestOfLooks'
 
 /**
  * The slides of a best-of, one component per kind (utils/bestOf.js makes the
@@ -60,7 +60,7 @@ export function SlideImage({ media, className = '', style, onReady }) {
 
 // A photo that fills the slide: the thumbnail first, then the original once it
 // has been looked at for a moment — the moments viewer's stage does both.
-function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
+export function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
   return (
     <div className={`absolute inset-0 ${className}`}>
       <CrossfadeImage
@@ -129,23 +129,6 @@ export function IntroSlide({ slide, labels, onReady }) {
 }
 
 // ── The month in numbers ────────────────────────────────────────────────────
-
-function useCountUp(target, durationMs = 1400) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    let frame
-    const start = performance.now()
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / durationMs)
-      // Ease out: fast at first, settling on the number.
-      setValue(Math.round(target * (1 - Math.pow(1 - t, 3))))
-      if (t < 1) frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [target, durationMs])
-  return value
-}
 
 export function CountSlide({ slide, onReady }) {
   const { t, i18n } = useTranslation('bestOf')
@@ -245,15 +228,10 @@ export function Caption({ caption, meta, children }) {
   )
 }
 
-// The camera move utils/bestOf.js chose, so that photo after photo does not
-// push in the same way. One this version does not know — from a best-of saved
-// by a newer one — gets the push in.
-const motionOf = (slide) => `bestof-motion-${MOTIONS.includes(slide.motion) ? slide.motion : 'zoomIn'}`
-
 export function PhotoSlide({ slide, labels, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
-      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} alt={slide.caption || ''} />
+      <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
       <BottomShade />
       <Caption caption={slide.caption} meta={labels.meta(slide)} />
     </div>
@@ -301,10 +279,12 @@ export function AwardIntroSlide({ slide, look, onReady }) {
   )
 }
 
-function AwardDetail({ slide, labels }) {
+// What an award was given for. On a light card (`light`) it goes without the
+// shadows that keep it readable over a photo.
+export function AwardDetail({ slide, labels, light = false }) {
   const { t } = useTranslation('bestOf')
-  const big = 'bestof-text text-3xl sm:text-4xl font-bold leading-tight drop-shadow-lg break-words'
-  const small = 'bestof-text mt-1 text-sm text-white/85 drop-shadow'
+  const big = `bestof-text text-3xl sm:text-4xl font-bold leading-tight break-words ${light ? '' : 'drop-shadow-lg'}`
+  const small = `bestof-text mt-1 text-sm ${light ? 'text-[var(--bo-ink-soft)]' : 'text-white/85 drop-shadow'}`
   switch (slide.award) {
     case 'place':
       return (
@@ -378,7 +358,7 @@ export function DontForgetSlide({ slide, labels, look, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
-      <FullPhoto media={slide.media} onReady={onReady} className={motionOf(slide)} />
+      <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} />
       <BottomShade />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-12 text-white pointer-events-none">
         <p className="bestof-text text-lg text-white/90 drop-shadow">{t('dontForget')}</p>

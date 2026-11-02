@@ -53,6 +53,17 @@ black); and what it lays over the story — a film's black bars, a diary's paper
 confetti for an award. A best-of saved before there were styles keeps the look
 it had.
 
+Not only the opening card changes: each look draws the slides that come
+round most often its own way (`variants`, `components/bestof/BestOfVariants.jsx`).
+A single photo is a polaroid on a table, a film still with subtitles, a
+magazine page, a photo with a sticker, a diary page with the photo taped in,
+a photo the tiles lift off, or a photo in a wide white mount. The count is a
+pile of prints, a film's counter, a magazine's giant figure, a burst of rays,
+tally marks, a square for each photo, or a thin number alone. The themes, an
+award's announcement (a spotlight, a headline, a drumroll…) and the award
+itself (a stamp, credits, a banner, a medal…) change the same way. A variant
+this version does not know is drawn the classic way.
+
 The look back at the same month a year before reads that month's memories and
 moments too, when the best-of is made; a month that cannot be read is a
 best-of without that card.

@@ -15,8 +15,9 @@ import {
 } from '../../utils/audioContext'
 import { beatMs as beatMsOf, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
-import { LIGHT_INTROS, TRANSITION_MS, lookOf, lookVars } from './bestOfLooks'
+import { TRANSITION_MS, isLightSlide, lookOf, lookVars } from './bestOfLooks'
 import { StyledIntro } from './BestOfIntros'
+import { StyledAward, StyledAwardIntro, StyledCount, StyledPhoto, StyledThemes } from './BestOfVariants'
 import {
   AwardIntroSlide,
   AwardSlide,
@@ -33,13 +34,13 @@ import './bestOf.css'
 
 const SLIDES = {
   intro: StyledIntro,
-  count: CountSlide,
-  themes: ThemesSlide,
-  photo: PhotoSlide,
+  count: StyledCount,
+  themes: StyledThemes,
+  photo: StyledPhoto,
   collage: CollageSlide,
   video: VideoSlide,
-  awardIntro: AwardIntroSlide,
-  award: AwardSlide,
+  awardIntro: StyledAwardIntro,
+  award: StyledAward,
   dontForget: DontForgetSlide,
   calendar: CalendarSlide,
   rhythm: RhythmSlide,
@@ -49,15 +50,6 @@ const SLIDES = {
   outro: OutroSlide,
 }
 
-// Slides drawn on white, which want the controls in dark — unless the look
-// draws them dark too, as the cinema's does. Which opening card is light
-// depends on the look.
-const LIGHT_SLIDES = new Set(['count', 'themes', 'calendar', 'yearAgo', 'outro'])
-
-function isLight(slide, look) {
-  if (!slide || look.darkSurfaces) return false
-  return slide.kind === 'intro' ? LIGHT_INTROS.has(look.intro) : LIGHT_SLIDES.has(slide.kind)
-}
 
 // How long each kind stays up, in beats of the month's track, so the story
 // keeps the music's pace — though not its beat: a slide's clock starts once its
@@ -167,7 +159,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const slide = slides[index]
   const isLast = index === slides.length - 1
   const isVideo = slide?.kind === 'video'
-  const light = isLight(slide, look)
+  const light = isLightSlide(slide, look)
   const paused = userPaused || holding || away
 
   // A new slide starts its clock from nothing, in the render that shows it —
