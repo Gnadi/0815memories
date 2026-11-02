@@ -13,6 +13,7 @@ import ScrapbookCanvas from '../components/scrapbook/ScrapbookCanvas'
 import EditorToolbar from '../components/scrapbook/EditorToolbar'
 import PhotoBar from '../components/scrapbook/PhotoBar'
 import PhotoActionBar from '../components/scrapbook/PhotoActionBar'
+import TextActionBar from '../components/scrapbook/TextActionBar'
 import BottomToolRow from '../components/scrapbook/BottomToolRow'
 import PageNavBar from '../components/scrapbook/PageNavBar'
 import PrintOrderModal from '../components/scrapbook/PrintOrderModal'
@@ -242,6 +243,7 @@ export default function ScrapbookEditorPage() {
   const selectedElement = currentPage?.elements.find((el) => el.id === selectedId) || null
   const isPhotoSelected = selectedElement?.type === 'photo' && !!selectedElement?.url
   const isSlotSelected = selectedElement?.type === 'photo' && !selectedElement?.url
+  const isTextSelected = selectedElement?.type === 'text'
   const editable = !!currentPage?.customizable
 
   const handleAddElement = (element) => dispatch({ type: 'ADD_ELEMENT', element })
@@ -349,6 +351,12 @@ export default function ScrapbookEditorPage() {
     if (!selectedElement) return
     const fields = Object.keys(updates)
     const gesture = fields.length === 1 && SLIDER_FIELDS.includes(fields[0]) ? `${fields[0]}:${selectedId}` : null
+    handleUpdateElement(selectedId, updates, gesture)
+  }
+  // The size slider is one undo step per drag, like the photo sliders.
+  const handleTextStyle = (updates) => {
+    if (!selectedElement) return
+    const gesture = 'fontSize' in updates ? `fontSize:${selectedId}` : null
     handleUpdateElement(selectedId, updates, gesture)
   }
   const handleActionPolaroid = (on) => {
@@ -467,6 +475,13 @@ export default function ScrapbookEditorPage() {
             onRemovePicture={handleActionRemovePicture}
             onRemove={handleActionRemove}
             mode={photoMode}
+          />
+        ) : isTextSelected ? (
+          <TextActionBar
+            element={selectedElement}
+            onChange={handleTextStyle}
+            onDone={handleActionDone}
+            onRemove={handleActionRemove}
           />
         ) : (
           <PhotoBar

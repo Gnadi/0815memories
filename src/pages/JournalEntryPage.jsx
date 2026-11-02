@@ -283,8 +283,10 @@ export default function JournalEntryPage() {
           </div>
 
           {/* Emotion: one row that scrolls sideways on a phone, rather than a
-              block of chips pushing the text off the screen. */}
-          <fieldset>
+              block of chips pushing the text off the screen. A fieldset
+              defaults to min-width: min-content, which would stretch it (and
+              the whole page) to the width of all chips, hence `min-w-0`. */}
+          <fieldset className="min-w-0">
             <legend className="text-xs font-semibold text-bark-muted uppercase tracking-wide mb-1.5">
               {t('editor.emotionLabel')}
             </legend>

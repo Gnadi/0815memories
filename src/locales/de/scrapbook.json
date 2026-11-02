@@ -218,5 +218,21 @@
     "photosMissing": "Ein Foto auf Seite {{page}} konnte nicht geladen werden, deshalb wurde keine Druckdatei erstellt – ein gedrucktes Buch soll keine Lücke haben, wo ein Foto hingehört. Prüfe deine Verbindung und versuche es erneut.",
     "checkHeading": "Alle Seiten prüfen",
     "checkBody": "Die Kasse von Peecho zeigt nur den Umschlag. Sieh dir hier vorher das ganze Buch an – genau diese Datei wird gedruckt."
+  },
+  "textBar": {
+    "font": "Schriftart",
+    "size": "Größe",
+    "bold": "Fett",
+    "fonts": {
+      "display": "Display",
+      "serif": "Serif",
+      "sans": "Sans",
+      "mono": "Mono"
+    },
+    "align": {
+      "left": "Linksbündig",
+      "center": "Zentriert",
+      "right": "Rechtsbündig"
+    }
   }
 }
