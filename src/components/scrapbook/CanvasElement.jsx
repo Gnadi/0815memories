@@ -228,7 +228,9 @@ export default function CanvasElement({
   // frame itself is fixed (a locked layout) or the crop panel is open.
   const canPan = type === 'photo' && !!element.url && isSelected && !exporting && (cropping || !editable)
   const allowDrag = (editable && !canPan) || type !== 'photo'
-  const allowResize = editable || type !== 'photo'
+  // A filled photo can always be made larger or smaller, also on a locked
+  // page: locking keeps the photos where they are, it should not fix their size.
+  const allowResize = editable || type !== 'photo' || !!element.url
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !allowDrag })
 
@@ -625,7 +627,7 @@ export default function CanvasElement({
             <div
               key={corner}
               onPointerDown={(e) => handleResizePointerDown(e, corner)}
-              className="absolute w-[10px] h-[10px] bg-white border-2 border-kaydo rounded-sm z-10"
+              className="absolute w-[10px] h-[10px] bg-white border-2 border-kaydo rounded-sm z-10 before:content-[''] before:absolute before:-inset-3"
               style={{ ...style, touchAction: 'none' }}
             />
           ))}

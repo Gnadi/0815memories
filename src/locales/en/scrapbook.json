@@ -218,5 +218,21 @@
     "photosMissing": "A photo on page {{page}} could not be loaded, so no print file was made – a printed book should not have a gap where a photo belongs. Check your connection and try again.",
     "checkHeading": "Check every page",
     "checkBody": "Peecho's checkout only shows the cover. Look through the whole book here first – this is exactly the file that will be printed."
+  },
+  "textBar": {
+    "font": "Font",
+    "size": "Size",
+    "bold": "Bold",
+    "fonts": {
+      "display": "Display",
+      "serif": "Serif",
+      "sans": "Sans",
+      "mono": "Mono"
+    },
+    "align": {
+      "left": "Align left",
+      "center": "Center",
+      "right": "Align right"
+    }
   }
 }
