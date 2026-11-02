@@ -43,7 +43,7 @@ vi.mock('../utils/audioContext', async (importOriginal) => ({
 vi.mock('../utils/bestOfMusic', () => ({
   trackForMonth: () => 'warm',
   // 120 bpm: a beat is 500 ms.
-  barMs: () => 2000,
+  beatMs: () => 500,
   createSoundtrack: (context, track) => {
     const soundtrack = {
       track,

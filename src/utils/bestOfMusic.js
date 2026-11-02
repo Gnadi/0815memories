@@ -3,10 +3,12 @@
 // files and no network: like the rest of the best-of, it never leaves the
 // device.
 //
-// Three moods, one per season of the month the photos are from (see
-// trackForMonth), so everyone in the family hears the same music under the
-// same best-of. Each is an eight-bar loop of a four-chord progression, one
-// chord every two bars, that goes round for as long as the story plays.
+// Eight tracks, each with its own progression, key, tempo and instruments,
+// taken in turn from month to month (see trackForMonth), so that one month's
+// best-of does not sound like the last one's, and everyone in the family hears
+// the same music under the same best-of. Each is an eight-bar loop of a
+// four-chord progression, one chord every two bars, that goes round for as
+// long as the story plays.
 //
 // The musical design follows from where it plays: under photos, mostly from a
 // phone speaker, to people who are looking rather than listening. So the
@@ -23,11 +25,14 @@ const DRUMS = new Set(['kick', 'shaker', 'clap'])
 
 // Steps of a pattern, one chord (two bars) long, by voice:
 //   pad                    [beat, length, velocity], for every note of chord.pad
-//   keys, pluck            [beat, tone, length, velocity], tone indexes chord.tones
+//   keys, pluck, string,
+//   bell, pizz, arp        [beat, tone, length, velocity, octave?], tone indexes
+//                          chord.tones, octave moves it by twelve
 //   bass                   [beat, octave, length, velocity], on chord.bass
 //   kick, shaker, clap     [beat, velocity]
 // Lengths are in beats; a note may ring past the end of its chord, or of the
-// loop, into the next one.
+// loop, into the next one. A bar has four beats unless the track says
+// otherwise (`meter`), as the waltz does.
 const twice = (bar) => [...bar, ...bar.map(([beat, ...rest]) => [beat + BEATS_PER_BAR, ...rest])]
 
 // Voicings are written out as MIDI notes (60 is middle C) rather than derived,
@@ -115,36 +120,182 @@ export const TRACKS = {
       bass: [[0, 0, 7.5, 0.5]],
     },
   },
+  // C–Am–F–G in C major. A guitar picked in eighths, the thumb on the low
+  // strings and the fingers above, over a quiet pad, a shaker and a kick that
+  // is barely there.
+  folk: {
+    bpm: 96,
+    bars: 8,
+    key: 'C major',
+    padAttack: 0.8,
+    chords: [
+      { name: 'C', bass: 36, pad: [55, 60, 64], tones: [48, 55, 60, 64, 67] },
+      { name: 'Am', bass: 45, pad: [57, 60, 64], tones: [45, 52, 57, 60, 64] },
+      { name: 'F', bass: 41, pad: [57, 60, 65], tones: [41, 48, 53, 57, 60] },
+      { name: 'G', bass: 43, pad: [55, 59, 62], tones: [43, 50, 55, 59, 62] },
+    ],
+    parts: {
+      pad: [[0, 8, 0.28]],
+      string: twice([
+        [0, 0, 1.5, 0.7], [0.5, 3, 1, 0.45], [1, 1, 1.5, 0.55], [1.5, 4, 1, 0.45],
+        [2, 0, 1.5, 0.6], [2.5, 3, 1, 0.42], [3, 1, 1.5, 0.52], [3.5, 2, 1, 0.4],
+      ]),
+      kick: twice([[0, 0.3]]),
+      shaker: twice([[0.5, 0.25], [1.5, 0.3], [2.5, 0.25], [3.5, 0.3]]),
+    },
+  },
+  // E♭maj7–Dm7–Cm7–F7 in B♭ major, slow and swung: rolled electric-piano
+  // chords with a few lazy notes between them, a walking bass and a soft,
+  // late beat — the sound of a rainy afternoon.
+  lofi: {
+    bpm: 78,
+    bars: 8,
+    key: 'B♭ major',
+    padAttack: 1,
+    chords: [
+      { name: 'E♭maj7', bass: 39, pad: [55, 58, 62], tones: [63, 67, 70, 74] },
+      { name: 'Dm7', bass: 38, pad: [53, 57, 60], tones: [62, 65, 69, 72] },
+      { name: 'Cm7', bass: 36, pad: [51, 55, 58], tones: [60, 63, 67, 70] },
+      { name: 'F7', bass: 41, pad: [51, 57, 60], tones: [60, 63, 65, 69] },
+    ],
+    parts: {
+      pad: [[0, 8, 0.3]],
+      keys: [
+        [0, 0, 2, 0.42], [0.03, 1, 2, 0.36], [0.06, 2, 2, 0.36],
+        [1.67, 3, 0.8, 0.38], [2.67, 2, 0.8, 0.32], [3, 1, 1, 0.34],
+        [4, 0, 2, 0.38], [4.03, 1, 2, 0.32], [4.06, 3, 2, 0.34],
+        [5.67, 2, 0.6, 0.3], [6, 1, 1.2, 0.34], [7.33, 3, 0.6, 0.28],
+      ],
+      bass: [
+        [0, 0, 1.5, 0.6], [1.67, 0, 0.3, 0.35], [2, 1, 0.4, 0.3], [2.67, 0, 1, 0.45],
+        [4, 0, 1.5, 0.55], [6, 0, 0.5, 0.4], [6.67, 1, 0.3, 0.3], [7.33, 0, 0.5, 0.35],
+      ],
+      kick: twice([[0, 0.45], [2.67, 0.3]]),
+      clap: twice([[1, 0.3], [3, 0.34]]),
+      shaker: twice([[0.67, 0.18], [1.67, 0.2], [2.67, 0.18], [3.67, 0.22]]),
+    },
+  },
+  // A–F♯m–D–E in A major, in three: a music box over a bass on the one and
+  // pizzicato strings on two and three. No drums.
+  waltz: {
+    bpm: 126,
+    bars: 8,
+    meter: 3,
+    key: 'A major',
+    padAttack: 0.8,
+    chords: [
+      { name: 'A', bass: 45, pad: [57, 61, 64], tones: [69, 73, 76, 81] },
+      { name: 'F♯m', bass: 42, pad: [57, 61, 66], tones: [66, 69, 73, 78] },
+      { name: 'D', bass: 50, pad: [57, 62, 66], tones: [66, 69, 74, 78] },
+      { name: 'E', bass: 52, pad: [56, 59, 64], tones: [68, 71, 76, 80] },
+    ],
+    parts: {
+      pad: [[0, 6, 0.25]],
+      bass: [[0, 0, 1, 0.6], [3, 0, 1, 0.55]],
+      pizz: [
+        [1, 0, 0.4, 0.4, -1], [1, 1, 0.4, 0.34, -1], [2, 0, 0.4, 0.36, -1], [2, 1, 0.4, 0.3, -1],
+        [4, 0, 0.4, 0.38, -1], [4, 1, 0.4, 0.32, -1], [5, 0, 0.4, 0.34, -1], [5, 1, 0.4, 0.3, -1],
+      ],
+      bell: [
+        [0, 2, 1.5, 0.5], [1.5, 1, 0.5, 0.35], [2, 3, 1, 0.45],
+        [3, 2, 1, 0.42], [4, 1, 1, 0.38], [5, 0, 1, 0.4],
+      ],
+    },
+  },
+  // Am–F–C–G in C major, the quickest of them: a synth arpeggio in
+  // sixteenths, an octave bass in eighths, a kick on every beat and a clap on
+  // two and four, all of it softened.
+  pop: {
+    bpm: 116,
+    bars: 8,
+    key: 'C major',
+    padAttack: 0.5,
+    chords: [
+      { name: 'Am', bass: 45, pad: [57, 60, 64], tones: [57, 60, 64, 69] },
+      { name: 'F', bass: 41, pad: [57, 60, 65], tones: [53, 57, 60, 65] },
+      { name: 'C', bass: 48, pad: [55, 60, 64], tones: [55, 60, 64, 67] },
+      { name: 'G', bass: 43, pad: [55, 59, 62], tones: [55, 59, 62, 67] },
+    ],
+    parts: {
+      pad: [[0, 8, 0.32]],
+      arp: twice([0, 1, 2, 3, 1, 2, 3, 2, 0, 1, 2, 3, 2, 3, 1, 2].map((tone, i) => [i / 4, tone, 0.22, i % 4 === 0 ? 0.55 : 0.34])),
+      bass: twice([
+        [0, 0, 0.45, 0.5], [0.5, 1, 0.4, 0.32], [1, 0, 0.45, 0.42], [1.5, 1, 0.4, 0.3],
+        [2, 0, 0.45, 0.46], [2.5, 1, 0.4, 0.32], [3, 0, 0.45, 0.42], [3.5, 1, 0.4, 0.3],
+      ]),
+      kick: twice([[0, 0.42], [1, 0.34], [2, 0.4], [3, 0.34]]),
+      clap: twice([[1, 0.4], [3, 0.45]]),
+      shaker: twice([[0.5, 0.28], [1.5, 0.24], [2.5, 0.28], [3.5, 0.24]]),
+    },
+  },
+  // E♭–Cm–A♭–B♭ in E♭ major: a glockenspiel tune with pizzicato on the
+  // off-beats, a bouncing bass and a light beat. Playful, for a month of
+  // children.
+  playful: {
+    bpm: 104,
+    bars: 8,
+    key: 'E♭ major',
+    padAttack: 0.6,
+    chords: [
+      { name: 'E♭', bass: 51, pad: [55, 58, 63], tones: [75, 79, 82, 87] },
+      { name: 'Cm', bass: 48, pad: [55, 60, 63], tones: [72, 75, 79, 84] },
+      { name: 'A♭', bass: 44, pad: [56, 60, 63], tones: [72, 75, 80, 84] },
+      { name: 'B♭', bass: 46, pad: [53, 58, 62], tones: [70, 74, 77, 82] },
+    ],
+    parts: {
+      pad: [[0, 8, 0.28]],
+      bell: [
+        [0, 2, 1, 0.5], [1, 1, 0.5, 0.4], [1.5, 2, 0.5, 0.38], [2, 3, 1.5, 0.48],
+        [4, 1, 1, 0.45], [5, 0, 0.5, 0.38], [5.5, 1, 0.5, 0.36], [6, 2, 2, 0.45],
+      ],
+      pizz: twice([[0.5, 0, 0.3, 0.4, -1], [1.5, 1, 0.3, 0.35, -1], [2.5, 2, 0.3, 0.4, -1], [3.5, 1, 0.3, 0.35, -1]]),
+      bass: [[0, 0, 1, 0.55], [2, 0, 1, 0.45], [4, 0, 1, 0.5], [6, 0, 1, 0.42], [7, 1, 0.5, 0.32]],
+      kick: twice([[0, 0.35], [2, 0.3]]),
+      clap: twice([[1, 0.28], [3, 0.32]]),
+    },
+  },
 }
 
 const trackOf = (trackId) => TRACKS[trackId] || TRACKS.warm
+const meterOf = (track) => track.meter || BEATS_PER_BAR
+
+// The order the tracks take turns in, month by month, with a quiet one never
+// next to another quiet one. Eight does not go into twelve, so the same month
+// a year later has a different track too: October 2027 does not sound like
+// October 2026.
+export const TRACK_ORDER = ['warm', 'pop', 'calm', 'folk', 'lofi', 'bright', 'waltz', 'playful']
 
 /**
- * The track for a best-of's month ('YYYY-MM'): calm in winter, bright in
- * summer, warm the rest of the year and for anything that is not a month.
+ * The track for a best-of's month ('YYYY-MM'): each month the next one of
+ * TRACK_ORDER, so no two months in a row sound the same. Warm for anything
+ * that is not a month.
  */
 export function trackForMonth(monthKey) {
   const parsed = parseMonthKey(monthKey)
   if (!parsed) return 'warm'
-  const { month } = parsed
-  if (month === 11 || month <= 1) return 'calm'
-  if (month >= 5 && month <= 7) return 'bright'
-  return 'warm'
+  const index = (parsed.year * 12 + parsed.month) % TRACK_ORDER.length
+  return TRACK_ORDER[index]
 }
 
-/** One bar (four beats) in milliseconds. The viewer times its slides in bars. */
+/** One beat in milliseconds. The viewer times its slides in beats. */
+export function beatMs(trackId) {
+  return 60000 / trackOf(trackId).bpm
+}
+
+/** One bar in milliseconds: four beats, or three in a waltz. */
 export function barMs(trackId) {
-  return (BEATS_PER_BAR * 60000) / trackOf(trackId).bpm
+  const track = trackOf(trackId)
+  return meterOf(track) * beatMs(trackId)
 }
 
 /**
- * One loop of a track as notes: { bpm, bars, events }, each event
+ * One loop of a track as notes: { bpm, bars, meter, events }, each event
  * { beat, voice, midi, length, velocity }, sorted by beat. midi is null for
  * drums. Pure, so the same track always plays the same notes.
  */
 export function arrangement(trackId) {
   const track = trackOf(trackId)
-  const beatsPerChord = (track.bars * BEATS_PER_BAR) / track.chords.length
+  const beatsPerChord = (track.bars * meterOf(track)) / track.chords.length
   const events = []
   track.chords.forEach((chord, index) => {
     for (const [voice, pattern] of Object.entries(track.parts)) {
@@ -157,6 +308,7 @@ export function arrangement(trackId) {
   return {
     bpm: track.bpm,
     bars: track.bars,
+    meter: meterOf(track),
     // Played at exactly the written velocities, a loop sounds mechanical by its
     // third time round. The nudge is derived from the position, not random, so
     // it is the same every time.
@@ -180,8 +332,8 @@ function notesOf(voice, step, chord, offset) {
     const [beat, velocity] = step
     return [{ beat: offset + beat, voice, midi: null, length: 0.25, velocity }]
   }
-  const [beat, tone, length, velocity] = step
-  return [{ beat: offset + beat, voice, midi: chord.tones[tone], length, velocity }]
+  const [beat, tone, length, velocity, octave = 0] = step
+  return [{ beat: offset + beat, voice, midi: chord.tones[tone] + 12 * octave, length, velocity }]
 }
 
 // ── Playing it ──────────────────────────────────────────────────────────────
@@ -207,6 +359,7 @@ const RESUME_FADE = 0.25
 const REVERB_SECONDS = 2
 const REVERB_WET = 0.2
 const NOISE_SECONDS = 1
+const STRING_SECONDS = 2.5
 
 // The peak of one note at full velocity, before the master. The keys or the
 // pluck carry the tune; pad and bass sit under them; the drums are only just
@@ -224,6 +377,10 @@ const LEVELS = {
   kick: 0.3,
   shaker: 0.14,
   clap: 0.16,
+  string: 0.55,
+  bell: 0.14,
+  pizz: 0.17,
+  arp: 0.075,
 }
 
 const SILENT = Object.freeze({
@@ -246,10 +403,10 @@ const SILENT = Object.freeze({
 export function createSoundtrack(context, trackId) {
   if (!context) return SILENT
 
-  const { bpm, bars, events } = arrangement(trackId)
+  const { bpm, bars, meter, events } = arrangement(trackId)
   const { padAttack } = trackOf(trackId)
   const beat = 60 / bpm
-  const loopSeconds = bars * BEATS_PER_BAR * beat
+  const loopSeconds = bars * meter * beat
 
   let state = 'idle' // → playing ⇄ paused → stopped
   let chain = null
@@ -516,6 +673,72 @@ const VOICES = {
     return run([body, sub], [body, sub, amp], at, stopAt)
   },
 
+  // A plucked guitar string, Karplus–Strong: a burst of noise going round a
+  // loop one period long, softened a little each time round, as a string
+  // loses its overtones first. It is worked out once per pitch, ahead of
+  // time (stringBuffer), since a feedback loop of Web Audio nodes cannot be
+  // shorter than 128 samples and so could not play anything above E4.
+  string(ctx, out, { at, end, f, peak }) {
+    const { buffer, rate } = stringBuffer(ctx, f)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.playbackRate.value = rate
+    const amp = gainNode(ctx, 0)
+    source.connect(amp)
+    amp.connect(out)
+    const ring = buffer.length / buffer.sampleRate / rate
+    const stopAt = Math.min(
+      at + ring,
+      envelope(amp.gain, at, { peak, attack: 0.002, decay: 2, sustain: 1, end: end + 0.4, release: 0.25 }),
+    )
+    return run([source], [source, amp], at, stopAt)
+  },
+
+  // A struck metal bar, glockenspiel or music box: three sines at the
+  // inharmonic ratios of a bar, the upper ones dying first.
+  bell(ctx, out, { at, f, peak }) {
+    const sources = []
+    const nodes = []
+    let stopAt = at
+    for (const [ratio, level, decay] of [[1, 1, 0.9], [2.76, 0.32, 0.35], [5.4, 0.12, 0.12]]) {
+      const tone = oscillator(ctx, 'sine', f * ratio)
+      const amp = gainNode(ctx, 0)
+      tone.connect(amp)
+      amp.connect(out)
+      const end = envelope(amp.gain, at, { peak: peak * level, attack: 0.002, decay, sustain: 0, end: at, release: decay })
+      stopAt = Math.max(stopAt, end)
+      sources.push(tone)
+      nodes.push(tone, amp)
+    }
+    return run(sources, nodes, at, stopAt)
+  },
+
+  // Pizzicato: a triangle with a little sawtooth for the bite of the string,
+  // gone in a tenth of a second.
+  pizz(ctx, out, { at, f, peak }) {
+    const amp = gainNode(ctx, 0)
+    const body = oscillator(ctx, 'triangle', f)
+    const edge = oscillator(ctx, 'sawtooth', f)
+    const edgeAmp = gainNode(ctx, 0.25)
+    body.connect(amp)
+    edge.connect(edgeAmp)
+    edgeAmp.connect(amp)
+    amp.connect(out)
+    const stopAt = envelope(amp.gain, at, { peak, attack: 0.004, decay: 0.12, sustain: 0, end: at, release: 0.08 })
+    return run([body, edge], [body, edge, edgeAmp, amp], at, stopAt)
+  },
+
+  // A synth arpeggio: a square wave, short, through a low lowpass so that it
+  // is round rather than buzzing.
+  arp(ctx, out, { at, end, f, peak }) {
+    const tone = oscillator(ctx, 'square', f)
+    const amp = gainNode(ctx, 0)
+    tone.connect(amp)
+    amp.connect(out)
+    const stopAt = envelope(amp.gain, at, { peak, attack: 0.004, decay: 0.15, sustain: 0.25, end, release: 0.06 })
+    return run([tone], [tone, amp], at, stopAt)
+  },
+
   // A sine dropping from 110 to 45 Hz: a thump, with no click on top.
   kick(ctx, out, { at, peak }) {
     const body = oscillator(ctx, 'sine', 110)
@@ -610,6 +833,10 @@ function buildChain(ctx) {
     kick: bus,
     shaker: input(filter(ctx, 'highpass', 5000), filter(ctx, 'lowpass', 9000)),
     clap: input(filter(ctx, 'bandpass', 1400, 0.9)),
+    string: input(filter(ctx, 'lowpass', 3500)),
+    bell: input(filter(ctx, 'lowpass', 6000)),
+    pizz: input(filter(ctx, 'lowpass', 2000)),
+    arp: input(filter(ctx, 'lowpass', 1500)),
   }
 
   // The pad's lowpass drifts slowly up and down, so a held chord breathes
@@ -629,8 +856,42 @@ function buildChain(ctx) {
 const buffers = new WeakMap()
 
 function buffersFor(ctx) {
-  if (!buffers.has(ctx)) buffers.set(ctx, { impulse: impulseResponse(ctx), noise: whiteNoise(ctx) })
+  if (!buffers.has(ctx)) buffers.set(ctx, { impulse: impulseResponse(ctx), noise: whiteNoise(ctx), strings: new Map() })
   return buffers.get(ctx)
+}
+
+// A string's sound at one pitch, made the first time that pitch is played and
+// kept with the context. The loop is a whole number of samples long, which
+// would leave a note up to a few cents off; the playback rate makes up the
+// difference. The noise is seeded from the pitch, so a note sounds the same
+// every time it is struck.
+function stringBuffer(ctx, f) {
+  const { strings } = buffersFor(ctx)
+  const key = Math.round(f * 100)
+  if (strings.has(key)) return strings.get(key)
+  const rate = ctx.sampleRate
+  const period = Math.max(2, Math.round(rate / f))
+  const length = Math.round(rate * STRING_SECONDS)
+  const buffer = ctx.createBuffer(1, length, rate)
+  const data = buffer.getChannelData(0)
+  let seed = key >>> 0 || 1
+  let smoothed = 0
+  for (let i = 0; i < Math.min(period, length); i++) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+    smoothed += 0.5 * ((seed / 2 ** 32) * 2 - 1 - smoothed)
+    data[i] = smoothed
+  }
+  for (let i = period; i < length; i++) {
+    data[i] = 0.996 * 0.5 * (data[i - period] + (i > period ? data[i - period - 1] : 0))
+  }
+  // The last few milliseconds fade out, so a string cut off by its buffer's
+  // end does not click.
+  const fade = Math.min(length, Math.round(rate * 0.05))
+  for (let i = 0; i < fade; i++) data[length - 1 - i] *= i / fade
+  // Averaging two neighbours delays the loop by half a sample.
+  const made = { buffer, rate: f / (rate / (period + 0.5)) }
+  strings.set(key, made)
+  return made
 }
 
 function whiteNoise(ctx) {

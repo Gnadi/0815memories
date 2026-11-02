@@ -13,7 +13,7 @@ import {
   suspendAudio,
   unlockAudio,
 } from '../../utils/audioContext'
-import { barMs, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
+import { beatMs as beatMsOf, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
 import {
   AwardIntroSlide,
@@ -121,7 +121,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   )
   const labels = useMemo(() => bestOfLabels(bestOf.month, i18n.language, t), [bestOf.month, i18n.language, t])
   const track = useMemo(() => trackForMonth(bestOf.month), [bestOf.month])
-  const beatMs = barMs(track) / 4
+  const beatMs = beatMsOf(track)
   const still = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const [index, setIndex] = useState(0)
