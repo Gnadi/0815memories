@@ -12,7 +12,7 @@ rendered video:
 | `count` | how many photos and videos the month had |
 | `themes` | the month's most used categories and labels, or places |
 | `photo` | a single photo with a camera move: zoom in or out, a pan, a diagonal, a tilt |
-| `collage` | an album, or one day's snapshots, as an animated collage: `duo`, `trio`, `grid`, `polaroids`, `strip`, `mosaic`, `diagonal`, `pinboard` |
+| `collage` | an album, or one day's snapshots, as an animated collage: `duo`, `trio`, `grid`, `polaroids`, `strip`, `mosaic`, `diagonal`, `pinboard`, or a `montage` of quick cuts |
 | `video` | a clip, muted under the music |
 | `awardIntro`, `award` | "and the place of the month is…", then the winner |
 | `calendar` | the month's calendar, the days something was kept on lighting up |
@@ -20,7 +20,8 @@ rendered video:
 | `places` | up to three places of the month, with a photo each |
 | `bookends` | the month's first and last photo: "this is how it began… and how it ended" |
 | `yearAgo` | a few photos of the same month a year before |
-| `dontForget` | "and don't forget about…", photos that did not make it |
+| `montage` | "and don't forget about…": photos that did not make it, in quick cuts on the beat |
+| `dontForget` | the same for one or two photos, one at a time |
 | `outro` | the end card: watch again, or (admins) put it together again |
 
 The awards are **place of the month** (where the most entries were made),
@@ -111,12 +112,34 @@ saved best-of stays reachable from the row above the moments grid.
 ## Motion and music
 
 The slides are React components animated with CSS (`components/bestof/`,
-`bestOf.css`): photos drift and zoom, collage tiles slide, pop and drop into
-place, and one slide comes in over the next as the month's look has it.
-Everything stops
-while the story is held or the page is hidden, and nothing moves for someone
-who has asked their system for reduced motion — for them the film strip, the
-one layout that needs motion to show all its photos, is a still collage.
+`bestOf.css`), cut together the way a recap video is:
+
+- **On the beat.** A slide's clock starts on a beat of the music
+  (`untilNextBeat` in `utils/bestOfMusic.js`; without music, on a metronome of
+  the story's own at the same tempo), and lasts a whole number of beats, so
+  every cut falls on one. A slide ready a moment after a beat starts as if on
+  it, rather than wait for the next.
+- **Pacing that changes.** Montages cut every second or so; a collage is up as
+  long as its photos need; a single photo lingers.
+- **Cuts, not slide changes.** Each look has a few cuts that take turns
+  (`transitions`): through the photo into the next, a whip pan, an iris, a
+  flash, film burning out, a dip through black, a wipe. The new slide comes in
+  while the old one makes its exit beneath it, over a beat or so.
+- **Nothing stands still.** Photos come into focus and keep moving; captions
+  float against them; prints turn gently in space; a grid of four is toured
+  photo by photo. Under a track with a kick, the slide gives a little on every
+  beat while the music plays.
+- **Words that move.** Captions and titles build up word by word, letter by
+  letter, out from behind a mask, or written out by hand, as the look has it
+  (`KineticText.jsx`); counts roll into place like a counter's wheels. The
+  words are there once more, whole, for screen readers.
+- **Film.** Some looks are shot on grain, with a vignette, light leaking in at
+  the edges, or a projector's flicker (`texture`).
+
+Everything stops while the story is held or the page is hidden. Someone who
+has asked their system for reduced motion gets plain cuts and words that are
+simply there; a montage still cuts, without the punch in, and the film strip,
+the one layout that needs motion to show all its photos, is a still collage.
 
 The music is synthesized in the browser with the Web Audio API
 (`utils/bestOfMusic.js`): eight tracks, each a short loop, taken in turn month

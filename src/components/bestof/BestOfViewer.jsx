@@ -13,9 +13,10 @@ import {
   suspendAudio,
   unlockAudio,
 } from '../../utils/audioContext'
-import { beatMs as beatMsOf, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
+import { beatMs as beatMsOf, createSoundtrack, hasPulse, trackForMonth, untilBeat as untilBeatOf } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
-import { TRANSITION_MS, isLightSlide, lookOf, lookVars } from './bestOfLooks'
+import { isLightSlide, lookOf, lookVars, montageBeats, transitionAt, transitionMs } from './bestOfLooks'
+import { MontageSlide } from './BestOfMontage'
 import { StyledIntro } from './BestOfIntros'
 import { StyledAward, StyledAwardIntro, StyledCount, StyledPhoto, StyledThemes } from './BestOfVariants'
 import {
@@ -47,14 +48,17 @@ const SLIDES = {
   places: PlacesSlide,
   bookends: BookendsSlide,
   yearAgo: YearAgoSlide,
+  montage: MontageSlide,
   outro: OutroSlide,
 }
 
 
 // How long each kind stays up, in beats of the month's track, so the story
-// keeps the music's pace — though not its beat: a slide's clock starts once its
-// photo is in, whenever that is. The ones with something to read, or several
-// photos to arrive, get longer; a clip plays out instead, up to MAX_CLIP_S.
+// keeps the music's pace, and its beat too: a slide's clock starts once its
+// photo is in, on the next beat of the music, so it ends on a beat and the cut
+// to the next one falls on it, as an edit to music does. The ones with
+// something to read, or several photos to arrive, get longer; a clip plays out
+// instead, up to MAX_CLIP_S.
 const SLIDE_BEATS = {
   intro: 8,
   count: 6,
@@ -72,13 +76,22 @@ const SLIDE_BEATS = {
   outro: 12,
 }
 
+const COLLAGE_BEATS = { 2: 8, 3: 10, 4: 12 }
+
 // A film strip has to travel for its last frame to come into view, which
 // takes about seven seconds (bestOf.css), whatever the tempo. With less motion
 // asked for, it stands still as another collage does, and takes their time.
 const STRIP_BEATS = 14
 
-function beatsOf(slide, still) {
+// A montage takes the beats its cuts need (bestOfLooks.js).
+function beatsOf(slide, still, beatMs) {
   if (slide.kind === 'collage' && slide.layout === 'strip' && !still) return STRIP_BEATS
+  const photos = Array.isArray(slide.media) ? slide.media.filter(Boolean).length : 0
+  if (slide.kind === 'montage') return montageBeats(Math.max(1, photos), beatMs)
+  if (slide.kind === 'collage' && slide.layout === 'montage' && photos >= 3) return montageBeats(Math.min(photos, 4), beatMs)
+  // A collage is up as long as its photos need: two are seen sooner than four,
+  // and a pair held as long as a grid would stand there.
+  if (slide.kind === 'collage' && photos > 0) return COLLAGE_BEATS[Math.min(photos, 4)] ?? SLIDE_BEATS.collage
   return SLIDE_BEATS[slide.kind] ?? CLIP_FALLBACK_BEATS
 }
 
@@ -135,7 +148,6 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   // The look of the best-of's style: one saved before there were styles, or
   // with a style this version does not know, gets the classic one.
   const look = useMemo(() => lookOf(bestOf.style), [bestOf.style])
-  const transitionMs = TRANSITION_MS[look.transition] ?? TRANSITION_MS.fade
   const still = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const [index, setIndex] = useState(0)
@@ -143,6 +155,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const [userPaused, setUserPaused] = useState(false)
   const [holding, setHolding] = useState(false)
   const [ready, setReady] = useState(false)
+  const [startWait, setStartWait] = useState(0)
   const [clipShare, setClipShare] = useState(0)
   const [finished, setFinished] = useState(false)
   const [clipFailed, setClipFailed] = useState(false)
@@ -185,11 +198,15 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     setClipFailed(false)
   }
 
+  // The look's cuts take turns, one per cut: the cut away from a visit is the
+  // look's cut of that number.
+  const cut = useMemo(() => (leaving ? transitionAt(look, leaving.visit) : null), [leaving, look])
+  const cutMs = useMemo(() => (cut ? transitionMs(cut, beatMs) : 0), [cut, beatMs])
   useEffect(() => {
     if (!leaving) return
-    const timer = setTimeout(() => setLeaving(null), transitionMs + 50)
+    const timer = setTimeout(() => setLeaving(null), cutMs + 50)
     return () => clearTimeout(timer)
-  }, [leaving, transitionMs])
+  }, [leaving, cutMs])
 
   const running = ready && !paused && !finished
   // Photos and cards run on a clock; a clip on its own playback.
@@ -281,11 +298,33 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     setUserPaused(false)
     setIndex((i) => Math.max(0, i - 1))
   }, [])
-  const markReady = useCallback(() => setReady(true), [])
+  // How long until the next beat: the music's, while it plays; without it, a
+  // metronome of the story's own at the music's tempo, so the cuts keep a
+  // steady pulse all the same. When a beat went by a moment ago, it is how
+  // long ago, negative: the clock starts as if it had started on that beat,
+  // and still ends on one (untilBeat).
+  const metronome = useRef(null)
+  useEffect(() => {
+    metronome.current = performance.now()
+  }, [])
+  const untilBeat = useCallback(() => {
+    const music = soundtrack.current?.untilNextBeat?.()
+    if (music != null) return Math.round(music)
+    return Math.round(untilBeatOf(performance.now() - (metronome.current ?? 0), beatMs))
+  }, [beatMs])
+
+  // Ready once per visit: its clock then waits for the next beat to start.
+  const readyVisit = useRef(-1)
+  const markReady = useCallback(() => {
+    if (readyVisit.current === visit) return
+    readyVisit.current = visit
+    setStartWait(untilBeat())
+    setReady(true)
+  }, [visit, untilBeat])
   const markClipFailed = useCallback(() => {
     setClipFailed(true)
-    setReady(true)
-  }, [])
+    markReady()
+  }, [markReady])
 
   // The clock has run out: the next slide, or — on the last — stay, and let
   // the music wind down slowly. Once per slide: a clip says it is over twice,
@@ -320,9 +359,9 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
 
   useEffect(() => {
     if (ready) return
-    const timer = setTimeout(() => setReady(true), READY_TIMEOUT_MS)
+    const timer = setTimeout(markReady, READY_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [ready, visit])
+  }, [ready, visit, markReady])
 
   useEffect(() => {
     const onVisibility = () => setAway(document.hidden)
@@ -425,25 +464,38 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     ? 'bg-[var(--bo-ink)]/10 hover:bg-[var(--bo-ink)]/20 text-[var(--bo-ink)]'
     : 'bg-black/30 hover:bg-black/60 text-white'
 
+  // Under a track with a kick, the slide gives a little on every beat — only
+  // while the music plays, and not for someone who asked for less motion.
+  const pulse = musicOn && hasPulse(track) && !still
+
   // The same element, under the same key, as it was while current — so the
-  // slide being left keeps its state and motion while it fades.
+  // slide being left keeps its state and motion while it makes its exit. The
+  // cut is the look's: the new slide comes in its way, and the one being left
+  // goes out its way beneath it.
   const renderSlide = (shown, key, current) => {
     const Slide = SLIDES[shown.kind]
     return (
       <div
         key={key}
         className={current
-          ? `absolute inset-0 ${leaving ? `bestof-enter bestof-enter-${look.transition}` : ''}`
-          : 'absolute inset-0 pointer-events-none'}
-        style={current && leaving ? { animationDuration: `${transitionMs}ms` } : undefined}
+          ? `absolute inset-0 ${leaving ? `bestof-enter bestof-enter-${cut}` : ''}`
+          : `absolute inset-0 pointer-events-none bestof-exit bestof-exit-${cut}`}
+        style={leaving ? { animationDuration: `${cutMs}ms` } : undefined}
         data-testid={current ? `bestof-slide-${shown.kind}` : undefined}
+        data-cut={current && leaving ? cut : undefined}
         aria-hidden={current ? undefined : 'true'}
       >
-        <Slide
-          slide={shown}
-          labels={labels}
-          look={look}
-          onReady={current ? markReady : noop}
+        <div
+          className={`absolute inset-0 ${pulse && current ? 'bestof-pulse' : ''}`}
+          style={pulse && current ? { animationDuration: `${Math.round(beatMs)}ms` } : undefined}
+        >
+          <Slide
+            slide={shown}
+            labels={labels}
+            look={look}
+            beatMs={beatMs}
+            slideMs={Math.round(beatsOf(shown, still, beatMs) * beatMs)}
+            onReady={current ? markReady : noop}
           {...(shown.kind === 'video'
             ? {
               muted: true,
@@ -453,8 +505,9 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
               onFailed: current ? markClipFailed : noop,
             }
             : null)}
-          {...(shown.kind === 'outro' ? { onRestart: restart, onRemake } : null)}
-        />
+            {...(shown.kind === 'outro' ? { onRestart: restart, onRemake } : null)}
+          />
+        </div>
       </div>
     )
   }
@@ -492,6 +545,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
         {renderSlide(slide, `visit-${visit}`, true)}
 
         {/* What the look lays over the story. */}
+        <Texture texture={look.texture} />
         {look.paper && light && <div className="bestof-paper absolute inset-0 z-10 pointer-events-none" aria-hidden="true" />}
         {look.confetti && slide.kind === 'award' && <Confetti key={`confetti-${visit}`} />}
         {look.letterbox && (
@@ -524,7 +578,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
                       data-testid="bestof-fill"
                       className={`bestof-fill block h-full w-full origin-left ${fill}`}
                       style={{
-                        animation: `bestof-fill ${Math.round(beatsOf(slide, still) * beatMs)}ms linear forwards`,
+                        animation: `bestof-fill ${Math.round(beatsOf(slide, still, beatMs) * beatMs)}ms linear ${startWait}ms forwards`,
                         animationPlayState: running ? 'running' : 'paused',
                       }}
                       onAnimationEnd={timeUp}
@@ -624,6 +678,26 @@ function Confetti() {
           }}
         />
       ))}
+    </div>
+  )
+}
+
+// The film the look is shot on: grain, a darker edge, light leaking in at the
+// edges, an old projector's flicker. Laid over the slides, under the controls,
+// and none of it in the way of a tap.
+function Texture({ texture }) {
+  if (!texture) return null
+  return (
+    <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none" aria-hidden="true" data-testid="bestof-texture">
+      {texture.leaks && (
+        <>
+          <span className="bestof-leak bestof-leak-a absolute left-0 top-0" />
+          <span className="bestof-leak bestof-leak-b absolute right-0 bottom-0" />
+        </>
+      )}
+      {texture.vignette && <span className="bestof-vignette absolute inset-0" />}
+      {texture.grain > 0 && <span className="bestof-grain absolute" style={{ opacity: Math.min(1, texture.grain) * 0.35 }} />}
+      {texture.flicker && <span className="bestof-flicker absolute inset-0" />}
     </div>
   )
 }

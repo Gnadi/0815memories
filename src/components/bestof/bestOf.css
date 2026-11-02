@@ -322,6 +322,205 @@
 }
 .bestof-drumroll { animation: bestof-drumroll 1.6s ease-out both; }
 
+/* ── Cuts, as an edit to music has them ───────────────────────────────────
+   The new slide comes in (.bestof-enter-…) while the one being left goes out
+   (.bestof-exit-…) beneath it. Their length is set by the viewer, in beats
+   (bestOfLooks.js). */
+
+/* Through the photo into the next: the old one rushes at the camera and is
+   gone, the new one settles out of the distance. */
+@keyframes bestof-enter-zoomThrough {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes bestof-exit-zoomThrough {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+
+/* A whip pan: both swept sideways, smeared with speed. */
+@keyframes bestof-enter-whip {
+  from { transform: translate3d(70%, 0, 0); filter: blur(16px); }
+  to { transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes bestof-exit-whip {
+  from { transform: translate3d(0, 0, 0); filter: blur(0); }
+  to { transform: translate3d(-70%, 0, 0); filter: blur(16px); }
+}
+
+/* An iris opening on the new shot. */
+@keyframes bestof-enter-iris {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(120% at 50% 50%); }
+}
+
+/* A cut on a flash of light. */
+@keyframes bestof-enter-flash {
+  0% { filter: brightness(3.5) saturate(0.4); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+/* Film burning out of the gate: the old shot flares, warm and too bright,
+   and the new one comes up out of it. */
+@keyframes bestof-exit-burn {
+  0% { filter: brightness(1) sepia(0); opacity: 1; }
+  55% { filter: brightness(2.2) sepia(1) saturate(3); opacity: 1; }
+  100% { filter: brightness(4) sepia(1) saturate(4); opacity: 0; }
+}
+@keyframes bestof-enter-burn {
+  0%, 45% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.bestof-enter.bestof-enter-zoomThrough { animation-name: bestof-enter-zoomThrough; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+.bestof-enter.bestof-enter-whip { animation-name: bestof-enter-whip; animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1); }
+.bestof-enter.bestof-enter-iris { animation-name: bestof-enter-iris; animation-timing-function: cubic-bezier(0.5, 0, 0.3, 1); }
+.bestof-enter.bestof-enter-flash { animation-name: bestof-enter-flash; }
+.bestof-enter.bestof-enter-burn { animation-name: bestof-enter-burn; animation-timing-function: linear; }
+.bestof-exit { animation-duration: 0.45s; animation-fill-mode: both; animation-timing-function: ease-in; }
+.bestof-exit.bestof-exit-zoomThrough { animation-name: bestof-exit-zoomThrough; animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4); }
+.bestof-exit.bestof-exit-whip { animation-name: bestof-exit-whip; animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3); }
+.bestof-exit.bestof-exit-burn { animation-name: bestof-exit-burn; animation-timing-function: linear; }
+
+/* ── Motion that does not stop ───────────────────────────────────────────── */
+
+/* A photo coming into focus as it arrives, as a camera pulls focus. */
+@keyframes bestof-focus {
+  from { filter: blur(10px); }
+  to { filter: blur(0); }
+}
+.bestof-focus { animation: bestof-focus 0.7s ease-out both; }
+
+/* Words floating a little once they are in, against the photo's move. */
+@keyframes bestof-float {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-1.5%, -10px, 0); }
+}
+.bestof-float { animation: bestof-float 5s ease-in-out 1.2s infinite alternate both; }
+
+/* A print turning gently in space. */
+@keyframes bestof-float3d {
+  from { transform: perspective(900px) rotateY(-5deg) rotateX(2deg); }
+  to { transform: perspective(900px) rotateY(5deg) rotateX(-2deg); }
+}
+.bestof-float3d { animation: bestof-float3d 6s ease-in-out infinite alternate; }
+
+/* The slide giving a little on the beat, under a track with a kick. The
+   viewer sets a beat's length; a cut falls on a beat, so the two agree. */
+@keyframes bestof-pulse {
+  0% { transform: scale(1.014); }
+  35%, 100% { transform: scale(1); }
+}
+.bestof-pulse { animation: bestof-pulse 0.6s ease-out infinite; }
+
+/* A camera tour of a grid of four: the whole, each photo close up in turn,
+   the whole again. The viewer stretches it over the slide's time. A tile's
+   centre is moved to the middle (translate first, then the scale). */
+@keyframes bestof-grid-tour {
+  0%, 8% { transform: scale(1) translate(0, 0); }
+  16%, 27% { transform: scale(1.85) translate(23.5%, 22.8%); }
+  35%, 46% { transform: scale(1.85) translate(-23.5%, 22.8%); }
+  54%, 65% { transform: scale(1.85) translate(23.5%, -22.8%); }
+  73%, 84% { transform: scale(1.85) translate(-23.5%, -22.8%); }
+  94%, 100% { transform: scale(1) translate(0, 0); }
+}
+.bestof-grid-tour { animation: bestof-grid-tour 9s cubic-bezier(0.65, 0, 0.35, 1) both; }
+
+/* A montage's shot: unseen until its cut, then punching in and staying, under
+   the shots after it. Its delay and length come from the beat. */
+@keyframes bestof-shot {
+  from { opacity: 1; transform: scale(1.18); }
+  to { opacity: 1; transform: scale(1.03); }
+}
+.bestof-shot { opacity: 0; animation: bestof-shot 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+/* ── Words that move (KineticText.jsx) ───────────────────────────────────── */
+
+@keyframes bestof-kt-words {
+  from { opacity: 0; transform: translate3d(0, 0.7em, 0) rotate(4deg); filter: blur(4px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); filter: blur(0); }
+}
+@keyframes bestof-kt-letters {
+  from { opacity: 0; transform: translate3d(0, 0.25em, 0); filter: blur(6px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes bestof-kt-pop {
+  0% { opacity: 0; transform: scale(0.2) translate3d(0, 0.4em, 0); }
+  70% { opacity: 1; transform: scale(1.25) translate3d(0, -0.05em, 0); }
+  100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+}
+@keyframes bestof-kt-mask {
+  from { transform: translate3d(0, 110%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes bestof-kt-write {
+  from { clip-path: inset(-10% 100% -10% 0); }
+  to { clip-path: inset(-10% 0 -10% 0); }
+}
+.bestof-kt-words { animation: bestof-kt-words 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-kt-letters { animation: bestof-kt-letters 0.5s ease-out both; }
+.bestof-kt-pop { animation: bestof-kt-pop 0.45s cubic-bezier(0.3, 0.9, 0.4, 1.3) both; }
+.bestof-kt-mask { animation: bestof-kt-mask 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.bestof-kt-write { animation: bestof-kt-write 1s linear both; }
+
+/* A counter's wheel turning past its digit once and stopping on it. */
+@keyframes bestof-roll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, var(--bestof-roll-to, 0), 0); }
+}
+.bestof-roll { animation: bestof-roll 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* ── The film it is shot on (BestOfViewer.jsx, Texture) ──────────────────── */
+
+/* Grain: noise from an SVG filter, jumping a few times a second, as film
+   grain does from frame to frame. */
+.bestof-grain {
+  inset: -50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  animation: bestof-grain 0.6s steps(4) infinite;
+}
+@keyframes bestof-grain {
+  0% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-7%, 4%, 0); }
+  50% { transform: translate3d(5%, -6%, 0); }
+  75% { transform: translate3d(-3%, -9%, 0); }
+  100% { transform: translate3d(8%, 3%, 0); }
+}
+
+.bestof-vignette { background: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.45) 100%); }
+
+/* Light leaking in at the edge of the frame, warm, wandering slowly. */
+.bestof-leak {
+  width: 90%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  filter: blur(40px);
+  mix-blend-mode: screen;
+  opacity: 0.35;
+}
+@keyframes bestof-leak-a {
+  from { transform: translate3d(-40%, -30%, 0) scale(0.8); opacity: 0.15; }
+  to { transform: translate3d(10%, 10%, 0) scale(1.2); opacity: 0.4; }
+}
+@keyframes bestof-leak-b {
+  from { transform: translate3d(40%, 60%, 0) scale(1.1); opacity: 0.35; }
+  to { transform: translate3d(0, 20%, 0) scale(0.8); opacity: 0.1; }
+}
+.bestof-leak-a { background: radial-gradient(circle, rgb(255 150 60), transparent 70%); animation: bestof-leak-a 9s ease-in-out infinite alternate; }
+.bestof-leak-b { background: radial-gradient(circle, rgb(255 80 120), transparent 70%); animation: bestof-leak-b 11s ease-in-out infinite alternate; }
+
+/* An old projector's flicker. */
+@keyframes bestof-flicker {
+  0%, 100% { opacity: 0; }
+  10% { opacity: 0.06; }
+  20% { opacity: 0.02; }
+  45% { opacity: 0.08; }
+  60% { opacity: 0; }
+  80% { opacity: 0.05; }
+}
+.bestof-flicker { background: black; animation: bestof-flicker 0.9s steps(1) infinite; }
+
 /* The diary's paper: a faint grain and a darker edge, laid over its light
    cards and multiplied in, so it tints the paper and hardly the photos. */
 .bestof-paper {
@@ -359,6 +558,10 @@
 .bestof-grid-zoom { animation: bestof-grid-zoom 9s ease-out both; }
 .bestof-strip { animation: bestof-strip 9s cubic-bezier(0.2, 0.3, 0.5, 1) both; }
 
+@keyframes bestof-shot-still {
+  from, to { opacity: 1; }
+}
+
 /* The film's perforations, a row above the frames and a row below. */
 .bestof-sprockets::before,
 .bestof-sprockets::after {
@@ -376,7 +579,7 @@
    paused by the viewer itself, so it stays out of this, and so does the
    crossfade: the slide being left is taken away on a timer, and a fade held
    half-way would end in a jump. */
-.bestof-paused *:not(.bestof-fill):not(.bestof-enter) {
+.bestof-paused *:not(.bestof-fill):not(.bestof-enter):not(.bestof-exit) {
   animation-play-state: paused !important;
 }
 
@@ -420,8 +623,34 @@
     animation: none;
     display: none;
   }
-  .bestof-enter[class*='bestof-enter-'] {
+  .bestof-enter[class*='bestof-enter-'],
+  .bestof-exit {
     animation: none;
+  }
+  .bestof-focus,
+  .bestof-float,
+  .bestof-float3d,
+  .bestof-pulse,
+  .bestof-grid-tour,
+  .bestof-kt-words,
+  .bestof-kt-letters,
+  .bestof-kt-pop,
+  .bestof-kt-mask,
+  .bestof-kt-write,
+  .bestof-grain,
+  .bestof-leak-a,
+  .bestof-leak-b,
+  .bestof-flicker {
+    animation: none;
+  }
+  /* Without motion, a montage still cuts — a cut is not a movement — but
+     without the punch in; a counter shows its number. */
+  .bestof-shot {
+    animation-name: bestof-shot-still;
+  }
+  .bestof-roll {
+    animation: none;
+    transform: translate3d(0, var(--bestof-roll-to, 0), 0);
   }
   .bestof-stamp,
   .bestof-rays,

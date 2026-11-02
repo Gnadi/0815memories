@@ -430,7 +430,10 @@ describe('buildBestOf', () => {
       })
       const { slides } = buildBestOf({ month: '2026-09', moments })
       const themes = slides.find((s) => s.kind === 'themes').media.map((m) => m.url)
-      const end = slides.slice(slides.findIndex((s) => s.kind === 'dontForget'), -1).map((s) => s.media.url)
+      const montage = slides.find((s) => s.kind === 'montage' || s.kind === 'dontForget')
+      expect(montage).toBeTruthy()
+      const end = [montage.media].flat().map((m) => m.url)
+      expect(end.length).toBeGreaterThan(0)
       expect(end.filter((url) => themes.includes(url))).toEqual([])
     }
   })
@@ -488,6 +491,29 @@ describe('buildBestOf', () => {
 
     const empty = buildBestOf({ month: '2026-09', ...september(), lastYear: { memories: [], moments: [] } })
     expect(empty.slides.some((s) => s.kind === 'yearAgo')).toBe(false)
+  })
+
+  it('ends on a montage of what did not make it, from days not yet shown', () => {
+    const moments = Array.from({ length: 24 }, (_, i) => moment(`d${i + 1}`, i + 1, [uploaded(i + 1, `x${i + 1}`)]))
+    const { slides } = buildBestOf({ month: '2026-09', moments })
+    const montage = slides.find((s) => s.kind === 'montage')
+    expect(montage).toMatchObject({ label: 'dontForget' })
+    expect(montage.media.length).toBeGreaterThanOrEqual(3)
+    expect(montage.media.length).toBeLessThanOrEqual(5)
+    expect(montage.days).toEqual([...montage.days].sort())
+    expect(slides.some((s) => s.kind === 'dontForget')).toBe(false)
+    // Right before the close, and no photo of it shown in the run before.
+    expect(slides.at(-2)).toBe(montage)
+    const shown = slides
+      .filter((s) => ['photo', 'video', 'award', 'collage'].includes(s.kind))
+      .flatMap((s) => [s.media].flat().map((m) => m.url))
+    for (const { url } of montage.media) expect(shown).not.toContain(url)
+  })
+
+  it('looks at one or two leftovers on their own rather than as a montage', () => {
+    const { slides } = buildBestOf({ month: '2026-09', ...september() })
+    const kinds = slides.map((s) => s.kind)
+    expect(kinds).not.toContain('montage')
   })
 
   it('never shows a photo twice in the run of the month', () => {

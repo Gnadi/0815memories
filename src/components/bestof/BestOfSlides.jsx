@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import useCountUp from './useCountUp'
+import KineticText, { RollingNumber } from './KineticText'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, RotateCcw, Trophy } from 'lucide-react'
 import useDecryptedMedia from '../media/useDecryptedMedia'
@@ -60,17 +60,20 @@ export function SlideImage({ media, className = '', style, onReady }) {
 
 // A photo that fills the slide: the thumbnail first, then the original once it
 // has been looked at for a moment — the moments viewer's stage does both.
+// It comes into focus as it arrives, the way a camera pulls focus on a shot.
 export function FullPhoto({ media, onReady, className = 'bestof-zoom', alt = '' }) {
   return (
     <div className={`absolute inset-0 ${className}`}>
-      <CrossfadeImage
-        src={media?.url || ''}
-        thumbSrc={media?.thumbUrl || ''}
-        tinyPreview={media?.tiny || ''}
-        alt={alt}
-        className="absolute inset-0 w-full h-full bg-[var(--bo-dark)]"
-        onSettled={onReady}
-      />
+      <div className="bestof-focus absolute inset-0">
+        <CrossfadeImage
+          src={media?.url || ''}
+          thumbSrc={media?.thumbUrl || ''}
+          tinyPreview={media?.tiny || ''}
+          alt={alt}
+          className="absolute inset-0 w-full h-full bg-[var(--bo-dark)]"
+          onSettled={onReady}
+        />
+      </div>
     </div>
   )
 }
@@ -133,7 +136,6 @@ export function IntroSlide({ slide, labels, onReady }) {
 export function CountSlide({ slide, onReady }) {
   const { t, i18n } = useTranslation('bestOf')
   const total = (slide.photos || 0) + (slide.videos || 0)
-  const shown = useCountUp(total)
   const label = slide.videos > 0 ? t('count.photosAndVideos') : t('count.photos', { count: slide.photos })
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-light)]">
@@ -146,7 +148,7 @@ export function CountSlide({ slide, onReady }) {
       </div>
       <div className="absolute inset-x-0 top-[52%] flex flex-col items-center text-white pointer-events-none">
         <p className="font-black leading-none tabular-nums drop-shadow-lg" style={{ fontSize: 'min(30vw, 9.5rem)' }}>
-          {shown.toLocaleString(i18n.language)}
+          <RollingNumber value={total} locale={i18n.language} />
         </p>
         <p className="bestof-text mt-3 text-2xl sm:text-3xl font-bold drop-shadow" style={{ animationDelay: '0.9s' }}>
           {label}
@@ -187,13 +189,13 @@ export function ThemesSlide({ slide, labels, look, onReady }) {
       ))}
       <div className="absolute inset-x-6 top-[54%] text-center text-[var(--bo-ink)]">
         {slide.themes.map((theme, i) => (
-          <p
+          <KineticText
             key={theme}
-            className={`bestof-text text-3xl sm:text-4xl leading-snug break-words ${titleOf(look, 'font-semibold')}`}
-            style={{ animationDelay: `${0.3 + i * 0.25}s` }}
-          >
-            {theme}
-          </p>
+            text={theme}
+            look={look}
+            delay={0.3 + i * 0.35}
+            className={`text-3xl sm:text-4xl leading-snug break-words ${titleOf(look, 'font-semibold')}`}
+          />
         ))}
         <p
           className="bestof-text mt-1 text-3xl sm:text-4xl leading-snug"
@@ -217,28 +219,33 @@ function ReadyNow({ onReady }) {
 
 // ── The month's photos and clips ────────────────────────────────────────────
 
-export function Caption({ caption, meta, children }) {
+// The caption builds itself up as the look has its words move, and then
+// floats a little, against the photo's own move, so the slide never stands
+// still and the words seem to sit in front of the picture.
+export function Caption({ caption, meta, look, children }) {
   if (!caption && !meta && !children) return null
   return (
     <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
-      {children}
-      {caption && <p className="bestof-text text-xl font-semibold leading-snug drop-shadow" style={{ animationDelay: '0.4s' }}>{caption}</p>}
-      {meta && <p className="bestof-text mt-1 text-sm text-white/80 drop-shadow" style={{ animationDelay: '0.6s' }}>{meta}</p>}
+      <div className="bestof-float">
+        {children}
+        <KineticText text={caption} look={look} delay={0.3} className="text-xl font-semibold leading-snug drop-shadow" />
+        {meta && <p className="bestof-text mt-1 text-sm text-white/80 drop-shadow" style={{ animationDelay: '0.8s' }}>{meta}</p>}
+      </div>
     </div>
   )
 }
 
-export function PhotoSlide({ slide, labels, onReady }) {
+export function PhotoSlide({ slide, labels, look, onReady }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <FullPhoto media={slide.media} onReady={onReady} className={motionClass(slide)} alt={slide.caption || ''} />
       <BottomShade />
-      <Caption caption={slide.caption} meta={labels.meta(slide)} />
+      <Caption caption={slide.caption} meta={labels.meta(slide)} look={look} />
     </div>
   )
 }
 
-export function VideoSlide({ slide, labels, muted, videoRef, onReady, onProgress, onEnded, onFailed }) {
+export function VideoSlide({ slide, labels, look, muted, videoRef, onReady, onProgress, onEnded, onFailed }) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
       <EncryptedVideo
@@ -258,7 +265,7 @@ export function VideoSlide({ slide, labels, muted, videoRef, onReady, onProgress
         onEnded={onEnded}
       />
       <BottomShade />
-      <Caption caption={slide.caption} meta={labels.meta(slide)} />
+      <Caption caption={slide.caption} meta={labels.meta(slide)} look={look} />
     </div>
   )
 }
@@ -271,9 +278,12 @@ export function AwardIntroSlide({ slide, look, onReady }) {
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <SlideImage media={slide.media} onReady={onReady} style={{ filter: 'blur(26px) brightness(0.55)', transform: 'scale(1.2)' }} />
       <div className="absolute inset-0 flex items-center justify-center px-8">
-        <p className={`bestof-text text-white text-center text-[2rem] sm:text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`}>
-          {t(`awardIntro.${slide.award}`)}
-        </p>
+        <KineticText
+          text={t(`awardIntro.${slide.award}`)}
+          look={look}
+          delay={0.2}
+          className={`text-white text-center text-[2rem] sm:text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`}
+        />
       </div>
     </div>
   )
@@ -281,47 +291,54 @@ export function AwardIntroSlide({ slide, look, onReady }) {
 
 // What an award was given for. On a light card (`light`) it goes without the
 // shadows that keep it readable over a photo.
-export function AwardDetail({ slide, labels, light = false }) {
+export function AwardDetail({ slide, labels, look, light = false }) {
   const { t } = useTranslation('bestOf')
-  const big = `bestof-text text-3xl sm:text-4xl font-bold leading-tight break-words ${light ? '' : 'drop-shadow-lg'}`
+  const big = (text) => (
+    <KineticText
+      text={text}
+      look={look}
+      delay={0.8}
+      className={`text-3xl sm:text-4xl font-bold leading-tight break-words ${light ? '' : 'drop-shadow-lg'}`}
+    />
+  )
   const small = `bestof-text mt-1 text-sm ${light ? 'text-[var(--bo-ink-soft)]' : 'text-white/85 drop-shadow'}`
   switch (slide.award) {
     case 'place':
       return (
         <>
-          <p className={big} style={{ animationDelay: '0.8s' }}>{slide.place}</p>
+          {big(slide.place)}
           <p className={small} style={{ animationDelay: '1s' }}>{t('award.entries', { count: slide.entries })}</p>
         </>
       )
     case 'busiestDay':
       return (
         <>
-          <p className={big} style={{ animationDelay: '0.8s' }}>{labels.longDay(slide.day)}</p>
+          {big(labels.longDay(slide.day))}
           <p className={small} style={{ animationDelay: '1s' }}>
             {t(slide.videos ? 'award.dayMedia' : 'award.dayPhotos', { count: slide.count })}
           </p>
         </>
       )
     case 'story':
-      return slide.caption ? <p className={big} style={{ animationDelay: '0.8s' }}>{slide.caption}</p> : null
+      return slide.caption ? big(slide.caption) : null
     case 'weekend':
       return (
         <>
-          <p className={big} style={{ animationDelay: '0.8s' }}>{labels.range(slide.from, slide.to)}</p>
+          {big(labels.range(slide.from, slide.to))}
           <p className={small} style={{ animationDelay: '1s' }}>{t('award.weekendMedia', { count: slide.count })}</p>
         </>
       )
     case 'streak':
       return (
         <>
-          <p className={big} style={{ animationDelay: '0.8s' }}>{t('award.streakDays', { count: slide.days })}</p>
+          {big(t('award.streakDays', { count: slide.days }))}
           <p className={small} style={{ animationDelay: '1s' }}>{labels.range(slide.from, slide.to)}</p>
         </>
       )
     case 'theme':
       return (
         <>
-          <p className={big} style={{ animationDelay: '0.8s' }}>{slide.theme}</p>
+          {big(slide.theme)}
           <p className={small} style={{ animationDelay: '1s' }}>{t('award.themeEntries', { count: slide.entries })}</p>
         </>
       )
@@ -335,7 +352,7 @@ export function AwardDetail({ slide, labels, light = false }) {
   }
 }
 
-export function AwardSlide({ slide, labels, onReady }) {
+export function AwardSlide({ slide, labels, look, onReady }) {
   const { t } = useTranslation('bestOf')
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
@@ -346,7 +363,7 @@ export function AwardSlide({ slide, labels, onReady }) {
           <Trophy className="w-4 h-4 text-[var(--bo-trophy)]" aria-hidden="true" />
           {t(`award.${slide.award}`)}
         </span>
-        <AwardDetail slide={slide} labels={labels} />
+        <AwardDetail slide={slide} labels={labels} look={look} />
       </div>
     </div>
   )
@@ -362,9 +379,12 @@ export function DontForgetSlide({ slide, labels, look, onReady }) {
       <BottomShade />
       <div className="absolute inset-x-0 bottom-0 px-6 pb-12 text-white pointer-events-none">
         <p className="bestof-text text-lg text-white/90 drop-shadow">{t('dontForget')}</p>
-        <p className={`bestof-text mt-1 text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`} style={{ animationDelay: '0.4s' }}>
-          {labels.title}
-        </p>
+        <KineticText
+          text={labels.title}
+          look={look}
+          delay={0.4}
+          className={`mt-1 text-4xl leading-tight drop-shadow-lg ${titleOf(look, 'font-semibold')}`}
+        />
       </div>
     </div>
   )
@@ -420,7 +440,7 @@ export function OutroSlide({ slide, labels, look, onReady, onRestart, onRemake }
       ))}
       {!media.some(Boolean) && <ReadyNow onReady={onReady} />}
       <div className="absolute inset-x-6 top-[60%] text-center text-[var(--bo-ink)]">
-        <p className={`bestof-text text-4xl sm:text-5xl leading-tight ${titleOf(look)}`} style={{ animationDelay: '0.5s' }}>{labels.title}</p>
+        <KineticText text={labels.title} look={look} delay={0.5} className={`text-4xl sm:text-5xl leading-tight ${titleOf(look)}`} />
         <p className="bestof-text mt-2 text-lg text-[var(--bo-ink-soft)]" style={{ animationDelay: '0.7s' }}>{t('outro.seeYou')}</p>
         <div className="relative z-30 mt-8 flex flex-col items-center gap-3">
           <button

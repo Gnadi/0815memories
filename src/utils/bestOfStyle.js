@@ -24,8 +24,9 @@ export const ORDERS = ['classic', 'countdown', 'numbersLast']
 export const FEATURES = ['calendar', 'rhythm', 'places', 'bookends']
 
 /**
- * The collages each size of beat may become, in turn, and the camera moves of
- * single photos, in turn. Every size of three or four has at least two
+ * The collages each size of beat may become, in turn — `montage` being the
+ * album's photos in quick cuts rather than side by side — and the camera moves
+ * of single photos, in turn. Every size of three or four has at least two
  * layouts, so two collages in a row need not look alike.
  *
  * `order` is how the story is put together (buildBestOf):
@@ -52,19 +53,19 @@ export const STYLES = {
   },
   cinema: {
     motions: ['panLeft', 'panRight', 'zoomIn', 'diagonal', 'panUp'],
-    layouts: { 2: ['duo', 'diagonal'], 3: ['strip', 'trio'], 4: ['strip', 'grid'] },
+    layouts: { 2: ['duo', 'diagonal'], 3: ['strip', 'montage', 'trio'], 4: ['strip', 'grid', 'montage'] },
     order: 'countdown',
     features: ['bookends', 'rhythm'],
   },
   magazine: {
     motions: ['zoomOut', 'panUp', 'zoomIn', 'panLeft', 'panDown'],
-    layouts: { 2: ['diagonal', 'duo'], 3: ['mosaic', 'trio'], 4: ['mosaic', 'grid'] },
+    layouts: { 2: ['diagonal', 'duo'], 3: ['mosaic', 'montage', 'trio'], 4: ['mosaic', 'grid', 'montage'] },
     order: 'numbersLast',
     features: ['places', 'rhythm', 'calendar'],
   },
   festival: {
     motions: ['zoomIn', 'tilt', 'panRight', 'zoomOut', 'panLeft', 'diagonal'],
-    layouts: { 2: ['duo', 'diagonal'], 3: ['trio', 'polaroids', 'mosaic'], 4: ['grid', 'polaroids', 'mosaic'] },
+    layouts: { 2: ['duo', 'diagonal'], 3: ['trio', 'montage', 'polaroids', 'mosaic'], 4: ['grid', 'montage', 'polaroids', 'mosaic'] },
     order: 'countdown',
     features: ['calendar', 'places'],
   },
@@ -76,7 +77,7 @@ export const STYLES = {
   },
   mosaic: {
     motions: ['zoomIn', 'diagonal', 'zoomOut', 'panLeft'],
-    layouts: { 2: ['diagonal'], 3: ['mosaic', 'trio'], 4: ['mosaic', 'grid'] },
+    layouts: { 2: ['diagonal'], 3: ['mosaic', 'montage', 'trio'], 4: ['mosaic', 'grid', 'montage'] },
     order: 'numbersLast',
     features: ['places', 'calendar', 'rhythm'],
   },
