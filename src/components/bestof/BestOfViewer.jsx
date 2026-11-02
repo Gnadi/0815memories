@@ -106,6 +106,9 @@ const CLIP_FALLBACK_BEATS = SLIDE_BEATS.photo
 // loaded must not stop the story.
 const READY_TIMEOUT_MS = 3000
 
+// The crossfade that stands in for every cut when less motion is asked for.
+const STILL_CUT_MS = 400
+
 // One slide comes in over the next as the look has it (bestOfLooks.js), and
 // the one being left stays mounted beneath until that is over.
 
@@ -200,8 +203,11 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
 
   // The look's cuts take turns, one per cut: the cut away from a visit is the
   // look's cut of that number.
-  const cut = useMemo(() => (leaving ? transitionAt(look, leaving.visit) : null), [leaving, look])
-  const cutMs = useMemo(() => (cut ? transitionMs(cut, beatMs) : 0), [cut, beatMs])
+  // For someone who asked for less motion every cut is a short crossfade
+  // (bestOf.css), long enough for the new slide's photo to be in before the
+  // one beneath it goes.
+  const cut = useMemo(() => (leaving ? (still ? 'fade' : transitionAt(look, leaving.visit)) : null), [leaving, look, still])
+  const cutMs = useMemo(() => (cut ? (still ? STILL_CUT_MS : transitionMs(cut, beatMs)) : 0), [cut, beatMs, still])
   useEffect(() => {
     if (!leaving) return
     const timer = setTimeout(() => setLeaving(null), cutMs + 50)

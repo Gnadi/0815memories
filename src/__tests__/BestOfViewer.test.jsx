@@ -710,4 +710,28 @@ describe('BestOfViewer', () => {
       expect(within(current()).getByTestId('bestof-rolling').querySelectorAll('.bestof-roll')).toHaveLength(2)
     })
   })
+
+  it('crossfades every cut for someone who asked for less motion, keeping the slide being left beneath', () => {
+    const matchMedia = window.matchMedia
+    window.matchMedia = (query) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+    try {
+      render(<BestOfViewer bestOf={{ ...BEST_OF, style: 'cinema' }} onClose={() => {}} />)
+      tap(0.8)
+      tap(0.8)
+      expect(current().dataset.cut).toBe('fade')
+      expect(current().className).toContain('bestof-enter-fade')
+      expect(current().style.animationDuration).toBe('400ms')
+      const slidesOnStage = () => stage().querySelectorAll(':scope > div.absolute.inset-0:not(.z-10)').length
+      act(() => vi.advanceTimersByTime(350))
+      expect(slidesOnStage()).toBe(2)
+      act(() => vi.advanceTimersByTime(150))
+      expect(slidesOnStage()).toBe(1)
+    } finally {
+      window.matchMedia = matchMedia
+    }
+  })
 })

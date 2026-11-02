@@ -585,7 +585,6 @@
   .bestof-text,
   .bestof-reveal,
   .bestof-badge,
-  .bestof-enter,
   .bestof-motion-zoomIn,
   .bestof-motion-zoomOut,
   .bestof-motion-panLeft,
@@ -615,7 +614,15 @@
     animation: none;
     display: none;
   }
-  .bestof-enter[class*='bestof-enter-'],
+  /* Every cut is a short crossfade instead, the slide being left showing
+     beneath until the new one is in: a fade moves nothing, and a hard cut
+     would show the new slide empty for a moment before its photo arrives,
+     a flash of its background at every step. */
+  .bestof-enter,
+  .bestof-enter[class*='bestof-enter-'] {
+    animation-name: bestof-enter;
+    animation-timing-function: ease-out;
+  }
   .bestof-exit {
     animation: none;
   }
@@ -630,9 +637,13 @@
   .bestof-kt-write,
   .bestof-grain,
   .bestof-leak-a,
-  .bestof-leak-b,
+  .bestof-leak-b {
+    animation: none;
+  }
+  /* A flicker held still would be a black veil over everything. */
   .bestof-flicker {
     animation: none;
+    display: none;
   }
   /* Without motion, a montage still cuts — a cut is not a movement — but
      without the punch in; a counter shows its number. */
