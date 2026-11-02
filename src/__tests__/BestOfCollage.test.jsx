@@ -49,6 +49,12 @@ describe('CollageSlide', () => {
     ['polaroids', 4, 4],
     ['strip', 3, 3],
     ['strip', 4, 4],
+    ['mosaic', 3, 3],
+    ['mosaic', 4, 4],
+    ['diagonal', 2, 2],
+    ['diagonal', 3, 3],
+    ['pinboard', 3, 3],
+    ['pinboard', 4, 4],
   ])('lays out a %s of %i photos in %i tiles', (layout, n, expected) => {
     render(<CollageSlide slide={collage(layout, n)} labels={labels} onReady={() => {}} />)
     expect(layoutShown()).toBe(layout)
@@ -64,13 +70,16 @@ describe('CollageSlide', () => {
     ['grid', 4],
     ['polaroids', 4],
     ['strip', 4],
+    ['mosaic', 4],
+    ['diagonal', 3],
+    ['pinboard', 4],
   ])('leaves out photos beyond what a %s holds', (layout, max) => {
     render(<CollageSlide slide={collage(layout, 6)} labels={labels} onReady={() => {}} />)
     expect(layoutShown()).toBe(layout)
     expect(tiles()).toHaveLength(max)
   })
 
-  it.each(['duo', 'trio', 'grid', 'polaroids', 'strip'])(
+  it.each(['duo', 'trio', 'grid', 'polaroids', 'strip', 'mosaic', 'diagonal', 'pinboard'])(
     'says a %s is ready once its first tile’s photo is in, and only once',
     (layout) => {
       const onReady = vi.fn()
@@ -109,6 +118,21 @@ describe('CollageSlide', () => {
     render(<CollageSlide slide={collage('someday-a-new-layout', 5)} labels={labels} onReady={() => {}} />)
     expect(layoutShown()).toBe('grid')
     expect(tiles()).toHaveLength(4)
+  })
+
+  it('cuts the bands of a diagonal on a slant, and keeps them apart', () => {
+    render(<CollageSlide slide={collage('diagonal', 2)} labels={labels} onReady={() => {}} />)
+    const clips = tiles().map((tile) => tile.style.clipPath)
+    expect(clips.every((clip) => clip.startsWith('polygon('))).toBe(true)
+    expect(new Set(clips).size).toBe(2)
+  })
+
+  it('makes a duo of a mosaic or a pinboard with two photos', () => {
+    render(<CollageSlide slide={collage('mosaic', 2)} labels={labels} onReady={() => {}} />)
+    expect(layoutShown()).toBe('duo')
+    cleanup()
+    render(<CollageSlide slide={collage('pinboard', 2)} labels={labels} onReady={() => {}} />)
+    expect(layoutShown()).toBe('duo')
   })
 
   it('shows a single photo as a photo slide, pushing in', () => {

@@ -23,9 +23,12 @@
  * who opens a best-of nobody has saved yet sees what an admin would save.
  */
 import { thumbAt, tinyPreviewAt } from './mediaThumbs'
+import { MOTIONS, styleAt, styleOf } from './bestOfStyle'
+
+export { MOTIONS }
 
 /** Bumped when the composition changes enough that a saved best-of is stale. */
-export const BEST_OF_VERSION = 1
+export const BEST_OF_VERSION = 2
 
 /**
  * Fewer photos and clips than this, or no photo among them, and a month has no
@@ -51,17 +54,6 @@ const MIN_PLACE_ENTRIES = 2
 
 export const AWARDS = ['place', 'busiestDay', 'story']
 
-// How a single photo moves, in turn, so no two in a row move the same way.
-export const MOTIONS = ['zoomIn', 'panLeft', 'zoomOut', 'panRight', 'panUp']
-
-// Which collage a beat of so many photos becomes, in turn: three photos are
-// a trio, then polaroids, then a film strip, and round again.
-const LAYOUTS = {
-  2: ['duo'],
-  3: ['trio', 'polaroids', 'strip'],
-  4: ['grid', 'polaroids', 'strip'],
-}
-
 // ── Months ──────────────────────────────────────────────────────────────────
 
 const MONTH_KEY = /^(\d{4})-(0[1-9]|1[0-2])$/
@@ -81,6 +73,15 @@ export function isMonthKey(value) {
 export function parseMonthKey(key) {
   const match = typeof key === 'string' ? MONTH_KEY.exec(key) : null
   return match ? { year: Number(match[1]), month: Number(match[2]) - 1 } : null
+}
+
+/**
+ * The style the best-of of a month is told in (utils/bestOfStyle.js): each
+ * month the next one, so no two months in a row look alike.
+ */
+export function styleForMonth(key) {
+  const parsed = parseMonthKey(key)
+  return parsed ? styleAt(parsed.year * 12 + parsed.month) : 'classic'
 }
 
 /** [start, end) of the month, local time. */
@@ -462,6 +463,8 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   const media = collectMedia({ memories, moments })
   if (!hasEnoughForBestOf(media)) return null
 
+  const style = styleForMonth(month)
+  const { motions: moves, layouts: layoutsBySize } = styleOf(style)
   const photos = media.filter((m) => m.type === 'image')
   const videos = media.filter((m) => m.type === 'video')
   const scores = new Map(photos.map((p) => [p.url, scorePhoto(p)]))
@@ -475,12 +478,15 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   const cover = ranked[0]
 
   // The month's moments, in the order they happened, with a few clips among
-  // them. Single photos and collages take turns at their moves and layouts.
+  // them. Single photos and collages take turns at the moves and layouts of
+  // the month's style, single photos starting from a different move each
+  // month, so that even a style's second outing does not open the same way.
   const beats = chooseBeats(photos, scores, used)
   const clips = spread(videos, MAX_VIDEOS)
   for (const clip of clips) used.add(clip.url)
 
-  let motions = 0
+  const { year = 0, month: monthIndex = 0 } = parseMonthKey(month) || {}
+  let motions = year + monthIndex
   const turns = { 2: 0, 3: 0, 4: 0 }
   let lastLayout = null
   const photoSlide = (item, kind = 'photo') => ({
@@ -489,13 +495,13 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
     caption: item.caption,
     location: item.location,
     day: item.day,
-    motion: MOTIONS[motions++ % MOTIONS.length],
+    motion: moves[motions++ % moves.length],
   })
   const beatSlide = (beat) => {
     if (beat.length === 1) return photoSlide(beat[0])
     // Sizes take their turns apart, and polaroids and strips come in two of
     // them, so a collage of three after one of four could repeat its layout.
-    const layouts = LAYOUTS[beat.length]
+    const layouts = layoutsBySize[beat.length]
     let layout = layouts[turns[beat.length]++ % layouts.length]
     if (layout === lastLayout && layouts.length > 1) layout = layouts[turns[beat.length]++ % layouts.length]
     lastLayout = layout
@@ -573,6 +579,7 @@ export function buildBestOf({ month, memories = [], moments = [] }) {
   return {
     version: BEST_OF_VERSION,
     month,
+    style,
     cover: slideMedia(cover),
     counts: { photos: photos.length, videos: videos.length },
     awards: awards.map((a) => a.award),

@@ -15,7 +15,9 @@ import {
   monthRange,
   parseMonthKey,
   scorePhoto,
+  styleForMonth,
 } from '../utils/bestOf'
+import { STYLES, STYLE_ORDER } from '../utils/bestOfStyle'
 import { BEST_OF_MIN_MEDIA, familiesWithBestOf } from '../../functions/bestOf.js'
 
 const day = (d, h = 12) => new Date(2026, 8, d, h) // September 2026
@@ -274,13 +276,51 @@ describe('buildBestOf', () => {
   it('makes an album a collage, and moves single photos in turn', () => {
     const bestOf = buildBestOf({ month: '2026-09', ...september() })
     const collage = bestOf.slides.find((s) => s.kind === 'collage' && s.day === '2026-09-20')
-    expect(collage).toMatchObject({ layout: 'duo', caption: 'Memory bday', location: 'Home' })
+    expect(collage).toMatchObject({ caption: 'Memory bday', location: 'Home' })
+    expect(STYLES[bestOf.style].layouts[2]).toContain(collage.layout)
     expect(collage.media.map((m) => m.url)).toEqual(['bday1', 'bday2'])
 
     const moves = bestOf.slides.filter((s) => s.kind === 'photo' || s.kind === 'dontForget').map((s) => s.motion)
     expect(moves.length).toBeGreaterThan(1)
-    for (const move of moves) expect(MOTIONS).toContain(move)
+    for (const move of moves) expect(STYLES[bestOf.style].motions).toContain(move)
     for (let i = 1; i < moves.length; i++) expect(moves[i]).not.toBe(moves[i - 1])
+  })
+
+  it('tells every month in a style, and the next month in another', () => {
+    const months = Array.from({ length: 30 }, (_, i) => `${2026 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
+    const styles = months.map(styleForMonth)
+    for (const style of styles) expect(STYLE_ORDER).toContain(style)
+    // Seven months in a row, seven styles.
+    for (let i = 0; i + 7 <= styles.length; i++) expect(new Set(styles.slice(i, i + 7)).size).toBe(7)
+    // And the same month a year later looks different too.
+    for (let i = 0; i + 12 < styles.length; i++) expect(styles[i + 12]).not.toBe(styles[i])
+    expect(styleForMonth('not a month')).toBe('classic')
+
+    expect(buildBestOf({ month: '2026-09', ...september() }).style).toBe(styleForMonth('2026-09'))
+  })
+
+  it('uses only the moves and layouts of the month’s style', () => {
+    const memories = [2, 3, 4, 1, 3, 4, 2, 1].map((n, i) =>
+      memory(`album${i}`, 1 + i * 3, Array.from({ length: n }, (_, j) => `s${i}-${j}`)),
+    )
+    for (let m = 1; m <= 12; m++) {
+      const month = `2027-${String(m).padStart(2, '0')}`
+      const shifted = memories.map((entry) => ({ ...entry, date: new Date(2027, m - 1, entry.date.getDate()) }))
+      const bestOf = buildBestOf({ month, memories: shifted })
+      const { motions, layouts } = STYLES[bestOf.style]
+      for (const slide of bestOf.slides) {
+        if (slide.motion) expect(motions).toContain(slide.motion)
+        if (slide.kind === 'collage') expect(layouts[slide.media.length]).toContain(slide.layout)
+      }
+    }
+  })
+
+  it('has moves every viewer knows and two layouts at least for three and four photos', () => {
+    for (const { motions, layouts } of Object.values(STYLES)) {
+      for (const move of motions) expect(MOTIONS).toContain(move)
+      expect(layouts[3].length).toBeGreaterThan(1)
+      expect(layouts[4].length).toBeGreaterThan(1)
+    }
   })
 
   it('varies the layout of collages of the same size', () => {

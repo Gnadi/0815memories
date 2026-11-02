@@ -19,6 +19,9 @@ const LAYOUT_SIZES = {
   grid: [4, 4],
   polaroids: [3, 4],
   strip: [3, 4],
+  mosaic: [3, 4],
+  diagonal: [2, 3],
+  pinboard: [3, 4],
 }
 
 // The strip is the one layout whose photos only come into view by moving, so
@@ -58,6 +61,36 @@ const GRID = [
   { left: 51, top: 50.6, width: 45, height: 44.4, enter: 'bestof-tile-pop', delay: 0.6 },
 ]
 
+// One big photo and the others beside it, or under it: a magazine's page.
+const MOSAIC = {
+  3: [
+    { left: 3, top: 4, width: 57, height: 92, enter: 'bestof-tile-left', motion: 'bestof-motion-panUp' },
+    { left: 62, top: 4, width: 35, height: 45, enter: 'bestof-tile-right', delay: 0.25, motion: 'bestof-tile-drift' },
+    { left: 62, top: 51, width: 35, height: 45, enter: 'bestof-tile-right', delay: 0.45, motion: 'bestof-tile-drift', drift: -3 },
+  ],
+  4: [
+    { left: 3, top: 4, width: 94, height: 50, enter: 'bestof-tile-pop', motion: 'bestof-motion-zoomIn' },
+    { left: 3, top: 55.5, width: 30, height: 40.5, enter: 'bestof-tile-pop', delay: 0.3, motion: 'bestof-tile-drift' },
+    { left: 35, top: 55.5, width: 30, height: 40.5, enter: 'bestof-tile-pop', delay: 0.45, motion: 'bestof-tile-drift', drift: -2 },
+    { left: 67, top: 55.5, width: 30, height: 40.5, enter: 'bestof-tile-pop', delay: 0.6, motion: 'bestof-tile-drift', drift: -4 },
+  ],
+}
+
+// Bands across the whole slide, cut on a slant. Every band is as large as the
+// slide and shows only its own share, so each photo is framed as if it filled
+// it, and the slanted gaps between them are the background.
+const DIAGONAL = {
+  2: [
+    { left: 0, top: 0, width: 100, height: 100, enter: 'bestof-tile-left', motion: 'bestof-motion-panRight', clip: 'polygon(0 0, 100% 0, 100% 41%, 0 57%)' },
+    { left: 0, top: 0, width: 100, height: 100, enter: 'bestof-tile-right', delay: 0.25, motion: 'bestof-motion-panLeft', clip: 'polygon(0 59%, 100% 43%, 100% 100%, 0 100%)' },
+  ],
+  3: [
+    { left: 0, top: 0, width: 100, height: 100, enter: 'bestof-tile-left', motion: 'bestof-motion-panRight', clip: 'polygon(0 0, 100% 0, 100% 26%, 0 38%)' },
+    { left: 0, top: 0, width: 100, height: 100, enter: 'bestof-tile-right', delay: 0.25, motion: 'bestof-motion-panLeft', clip: 'polygon(0 40%, 100% 28%, 100% 62%, 0 74%)' },
+    { left: 0, top: 0, width: 100, height: 100, enter: 'bestof-tile-left', delay: 0.5, motion: 'bestof-motion-panRight', clip: 'polygon(0 76%, 100% 64%, 100% 100%, 0 100%)' },
+  ],
+}
+
 // One photo in its frame. The frame makes the entrance and the photo inside
 // it the slow move: both are transforms, and on one element the second
 // animation would replace the first. `isolate`, because Safari otherwise lets
@@ -66,13 +99,14 @@ function Tile({ spot, media, rounded, onReady }) {
   return (
     <div
       data-testid="bestof-tile"
-      className={`absolute isolate overflow-hidden shadow-xl ${rounded} ${spot.enter || ''}`}
+      className={`absolute isolate overflow-hidden ${spot.clip ? '' : `shadow-xl ${rounded}`} ${spot.enter || ''}`}
       style={{
         left: `${spot.left}%`,
         top: `${spot.top}%`,
         width: `${spot.width}%`,
         height: `${spot.height}%`,
         animationDelay: spot.delay ? `${spot.delay}s` : undefined,
+        clipPath: spot.clip,
       }}
     >
       <div
@@ -143,6 +177,48 @@ function Polaroids({ photos, onReady }) {
   )
 }
 
+// Prints pinned to a board with a strip of tape each, nearly straight: a
+// diary's page rather than a table. They pop up one after another.
+const PINBOARD = {
+  3: [
+    { left: 6, top: 11, width: 50, tilt: -3, delay: 0 },
+    { left: 46, top: 27, width: 48, tilt: 4, delay: 0.3 },
+    { left: 12, top: 50, width: 52, tilt: -2, delay: 0.6 },
+  ],
+  4: [
+    { left: 5, top: 10, width: 46, tilt: -4, delay: 0 },
+    { left: 50, top: 13, width: 45, tilt: 3, delay: 0.25 },
+    { left: 8, top: 44, width: 44, tilt: 2, delay: 0.5 },
+    { left: 49, top: 47, width: 46, tilt: -3, delay: 0.75 },
+  ],
+}
+
+function Pinboard({ photos, onReady }) {
+  return (
+    <div className="bestof-board absolute inset-0 bg-[var(--bo-light-2)]">
+      {PINBOARD[photos.length].map((card, i) => (
+        <div
+          key={i}
+          data-testid="bestof-tile"
+          className="bestof-tile-pop absolute"
+          style={{ left: `${card.left}%`, top: `${card.top}%`, width: `${card.width}%`, animationDelay: `${card.delay}s` }}
+        >
+          <div className="relative bg-warm-white p-[4%] shadow-xl" style={{ rotate: `${card.tilt}deg` }}>
+            <div className="relative aspect-[4/5] overflow-hidden bg-cream-dark">
+              <SlideImage media={photos[i]} onReady={i === 0 ? onReady : undefined} />
+            </div>
+            <span
+              aria-hidden="true"
+              className="absolute left-1/2 -top-3 h-6 w-[38%] -translate-x-1/2 bg-white/60 shadow-sm"
+              style={{ rotate: `${-card.tilt * 1.5}deg` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // A film strip running right to left. Its frames are wider than half the
 // slide, so it has to travel for every photo to pass through: from the first
 // frame in the middle to the last. The track is as wide as the slide, which
@@ -178,7 +254,7 @@ export function CollageSlide({ slide, labels, onReady }) {
   const photos = layout ? all.slice(0, LAYOUT_SIZES[layout][1]) : []
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#141a2e]" data-layout={layout || 'empty'}>
+    <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]" data-layout={layout || 'empty'}>
       {layout === 'duo' && <Tiles spots={DUO} photos={photos} onReady={onReady} />}
       {layout === 'trio' && <Tiles spots={TRIO} photos={photos} onReady={onReady} />}
       {layout === 'grid' && (
@@ -188,6 +264,9 @@ export function CollageSlide({ slide, labels, onReady }) {
       )}
       {layout === 'polaroids' && <Polaroids photos={photos} onReady={onReady} />}
       {layout === 'strip' && <Strip photos={photos} onReady={onReady} />}
+      {layout === 'mosaic' && <Tiles spots={MOSAIC[photos.length]} photos={photos} rounded="rounded-2xl" onReady={onReady} />}
+      {layout === 'diagonal' && <Tiles spots={DIAGONAL[photos.length]} photos={photos} onReady={onReady} />}
+      {layout === 'pinboard' && <Pinboard photos={photos} onReady={onReady} />}
       <BottomShade />
       <Caption caption={slide.caption} meta={labels.meta(slide)} />
     </div>

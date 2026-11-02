@@ -58,6 +58,8 @@ vi.mock('../utils/bestOfMusic', () => ({
 }))
 
 import BestOfViewer from '../components/bestof/BestOfViewer'
+import { LOOKS, TRANSITION_MS } from '../components/bestof/bestOfLooks'
+import { STYLE_ORDER } from '../utils/bestOfStyle'
 
 const media = (url) => ({ url, thumbUrl: `${url}-t` })
 
@@ -433,6 +435,83 @@ describe('BestOfViewer', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Music on' }))
       expect(audio.soundtracks).toHaveLength(1)
       expect(audio.soundtracks[0].pause).toHaveBeenCalled()
+    })
+  })
+
+  describe('looks', () => {
+    const styled = (style) => ({ ...BEST_OF, style })
+    // The slides on stage, not what the look lays over them.
+    const leavingCount = () => stage().querySelectorAll(':scope > div.absolute.inset-0:not(.z-10)').length
+    const controls = () => screen.getByText('Best of September').parentElement
+
+    it('has the classic look without a style, or with one it does not know', () => {
+      for (const style of [undefined, 'someday-a-new-style']) {
+        render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+        expect(screen.getByText('SEP')).toBeInTheDocument()
+        expect(stage().style.getPropertyValue('--bo-dark')).toBe(LOOKS.classic.colors.dark)
+        tap(0.8)
+        expect(current().className).toContain('bestof-enter-fade')
+        cleanup()
+      }
+    })
+
+    it.each(STYLE_ORDER)('opens and plays a best-of in the %s look', (style) => {
+      const look = LOOKS[style]
+      render(<BestOfViewer bestOf={styled(style)} onClose={() => {}} />)
+      expect(stage().dataset.style).toBe(style)
+      expect(stage().style.getPropertyValue('--bo-accent')).toBe(look.colors.accent)
+      expect(kind()).toBe('intro')
+      // Every opening card names the month, one way or another.
+      expect(within(current()).queryAllByText(/^(SEP|September|September 2026)$/).length).toBeGreaterThan(0)
+
+      tap(0.8)
+      expect(kind()).toBe('count')
+      expect(current().className).toContain(`bestof-enter-${look.transition}`)
+      expect(current().style.animationDuration).toBe(`${TRANSITION_MS[look.transition]}ms`)
+      // The slide being left stays until the look's transition is over.
+      act(() => vi.advanceTimersByTime(TRANSITION_MS[look.transition] - 100))
+      expect(leavingCount()).toBe(2)
+      act(() => vi.advanceTimersByTime(200))
+      expect(leavingCount()).toBe(1)
+
+      tapUntil('outro')
+      expect(current().querySelector('[data-outro]').dataset.outro).toBe(look.outro)
+    })
+
+    it('frames a film in black bars, and keeps its controls white on its dark cards', () => {
+      render(<BestOfViewer bestOf={styled('cinema')} onClose={() => {}} />)
+      expect(screen.getByTestId('bestof-letterbox')).toBeInTheDocument()
+      tapUntil('count')
+      expect(controls().className).toContain('text-white')
+      cleanup()
+      render(<BestOfViewer bestOf={styled('polaroid')} onClose={() => {}} />)
+      expect(screen.queryByTestId('bestof-letterbox')).toBeNull()
+      tapUntil('count')
+      expect(controls().className).not.toContain('text-white')
+    })
+
+    it('throws confetti for an award in the festival look, and nowhere else', () => {
+      render(<BestOfViewer bestOf={styled('festival')} onClose={() => {}} />)
+      tapUntil('awardIntro')
+      expect(screen.queryByTestId('bestof-confetti')).toBeNull()
+      tap(0.8)
+      expect(kind()).toBe('award')
+      expect(screen.getByTestId('bestof-confetti')).toBeInTheDocument()
+      cleanup()
+      render(<BestOfViewer bestOf={styled('magazine')} onClose={() => {}} />)
+      tapUntil('award')
+      expect(screen.queryByTestId('bestof-confetti')).toBeNull()
+    })
+
+    it('lays the diary’s paper over its light cards only', () => {
+      render(<BestOfViewer bestOf={styled('diary')} onClose={() => {}} />)
+      expect(stage().querySelector('.bestof-paper')).toBeNull()
+      expect(screen.getByTestId('bestof-calendar')).toBeInTheDocument()
+      tap(0.8)
+      expect(kind()).toBe('count')
+      expect(stage().querySelector('.bestof-paper')).not.toBeNull()
+      tap(0.8)
+      expect(stage().querySelector('.bestof-paper')).toBeNull()
     })
   })
 })

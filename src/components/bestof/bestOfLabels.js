@@ -14,6 +14,12 @@ export function bestOfLabels(month, lang, t) {
   }
   return {
     monthName,
+    // For the diary's calendar page: how many days, which weekday the first
+    // falls on with the week starting on Monday, and the weekdays' initials.
+    daysInMonth: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(),
+    firstWeekday: (date.getDay() + 6) % 7,
+    // 1 January 2024 was a Monday.
+    weekdays: Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })),
     monthYear: date.toLocaleDateString(lang, { month: 'long', year: 'numeric' }),
     // "SEPT", "SEP": the opening card's big word, without the abbreviation's dot.
     monthShort: date.toLocaleDateString(lang, { month: 'short' }).replace(/\.$/, '').toUpperCase(),

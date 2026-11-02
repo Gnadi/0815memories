@@ -15,12 +15,13 @@ import {
 } from '../../utils/audioContext'
 import { beatMs as beatMsOf, createSoundtrack, trackForMonth } from '../../utils/bestOfMusic'
 import { bestOfLabels } from './bestOfLabels'
+import { LIGHT_INTROS, TRANSITION_MS, lookOf, lookVars } from './bestOfLooks'
+import { StyledIntro } from './BestOfIntros'
 import {
   AwardIntroSlide,
   AwardSlide,
   CountSlide,
   DontForgetSlide,
-  IntroSlide,
   OutroSlide,
   PhotoSlide,
   ThemesSlide,
@@ -30,7 +31,7 @@ import { CollageSlide } from './BestOfCollage'
 import './bestOf.css'
 
 const SLIDES = {
-  intro: IntroSlide,
+  intro: StyledIntro,
   count: CountSlide,
   themes: ThemesSlide,
   photo: PhotoSlide,
@@ -42,8 +43,15 @@ const SLIDES = {
   outro: OutroSlide,
 }
 
-// Slides drawn on white, which want the controls in dark.
+// Slides drawn on white, which want the controls in dark — unless the look
+// draws them dark too, as the cinema's does. Which opening card is light
+// depends on the look.
 const LIGHT_SLIDES = new Set(['count', 'themes', 'outro'])
+
+function isLight(slide, look) {
+  if (!slide || look.darkSurfaces) return false
+  return slide.kind === 'intro' ? LIGHT_INTROS.has(look.intro) : LIGHT_SLIDES.has(slide.kind)
+}
 
 // How long each kind stays up, in beats of the month's track, so the story
 // keeps the music's pace — though not its beat: a slide's clock starts once its
@@ -82,9 +90,8 @@ const CLIP_FALLBACK_BEATS = SLIDE_BEATS.photo
 // loaded must not stop the story.
 const READY_TIMEOUT_MS = 3000
 
-// One slide fades into the next over this long; the one being left stays
-// mounted beneath until then. Keep in step with .bestof-enter in bestOf.css.
-const CROSSFADE_MS = 450
+// One slide comes in over the next as the look has it (bestOfLooks.js), and
+// the one being left stays mounted beneath until that is over.
 
 // How the music winds down: quickly when the story is closed, slowly when it
 // has reached its end card and is just sitting there.
@@ -122,6 +129,10 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const labels = useMemo(() => bestOfLabels(bestOf.month, i18n.language, t), [bestOf.month, i18n.language, t])
   const track = useMemo(() => trackForMonth(bestOf.month), [bestOf.month])
   const beatMs = beatMsOf(track)
+  // The look of the best-of's style: one saved before there were styles, or
+  // with a style this version does not know, gets the classic one.
+  const look = useMemo(() => lookOf(bestOf.style), [bestOf.style])
+  const transitionMs = TRANSITION_MS[look.transition] ?? TRANSITION_MS.fade
   const still = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const [index, setIndex] = useState(0)
@@ -145,7 +156,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   const slide = slides[index]
   const isLast = index === slides.length - 1
   const isVideo = slide?.kind === 'video'
-  const light = LIGHT_SLIDES.has(slide?.kind)
+  const light = isLight(slide, look)
   const paused = userPaused || holding || away
 
   // A new slide starts its clock from nothing, in the render that shows it —
@@ -173,9 +184,9 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
 
   useEffect(() => {
     if (!leaving) return
-    const timer = setTimeout(() => setLeaving(null), CROSSFADE_MS + 50)
+    const timer = setTimeout(() => setLeaving(null), transitionMs + 50)
     return () => clearTimeout(timer)
-  }, [leaving])
+  }, [leaving, transitionMs])
 
   const running = ready && !paused && !finished
   // Photos and cards run on a clock; a clip on its own playback.
@@ -406,9 +417,9 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
 
   if (!slide) return null
 
-  const ink = light ? 'text-bark' : 'text-white'
+  const ink = light ? 'text-[var(--bo-ink)]' : 'text-white'
   const roundButton = light
-    ? 'bg-bark/10 hover:bg-bark/20 text-bark'
+    ? 'bg-[var(--bo-ink)]/10 hover:bg-[var(--bo-ink)]/20 text-[var(--bo-ink)]'
     : 'bg-black/30 hover:bg-black/60 text-white'
 
   // The same element, under the same key, as it was while current — so the
@@ -418,13 +429,17 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
     return (
       <div
         key={key}
-        className={current ? `absolute inset-0 ${leaving ? 'bestof-enter' : ''}` : 'absolute inset-0 pointer-events-none'}
+        className={current
+          ? `absolute inset-0 ${leaving ? `bestof-enter bestof-enter-${look.transition}` : ''}`
+          : 'absolute inset-0 pointer-events-none'}
+        style={current && leaving ? { animationDuration: `${transitionMs}ms` } : undefined}
         data-testid={current ? `bestof-slide-${shown.kind}` : undefined}
         aria-hidden={current ? undefined : 'true'}
       >
         <Slide
           slide={shown}
           labels={labels}
+          look={look}
           onReady={current ? markReady : noop}
           {...(shown.kind === 'video'
             ? {
@@ -460,8 +475,10 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
       </button>
 
       <div
-        className={`relative w-full h-full sm:w-auto sm:h-[min(92vh,52rem)] sm:aspect-[9/16] sm:rounded-3xl overflow-hidden select-none touch-none bg-[#141a2e] ${paused ? 'bestof-paused' : ''}`}
+        className={`relative w-full h-full sm:w-auto sm:h-[min(92vh,52rem)] sm:aspect-[9/16] sm:rounded-3xl overflow-hidden select-none touch-none bg-[var(--bo-dark)] ${paused ? 'bestof-paused' : ''}`}
+        style={lookVars(look)}
         data-testid="bestof-stage"
+        data-style={bestOf.style || 'classic'}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
@@ -471,13 +488,23 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
         {leavingSlide && renderSlide(leavingSlide, `visit-${leaving.visit}`, false)}
         {renderSlide(slide, `visit-${visit}`, true)}
 
+        {/* What the look lays over the story. */}
+        {look.paper && light && <div className="bestof-paper absolute inset-0 z-10 pointer-events-none" aria-hidden="true" />}
+        {look.confetti && slide.kind === 'award' && <Confetti key={`confetti-${visit}`} />}
+        {look.letterbox && (
+          <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true" data-testid="bestof-letterbox">
+            <div className="bestof-letterbox-top absolute inset-x-0 top-0 h-[7%] bg-black" />
+            <div className="bestof-letterbox-bottom absolute inset-x-0 bottom-0 h-[7%] bg-black" />
+          </div>
+        )}
+
         {/* Controls */}
         <div
           className={`absolute inset-x-0 top-0 z-20 px-3 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] ${light ? '' : 'bg-gradient-to-b from-black/60 to-transparent'} pointer-events-none`}
         >
           <div className="flex items-center gap-[3px] h-7" aria-hidden="true">
             {slides.map((_, i) => {
-              const fill = light ? 'bg-bark' : 'bg-white'
+              const fill = light ? 'bg-[var(--bo-ink)]' : 'bg-white'
               const current = i === index
               return [
                 // While paused, the current segment folds away for the pill
@@ -485,7 +512,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
                 // a remount would start it over.
                 <span
                   key={i}
-                  className={`h-[3px] rounded-full overflow-hidden ${light ? 'bg-bark/20' : 'bg-white/35'} ${current && paused ? 'w-0 flex-none opacity-0' : 'flex-1'}`}
+                  className={`h-[3px] rounded-full overflow-hidden ${light ? 'bg-[var(--bo-ink)]/20' : 'bg-white/35'} ${current && paused ? 'w-0 flex-none opacity-0' : 'flex-1'}`}
                 >
                   {i < index && <span className={`block h-full w-full ${fill}`} />}
                   {current && (timed ? (
@@ -528,7 +555,7 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
             </button>
             <div className={`min-w-0 text-center ${ink}`}>
               <p className="text-base font-semibold leading-tight truncate drop-shadow">{labels.title}</p>
-              <p className={`mt-0.5 inline-flex items-center gap-1 text-xs ${light ? 'text-bark-light' : 'text-white/85'}`}>
+              <p className={`mt-0.5 inline-flex items-center gap-1 text-xs ${light ? 'text-[var(--bo-ink-soft)]' : 'text-white/85'}`}>
                 <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                 {t('subtitle')}
               </p>
@@ -567,6 +594,33 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
       >
         <ChevronRight className="w-6 h-6" />
       </button>
+    </div>
+  )
+}
+
+// Confetti for an award: pieces in the look's accent and a few bright
+// colours, each falling from its own place at its own time. Placed by their
+// index, not at random, so that two renders are the same.
+const CONFETTI_COLORS = ['var(--bo-accent)', '#ffd166', '#06d6a0', '#118ab2', '#ffffff']
+
+function Confetti() {
+  return (
+    <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none" aria-hidden="true" data-testid="bestof-confetti">
+      {Array.from({ length: 28 }, (_, i) => (
+        <span
+          key={i}
+          className="bestof-confetti absolute top-0 block rounded-[1px]"
+          style={{
+            left: `${(i * 37) % 100}%`,
+            width: `${6 + (i % 3) * 2}px`,
+            height: `${10 + (i % 4) * 2}px`,
+            background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+            animationDelay: `${0.5 + ((i * 13) % 10) / 12}s`,
+            '--bestof-sway': `${((i * 7) % 9) - 4}vw`,
+            '--bestof-spin': `${360 + ((i * 53) % 360)}deg`,
+          }}
+        />
+      ))}
     </div>
   )
 }

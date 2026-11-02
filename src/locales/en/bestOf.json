@@ -6,6 +6,11 @@
     "title": "Best of",
     "open": "Watch the best of {{month}}"
   },
+  "intro": {
+    "lookBack": "A look back",
+    "masthead": "Best of",
+    "issue": "The {{month}} issue"
+  },
   "count": {
     "photos_one": "photo",
     "photos_other": "photos",
