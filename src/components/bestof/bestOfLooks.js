@@ -111,7 +111,7 @@ export const LOOKS = {
     outro: 'cards',
     transition: 'zoom',
     confetti: true,
-    variants: { photo: 'sticker', count: 'burst', themes: 'stickers', awardIntro: 'rays', award: 'medal' },
+    variants: { photo: 'sticker', count: 'burst', themes: 'stickers', awardIntro: 'rays', award: 'badge' },
     colors: {
       dark: '#1d1340',
       light: '#fff4e6',

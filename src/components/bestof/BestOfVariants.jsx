@@ -717,22 +717,13 @@ function BannerAward({ slide, labels, onReady }) {
   )
 }
 
-// A medal on a ribbon, swinging, above the winner.
-function MedalAward({ slide, labels, onReady }) {
+// The award in a white pill above the winner.
+function BadgeAward({ slide, labels, onReady }) {
   const name = useAwardName(slide)
   return (
     <div className="absolute inset-0 overflow-hidden bg-[var(--bo-dark)]">
       <FullPhoto media={slide.media} onReady={onReady} className="bestof-reveal" alt={name} />
       <BottomShade />
-      <div className="bestof-swing absolute left-1/2 top-[12%] -ml-14 w-28 origin-top flex flex-col items-center" aria-hidden="true">
-        <div className="flex gap-1">
-          <span className="h-12 w-5 -skew-x-12 bg-[#ffd166]" />
-          <span className="h-12 w-5 skew-x-12 bg-[#06d6a0]" />
-        </div>
-        <span className="-mt-1 flex h-24 w-24 items-center justify-center rounded-full border-4 border-white/70 bg-[var(--bo-accent)] shadow-2xl">
-          <Trophy className="h-11 w-11 text-[var(--bo-on-accent)]" />
-        </span>
-      </div>
       <div className="absolute inset-x-0 bottom-0 px-6 pb-10 text-white pointer-events-none">
         <span className="bestof-badge mb-3 inline-block rounded-full bg-white px-4 py-1.5 text-sm font-black text-[var(--bo-dark)] shadow-lg">{name}</span>
         <AwardDetail slide={slide} labels={labels} />
@@ -766,7 +757,7 @@ const AWARDS = {
   stamp: StampAward,
   credits: CreditsAward,
   banner: BannerAward,
-  medal: MedalAward,
+  badge: BadgeAward,
   below: BelowAward,
 }
 
