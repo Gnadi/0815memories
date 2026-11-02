@@ -2,8 +2,10 @@ import { MOTIONS } from '../../utils/bestOfStyle'
 
 /**
  * How each style of utils/bestOfStyle.js looks: its colours, its opening and
- * closing cards, how one slide gives way to the next, and what it lays over
- * the story — a film's black bars, a diary's paper, confetti for an award.
+ * closing cards, the cuts from one slide to the next, how its words move
+ * (`text`, KineticText.jsx), the film it is shot on (`texture`: grain, a
+ * vignette, light leaks, a flicker) and what else it lays over the story — a
+ * film's black bars, a diary's paper, confetti for an award.
  *
  * The colours are CSS custom properties set on the stage (see `lookVars`), so
  * the slides draw with var(--bo-…) instead of fixed colours. The classic look
@@ -11,15 +13,39 @@ import { MOTIONS } from '../../utils/bestOfStyle'
  * best-of saved without a style, or with one this version does not know, gets.
  */
 
-// How long each transition takes. The slide being left stays mounted beneath
-// the new one for this long (BestOfViewer.jsx); keep in step with bestOf.css.
-export const TRANSITION_MS = {
-  fade: 450,
-  slide: 500,
-  zoom: 500,
-  wipe: 550,
-  blur: 550,
-  dip: 750,
+// The cuts from one slide to the next, and how long each takes in beats of
+// the month's music, so a cut keeps the music's pace as an edit to music
+// would. The slide being left stays mounted beneath the new one, making its
+// own exit, until the cut is over (BestOfViewer.jsx; the moves are in
+// bestOf.css).
+export const TRANSITION_BEATS = {
+  fade: 1,
+  slide: 0.75,
+  zoom: 0.75,
+  wipe: 0.75,
+  blur: 1,
+  dip: 1.5,
+  zoomThrough: 0.75,
+  whip: 0.5,
+  iris: 1,
+  flash: 0.75,
+  burn: 1.5,
+}
+
+// However fast or slow the music, a cut is neither a flicker nor a wait.
+const MIN_TRANSITION_MS = 280
+const MAX_TRANSITION_MS = 950
+
+/** How long a cut takes at a beat of `beatMs`; a fade for one it does not know. */
+export function transitionMs(name, beatMs) {
+  const beats = TRANSITION_BEATS[name] ?? TRANSITION_BEATS.fade
+  return Math.round(Math.min(MAX_TRANSITION_MS, Math.max(MIN_TRANSITION_MS, beats * beatMs)))
+}
+
+/** The look's cut for the `n`th cut of the story: its cuts take turns. */
+export function transitionAt(look, n) {
+  const list = look.transitions?.length ? look.transitions : ['fade']
+  return list[((n % list.length) + list.length) % list.length]
 }
 
 // The app's own theme colours (index.css), as the best-of used them.
@@ -38,7 +64,8 @@ export const LOOKS = {
   classic: {
     intro: 'floating',
     outro: 'cards',
-    transition: 'fade',
+    transitions: ['fade'],
+    text: 'words',
     colors: CLASSIC_COLORS,
     title: 'font-bold',
   },
@@ -47,7 +74,9 @@ export const LOOKS = {
   polaroid: {
     intro: 'stack',
     outro: 'stack',
-    transition: 'slide',
+    transitions: ['slide', 'flash', 'zoomThrough'],
+    text: 'words',
+    texture: { grain: 0.5, vignette: true, leaks: true },
     variants: { photo: 'print', count: 'stack', award: 'stamp' },
     colors: {
       dark: '#2b2420',
@@ -66,7 +95,9 @@ export const LOOKS = {
   cinema: {
     intro: 'title',
     outro: 'grid',
-    transition: 'dip',
+    transitions: ['dip', 'whip', 'burn', 'dip'],
+    text: 'letters',
+    texture: { grain: 0.8, vignette: true, flicker: true },
     letterbox: true,
     // Its light cards are dark too, so the controls stay white on them.
     darkSurfaces: true,
@@ -90,7 +121,9 @@ export const LOOKS = {
   magazine: {
     intro: 'cover',
     outro: 'grid',
-    transition: 'wipe',
+    transitions: ['wipe', 'whip', 'iris'],
+    text: 'mask',
+    texture: { grain: 0.15 },
     variants: { photo: 'page', count: 'giant', themes: 'list', awardIntro: 'accent', award: 'banner' },
     colors: {
       dark: '#111111',
@@ -109,7 +142,9 @@ export const LOOKS = {
   festival: {
     intro: 'floating',
     outro: 'cards',
-    transition: 'zoom',
+    transitions: ['zoomThrough', 'flash', 'whip', 'zoom'],
+    text: 'pop',
+    texture: { leaks: true },
     confetti: true,
     variants: { photo: 'sticker', count: 'burst', themes: 'stickers', awardIntro: 'rays', award: 'badge' },
     colors: {
@@ -129,7 +164,9 @@ export const LOOKS = {
   diary: {
     intro: 'calendar',
     outro: 'stack',
-    transition: 'wipe',
+    transitions: ['wipe', 'fade', 'iris'],
+    text: 'write',
+    texture: { grain: 0.4, vignette: true },
     paper: true,
     variants: { photo: 'journal', count: 'tally', themes: 'notes', awardIntro: 'paper', award: 'stamp' },
     colors: {
@@ -149,7 +186,8 @@ export const LOOKS = {
   mosaic: {
     intro: 'mosaic',
     outro: 'grid',
-    transition: 'blur',
+    transitions: ['blur', 'iris', 'zoomThrough'],
+    text: 'mask',
     variants: { photo: 'tiles', count: 'squares', themes: 'tiles', awardIntro: 'accent', award: 'banner' },
     colors: {
       dark: '#10202a',
@@ -167,7 +205,8 @@ export const LOOKS = {
   minimal: {
     intro: 'mask',
     outro: 'cards',
-    transition: 'fade',
+    transitions: ['fade', 'zoomThrough'],
+    text: 'words',
     variants: { photo: 'passepartout', count: 'plain', themes: 'line', awardIntro: 'plain', award: 'below' },
     colors: {
       dark: '#18181b',
@@ -255,3 +294,17 @@ export function lookVars(look) {
  * by a newer one — gets the push in.
  */
 export const motionClass = (slide) => `bestof-motion-${MOTIONS.includes(slide?.motion) ? slide.motion : 'zoomIn'}`
+
+/**
+ * How many beats each photo of a montage is up: one where a beat is long
+ * enough to see a photo in, more where the music is quick, so a cut comes
+ * about every second whatever the tempo.
+ */
+export function montageBeatsPerPhoto(beatMs) {
+  return Math.max(1, Math.round(900 / (beatMs || 600)))
+}
+
+/** A montage's time in beats: its photos, and two to hold the last one. */
+export function montageBeats(photos, beatMs) {
+  return photos * montageBeatsPerPhoto(beatMs) + 2
+}
