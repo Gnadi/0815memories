@@ -157,18 +157,18 @@ const master = (context) => context.nodes.find((node) => node.outputs.includes(c
 const connected = (context) => context.nodes.filter((node) => node.outputs.length)
 const loopSeconds = (trackId) => (TRACKS[trackId].bars * barMs(trackId)) / 1000
 
-const PITCHED = new Set(['pad', 'keys', 'pluck', 'bass', 'string', 'bell', 'pizz', 'arp'])
-const DRUMS = new Set(['kick', 'shaker', 'clap'])
+const PITCHED = new Set(['pad', 'cello', 'piano', 'keys', 'bass', 'string', 'bell'])
+const DRUMS = new Set(['kick', 'brush'])
 // Pitch classes, C = 0, written out independently of the tracks.
 const SCALES = {
   warm: [2, 4, 6, 7, 9, 11, 1], // D major
-  bright: [7, 9, 11, 0, 2, 4, 6], // G major
+  hope: [0, 2, 4, 5, 7, 9, 11], // C major
   calm: [5, 7, 9, 10, 0, 2, 4], // F major
   folk: [0, 2, 4, 5, 7, 9, 11], // C major
-  lofi: [10, 0, 2, 3, 5, 7, 9], // B♭ major
-  waltz: [9, 11, 1, 2, 4, 6, 8], // A major
-  pop: [0, 2, 4, 5, 7, 9, 11], // C major
-  playful: [3, 5, 7, 8, 10, 0, 2], // E♭ major
+  dusk: [10, 0, 2, 3, 5, 7, 9], // B♭ major
+  bright: [7, 9, 11, 0, 2, 4, 6], // G major
+  lullaby: [9, 11, 1, 2, 4, 6, 8], // A major
+  glow: [3, 5, 7, 8, 10, 0, 2], // E♭ major
 }
 
 describe('arrangement', () => {
@@ -225,12 +225,39 @@ describe('arrangement', () => {
     }
   })
 
-  it('keeps the drums where they belong, and out of the calm track', () => {
+  it('keeps the drums few, soft and where they belong', () => {
     const drums = (id, voice) => arrangement(id).events.filter((event) => event.voice === voice)
-    expect(arrangement('calm').events.filter((event) => DRUMS.has(event.voice))).toEqual([])
-    expect(drums('warm', 'kick').every((event) => event.beat % 4 === 0 || event.beat % 4 === 2)).toBe(true)
-    expect(drums('bright', 'clap').every((event) => event.beat % 4 === 1 || event.beat % 4 === 3)).toBe(true)
-    expect(drums('warm', 'shaker').length).toBeGreaterThan(0)
+    for (const id of ['warm', 'calm', 'lullaby', 'glow']) {
+      expect(arrangement(id).events.filter((event) => DRUMS.has(event.voice))).toEqual([])
+    }
+    // A heartbeat, not a beat: the kick on the first beat of a bar.
+    expect(drums('hope', 'kick').every((event) => event.beat % 4 === 0)).toBe(true)
+    expect(drums('bright', 'brush').every((event) => event.beat % 4 === 1 || event.beat % 4 === 3)).toBe(true)
+    expect(drums('hope', 'brush').length).toBeGreaterThan(0)
+    for (const id of Object.keys(TRACKS)) {
+      const { bpm, events } = arrangement(id)
+      const hits = events.filter((event) => DRUMS.has(event.voice))
+      expect(hits.every((event) => event.velocity <= 0.4)).toBe(true)
+      // Fewer than two hits a second.
+      expect(hits.length / ((TRACKS[id].bars * (TRACKS[id].meter ?? 4) * 60) / bpm)).toBeLessThan(2)
+    }
+  })
+
+  it('is slow enough to look back to, with a tune on top', () => {
+    for (const id of Object.keys(TRACKS)) {
+      const { bpm, meter, events } = arrangement(id)
+      // A waltz counts its beats faster: it is its bars that are slow.
+      expect(bpm / (meter === 3 ? 1.2 : 1)).toBeLessThanOrEqual(80)
+      expect(bpm).toBeGreaterThanOrEqual(60)
+      const melody = events.filter((event) => event.lead)
+      expect(melody.length).toBeGreaterThan(20)
+      expect(new Set(melody.map((event) => event.voice)).size).toBe(1)
+      // Above what it is played over: its lowest note at or above the
+      // accompaniment's average.
+      const under = events.filter((event) => !event.lead && event.midi != null)
+      const average = under.reduce((sum, event) => sum + event.midi, 0) / under.length
+      expect(Math.min(...melody.map((event) => event.midi))).toBeGreaterThanOrEqual(average)
+    }
   })
 })
 
@@ -256,7 +283,7 @@ describe('trackForMonth', () => {
   })
 
   it('never puts two quiet tracks next to each other', () => {
-    const quiet = new Set(['calm', 'lofi', 'waltz'])
+    const quiet = new Set(['calm', 'dusk', 'lullaby'])
     TRACK_ORDER.forEach((id, i) => {
       const next = TRACK_ORDER[(i + 1) % TRACK_ORDER.length]
       expect(quiet.has(id) && quiet.has(next)).toBe(false)
@@ -287,7 +314,7 @@ describe('barMs and beatMs', () => {
       expect(beatMs(id)).toBeCloseTo(60000 / track.bpm, 6)
       expect(barMs(id)).toBeCloseTo(((track.meter ?? 4) * 60000) / track.bpm, 6)
     }
-    expect(barMs('waltz')).toBeCloseTo(3 * beatMs('waltz'), 6)
+    expect(barMs('lullaby')).toBeCloseTo(3 * beatMs('lullaby'), 6)
     expect(barMs('nonsense')).toBe(barMs('warm'))
     expect(beatMs('nonsense')).toBe(beatMs('warm'))
   })
@@ -351,7 +378,7 @@ describe('createSoundtrack', () => {
     const pitches = new Set(arrangement('folk').events.filter((e) => e.voice === 'string').map((e) => e.midi))
     // The reverb's impulse and the noise, and one buffer per pitch.
     expect(context.buffers).toBe(2 + pitches.size)
-    const strings = notes(context).filter((node) => node.kind === 'bufferSource' && node.buffer?.length === 2.5 * 8000)
+    const strings = notes(context).filter((node) => node.kind === 'bufferSource' && node.buffer?.length === 3 * 8000)
     expect(strings.length).toBeGreaterThan(pitches.size)
     for (const node of strings) {
       expect(node.playbackRate.value).toBeGreaterThan(0.9)
@@ -413,9 +440,9 @@ describe('createSoundtrack', () => {
 
   it('makes its noise and its reverb once, not once per hit', () => {
     const context = new FakeAudioContext()
-    createSoundtrack(context, 'bright').start()
+    createSoundtrack(context, 'hope').start()
     elapse(context, 5)
-    createSoundtrack(context, 'warm').start()
+    createSoundtrack(context, 'dusk').start()
     elapse(context, 5)
     expect(notes(context).filter((node) => node.kind === 'bufferSource').length).toBeGreaterThan(10)
     expect(context.buffers).toBe(2)
