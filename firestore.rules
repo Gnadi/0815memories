@@ -392,6 +392,27 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // A moment's text: caption, category, location and label. Kept in clear
+    // until November 2026, encrypted since, and flagged `textEncrypted` so a
+    // reader knows which. There is no migration, so a moment from before may
+    // keep its plaintext — but no moment is written with plaintext again: a
+    // write with text must leave the moment flagged and every text field
+    // ciphertext. A moment from before still takes the writes that touch no
+    // text (thumbnails, media references, focus).
+    function momentTextEncryptedOk() {
+      let d = request.resource.data;
+      return d.get('textEncrypted', false) == true
+        && encryptedOk(d, 'caption')
+        && encryptedOk(d, 'category')
+        && encryptedOk(d, 'location')
+        && encryptedOk(d, 'label');
+    }
+
+    function momentTextUntouched() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['caption', 'category', 'location', 'label', 'textEncrypted']);
+    }
+
     // Moments — same rules as memories
     match /moments/{momentId} {
       // Same as memories: listed by familyId, so the filter the client already
@@ -400,11 +421,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && momentTextEncryptedOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && (momentTextEncryptedOk() || momentTextUntouched());
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);

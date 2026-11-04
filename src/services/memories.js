@@ -1,6 +1,6 @@
 /**
- * Memories: the feed's entries with a story. Their text is encrypted; the
- * moments next to them (services/moments.js) keep theirs in clear.
+ * Memories: the feed's entries with a story. Their text is encrypted, as the
+ * text of the moments next to them is (services/moments.js).
  */
 import {
   addDoc,
@@ -20,6 +20,7 @@ import { decryptFields, decryptStringArray, encryptFields } from '../utils/encry
 import { isRichDoc, parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
+import { encryptMomentData } from './moments'
 
 const MEMORIES = 'memories'
 const MOMENTS = 'moments'
@@ -148,14 +149,15 @@ export async function deleteMemory(id) {
 // one batch so a failure never leaves the entry in both places or in neither.
 //
 // The media is reused as-is: both collections store the same encrypted uploads
-// under the same family key. Only the text differs — memories encrypt theirs,
-// moments keep it in clear — so each side goes through its own write path.
+// under the same family key. The text is encrypted on both sides, but by each
+// side's own write path, which knows its fields. A memory turned into a moment
+// used to land with its text in clear, moments having had none encrypted.
 
-export async function convertMemoryToMoment(familyId, memoryId, moment, date) {
+export async function convertMemoryToMoment(familyId, key, memoryId, moment, date) {
   const batch = writeBatch(db)
   const momentRef = doc(collection(db, MOMENTS))
   batch.set(momentRef, {
-    ...moment,
+    ...(await encryptMomentData(key, moment)),
     ...mediaRefsForCreate(moment),
     familyId,
     createdByUid: createdByUid(),

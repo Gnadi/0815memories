@@ -79,13 +79,11 @@ describe.skipIf(!EMULATOR)('Memory / moment conversion rules', () => {
     return batch.commit()
   }
 
-  const convertMemoryToMoment = (db) => {
+  // As services/memories.js writes it: the moment's text encrypted and flagged.
+  const convertMemoryToMoment = (db, text = { caption: CIPHERTEXT, category: CIPHERTEXT, location: CIPHERTEXT, label: CIPHERTEXT, textEncrypted: true }) => {
     const batch = writeBatch(db)
     batch.set(doc(collection(db, 'moments')), {
-      caption: 'Beach day',
-      category: '',
-      location: '',
-      label: '',
+      ...text,
       images: ['a.enc'],
       videos: [],
       familyId: FAMILY,
@@ -102,6 +100,13 @@ describe.skipIf(!EMULATOR)('Memory / moment conversion rules', () => {
 
   it('an admin can turn a memory into a moment', async () => {
     await assertSucceeds(convertMemoryToMoment(testEnv.authenticatedContext(ADMIN).firestore()))
+  })
+
+  it('cannot turn a memory into a moment with its text in clear', async () => {
+    // What the conversion used to write: the memory's decrypted text.
+    await assertFails(convertMemoryToMoment(testEnv.authenticatedContext(ADMIN).firestore(), {
+      caption: 'Beach day', category: '', location: '', label: '',
+    }))
   })
 
   it('a non-admin cannot convert', async () => {

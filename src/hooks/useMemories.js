@@ -89,8 +89,8 @@ function useMomentsSubscription(familyId, encryptionKey, pageSize) {
  * Moment writes without a subscription — the counterpart of useMemoryWriter,
  * for surfaces that can post a moment without showing the moments row.
  */
-export function useMomentWriter(familyId) {
-  return { addMoment: (moment) => addMoment(familyId, moment) }
+export function useMomentWriter(familyId, encryptionKey) {
+  return { addMoment: (moment) => addMoment(familyId, encryptionKey, moment) }
 }
 
 /**
@@ -98,16 +98,18 @@ export function useMomentWriter(familyId) {
  */
 export function useEntryConverter(familyId, encryptionKey) {
   return {
-    convertMemoryToMoment: (memoryId, moment, date) => convertMemoryToMoment(familyId, memoryId, moment, date),
+    convertMemoryToMoment: (memoryId, moment, date) =>
+      convertMemoryToMoment(familyId, encryptionKey, memoryId, moment, date),
     convertMomentToMemory: (momentId, memory) => convertMomentToMemory(familyId, encryptionKey, momentId, memory),
   }
 }
 
 export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_LIMIT) {
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
-  const { addMoment } = useMomentWriter(familyId)
+  const { addMoment } = useMomentWriter(familyId, encryptionKey)
+  const update = (id, updates) => updateMoment(encryptionKey, id, updates)
 
-  return { moments, loading, error, addMoment, updateMoment, deleteMoment }
+  return { moments, loading, error, addMoment, updateMoment: update, deleteMoment }
 }
 
 const DEFAULT_ALL_MOMENTS_LIMIT = 200
@@ -115,5 +117,7 @@ const DEFAULT_ALL_MOMENTS_LIMIT = 200
 export function useAllMoments(familyId, encryptionKey, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
 
-  return { moments, loading, error, updateMoment, deleteMoment }
+  const update = (id, updates) => updateMoment(encryptionKey, id, updates)
+
+  return { moments, loading, error, updateMoment: update, deleteMoment }
 }

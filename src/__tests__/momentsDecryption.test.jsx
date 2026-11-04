@@ -101,8 +101,26 @@ describe('useMoments', () => {
     const { result } = renderHook(() => useMoments('fam-1', key))
     await emit(snapshot({ id: 'm1', caption: 'Beach day', images: [IMAGE] }))
 
-    // Moments keep their text in clear; the decrypt pass must not disturb it.
+    // A moment from before encrypted text: unflagged, its plaintext is shown
+    // as it is rather than taken for damaged ciphertext.
     expect(result.current.moments[0]).toEqual({ id: 'm1', caption: 'Beach day', images: [IMAGE] })
+  })
+
+  it('decrypts the text of a moment written encrypted', async () => {
+    const { result } = renderHook(() => useMoments('fam-1', key))
+    await emit(snapshot({
+      id: 'm1',
+      textEncrypted: true,
+      caption: await encryptText(key, 'Beach day'),
+      category: await encryptText(key, 'Travel'),
+      location: await encryptText(key, 'Monterey'),
+      label: await encryptText(key, ''),
+      images: [IMAGE],
+    }))
+
+    expect(result.current.moments[0]).toMatchObject({
+      caption: 'Beach day', category: 'Travel', location: 'Monterey', label: '',
+    })
   })
 
   it('passes the document through untouched without a key', async () => {

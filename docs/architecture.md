@@ -99,6 +99,12 @@ throw (`encryption/decrypt-failed`) rather than hand the value back.
 other documents, and `UnreadableContentNotice` tells the user once that
 something could not be read.
 
+Moments are the one collection with both kinds of document: their text was
+kept in clear until November 2026, and the ones from before were not
+migrated. A moment written since carries `textEncrypted: true`, and only then
+does `services/moments.js` decrypt its text; the rules refuse a moment with
+plaintext text, and take a write that touches no text on an old one.
+
 `firestore.rules` holds writes to the same line: every encrypted field must be
 absent, `null`, or shaped like `encryptText` output (`isCiphertext`: base64, a
 multiple of four, at least an IV and a tag long). A field a service forgets to

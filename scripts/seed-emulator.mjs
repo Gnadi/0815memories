@@ -78,10 +78,10 @@ async function encryptText(text) {
   return Buffer.from(await encryptBytes(new TextEncoder().encode(text))).toString('base64')
 }
 
-// What each collection encrypts, as its service or hook does. Moments keep
-// their text in clear (src/services/moments.js), as does every field not
-// listed.
+// What each collection encrypts, as its service or hook does. Every field not
+// listed stays in clear.
 const ENCRYPTED = {
+  moments: { text: ['caption', 'category', 'location', 'label'] },
   memories: { text: ['title', 'content', 'quote', 'location', 'authorName', 'category'] },
   children: { text: ['name', 'birthTime', 'birthPlace'] },
   journals: { text: ['content'] },
@@ -292,7 +292,8 @@ async function main() {
     { caption: 'Garden harvest', category: 'Everyday', location: 'Backyard', images: [url('garden.jpg')], date: ts('2024-12-15') },
   ]
   for (const m of moments) {
-    await db.collection('moments').add({ ...m, familyId, createdAt: Timestamp.now() })
+    // Flagged as moments are written now (src/services/moments.js).
+    await db.collection('moments').add({ ...(await encrypted('moments', m)), textEncrypted: true, familyId, createdAt: Timestamp.now() })
   }
 
   console.log('⑦ Seeding children …')

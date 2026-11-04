@@ -119,6 +119,61 @@ describe.skipIf(!EMULATOR)('Encrypted fields in the security rules', () => {
     })
   }
 
+  describe('moments', () => {
+    const TEXT = ['caption', 'category', 'location', 'label']
+    const encryptedText = async () => Object.fromEntries(
+      await Promise.all(TEXT.map(async (field) => [field, await encryptText(key, field)])),
+    )
+
+    it('are written with their text encrypted, and flagged so', async () => {
+      await assertSucceeds(setDoc(doc(asAdmin(), 'moments', 'm1'), {
+        familyId: FAMILY, images: ['a.enc'], ...(await encryptedText()), textEncrypted: true,
+      }))
+      // Unflagged, a reader would take the ciphertext for text.
+      await assertFails(setDoc(doc(asAdmin(), 'moments', 'm2'), {
+        familyId: FAMILY, images: ['a.enc'], ...(await encryptedText()),
+      }))
+    })
+
+    for (const field of TEXT) {
+      it(`refuses a new moment with \`${field}\` in plaintext`, async () => {
+        await assertFails(setDoc(doc(asAdmin(), 'moments', 'plain'), {
+          familyId: FAMILY, ...(await encryptedText()), [field]: 'Beach day', textEncrypted: true,
+        }))
+      })
+    }
+
+    describe('from before encryption', () => {
+      // Not migrated: their text stays in clear until they are next edited.
+      beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+          await setDoc(doc(context.firestore(), 'moments', 'old'), {
+            familyId: FAMILY, caption: 'Beach day', category: 'Travel', location: 'Monterey', label: '',
+            images: ['a.enc'],
+          })
+        })
+      })
+
+      it('still take a write that touches no text', async () => {
+        await assertSucceeds(updateDoc(doc(asAdmin(), 'moments', 'old'), { thumbs: ['t.enc'] }))
+      })
+
+      it('are encrypted by an edit, which has to cover all of their text', async () => {
+        await assertFails(updateDoc(doc(asAdmin(), 'moments', 'old'), { caption: 'Strandtag' }))
+        await assertFails(updateDoc(doc(asAdmin(), 'moments', 'old'), {
+          caption: await encryptText(key, 'Strandtag'), textEncrypted: true,
+        }))
+        await assertSucceeds(updateDoc(doc(asAdmin(), 'moments', 'old'), {
+          ...(await encryptedText()), textEncrypted: true,
+        }))
+      })
+
+      it('cannot be flagged without being encrypted', async () => {
+        await assertFails(updateDoc(doc(asAdmin(), 'moments', 'old'), { textEncrypted: true }))
+      })
+    })
+  })
+
   it('takes encryptJSON output, which is ciphertext like any other', async () => {
     const ingredients = await encryptJSON(key, [{ name: 'Mehl', amount: '500 g' }])
     await assertSucceeds(setDoc(doc(asAdmin(), 'recipes', 'r1'), { familyId: FAMILY, ingredients }))
