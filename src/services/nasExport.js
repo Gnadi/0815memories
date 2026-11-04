@@ -258,8 +258,9 @@ async function attachCapsuleContents(capsules, encryptionKey) {
  *    partner's unrevealed one is denied wholesale, so asking for both would
  *    return nothing rather than half. The query also has to name the caller
  *    as a participant: a list is only allowed when its own filters prove the
- *    read rule, and the rule starts with `uid in participantUids`. Filtering
- *    by author alone was refused outright, and the whole export with it.
+ *    read rule, and the rule asks for `uid in participantUids` and an admin of
+ *    `familyId`. Filtering by author alone was refused outright, and the
+ *    whole export with it.
  *  - A letter still sealed stays sealed. Same reasoning as a capsule.
  */
 async function fetchOurYear(familyId, uid, encryptionKey) {
@@ -267,15 +268,15 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const ritualSnap = await getDocs(query(
     collection(db, 'ourYearRituals'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
   ))
-  const rituals = ritualSnap.docs
-    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
-    .filter((r) => r.familyId === familyId)
+  const rituals = ritualSnap.docs.map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
   if (rituals.length === 0) return { rituals: [], chapters: [], entries: [], letters: [] }
 
   const chapterSnap = await getDocs(query(
     collection(db, 'ourYearChapters'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
   ))
   const ritualIds = new Set(rituals.map((r) => r.id))
@@ -285,6 +286,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const entrySnap = await getDocs(query(
     collection(db, 'ourYearEntries'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
     where('authorUid', '==', uid),
   ))

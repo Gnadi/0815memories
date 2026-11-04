@@ -120,6 +120,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(A), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', A),
             where('ritualId', '==', 'ritual-1'),
             orderBy('periodStart', 'desc'),
@@ -127,6 +128,20 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         ),
       )
       expect(snap.size).toBe(1)
+    })
+
+    it('rejects a query that does not name the family', async () => {
+      // The read rule asks for an admin of the chapter's family, so the query
+      // has to say which family that is.
+      await assertFails(
+        getDocs(
+          query(
+            collection(as(A), 'ourYearChapters'),
+            where('participantUids', 'array-contains', A),
+            where('ritualId', '==', 'ritual-1'),
+          ),
+        ),
+      )
     })
 
     it('rejects a query that does not constrain itself to the asker', async () => {
@@ -145,6 +160,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(OUTSIDER), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', A),
             where('ritualId', '==', 'ritual-1'),
           ),
@@ -159,6 +175,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(OUTSIDER), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', OUTSIDER),
           ),
         ),
@@ -169,10 +186,56 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('lets a partner find their ritual by membership', async () => {
       const snap = await assertSucceeds(
         getDocs(
-          query(collection(as(B), 'ourYearRituals'), where('participantUids', 'array-contains', B)),
+          query(
+            collection(as(B), 'ourYearRituals'),
+            where('familyId', '==', FAMILY),
+            where('participantUids', 'array-contains', B),
+          ),
         ),
       )
       expect(snap.size).toBe(1)
+    })
+  })
+
+  // Our Year belongs to the couple, but only within the family. A partner
+  // removed from the family keeps their participant id on every document; it
+  // must not keep opening them. Checked with a fresh session that has no
+  // claim, which is what a removed admin gets on their next sign-in.
+  describe('a partner removed from the family', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore()
+        await setDoc(doc(db, entryPath(B)), entry(B, { revealed: true }))
+        await setDoc(doc(db, 'ourYearLetters', CHAPTER), {
+          familyId: FAMILY, chapterId: CHAPTER, participantUids: PARTICIPANTS, sections: CIPHERTEXT,
+        })
+        await updateDoc(doc(db, 'families', FAMILY), { adminUids: [A, OUTSIDER] })
+      })
+    })
+
+    it('can read nothing of it any more', async () => {
+      await assertFails(getDoc(doc(as(B), 'ourYearRituals/ritual-1')))
+      await assertFails(getDoc(doc(as(B), 'ourYearChapters', CHAPTER)))
+      await assertFails(getDoc(doc(as(B), entryPath(B))))
+      await assertFails(getDoc(doc(as(B), 'ourYearLetters', CHAPTER)))
+      await assertFails(getDocs(query(
+        collection(as(B), 'ourYearRituals'),
+        where('familyId', '==', FAMILY),
+        where('participantUids', 'array-contains', B),
+      )))
+    })
+
+    it('can change or delete nothing of it any more', async () => {
+      await assertFails(updateDoc(doc(as(B), 'ourYearRituals/ritual-1'), { rhythm: 'yearly' }))
+      await assertFails(updateDoc(doc(as(B), 'ourYearChapters', CHAPTER), { status: 'closed' }))
+      await assertFails(deleteDoc(doc(as(B), 'ourYearLetters', CHAPTER)))
+      await assertFails(deleteDoc(doc(as(B), 'ourYearChapters', CHAPTER)))
+    })
+
+    it('leaves the partner who stayed their access', async () => {
+      await assertSucceeds(getDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await assertSucceeds(getDoc(doc(as(A), entryPath(B))))
+      await assertSucceeds(updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { status: 'closed' }))
     })
   })
 
@@ -276,6 +339,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       const snap = await assertSucceeds(
         getDocs(query(
           collection(as(A), 'ourYearEntries'),
+          where('familyId', '==', FAMILY),
           where('participantUids', 'array-contains', A),
           where('authorUid', '==', A),
         )),

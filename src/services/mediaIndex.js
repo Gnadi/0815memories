@@ -65,9 +65,13 @@ const SOURCES = [
   { name: 'recipes', list: byFamily('recipes'), decrypt: decryptRecipe },
   {
     name: 'ourYearChapters',
-    // The read rule admits a chapter's participants only, so the query has to
-    // say so; the family is checked on the results.
-    list: (familyId, uid) => query(collection(db, 'ourYearChapters'), where('participantUids', 'array-contains', uid)),
+    // The read rule admits a chapter's participants only, and only while they
+    // are admins of its family, so the query has to say both.
+    list: (familyId, uid) => query(
+      collection(db, 'ourYearChapters'),
+      where('familyId', '==', familyId),
+      where('participantUids', 'array-contains', uid),
+    ),
     decrypt: decryptChapter,
   },
 ]

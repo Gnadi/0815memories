@@ -95,16 +95,18 @@ export async function decryptLetter(key, data) {
 // ---------------------------------------------------------------------------
 
 /**
- * The couple's ritual, found by membership rather than by family: a family can
- * hold more than one couple, and each only ever sees its own. `onData` gets it,
- * or null when there is none.
+ * The couple's ritual, found by membership within the family: a family can hold
+ * more than one couple, and each only ever sees its own. `onData` gets it, or
+ * null when there is none.
+ *
+ * Both filters are what make the query legal (see subscribeChapters): the
+ * rules admit a participant only while they are an admin of the family.
  */
 export function subscribeRitual(familyId, uid, key, onData, onError) {
   return subscribeDecrypted(
-    query(collection(db, RITUALS), where('participantUids', 'array-contains', uid)),
+    query(collection(db, RITUALS), where('familyId', '==', familyId), where('participantUids', 'array-contains', uid)),
     async (docs) => {
-      const own = docs.filter((d) => !familyId || d.familyId === familyId)
-      const [first] = await Promise.all(own.map((d) => decryptRitual(key, d)))
+      const [first] = await Promise.all(docs.map((d) => decryptRitual(key, d)))
       return first ?? null
     },
     onData,
@@ -136,16 +138,18 @@ export async function updateRitual(key, id, data) {
 /**
  * The couple's chapters, newest first.
  *
- * The `participantUids` filter is not redundant with `ritualId` — it is what
- * makes the query legal. Security rules are not filters: for a list, Firestore
- * rejects the whole query unless its constraints prove the read rule holds for
- * every possible match. The rule allows a chapter only to its participants, so
- * the query has to say so.
+ * The `familyId` and `participantUids` filters are not redundant with
+ * `ritualId` — they are what makes the query legal. Security rules are not
+ * filters: for a list, Firestore rejects the whole query unless its
+ * constraints prove the read rule holds for every possible match. The rule
+ * allows a chapter only to its participants, and only while they are admins of
+ * its family, so the query has to say both.
  */
-export function subscribeChapters(ritualId, uid, key, onData, onError) {
+export function subscribeChapters(familyId, ritualId, uid, key, onData, onError) {
   return subscribeDecrypted(
     query(
       collection(db, CHAPTERS),
+      where('familyId', '==', familyId),
       where('participantUids', 'array-contains', uid),
       where('ritualId', '==', ritualId),
       orderBy('periodStart', 'desc'),

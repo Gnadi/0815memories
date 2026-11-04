@@ -291,15 +291,23 @@ describe('Our Year, which belongs to two people rather than the family', () => {
     expect(Object.keys(zipFiles).filter((k) => k.includes('our-year'))).toHaveLength(0)
   })
 
-  it('ignores a ritual belonging to a different family', async () => {
+  it('asks for this family only, which is also what the rules require', async () => {
     respond({
       collections: {
-        ourYearRituals: [{ id: 'r1', familyId: 'other-family', participantUids: [UID] }],
+        ourYearRituals: [{ id: 'r1', familyId: FAMILY, participantUids: [UID] }],
+        ourYearChapters: [],
+        ourYearEntries: [],
       },
     })
     await run()
 
-    expect(Object.keys(zipFiles).filter((k) => k.includes('our-year'))).toHaveLength(0)
+    const ourYearQueries = getDocs.mock.calls
+      .map(([q]) => q)
+      .filter((q) => q.ref.name.startsWith('ourYear'))
+    expect(ourYearQueries.map((q) => q.ref.name)).toEqual(['ourYearRituals', 'ourYearChapters', 'ourYearEntries'])
+    for (const q of ourYearQueries) {
+      expect(q.c).toEqual(expect.arrayContaining([{ field: 'familyId', op: '==', value: FAMILY }]))
+    }
   })
 })
 

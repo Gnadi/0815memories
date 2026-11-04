@@ -756,15 +756,25 @@ service cloud.firestore {
     // "Our Year" — the couple's recurring review ritual.
     //
     // Stricter than every other collection in this file: family-admin status is
-    // not enough. Each document carries `participantUids` (exactly the two
-    // partners), and only those two can read it — other admins of the same
-    // family see nothing. Two further guarantees are enforced here rather than
+    // not enough, and not optional either. Each document carries
+    // `participantUids` (exactly the two partners), and only those two can read
+    // it, while they are admins of its family — other admins of the same family
+    // see nothing. Two further guarantees are enforced here rather than
     // in the UI, because the whole point of the ritual is that they hold:
     //   1. neither partner can read the other's answers before both are in
     //      (ourYearEntries);
     //   2. a sealed letter cannot be read or altered before its open date
     //      (ourYearLetters) — request.time is the server's clock.
     // -----------------------------------------------------------------------
+
+    // One of the couple, and still an admin of the family the ritual belongs
+    // to. Our Year is the couple's own, but only within the family: removing
+    // someone from the family ends their access here too, rather than leaving
+    // them every right their participant id once gave them.
+    function isCoupleMember(data) {
+      return request.auth.uid in data.get('participantUids', [])
+        && isFamilyAdmin(data.familyId);
+    }
 
     // The ritual itself: who, which occasion, which rhythm.
     function ritualEncryptedOk() {
@@ -774,7 +784,7 @@ service cloud.firestore {
 
     match /ourYearRituals/{ritualId} {
       allow read: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && isCoupleMember(resource.data);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -786,12 +796,12 @@ service cloud.firestore {
       // Participants may edit the ritual, but never re-home it or hand it to
       // someone else.
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isCoupleMember(resource.data)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && ritualEncryptedOk();
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && isCoupleMember(resource.data);
     }
 
     // One chapter = one review of a self-chosen period. Carries only metadata
@@ -806,7 +816,7 @@ service cloud.firestore {
     match /ourYearChapters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
-                        || request.auth.uid in resource.data.get('participantUids', []));
+                        || isCoupleMember(resource.data));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -818,7 +828,7 @@ service cloud.firestore {
       // bookkeeping may still change (opening a letter that was written back
       // then). Everything else is frozen for good.
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isCoupleMember(resource.data)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (
@@ -828,7 +838,7 @@ service cloud.firestore {
                     )
                     && chapterEncryptedOk();
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && isCoupleMember(resource.data);
     }
 
     // Has the caller handed in their own answers to the same part of the same
@@ -856,7 +866,7 @@ service cloud.firestore {
       // Nothing leaks — there is nothing there.
       allow read: if request.auth != null
                     && (resource == null
-                        || (request.auth.uid in resource.data.get('participantUids', [])
+                        || (isCoupleMember(resource.data)
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
       allow create: if request.auth != null
@@ -867,7 +877,7 @@ service cloud.firestore {
                     && request.resource.data.get('authorUid', '') == request.auth.uid
                     && entryEncryptedOk();
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isCoupleMember(resource.data)
                     && (
                       // Your own answers, yours to edit until you hand them in.
                       // After that they are fixed, or the look at your
@@ -900,7 +910,7 @@ service cloud.firestore {
       // answers were already visible. deleteChapter removes the chapter first
       // for exactly this reason.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isCoupleMember(resource.data)
                     && (resource.data.get('submitted', false) != true
                         || !exists(/databases/$(database)/documents/ourYearChapters/$(resource.data.chapterId)));
     }
@@ -917,7 +927,7 @@ service cloud.firestore {
     match /ourYearLetters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
-                        || (request.auth.uid in resource.data.get('participantUids', [])
+                        || (isCoupleMember(resource.data)
                             && (resource.data.get('sealedAt', null) == null
                                 || request.time >= resource.data.openAt)));
       allow create: if request.auth != null
@@ -928,7 +938,7 @@ service cloud.firestore {
                     && request.resource.data.get('sealedAt', null) == null
                     && letterSectionsEncryptedOk();
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isCoupleMember(resource.data)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (resource.data.get('sealedAt', null) == null
@@ -937,7 +947,7 @@ service cloud.firestore {
       // Deleting is allowed (a chapter can be discarded while it is open);
       // reading early is not, which is the property that matters.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && isCoupleMember(resource.data);
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.
