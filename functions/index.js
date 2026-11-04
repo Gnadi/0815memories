@@ -39,6 +39,7 @@ import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { adminUidsOf, reconcileAdminClaims } from './adminClaims.js'
+import { sharedPasswordProblem } from './sharedPassword.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -67,9 +68,6 @@ initializeApp()
 // that is configured — see the follow-up section of the plan. The rate limiter
 // further down does not depend on it.
 const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
-
-// Mirrored by SettingsPanel, which says so before the round trip.
-const MIN_SHARED_PASSWORD_LENGTH = 8
 
 
 
@@ -581,11 +579,10 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   const familyId = String(request.data?.familyId || '')
   const password = String(request.data?.password || '')
   if (!familyId) throw new HttpsError('invalid-argument', 'No family given')
-  // It is what stands between a guesser and the family's encryption key, and
-  // guessing is throttled, not stopped. Existing passwords keep working.
-  if (password.length < MIN_SHARED_PASSWORD_LENGTH) {
-    throw new HttpsError('invalid-argument', 'Password is too short')
-  }
+  // See sharedPassword.js. The message is what SettingsPanel tells apart.
+  const problem = sharedPasswordProblem(password)
+  if (problem === 'too-short') throw new HttpsError('invalid-argument', 'Password is too short')
+  if (problem === 'too-long') throw new HttpsError('invalid-argument', 'Password is too long')
 
   const familySnap = await getFirestore().doc(`families/${familyId}`).get()
   // adminUids on the document, not the caller's claim: this is the source of

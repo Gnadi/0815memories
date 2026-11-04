@@ -134,6 +134,7 @@
     "description": "This is the password family and friends use to access the site.",
     "placeholder": "New shared password",
     "tooShort": "Password must be at least 8 characters",
+    "tooLong": "Password can be at most 72 bytes long — about 72 letters, fewer with umlauts or emoji",
     "noFamily": "No family found",
     "updated": "Shared password updated!",
     "updateFailed": "Failed to update password",

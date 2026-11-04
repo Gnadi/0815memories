@@ -53,9 +53,15 @@ export default function SettingsPanel() {
 
   const handleSavePassword = async (e) => {
     e.preventDefault()
-    // Mirrors setSharedPassword in functions/index.js.
+    // Mirrors functions/sharedPassword.js. The upper limit is in UTF-8 bytes:
+    // bcrypt reads no further, so a password changed only past them would
+    // still let the old one in.
     if (!newPassword || newPassword.length < 8) {
       setMessage(t('password.tooShort'))
+      return
+    }
+    if (new TextEncoder().encode(newPassword).length > 72) {
+      setMessage(t('password.tooLong'))
       return
     }
     if (!familyId) {

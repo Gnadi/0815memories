@@ -134,6 +134,7 @@
     "description": "Das ist das Passwort, mit dem Familie und Freunde auf die Seite zugreifen.",
     "placeholder": "Neues geteiltes Passwort",
     "tooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+    "tooLong": "Das Passwort darf höchstens 72 Byte lang sein – etwa 72 Buchstaben, weniger mit Umlauten oder Emojis",
     "noFamily": "Keine Familie gefunden",
     "updated": "Geteiltes Passwort aktualisiert!",
     "updateFailed": "Passwort konnte nicht aktualisiert werden",
