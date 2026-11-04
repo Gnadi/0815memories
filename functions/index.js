@@ -38,6 +38,7 @@ import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
 import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
+import { adminUidsOf, reconcileAdminClaims } from './adminClaims.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -70,10 +71,7 @@ const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 // Mirrored by SettingsPanel, which says so before the round trip.
 const MIN_SHARED_PASSWORD_LENGTH = 8
 
-/** The admins of a family document. */
-function adminUidsOf(data) {
-  return Array.isArray(data?.adminUids) ? data.adminUids : []
-}
+
 
 // ---------------------------------------------------------------------------
 // Push notifications
@@ -519,34 +517,14 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
  * A trigger rather than a call at each site: signup, invite redemption and
  * admin removal all end in a write to this one document, so this is the single
  * place where admin status is decided. A future flow that adds an admin gets
- * the claim without knowing this function exists.
+ * the claim without knowing this function exists. What it decides, it decides
+ * from the document as it stands when it runs (adminClaims.js).
  */
 export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (event) => {
-  const { familyId } = event.params
-  const before = adminUidsOf(event.data?.before?.exists ? event.data.before.data() : null)
-  const after = adminUidsOf(event.data?.after?.exists ? event.data.after.data() : null)
-
-  const added = after.filter((uid) => !before.includes(uid))
-  const removed = before.filter((uid) => !after.includes(uid))
-  const auth = getAuth()
-
-  await Promise.allSettled(
-    added.map((uid) => auth.setCustomUserClaims(uid, { familyId, role: 'admin' })),
-  )
-
-  // Removal has to revoke as well as clear: a cleared claim still sits in the
-  // ID token the removed admin is holding, which stays valid for up to an hour.
-  await Promise.allSettled(
-    removed.map(async (uid) => {
-      const user = await auth.getUser(uid).catch(() => null)
-      if (!user) return
-      // Only clear a claim that points at *this* family, so an admin who moved
-      // families does not lose the claim they were just given.
-      if (user.customClaims?.familyId && user.customClaims.familyId !== familyId) return
-      await auth.setCustomUserClaims(uid, null)
-      await auth.revokeRefreshTokens(uid)
-    }),
-  )
+  await reconcileAdminClaims({ db: getFirestore(), auth: getAuth() }, event.params.familyId, {
+    before: event.data?.before?.exists ? event.data.before.data() : null,
+    after: event.data?.after?.exists ? event.data.after.data() : null,
+  })
 })
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
