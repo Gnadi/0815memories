@@ -60,6 +60,12 @@
     "closeMenu": "Menü schließen",
     "familyIllustrationAlt": "Illustration einer Familienzusammenkunft"
   },
+  "unreadable": {
+    "notice_one": "Ein Eintrag konnte mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Er wird ohne den betroffenen Text angezeigt.",
+    "notice_other": "{{count}} Einträge konnten mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Sie werden ohne den betroffenen Text angezeigt.",
+    "content": "Dieser Inhalt konnte nicht entschlüsselt werden.",
+    "title": "Unlesbarer Eintrag"
+  },
   "mobileNav": {
     "home": "Start",
     "journal": "Tagebuch",

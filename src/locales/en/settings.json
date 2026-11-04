@@ -185,18 +185,6 @@
     "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
     "error": "Something went wrong. You can safely try again."
   },
-  "secureCapsules": {
-    "label": "Secure your time capsules",
-    "description": "An earlier version stored Black Box capsules without encryption, and kept their contents on the same record as the label — so a sealed capsule could be read before its date. This encrypts them and moves each letter behind its seal. The capsules themselves are unchanged.",
-    "scanning": "Checking your capsules…",
-    "allDone": "Your capsules are encrypted.",
-    "remaining": "{{pending}} capsule(s) still saved without encryption.",
-    "start": "Encrypt them now",
-    "stop": "Stop",
-    "progress": "{{done}} of {{total}}",
-    "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
-    "error": "Something went wrong. You can safely try again."
-  },
   "mediaIndex": {
     "label": "Index your photos and videos",
     "description": "Kaydo now keeps track of which stored files are still in use, so files nobody needs any more can be cleared away. Posts saved before that don't say which files they use yet. This goes through them once and notes it — nothing is downloaded, changed or deleted.",

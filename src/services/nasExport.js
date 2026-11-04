@@ -229,12 +229,9 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
  * withholds it until the unlock date — so it exports as metadata with `sealed:
  * true` and no letter. That is the correct behaviour rather than a gap: an
  * export must not be a way around the seal.
- *
- * Pre-split capsules still carry their payload inline, and are left as they are.
  */
 async function attachCapsuleContents(capsules, encryptionKey) {
   return Promise.all(capsules.map(async (capsule) => {
-    if (capsule.message != null || capsule.photos != null) return capsule
     try {
       const snap = await getDoc(doc(db, 'blackboxContent', capsule.id))
       if (!snap.exists()) return { ...capsule, sealed: false }

@@ -83,21 +83,7 @@ export default function ScrapbookEditorPage() {
     getScrapbook(familyId, encryptionKey, id).then((book) => {
       if (!book) { setLoadError(t('errors.notFound')); setLoading(false); return }
       const nextTitle = book.title || 'My Scrapbook'
-      // Migration: pages without an explicit `customizable` flag predate the
-      // photobook redesign and should default to customizable so existing
-      // freely-placed photos remain draggable/resizable.
-      const nextPages = (book.pages || [makeBlankPage()]).map((p) => (
-        Object.prototype.hasOwnProperty.call(p, 'customizable')
-          ? p
-          : { ...p, customizable: true }
-      ))
-      dispatch({ type: 'LOAD', pages: nextPages, title: nextTitle })
-      // Backfill for books last saved before the page count was stored next to
-      // the encrypted pages. The overview can't derive it without decrypting
-      // the whole book; here the pages are decrypted anyway.
-      if (book.pageCount !== nextPages.length) {
-        updateScrapbook(id, { pageCount: nextPages.length }).catch(() => {})
-      }
+      dispatch({ type: 'LOAD', pages: book.pages || [makeBlankPage()], title: nextTitle })
       setLoading(false)
     }).catch((err) => {
       setLoadError(err.message)

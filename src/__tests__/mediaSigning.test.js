@@ -102,9 +102,9 @@ describe('signUpload', () => {
     expect(ledger(d).abc123.kind).toBe('public')
   })
 
-  it('accepts an admin of a family from before adminUids', async () => {
-    const signed = await signUpload(deps({ family: { adminUid: ADMIN } }), ADMIN, { familyId: FAMILY })
-    expect(signed.publicId).toBe('kaydo/fam-1/abc123')
+  it('goes by adminUids alone, not by the owner field', async () => {
+    await expect(signUpload(deps({ family: { adminUid: ADMIN } }), ADMIN, { familyId: FAMILY }))
+      .rejects.toMatchObject({ code: 'permission-denied' })
   })
 
   it.each([

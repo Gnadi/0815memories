@@ -18,7 +18,6 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  updateDoc,
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
@@ -63,21 +62,10 @@ export async function createFamily({ uid, name, slug, encryptionKeyJwk }) {
   return ref.id
 }
 
-/**
- * The families `uid` is an admin of, as `{ id, data }`. The oldest families
- * predate `adminUids` and name their single owner in `adminUid` instead.
- */
+/** The families `uid` is an admin of, as `{ id, data }`. */
 export async function findAdminFamilies(uid) {
-  let snapshot = await getDocs(query(collection(db, FAMILIES), where('adminUids', 'array-contains', uid)))
-  if (snapshot.empty) {
-    snapshot = await getDocs(query(collection(db, FAMILIES), where('adminUid', '==', uid)))
-  }
+  const snapshot = await getDocs(query(collection(db, FAMILIES), where('adminUids', 'array-contains', uid)))
   return snapshot.docs.map((d) => ({ id: d.id, data: d.data() }))
-}
-
-/** The owner's one-time move of an old family to `adminUids`. */
-export async function backfillAdminUids(familyId, uid) {
-  await updateDoc(doc(db, FAMILIES, familyId), { adminUids: [uid] })
 }
 
 /** What the login page may know about a family before anyone signs in, or null. */

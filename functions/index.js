@@ -70,12 +70,9 @@ const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 // Mirrored by SettingsPanel, which says so before the round trip.
 const MIN_SHARED_PASSWORD_LENGTH = 8
 
-/** The admins of a family document, across both the legacy and current shape. */
+/** The admins of a family document. */
 function adminUidsOf(data) {
-  if (!data) return []
-  const list = Array.isArray(data.adminUids) ? data.adminUids : []
-  if (list.length > 0) return list
-  return data.adminUid ? [data.adminUid] : []
+  return Array.isArray(data?.adminUids) ? data.adminUids : []
 }
 
 // ---------------------------------------------------------------------------

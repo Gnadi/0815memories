@@ -13,7 +13,9 @@ import {
   MEMORY_TEXT_FIELDS,
   MEMORY_WRITE_FIELDS,
   encryptMemoryData,
+  decryptMemory,
   decryptMemoryDoc,
+  decryptMemoryRich,
 } from '../services/memories'
 
 const DOC = {
@@ -80,12 +82,16 @@ describe('decryptMemoryDoc', () => {
     expect(decrypted.content).toBe('Der Sommer bei Oma\n\nAm See')
   })
 
-  it('is idempotent, because the edit modal re-decrypts defensively', async () => {
+  it('lets the edit form finish a feed memory without decrypting its text twice', async () => {
     const encrypted = await encryptMemoryData(key, memory())
-    const once = await decryptMemoryDoc(key, encrypted)
-    const twice = await decryptMemoryDoc(key, once)
-    expect(twice.contentRich).toEqual(DOC)
-    expect(twice.title).toBe('Sommer')
+    const fromFeed = await decryptMemory(key, encrypted)
+    const forForm = await decryptMemoryRich(key, fromFeed)
+    expect(forForm.contentRich).toEqual(DOC)
+    expect(forForm.title).toBe('Sommer')
+    expect(forForm.unreadableFields).toBeUndefined()
+    // And a memory read in full passes through as it is.
+    const full = await decryptMemoryDoc(key, encrypted)
+    expect(await decryptMemoryRich(key, full)).toBe(full)
   })
 
   it('leaves a legacy memory with no contentRich untouched', async () => {

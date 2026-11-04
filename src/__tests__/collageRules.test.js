@@ -13,6 +13,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT } from './fakeCiphertext'
 
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 
@@ -20,9 +21,6 @@ const FAMILY = 'family-1'
 const OTHER_FAMILY = 'family-2'
 const ADMIN = 'uid-admin'
 const OTHER_ADMIN = 'uid-other-admin'
-
-// Stands in for encryptText()/encryptJSON() output.
-const CIPHERTEXT = 'kJ8xQ2hZbGxvV29ybGRUaGlzSXNCYXNlNjQ='
 
 let testEnv
 

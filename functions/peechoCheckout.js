@@ -46,10 +46,7 @@ export class CheckoutError extends Error {
 }
 
 function adminUidsOf(data) {
-  if (!data) return []
-  const list = Array.isArray(data.adminUids) ? data.adminUids : []
-  if (list.length > 0) return list
-  return data.adminUid ? [data.adminUid] : []
+  return Array.isArray(data?.adminUids) ? data.adminUids : []
 }
 
 /** Peecho reads the expiry as CET/CEST wall-clock time, 'dd-MM-yyyy HH:mm:ss'. */

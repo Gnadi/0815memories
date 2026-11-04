@@ -11,6 +11,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { deleteField, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -23,8 +24,8 @@ let testEnv
 const entry = (extra = {}) => ({
   familyId: FAMILY,
   childId: 'kid-1',
-  title: 'First tooth',
-  content: 'ciphertext',
+  title: sealed('First tooth'),
+  content: CIPHERTEXT,
   date: Timestamp.now(),
   ...extra,
 })
@@ -62,7 +63,7 @@ describe.skipIf(!EMULATOR)('journals', () => {
 
   it('are stored rich, encrypted, or as Markdown', async () => {
     await assertSucceeds(setDoc(doc(asAdmin(), 'journals', 'rich'),
-      entry({ contentFormat: 'rich', contentRich: 'Y2lwaGVydGV4dA==' })))
+      entry({ contentFormat: 'rich', contentRich: CIPHERTEXT })))
     await assertSucceeds(setDoc(doc(asAdmin(), 'journals', 'md'), entry({ contentFormat: 'markdown' })))
   })
 
@@ -77,9 +78,9 @@ describe.skipIf(!EMULATOR)('journals', () => {
   })
 
   it('from before the editor stay editable, and switch between the formats', async () => {
-    await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'legacy'), { content: 'ciphertext 2' }))
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'legacy'), { content: sealed('ciphertext 2') }))
     await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'legacy'), {
-      contentFormat: 'rich', contentRich: 'Y2lwaGVydGV4dA==',
+      contentFormat: 'rich', contentRich: CIPHERTEXT,
     }))
     await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'legacy'), {
       contentFormat: 'markdown', contentRich: deleteField(),

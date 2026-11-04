@@ -16,7 +16,7 @@ import {
   writeBatch,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptFields, decryptJSON, encryptFields, encryptJSON } from '../utils/encryption'
+import { decryptFields, decryptJSONFields, encryptFields, encryptJSON } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
@@ -56,11 +56,8 @@ async function encryptRecipe(key, data) {
 
 export async function decryptRecipe(key, data) {
   if (!key) return data
-  const result = await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
+  const result = await decryptJSONFields(key, await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS), ['ingredients'])
   if (result.instructionsRich != null) result.instructionsRich = parseRichDoc(result.instructionsRich)
-  if (typeof result.ingredients === 'string') {
-    result.ingredients = await decryptJSON(key, result.ingredients)
-  }
   return result
 }
 

@@ -17,7 +17,7 @@ import {
 } from '../config/firestore'
 import { auth, db } from '../config/firebase'
 import { decryptFields, decryptStringArray, encryptFields } from '../utils/encryption'
-import { parseRichDoc } from '../utils/richText'
+import { isRichDoc, parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
@@ -64,13 +64,27 @@ export async function decryptMemory(key, data) {
 }
 
 /**
- * Single-document read (detail page, edit form, export): decrypt everything and
- * parse the rich description. Idempotent, so passing an already-decrypted
- * memory back through is harmless.
+ * Single-document read (detail page, export): decrypt everything and parse the
+ * rich description. Takes a document as stored — a decrypted field does not
+ * decrypt a second time, and comes back unreadable.
  */
 export async function decryptMemoryDoc(key, data) {
   if (!key) return data
   const result = await decryptFields(key, data, MEMORY_WRITE_FIELDS)
+  if (result.contentRich != null) result.contentRich = parseRichDoc(result.contentRich)
+  return result
+}
+
+/**
+ * Complete a memory the feed decrypted (decryptMemory) for the edit form: its
+ * text is plaintext already, only `contentRich` may still be ciphertext. A
+ * memory from getMemory passes through unchanged, its document parsed.
+ */
+export async function decryptMemoryRich(key, memory) {
+  if (!key || typeof memory.contentRich !== 'string' || isRichDoc(parseRichDoc(memory.contentRich))) {
+    return memory
+  }
+  const result = await decryptFields(key, memory, ['contentRich'])
   if (result.contentRich != null) result.contentRich = parseRichDoc(result.contentRich)
   return result
 }

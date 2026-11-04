@@ -17,6 +17,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
 import { bestOfListQuery, bestOfMonthQuery, monthEntriesQuery } from '../services/bestOf'
 import { countMonthMedia, previousMonthWindow } from '../../functions/bestOf.js'
+import { CIPHERTEXT } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -25,9 +26,6 @@ const FAMILY = 'family-1'
 const OTHER_FAMILY = 'family-2'
 const ADMIN = 'uid-admin'
 const OTHER_ADMIN = 'uid-other'
-
-// Stands in for encryptJSON(): base64, so it can never begin with '{' or '['.
-const CIPHERTEXT = 'kJ8xQ2hZbGxvV29ybGRUaGlzSXNCYXNlNjQ='
 
 let testEnv
 let adminApp

@@ -59,7 +59,7 @@ rather than two.
 | Role → privilege | `src/context/AuthContext.jsx` |
 | Who may read what | `firestore.rules` |
 | Proof it holds | `src/__tests__/authRules.test.js` |
-| One-time data move | `scripts/migrate-access-control.mjs` |
+| One-time data move | `scripts/migrate-access-control.mjs` — run, then removed with the fallbacks for the shape before it |
 
 The new functions are v2 (`firebase-functions/v2`) in `europe-west3`. The
 existing push trigger stays v1 in its original region — moving a deployed

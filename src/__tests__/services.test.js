@@ -417,15 +417,13 @@ describe('best-of', () => {
 describe('the family', () => {
   beforeEach(async () => {
     await fs.setDoc(fs.doc(null, 'families', 'fam-new'), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
-    await fs.setDoc(fs.doc(null, 'families', 'fam-old'), { adminUid: 'uid-c' })
     await fs.setDoc(fs.doc(null, 'familyPublic', 'fam-new'), { familySlug: 'the-millers', familyName: 'The Millers' })
   })
 
-  it('finds the families someone is an admin of, the oldest ones by their owner', async () => {
+  it('finds the families someone is an admin of', async () => {
     await expect(findAdminFamilies('uid-b')).resolves.toEqual([
       { id: 'fam-new', data: { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] } },
     ])
-    await expect(findAdminFamilies('uid-c')).resolves.toEqual([{ id: 'fam-old', data: { adminUid: 'uid-c' } }])
     await expect(findAdminFamilies('uid-nobody')).resolves.toEqual([])
   })
 

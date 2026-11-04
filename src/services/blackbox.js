@@ -11,10 +11,6 @@
  * The split is forced by the query: `blackbox` is listed by familyId, and one
  * denied document fails a whole list listener, so the time condition cannot live
  * on the document the page lists.
- *
- * Capsules created before the split keep their payload inline on the metadata
- * document. Both eras are read here; services/blackboxMigration.js moves the old
- * ones across.
  */
 import {
   collection,
@@ -38,10 +34,8 @@ import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 const BLACKBOX = 'blackbox'
 const BLACKBOX_CONTENT = 'blackboxContent'
 
-// Encrypted on the metadata document. `message` appears here only on pre-split
-// capsules — new ones carry it on the content document — but it must stay in
-// this list until the migration has moved them all.
-export const METADATA_ENCRYPTED_FIELDS = ['title', 'message']
+// Encrypted on the metadata document.
+export const METADATA_ENCRYPTED_FIELDS = ['title']
 
 // Encrypted on the content document.
 export const CONTENT_ENCRYPTED_FIELDS = ['message']
@@ -108,34 +102,19 @@ export async function addBox(familyId, key, box) {
 
 /**
  * Read a capsule's letter. Returns null when the rules withheld it, which for
- * a sealed capsule is the expected answer rather than an error.
- *
- * Falls back to the inline fields of a pre-split capsule when no content
- * document exists.
+ * a sealed capsule is the expected answer rather than an error, and when there
+ * is no letter: deleteBox removes it first.
  */
 export async function getBoxContent(key, box) {
   try {
     const snap = await getDoc(doc(db, BLACKBOX_CONTENT, box.id))
-    if (snap.exists()) {
-      return decryptBoxContent(key, snap.data())
-    }
+    return snap.exists() ? decryptBoxContent(key, snap.data()) : null
   } catch (err) {
     // A sealed capsule denies the read. Nothing to report — the caller shows
     // the sealed state, which is correct.
     devError('Black Box content read failed:', err)
     return null
   }
-  // Pre-split capsule: the payload is on the metadata document, already
-  // decrypted by the list.
-  if (box.message != null || box.photos != null) {
-    return {
-      message: box.message ?? '',
-      photos: box.photos ?? [],
-      videos: box.videos ?? [],
-      voiceNote: box.voiceNote ?? null,
-    }
-  }
-  return null
 }
 
 /** Move a capsule's unlock date out to `until` — see checkIn in the hook. */

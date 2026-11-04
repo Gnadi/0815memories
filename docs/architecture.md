@@ -91,6 +91,21 @@ The encryption helpers back this up: writing without a key throws, except in
 the demo, whose family is the only one without one. The emulator seed is
 encrypted like any other family, pictures included.
 
+Reading is just as strict. Every stored value is ciphertext, so one that does
+not decrypt is the wrong key or damaged data: `decryptText` and `decryptJSON`
+throw (`encryption/decrypt-failed`) rather than hand the value back.
+`decryptFields` and `decryptJSONFields` catch that per field: the field becomes
+`null` and is named in the document's `unreadableFields`, so a list keeps its
+other documents, and `UnreadableContentNotice` tells the user once that
+something could not be read.
+
+`firestore.rules` holds writes to the same line: every encrypted field must be
+absent, `null`, or shaped like `encryptText` output (`isCiphertext`: base64, a
+multiple of four, at least an IV and a tag long). A field a service forgets to
+encrypt is refused instead of stored readable. The field lists there mirror
+the services, and `src/__tests__/encryptedFieldsRules.test.js` checks each one;
+a newly encrypted field goes into all three.
+
 ## Data model
 
 Every top-level collection holds documents for all families, each with a
