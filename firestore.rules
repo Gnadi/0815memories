@@ -514,23 +514,21 @@ service cloud.firestore {
     }
 
     match /blackboxContent/{boxId} {
-      // `resource == null` is allowed so a capsule whose content has not been
-      // split out yet reads as absent rather than denied — that is how the card
-      // knows to fall back to the pre-split inline fields.
       allow read: if request.auth != null
-                    && (resource == null
-                        || (resource.data.familyId != null
-                            && isFamilyAdmin(resource.data.familyId)
-                            && capsuleIsOpen(boxId)));
-      // Only for a capsule of the same family. The metadata is written in the
-      // same batch (addBox) or already exists (the migration), so getAfter()
-      // finds it either way. Without this, another family's admin could plant
-      // a letter under the id of a capsule that predates the split, and the
-      // owners would be denied their own capsule's content.
+                    && resource != null
+                    && resource.data.familyId != null
+                    && isFamilyAdmin(resource.data.familyId)
+                    && capsuleIsOpen(boxId);
+      // Only together with its metadata, in addBox's batch, and for the same
+      // family. Not for a capsule that already exists: its letter can be
+      // deleted while sealed, and writing a new one in its place would be the
+      // edit the update rule refuses until the date. Nor under another
+      // family's capsule, whose owners would be denied their own letter.
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
+                    && !exists(/databases/$(database)/documents/blackbox/$(boxId))
                     && getAfter(/databases/$(database)/documents/blackbox/$(boxId)).data.familyId
                          == request.resource.data.familyId;
       // Editing the letter is only possible once it has opened. Deleting is

@@ -165,11 +165,11 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       await assertFails(getDoc(doc(db, 'blackboxContent', OPEN)))
     })
 
-    it('reads as absent, not denied, when a capsule predates the split', async () => {
-      // This is how the card knows to fall back to the inline fields of an
-      // unmigrated capsule instead of showing an error.
+    it('is denied when there is none, rather than read as absent', async () => {
+      // Every capsule is written with its letter (addBox), so there is no
+      // capsule left that needs telling "no letter" apart from "not yet".
       const db = as(ADMIN)
-      await assertSucceeds(getDoc(doc(db, 'blackboxContent', 'never-created')))
+      await assertFails(getDoc(doc(db, 'blackboxContent', 'never-created')))
     })
   })
 
@@ -302,11 +302,19 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       await assertSucceeds(batch.commit())
     })
 
+    it('cannot replace the letter of an existing capsule while it is sealed', async () => {
+      // Deleting a sealed letter is allowed; writing a new one in its place
+      // would be the edit the update rule refuses until the date.
+      const db = as(ADMIN)
+      await assertSucceeds(deleteDoc(doc(db, 'blackboxContent', SEALED)))
+      await assertFails(setDoc(doc(db, 'blackboxContent', SEALED), { familyId: FAMILY, message: 'rewritten' }))
+    })
+
     it('cannot be planted under a capsule of another family', async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const db = context.firestore()
         await setDoc(doc(db, 'families', 'family-2'), { adminUid: OUTSIDER, adminUids: [OUTSIDER] })
-        // A capsule from before the split: it has no content document yet.
+        // A capsule whose letter was deleted, which is allowed while sealed.
         await setDoc(doc(db, 'blackbox', 'legacy'), {
           familyId: FAMILY,
           unlockDate: future(),

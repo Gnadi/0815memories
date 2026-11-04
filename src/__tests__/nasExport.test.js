@@ -41,6 +41,11 @@ vi.mock('../utils/encryption', () => ({
   }),
   decryptText: vi.fn(async (_k, v) => unmark(v)),
   decryptJSON: vi.fn(async (_k, v) => (typeof v === 'string' ? JSON.parse(unmark(v)) : v)),
+  decryptJSONFields: vi.fn(async (_k, obj, fields) => {
+    const out = { ...obj }
+    for (const field of fields) if (typeof out[field] === 'string') out[field] = JSON.parse(unmark(out[field]))
+    return out
+  }),
   decryptBlob: vi.fn(async () => new Blob(['plain'])),
 }))
 vi.mock('file-saver', () => ({ saveAs: vi.fn() }))
@@ -198,19 +203,6 @@ describe('sealed things stay sealed', () => {
     expect(capsule.message).toBeUndefined()
     // And it is named, so the export does not look like data loss.
     expect(manifest().stillSealed.capsules).toEqual(['sealed'])
-  })
-
-  it('leaves a pre-split capsule exactly as it is', async () => {
-    respond({
-      collections: {
-        blackbox: [{ id: 'old', familyId: FAMILY, title: 'T', message: 'inline', photos: [] }],
-      },
-    })
-    await run()
-
-    expect(data('blackbox.json')[0].message).toBe('inline')
-    // No content document is looked for when the payload is already there.
-    expect(getDoc.mock.calls.filter(([r]) => r.name === 'blackboxContent')).toHaveLength(0)
   })
 
   it('records a still-sealed Our Year letter without its contents', async () => {

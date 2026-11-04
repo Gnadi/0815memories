@@ -11,7 +11,6 @@ import { getFamily, isSlugAvailable, updateFamily } from '../../services/family'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
-import SecureCapsulesPanel from './SecureCapsulesPanel'
 import MediaIndexPanel from './MediaIndexPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 
@@ -382,11 +381,6 @@ export default function SettingsPanel() {
 
       {/* One-off thumbnail migration for photos predating thumbnails */}
       <OptimizePhotosPanel />
-
-      {/* One-off encryption repair for capsules sealed while the Black Box's
-          field list named a field the create page never wrote. Renders nothing
-          for families with no affected capsules. */}
-      <SecureCapsulesPanel />
 
       {/* Notes on older posts which stored files they use, so files nobody
           needs can be told apart (docs/plan-media-lifecycle.md, phase 5). */}
