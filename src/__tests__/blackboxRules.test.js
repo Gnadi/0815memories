@@ -44,6 +44,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -89,7 +90,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       // One capsule sealed for a year, one already open.
       await setDoc(doc(db, 'blackbox', SEALED), {
         familyId: FAMILY,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         triggerType: 'specificDate',
         unlockDate: future(),
         isSealed: true,
@@ -97,13 +98,13 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       })
       await setDoc(doc(db, 'blackboxContent', SEALED), {
         familyId: FAMILY,
-        message: 'ciphertext-letter',
+        message: sealed('ciphertext-letter'),
         photos: [],
       })
 
       await setDoc(doc(db, 'blackbox', OPEN), {
         familyId: FAMILY,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         triggerType: 'specificDate',
         unlockDate: past(),
         isSealed: true,
@@ -111,7 +112,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       })
       await setDoc(doc(db, 'blackboxContent', OPEN), {
         familyId: FAMILY,
-        message: 'ciphertext-letter',
+        message: sealed('ciphertext-letter'),
         photos: [],
       })
     })
@@ -144,10 +145,10 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const db = context.firestore()
         await setDoc(doc(db, 'blackbox', 'no-date'), {
-          familyId: FAMILY, title: 'x', triggerType: 'legacy', createdAt: past(),
+          familyId: FAMILY, title: sealed('x'), triggerType: 'legacy', createdAt: past(),
         })
         await setDoc(doc(db, 'blackboxContent', 'no-date'), {
-          familyId: FAMILY, message: 'ciphertext-letter',
+          familyId: FAMILY, message: sealed('ciphertext-letter'),
         })
       })
       const db = as(ADMIN)
@@ -225,7 +226,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await setDoc(doc(context.firestore(), 'blackbox', 'dateless'), {
           familyId: FAMILY,
-          title: 'ciphertext',
+          title: CIPHERTEXT,
           isSealed: true,
           createdAt: past(),
         })
@@ -254,7 +255,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
 
     it('lets other fields be edited without touching the date', async () => {
       const db = as(ADMIN)
-      await assertSucceeds(updateDoc(doc(db, 'blackbox', SEALED), { title: 'new ciphertext' }))
+      await assertSucceeds(updateDoc(doc(db, 'blackbox', SEALED), { title: sealed('new ciphertext') }))
     })
 
     it('cannot be moved by someone outside the family', async () => {
@@ -266,12 +267,12 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
   describe('the letter itself', () => {
     it('cannot be rewritten while the capsule is sealed', async () => {
       const db = as(ADMIN)
-      await assertFails(updateDoc(doc(db, 'blackboxContent', SEALED), { message: 'tampered' }))
+      await assertFails(updateDoc(doc(db, 'blackboxContent', SEALED), { message: sealed('tampered') }))
     })
 
     it('can be edited once the capsule has opened', async () => {
       const db = as(ADMIN)
-      await assertSucceeds(updateDoc(doc(db, 'blackboxContent', OPEN), { message: 'ciphertext-2' }))
+      await assertSucceeds(updateDoc(doc(db, 'blackboxContent', OPEN), { message: sealed('ciphertext-2') }))
     })
 
     it('can be deleted while sealed, so a capsule can be discarded', async () => {
@@ -284,7 +285,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
     it('cannot be created by someone outside the family', async () => {
       const db = as(OUTSIDER)
       await assertFails(
-        setDoc(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: 'x' }),
+        setDoc(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: sealed('x') }),
       )
     })
 
@@ -294,11 +295,11 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       const batch = writeBatch(db)
       batch.set(doc(db, 'blackbox', 'new'), {
         familyId: FAMILY,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         unlockDate: future(),
         isSealed: true,
       })
-      batch.set(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: 'ciphertext' })
+      batch.set(doc(db, 'blackboxContent', 'new'), { familyId: FAMILY, message: CIPHERTEXT })
       await assertSucceeds(batch.commit())
     })
 
@@ -307,7 +308,7 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
       // would be the edit the update rule refuses until the date.
       const db = as(ADMIN)
       await assertSucceeds(deleteDoc(doc(db, 'blackboxContent', SEALED)))
-      await assertFails(setDoc(doc(db, 'blackboxContent', SEALED), { familyId: FAMILY, message: 'rewritten' }))
+      await assertFails(setDoc(doc(db, 'blackboxContent', SEALED), { familyId: FAMILY, message: sealed('rewritten') }))
     })
 
     it('cannot be planted under a capsule of another family', async () => {
@@ -318,11 +319,11 @@ describe.skipIf(!EMULATOR)('Black Box security rules', () => {
         await setDoc(doc(db, 'blackbox', 'legacy'), {
           familyId: FAMILY,
           unlockDate: future(),
-          message: 'ciphertext',
+          message: CIPHERTEXT,
         })
       })
       await assertFails(
-        setDoc(doc(as(OUTSIDER), 'blackboxContent', 'legacy'), { familyId: 'family-2', message: 'x' }),
+        setDoc(doc(as(OUTSIDER), 'blackboxContent', 'legacy'), { familyId: 'family-2', message: sealed('x') }),
       )
     })
 

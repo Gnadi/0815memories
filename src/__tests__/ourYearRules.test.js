@@ -29,6 +29,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -48,7 +49,7 @@ const entry = (uid, overrides = {}) => ({
   participantUids: PARTICIPANTS,
   authorUid: uid,
   kind: 'reflection',
-  answers: 'ciphertext',
+  answers: CIPHERTEXT,
   submitted: true,
   revealed: false,
   ...overrides,
@@ -92,7 +93,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         familyId: FAMILY,
         ritualId: 'ritual-1',
         participantUids: PARTICIPANTS,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         status: 'open',
         letterStatus: 'none',
       })
@@ -203,7 +204,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
 
     it('does not let the partner edit them', async () => {
-      await assertFails(updateDoc(doc(as(B), entryPath(A)), { answers: 'tampered' }))
+      await assertFails(updateDoc(doc(as(B), entryPath(A)), { answers: sealed('tampered') }))
     })
 
     it('cannot be revealed by a partner who has not handed in', async () => {
@@ -222,7 +223,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('lets the partner set nothing but `revealed`, once both have handed in', async () => {
       await setDoc(doc(as(B), entryPath(B)), entry(B))
       await assertFails(
-        updateDoc(doc(as(B), entryPath(A)), { revealed: true, answers: 'tampered' }),
+        updateDoc(doc(as(B), entryPath(A)), { revealed: true, answers: sealed('tampered') }),
       )
       await assertSucceeds(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
     })
@@ -245,7 +246,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('fixes an answer once it is handed in', async () => {
       // Otherwise the look at the partner's answers would come with a chance
       // to rewrite one's own.
-      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'rewritten' }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('rewritten') }))
       await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: false }))
     })
 
@@ -295,9 +296,9 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
 
     it('stays editable by its author until it is handed in', async () => {
-      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'second thoughts' }))
-      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'final', submitted: true }))
-      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'third thoughts' }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('second thoughts') }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('final'), submitted: true }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('third thoughts') }))
     })
 
     it('cannot be re-homed or revealed by its author', async () => {
@@ -328,7 +329,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
           familyId: FAMILY,
           chapterId: CHAPTER,
           participantUids: PARTICIPANTS,
-          sections: 'ciphertext',
+          sections: CIPHERTEXT,
           sealedAt: sealed ? Timestamp.fromDate(new Date(2026, 0, 1)) : null,
           openAt: openAt ? Timestamp.fromDate(openAt) : null,
           openedAt: null,
@@ -338,7 +339,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('is readable and editable while it is still a draft', async () => {
       await seedLetter(null, false)
       await assertSucceeds(getDoc(doc(as(A), letterPath)))
-      await assertSucceeds(updateDoc(doc(as(A), letterPath), { sections: 'more' }))
+      await assertSucceeds(updateDoc(doc(as(A), letterPath), { sections: sealed('more') }))
     })
 
     it('cannot be read by either partner before the chosen day', async () => {
@@ -369,7 +370,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
           familyId: FAMILY,
           chapterId: CHAPTER,
           participantUids: PARTICIPANTS,
-          sections: 'ciphertext',
+          sections: CIPHERTEXT,
           sealedAt: Timestamp.now(),
           openAt: Timestamp.fromDate(new Date(2030, 0, 1)),
         }),
@@ -389,7 +390,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
 
     it('cannot be edited any more', async () => {
       await assertFails(
-        updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { title: 'rewritten' }),
+        updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { title: sealed('rewritten') }),
       )
       await assertFails(
         updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { status: 'open' }),

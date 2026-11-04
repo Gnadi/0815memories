@@ -338,30 +338,50 @@ service cloud.firestore {
       allow delete: if isFamilyAdmin(familyId);
     }
 
+    // ── Encrypted fields ────────────────────────────────────────────────
+    //
+    // Family content is stored as the client wrote it, so its confidentiality
+    // rests entirely on the client encrypting before it writes — there is no
+    // privileged server path that could re-encrypt after the fact. These are
+    // the backstop for when that goes wrong in silence: encryptFields() skips a
+    // field it is not told about, or one that is not a string, and the Black
+    // Box went out in plaintext for the life of the feature that way.
+    //
+    // Is this a value encryptText() wrote? Base64 of a 12-byte IV, the
+    // ciphertext and a 16-byte tag, so at least 40 characters, a multiple of
+    // four, and nothing outside the base64 alphabet — no space, no brace, no
+    // letter of any other script. Plaintext passes that only as a single word
+    // of 40 or more base64 characters. Every stored value is ciphertext since
+    // Kaydo stopped opening families from before encryption.
+    function isCiphertext(v, maxSize) {
+      return v is string
+        && v.size() >= 40
+        && v.size() <= maxSize
+        && v.size() % 4 == 0
+        && v.matches('[A-Za-z0-9+/]+={0,2}');
+    }
+
+    // An encrypted field of the document being written: absent, cleared to
+    // null, or ciphertext. Firestore caps a document at 1 MiB.
+    function encryptedOk(d, field) {
+      return !(field in d) || d[field] == null || isCiphertext(d[field], 1048576);
+    }
+
     // Memories — readable by the family (admins and viewers alike),
     // writable only by an admin of the memory's family.
     //
-    // `contentRich` is the rich description document. Memory docs are read by
-    // the whole family and stored as-is on the server, so confidentiality rests
-    // entirely on the client encrypting before it writes — there is no
-    // privileged server path that
-    // could re-encrypt after the fact. This is the backstop for the one way
-    // that can silently go wrong: encryptFields() skips any value that is not
-    // a string, so a document object would land here readable. Requiring a
-    // string rejects exactly that. The leading-character check catches the
-    // next case up — stringified but unencrypted JSON — because encryptText()
-    // emits base64, which can never begin with '{' or '['.
-    //
-    // Deliberately scoped to this one field: the older text fields have
-    // pre-encryption data in the wild that a type check would now block.
+    // `contentRich` is the rich description document, held to a size and, when
+    // present, never null — the readers fall back to `content` when it is
+    // missing, not when it is empty.
     function memoryContentOk() {
       let d = request.resource.data;
-      return !('contentRich' in d)
-        || (d.contentRich is string
-            && d.contentRich.size() > 0
-            && d.contentRich.size() <= 700000
-            && d.contentRich[0:1] != '{'
-            && d.contentRich[0:1] != '[');
+      return (!('contentRich' in d) || isCiphertext(d.contentRich, 700000))
+        && encryptedOk(d, 'title')
+        && encryptedOk(d, 'content')
+        && encryptedOk(d, 'quote')
+        && encryptedOk(d, 'location')
+        && encryptedOk(d, 'authorName')
+        && encryptedOk(d, 'category');
     }
 
     match /memories/{memoryId} {
@@ -420,6 +440,11 @@ service cloud.firestore {
     }
 
     // Children — admin only (not visible to viewers)
+    function childEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'name') && encryptedOk(d, 'birthTime') && encryptedOk(d, 'birthPlace');
+    }
+
     match /children/{childId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -427,28 +452,24 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && childEncryptedOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && childEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
     }
 
     // An entry's rich document, `contentRich`, is held to what memoryContentOk()
-    // asks of a memory's: a string that does not start the way plaintext JSON
-    // does, so a document the client forgot to encrypt is refused rather than
-    // stored readable. Entries from before the editor have neither field.
+    // asks of a memory's. Entries from before the editor have neither field.
     function journalContentOk() {
       let d = request.resource.data;
-      return (!('contentRich' in d)
-          || (d.contentRich is string
-              && d.contentRich.size() > 0
-              && d.contentRich.size() <= 700000
-              && d.contentRich[0:1] != '{'
-              && d.contentRich[0:1] != '['))
+      return (!('contentRich' in d) || isCiphertext(d.contentRich, 700000))
+        && encryptedOk(d, 'content')
         && (!('contentFormat' in d) || d.contentFormat in ['rich', 'markdown']);
     }
 
@@ -484,6 +505,11 @@ service cloud.firestore {
     // listener, so a time condition on the metadata would blank the page for any
     // family holding one sealed capsule. The same shape as ourYearLetters, which
     // gets away with a single document only because it is read by ID.
+    function boxEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'title');
+    }
+
     match /blackbox/{boxId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -497,7 +523,8 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
-                    && !exists(/databases/$(database)/documents/blackboxContent/$(boxId));
+                    && !exists(/databases/$(database)/documents/blackboxContent/$(boxId))
+                    && boxEncryptedOk();
       // The unlock date may only ever move further away. That is what makes the
       // legacy check-in safe to expose — a capsule's deadline can be pushed
       // back indefinitely by someone who is still here, and nobody can pull a
@@ -507,10 +534,16 @@ service cloud.firestore {
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
-                    && unlockDateOnlyMovesForward();
+                    && unlockDateOnlyMovesForward()
+                    && boxEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
+    }
+
+    function letterEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'message');
     }
 
     match /blackboxContent/{boxId} {
@@ -530,7 +563,8 @@ service cloud.firestore {
                     && isFamilyAdmin(request.resource.data.familyId)
                     && !exists(/databases/$(database)/documents/blackbox/$(boxId))
                     && getAfter(/databases/$(database)/documents/blackbox/$(boxId)).data.familyId
-                         == request.resource.data.familyId;
+                         == request.resource.data.familyId
+                    && letterEncryptedOk();
       // Editing the letter is only possible once it has opened. Deleting is
       // allowed while sealed: discarding a capsule you no longer want must not
       // require waiting years for it, and the metadata delete is what the UI
@@ -539,13 +573,19 @@ service cloud.firestore {
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
                     && familyUnchanged()
-                    && capsuleIsOpen(boxId);
+                    && capsuleIsOpen(boxId)
+                    && letterEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
     }
 
     // Scrapbooks — admin only (digital scrapbook pages)
+    function scrapbookEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'title') && encryptedOk(d, 'pages');
+    }
+
     match /scrapbooks/{scrapbookId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -553,17 +593,24 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && scrapbookEncryptedOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && scrapbookEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
     }
 
     // Collages — admin only (template-based photo collages)
+    function collageEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'title') && encryptedOk(d, 'doc');
+    }
+
     match /collages/{collageId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -571,11 +618,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && collageEncryptedOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && collageEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
@@ -584,6 +633,11 @@ service cloud.firestore {
     // Highlight videos — admin only. The document is the recipe (shot list,
     // durations, title card); the rendered video never leaves the browser
     // unless it is posted to the feed as an ordinary memory.
+    function highlightEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'title') && encryptedOk(d, 'doc');
+    }
+
     match /highlights/{highlightId} {
       allow read: if request.auth != null
                     && resource.data.familyId != null
@@ -591,11 +645,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && highlightEncryptedOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && highlightEncryptedOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
@@ -610,8 +666,7 @@ service cloud.firestore {
     // so two devices making the same month write one document, and no family
     // can file one under another's name. The story lives in `doc`, encrypted
     // as a single string, and nothing else may ride along: the fields are
-    // listed, and `doc` must not start the way plaintext JSON does — the same
-    // backstop memoryContentOk() is for `contentRich`. `mediaRefs` names the
+    // listed, and `doc` must be ciphertext (isCiphertext). `mediaRefs` names the
     // photos the story shows (src/services/mediaRefs.js), so they are not
     // deleted while it does.
     function bestOfOk(bestOfId) {
@@ -622,11 +677,7 @@ service cloud.firestore {
         && d.month is string
         && d.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
         && bestOfId == d.familyId + '_' + d.month
-        && d.doc is string
-        && d.doc.size() > 0
-        && d.doc.size() <= 900000
-        && d.doc[0:1] != '{'
-        && d.doc[0:1] != '[';
+        && isCiphertext(d.doc, 900000);
     }
 
     match /bestOf/{bestOfId} {
@@ -671,18 +722,20 @@ service cloud.firestore {
     }
 
     // `instructionsRich`, the rich instructions document, gets the backstop
-    // memoryContentOk() gives `contentRich`: a string that does not start the
-    // way plaintext JSON does, so a document the client forgot to encrypt is
-    // refused rather than stored readable.
+    // memoryContentOk() gives `contentRich`, and the text beside it the one
+    // every encrypted field gets.
     function recipeInstructionsOk() {
       let d = request.resource.data;
       return (!('instructionsRich' in d)
           || d.instructionsRich == null
-          || (d.instructionsRich is string
-              && d.instructionsRich.size() > 0
-              && d.instructionsRich.size() <= 700000
-              && d.instructionsRich[0:1] != '{'
-              && d.instructionsRich[0:1] != '['))
+          || isCiphertext(d.instructionsRich, 700000))
+        && encryptedOk(d, 'title')
+        && encryptedOk(d, 'description')
+        && encryptedOk(d, 'instructions')
+        && encryptedOk(d, 'chefNote')
+        && encryptedOk(d, 'forkReason')
+        && encryptedOk(d, 'author')
+        && encryptedOk(d, 'ingredients')
         && (!('instructionsFormat' in d) || d.instructionsFormat in ['rich', 'markdown']);
     }
 
@@ -725,6 +778,11 @@ service cloud.firestore {
     // -----------------------------------------------------------------------
 
     // The ritual itself: who, which occasion, which rhythm.
+    function ritualEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'occasionLabel') && encryptedOk(d, 'partners');
+    }
+
     match /ourYearRituals/{ritualId} {
       allow read: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', []);
@@ -734,13 +792,15 @@ service cloud.firestore {
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.resource.data.participantUids is list
                     && request.resource.data.participantUids.size() == 2
-                    && request.auth.uid in request.resource.data.participantUids;
+                    && request.auth.uid in request.resource.data.participantUids
+                    && ritualEncryptedOk();
       // Participants may edit the ritual, but never re-home it or hand it to
       // someone else.
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && request.resource.data.familyId == resource.data.familyId
-                    && request.resource.data.participantUids == resource.data.participantUids;
+                    && request.resource.data.participantUids == resource.data.participantUids
+                    && ritualEncryptedOk();
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', []);
     }
@@ -748,6 +808,12 @@ service cloud.firestore {
     // One chapter = one review of a self-chosen period. Carries only metadata
     // about the answers (who handed in, whether they are revealed) — never the
     // answers themselves.
+    function chapterEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'title') && encryptedOk(d, 'quizQuestions')
+        && encryptedOk(d, 'quizReactions') && encryptedOk(d, 'keepsakes');
+    }
+
     match /ourYearChapters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
@@ -757,7 +823,8 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.resource.data.participantUids is list
-                    && request.auth.uid in request.resource.data.participantUids;
+                    && request.auth.uid in request.resource.data.participantUids
+                    && chapterEncryptedOk();
       // A closed chapter is a time capsule: once it is closed, only the letter
       // bookkeeping may still change (opening a letter that was written back
       // then). Everything else is frozen for good.
@@ -769,7 +836,8 @@ service cloud.firestore {
                       resource.data.get('status', 'open') != 'closed'
                       || request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['letterStatus', 'letterOpenedAt', 'updatedAt'])
-                    );
+                    )
+                    && chapterEncryptedOk();
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', []);
     }
@@ -787,6 +855,11 @@ service cloud.firestore {
     // makes "write independently, then look together" real: until `revealed`
     // is set, only the author can read their own document — which is why
     // setting `revealed` is guarded as closely as reading would be.
+    function entryEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'answers');
+    }
+
     match /ourYearEntries/{entryId} {
       // `resource == null` covers a document that does not exist yet: a client
       // subscribes to its own entry before writing it, and denying that read
@@ -802,7 +875,8 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
-                    && request.resource.data.get('authorUid', '') == request.auth.uid;
+                    && request.resource.data.get('authorUid', '') == request.auth.uid
+                    && entryEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && (
@@ -826,7 +900,8 @@ service cloud.firestore {
                           && request.resource.data.revealed == true
                           && resource.data.get('submitted', false) == true
                           && callerHandedIn(resource.data))
-                    );
+                    )
+                    && entryEncryptedOk();
       // Either partner may delete, so discarding a chapter cleans up both
       // sides. Destroying an answer is fine; reading it early is not, and that
       // is what the read rule above guards.
@@ -845,6 +920,11 @@ service cloud.firestore {
     // date has not arrived, Firestore hands the document to nobody — not the
     // partners, not through the console. The chapter document carries the
     // status and the open date so the UI can show the wait without reading it.
+    function letterSectionsEncryptedOk() {
+      let d = request.resource.data;
+      return encryptedOk(d, 'sections');
+    }
+
     match /ourYearLetters/{chapterId} {
       allow read: if request.auth != null
                     && (resource == null
@@ -856,13 +936,15 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
-                    && request.resource.data.get('sealedAt', null) == null;
+                    && request.resource.data.get('sealedAt', null) == null
+                    && letterSectionsEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (resource.data.get('sealedAt', null) == null
-                        || request.time >= resource.data.openAt);
+                        || request.time >= resource.data.openAt)
+                    && letterSectionsEncryptedOk();
       // Deleting is allowed (a chapter can be discarded while it is open);
       // reading early is not, which is the property that matters.
       allow delete: if request.auth != null

@@ -49,6 +49,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -126,15 +127,15 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
       await setDoc(doc(db, 'memories', 'mem-1'), {
         familyId: FAMILY,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         images: ['https://res.cloudinary.com/demo/raw/upload/encrypted.dat'],
       })
       await setDoc(doc(db, 'memories', 'mem-other'), {
         familyId: OTHER_FAMILY,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
       })
       await setDoc(doc(db, 'moments', 'moment-1'), { familyId: FAMILY, caption: 'ciphertext' })
-      await setDoc(doc(db, 'journals', 'journal-1'), { familyId: FAMILY, content: 'ciphertext' })
+      await setDoc(doc(db, 'journals', 'journal-1'), { familyId: FAMILY, content: CIPHERTEXT })
 
       await setDoc(doc(db, 'families', FAMILY, 'invites', 'invite-token-1'), {
         createdBy: ADMIN,
@@ -241,7 +242,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(
         setDoc(doc(asViewer(VIEWER, FAMILY), 'notificationsQueue', 'q-1'), {
           familyId: FAMILY,
-          title: 'Anything',
+          title: sealed('Anything'),
         }),
       )
     })
@@ -292,7 +293,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertSucceeds(getDoc(doc(db, 'families', FAMILY)))
       await assertSucceeds(getDoc(doc(db, 'journals', 'journal-1')))
       await assertSucceeds(
-        setDoc(doc(db, 'memories', 'mem-new'), { familyId: FAMILY, title: 'ciphertext' }),
+        setDoc(doc(db, 'memories', 'mem-new'), { familyId: FAMILY, title: CIPHERTEXT }),
       )
     })
 
@@ -345,7 +346,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(
         setDoc(doc(asAdmin(ADMIN, FAMILY), 'notificationsQueue', 'q-1'), {
           familyId: FAMILY,
-          title: 'New memory added',
+          title: sealed('New memory added'),
         }),
       )
     })
@@ -535,11 +536,11 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
     it.each(COLLECTIONS)('cannot move a %s document into this family', async (name) => {
       await testEnv.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), name, 'theirs'), { familyId: OTHER_FAMILY, title: 'x' })
+        await setDoc(doc(ctx.firestore(), name, 'theirs'), { familyId: OTHER_FAMILY, title: sealed('x') })
       })
       const db = asAdmin('uid-admin-2', OTHER_FAMILY)
-      await assertSucceeds(updateDoc(doc(db, name, 'theirs'), { title: 'still theirs' }))
-      await assertFails(updateDoc(doc(db, name, 'theirs'), { familyId: FAMILY, title: 'Injected' }))
+      await assertSucceeds(updateDoc(doc(db, name, 'theirs'), { title: sealed('still theirs') }))
+      await assertFails(updateDoc(doc(db, name, 'theirs'), { familyId: FAMILY, title: sealed('Injected') }))
     })
   })
 
@@ -573,7 +574,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertSucceeds(getDoc(doc(db, 'families', FAMILY)))
       await assertSucceeds(updateDoc(doc(db, 'families', FAMILY), { familyName: 'Still ours' }))
       await assertSucceeds(
-        setDoc(doc(db, 'memories', 'mem-unverified'), { familyId: FAMILY, title: 'ciphertext' }),
+        setDoc(doc(db, 'memories', 'mem-unverified'), { familyId: FAMILY, title: CIPHERTEXT }),
       )
     })
   })

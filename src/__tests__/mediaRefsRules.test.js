@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs'
 import { mediaRefsForCreate, mediaRefsForMerge, mediaRefsForUpdate } from '../services/mediaRefs'
 import { MEDIA_ASSETS } from '../../functions/mediaSigning.js'
 import { trackMediaRefs } from '../../functions/mediaRefs.js'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -75,13 +76,13 @@ describe.skipIf(!EMULATOR)('media references', () => {
   }
 
   it('follows a memory through creation, partial edits and deletion', async () => {
-    const created = { familyId: FAMILY, title: 'Summer', images: [url('a'), url('b')] }
+    const created = { familyId: FAMILY, title: sealed('Summer'), images: [url('a'), url('b')] }
     await write('memories', 'm1', (ref) => setDoc(ref, { ...created, ...mediaRefsForCreate(created) }))
     expect(await stateOf('a')).toBe('attached')
     expect(await stateOf('b')).toBe('attached')
 
     // A title edit leaves the photos' entry alone.
-    const after = await write('memories', 'm1', (ref) => updateDoc(ref, { title: 'Summer 26', ...mediaRefsForUpdate({ title: 'Summer 26' }) }))
+    const after = await write('memories', 'm1', (ref) => updateDoc(ref, { title: sealed('Summer 26'), ...mediaRefsForUpdate({ title: 'Summer 26' }) }))
     expect(after.mediaRefs).toEqual({ images: [pid('a'), pid('b')] })
 
     // Taking a photo out lets go of it; adding one attaches it.
@@ -97,8 +98,8 @@ describe.skipIf(!EMULATOR)('media references', () => {
   })
 
   it('leaves a document from before mediaRefs as it was on an edit without media', async () => {
-    await db.doc('memories/old').set({ familyId: FAMILY, title: 'Old', images: ['https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/legacy'] })
-    const after = await write('memories', 'old', (ref) => updateDoc(ref, { title: 'Older', ...mediaRefsForUpdate({ title: 'Older' }) }))
+    await db.doc('memories/old').set({ familyId: FAMILY, title: sealed('Old'), images: ['https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/legacy'] })
+    const after = await write('memories', 'old', (ref) => updateDoc(ref, { title: sealed('Older'), ...mediaRefsForUpdate({ title: 'Older' }) }))
     expect(after.mediaRefs ?? {}).toEqual({})
   })
 
@@ -115,7 +116,7 @@ describe.skipIf(!EMULATOR)('media references', () => {
 
   it('takes the whole map the backfill writes, and counts a file from before the ledger', async () => {
     const legacyUrl = 'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/old1.dat'
-    await db.doc('memories/old').set({ familyId: FAMILY, title: 'Old', images: [legacyUrl] })
+    await db.doc('memories/old').set({ familyId: FAMILY, title: sealed('Old'), images: [legacyUrl] })
 
     const { mediaRefs } = mediaRefsForCreate({ images: [legacyUrl] })
     await write('memories', 'old', (ref) => updateDoc(ref, { mediaRefs }))

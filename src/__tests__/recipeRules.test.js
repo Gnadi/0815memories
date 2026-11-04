@@ -14,6 +14,7 @@ import {
   collection, deleteDoc, deleteField, doc, getDoc, getDocs, orderBy, query, setDoc, Timestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -26,7 +27,7 @@ let testEnv
 
 const recipe = (extra = {}) => ({
   familyId: FAMILY,
-  title: 'ciphertext',
+  title: CIPHERTEXT,
   createdAt: Timestamp.now(),
   parentId: null,
   rootId: null,
@@ -105,7 +106,7 @@ describe.skipIf(!EMULATOR)('recipes', () => {
 
   describe('a viewer writes nothing', () => {
     it('neither changes nor deletes a shared recipe', async () => {
-      await assertFails(updateDoc(doc(asViewer(), 'recipes', 'shared'), { title: 'changed' }))
+      await assertFails(updateDoc(doc(asViewer(), 'recipes', 'shared'), { title: sealed('changed') }))
       await assertFails(deleteDoc(doc(asViewer(), 'recipes', 'shared')))
     })
 
@@ -169,7 +170,7 @@ describe.skipIf(!EMULATOR)('recipes', () => {
 
     it('still changes a recipe from before sharing, with no rootId or flag at all', async () => {
       await testEnv.withSecurityRulesDisabled((context) =>
-        setDoc(doc(context.firestore(), 'recipes', 'legacy'), { familyId: FAMILY, title: 'ciphertext' }))
+        setDoc(doc(context.firestore(), 'recipes', 'legacy'), { familyId: FAMILY, title: CIPHERTEXT }))
       await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'legacy'), { viewerVisible: true }))
     })
   })
@@ -177,10 +178,10 @@ describe.skipIf(!EMULATOR)('recipes', () => {
   describe('instructions', () => {
     it('are stored rich, encrypted, or as Markdown', async () => {
       await assertSucceeds(setDoc(doc(asAdmin(), 'recipes', 'rich'), recipe({
-        viewerVisible: false, instructionsFormat: 'rich', instructionsRich: 'Y2lwaGVydGV4dA==', instructions: 'ciphertext',
+        viewerVisible: false, instructionsFormat: 'rich', instructionsRich: CIPHERTEXT, instructions: CIPHERTEXT,
       })))
       await assertSucceeds(setDoc(doc(asAdmin(), 'recipes', 'md'), recipe({
-        viewerVisible: false, instructionsFormat: 'markdown', instructions: 'ciphertext',
+        viewerVisible: false, instructionsFormat: 'markdown', instructions: CIPHERTEXT,
       })))
     })
 
@@ -195,12 +196,12 @@ describe.skipIf(!EMULATOR)('recipes', () => {
 
     it('are corrected by an admin, on a recipe and on a fork', async () => {
       await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'shared'), {
-        title: 'ciphertext', instructionsFormat: 'markdown', instructions: 'ciphertext', instructionsRich: deleteField(),
+        title: CIPHERTEXT, instructionsFormat: 'markdown', instructions: CIPHERTEXT, instructionsRich: deleteField(),
       }))
       await assertSucceeds(updateDoc(doc(asAdmin(), 'recipes', 'sharedFork'), {
-        title: 'ciphertext', instructionsFormat: 'rich', instructionsRich: 'Y2lwaGVydGV4dA==',
+        title: CIPHERTEXT, instructionsFormat: 'rich', instructionsRich: CIPHERTEXT,
       }))
-      await assertFails(updateDoc(doc(asViewer(), 'recipes', 'sharedFork'), { title: 'ciphertext' }))
+      await assertFails(updateDoc(doc(asViewer(), 'recipes', 'sharedFork'), { title: CIPHERTEXT }))
     })
 
     it('are in a format the app can read', async () => {

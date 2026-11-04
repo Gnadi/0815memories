@@ -99,6 +99,13 @@ throw (`encryption/decrypt-failed`) rather than hand the value back.
 other documents, and `UnreadableContentNotice` tells the user once that
 something could not be read.
 
+`firestore.rules` holds writes to the same line: every encrypted field must be
+absent, `null`, or shaped like `encryptText` output (`isCiphertext`: base64, a
+multiple of four, at least an IV and a tag long). A field a service forgets to
+encrypt is refused instead of stored readable. The field lists there mirror
+the services, and `src/__tests__/encryptedFieldsRules.test.js` checks each one;
+a newly encrypted field goes into all three.
+
 ## Data model
 
 Every top-level collection holds documents for all families, each with a
