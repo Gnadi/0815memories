@@ -261,3 +261,21 @@ work is split between the families' browsers and a report for the operator.
   collection, as a list of strings only.
 - E2E against the emulators: upload, save, delete a moment, and see the ledger
   move from `pending` to `attached` to `detached`.
+
+## Open question: is a signature bound to its resource type?
+
+The signature covers `overwrite`, `public_id`, `tags` and `timestamp`; the
+resource type is only the path of the upload URL. If Cloudinary leaves the path
+out of the signature, a signature made for an encrypted `raw` file also uploads
+a plain `image` or `video` under the same public_id, outside what the ledger
+records for it. `scripts/check-cloudinary-signature.mjs` finds out against a
+Cloudinary account of its own — never the one Kaydo runs on:
+
+```
+CLOUDINARY_TEST_CLOUD_NAME=… CLOUDINARY_TEST_API_KEY=… CLOUDINARY_TEST_API_SECRET=… \
+  node scripts/check-cloudinary-signature.mjs --test-account --out result.json
+```
+
+It signs with the real `signUpload`, tries the signature at `/raw`, `/image`,
+`/video` and `/auto` and a second time, lists what the test family's tag holds
+per resource type, and deletes it again.
