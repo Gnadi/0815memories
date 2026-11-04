@@ -109,6 +109,18 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     expect(deps.compare).toHaveBeenCalledTimes(MAX_FAILURES)
   })
 
+  it('holds the limit against guesses sent all at once', async () => {
+    // Checking for a block first and counting only after a wrong password let
+    // a parallel burst all see the same unblocked state: twenty guesses got
+    // twenty comparisons against a limit of five.
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_, i) => login({ password: `guess-${i}`, ip: `198.51.100.${i}` })),
+    )
+    expect(deps.compare).toHaveBeenCalledTimes(MAX_FAILURES)
+    expect(results.filter((r) => r.outcome === 'denied')).toHaveLength(MAX_FAILURES)
+    expect(results.filter((r) => r.outcome === 'blocked')).toHaveLength(20 - MAX_FAILURES)
+  })
+
   it('does not lock out a device that has signed in before', async () => {
     // The finding: a stranger's wrong guesses used to keep every viewer out.
     const { deviceToken } = await login({ password: RIGHT })
