@@ -53,10 +53,7 @@ export class SigningError extends Error {
 }
 
 function adminUidsOf(data) {
-  if (!data) return []
-  const list = Array.isArray(data.adminUids) ? data.adminUids : []
-  if (list.length > 0) return list
-  return data.adminUid ? [data.adminUid] : []
+  return Array.isArray(data?.adminUids) ? data.adminUids : []
 }
 
 /**

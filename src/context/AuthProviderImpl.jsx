@@ -7,7 +7,7 @@ import {
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
 import { generateSlug } from '../utils/familySlug'
-import { backfillAdminUids, createFamily, findAdminFamilies, isSlugAvailable } from '../services/family'
+import { createFamily, findAdminFamilies, isSlugAvailable } from '../services/family'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
@@ -78,19 +78,10 @@ export function AuthProvider({ children }) {
     // could differ from the family the token's claim names, and so from what
     // onAuthStateChanged had just set. The claim's family wins, then the one
     // they own.
-    const { id, data } =
+    const { id } =
       families.find((f) => f.id === preferredId) ??
       families.find((f) => f.data.adminUid === uid) ??
       families[0]
-    // Lazy migration: if the owner logs in before the family has an `adminUids`
-    // array, backfill it now so subsequent rule checks use the new shape.
-    if (data.adminUid === uid && !Array.isArray(data.adminUids)) {
-      try {
-        await backfillAdminUids(id, uid)
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('Lazy adminUids migration failed:', err)
-      }
-    }
     setFamilyId(id)
     writeStored('fh_familyId', id)
     return id
@@ -180,8 +171,9 @@ export function AuthProvider({ children }) {
       setEmailVerified(!!firebaseUser?.emailVerified)
       try {
         const claimFamily = await applyClaims(firebaseUser)
-        // Admins from before the claim migration have no familyId in their token.
-        // The adminUids lookup stays as the fallback for exactly them.
+        // An admin whose claim has not landed yet has no familyId in their
+        // token: syncAdminClaims writes it after the write that made them an
+        // admin. The adminUids lookup is the fallback for exactly them.
         if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
           await resolveFamilyId(firebaseUser.uid)
         }

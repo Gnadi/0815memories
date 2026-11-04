@@ -47,7 +47,6 @@ vi.mock('../config/firebase', () => ({
 }))
 
 vi.mock('../services/family', () => ({
-  backfillAdminUids: vi.fn(),
   createFamily: (...args) => createFamily(...args),
   findAdminFamilies: (...args) => findAdminFamilies(...args),
   isSlugAvailable: vi.fn(async () => true),

@@ -32,9 +32,7 @@ service cloud.firestore {
     // `||` short-circuits, so this runs only for a caller who has none.
     function isAdminByDocument(familyId) {
       let fam = get(/databases/$(database)/documents/families/$(familyId)).data;
-      return request.auth != null
-        && (request.auth.uid in fam.get('adminUids', [fam.adminUid])
-            || request.auth.uid == fam.adminUid);
+      return request.auth != null && request.auth.uid in fam.adminUids;
     }
 
     function isFamilyAdmin(familyId) {
@@ -158,9 +156,8 @@ service cloud.firestore {
       // anyone who knew the family id — and the login page handed the id out.
       // What the login page actually needs now lives in familyPublic below.
       allow read: if isFamilyMember(familyId);
-      // Finding your own family: `adminUids array-contains <you>`, or the
-      // oldest families' `adminUid == <you>` — the lookups AuthContext makes at
-      // sign-in for an admin without a claim.
+      // Finding your own family: `adminUids array-contains <you>`, the lookup
+      // AuthContext makes at sign-in for an admin without a claim.
       //
       // The read rule above cannot answer them. A query is checked against its
       // filters, not document by document, so `familyId` has no value there and
@@ -169,14 +166,12 @@ service cloud.firestore {
       // a new device or to upload. This proves the same thing from the filter
       // itself, and admits no query that is not about the caller.
       allow list: if request.auth != null
-                    && (request.auth.uid in resource.data.adminUids
-                        || resource.data.adminUid == request.auth.uid);
+                    && request.auth.uid in resource.data.adminUids;
       allow create: if request.auth != null
                     && tokenRole() != 'viewer'
                     && hasVerifiedEmail()
                     && request.resource.data.adminUid == request.auth.uid
-                    && (!('adminUids' in request.resource.data)
-                        || request.resource.data.adminUids == [request.auth.uid])
+                    && request.resource.data.adminUids == [request.auth.uid]
                     && hasEncryptionKey()
                     && loginCustomOk();
       allow update: if request.auth != null
@@ -186,14 +181,8 @@ service cloud.firestore {
                     && (
                       // Path A: existing admin edits regular fields; adminUids unchanged.
                       (
-                        request.auth.uid in resource.data.get('adminUids', [resource.data.adminUid])
-                        && request.resource.data.get('adminUids', null) == resource.data.get('adminUids', null)
-                      )
-                      // Path B: owner one-shot lazy migration of `adminUids`.
-                      || (
-                        request.auth.uid == resource.data.adminUid
-                        && !('adminUids' in resource.data)
-                        && request.resource.data.adminUids == [resource.data.adminUid]
+                        request.auth.uid in resource.data.adminUids
+                        && request.resource.data.adminUids == resource.data.adminUids
                       )
                       // Path C: invite redemption — caller adds exactly themselves,
                       // and changes nothing else.
@@ -206,10 +195,10 @@ service cloud.firestore {
                       // recreated from the spent invite walk straight back in.
                       || (
                         hasVerifiedEmail()
-                        && !(request.auth.uid in resource.data.get('adminUids', [resource.data.adminUid]))
+                        && !(request.auth.uid in resource.data.adminUids)
                         && request.auth.uid in request.resource.data.adminUids
-                        && request.resource.data.adminUids.size() == resource.data.get('adminUids', [resource.data.adminUid]).size() + 1
-                        && request.resource.data.adminUids.hasAll(resource.data.get('adminUids', [resource.data.adminUid]))
+                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() + 1
+                        && request.resource.data.adminUids.hasAll(resource.data.adminUids)
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids'])
                         && !exists(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
                         && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
@@ -218,9 +207,9 @@ service cloud.firestore {
                       // The owner is always retained because `adminUid` is unchanged AND
                       // the resulting array must still contain `adminUid`.
                       || (
-                        request.auth.uid in resource.data.get('adminUids', [resource.data.adminUid])
-                        && request.resource.data.adminUids.size() == resource.data.get('adminUids', [resource.data.adminUid]).size() - 1
-                        && resource.data.get('adminUids', [resource.data.adminUid]).hasAll(request.resource.data.adminUids)
+                        request.auth.uid in resource.data.adminUids
+                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() - 1
+                        && resource.data.adminUids.hasAll(request.resource.data.adminUids)
                         && resource.data.adminUid in request.resource.data.adminUids
                       )
                     );
