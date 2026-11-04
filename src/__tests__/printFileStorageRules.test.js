@@ -25,6 +25,8 @@ const ADMIN = 'uid-admin'
 // In adminUids, but the syncAdminClaims trigger has not given them a claim yet.
 const NEW_ADMIN = 'uid-new-admin'
 const OTHER_ADMIN = 'uid-other-admin'
+const OWNER_ONLY_FAMILY = 'family-3'
+const OWNER_ONLY = 'uid-owner-only'
 
 const PDF = { contentType: 'application/pdf' }
 const JPEG = { contentType: 'image/jpeg' }
@@ -52,6 +54,8 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'families', FAMILY), { adminUids: [ADMIN, NEW_ADMIN] })
       await setDoc(doc(context.firestore(), 'families', OTHER_FAMILY), { adminUids: [OTHER_ADMIN] })
+      // The owner field alone, as in the families from before adminUids.
+      await setDoc(doc(context.firestore(), 'families', OWNER_ONLY_FAMILY), { adminUid: OWNER_ONLY, adminUids: [] })
     })
   })
 
@@ -82,6 +86,11 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
 
   it('lets an admin whose claim has not landed yet store one too', async () => {
     await assertSucceeds(newAdmin().ref(path('book.pdf')).put(bytes(), PDF))
+  })
+
+  it('goes by adminUids, not by the owner field', async () => {
+    const owner = testEnv.authenticatedContext(OWNER_ONLY).storage()
+    await assertFails(owner.ref(path('book.pdf', OWNER_ONLY_FAMILY)).put(bytes(), PDF))
   })
 
   it('keeps everyone else from storing one', async () => {

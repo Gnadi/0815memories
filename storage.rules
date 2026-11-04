@@ -24,8 +24,7 @@ service firebase.storage {
 
     function isAdminByDocument(familyId) {
       let fam = firestore.get(/databases/(default)/documents/families/$(familyId)).data;
-      return request.auth.uid in fam.get('adminUids', [])
-        || request.auth.uid == fam.get('adminUid', '');
+      return request.auth.uid in fam.get('adminUids', []);
     }
 
     match /printFiles/{familyId}/{printId}/{name} {
