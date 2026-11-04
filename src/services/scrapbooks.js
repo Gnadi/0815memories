@@ -14,7 +14,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
+import { decryptFields, decryptJSONFields, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
@@ -39,15 +39,11 @@ async function encryptScrapbook(key, data) {
 
 export async function decryptScrapbook(key, data, { withPages = true } = {}) {
   if (!key) return data
-  const result = { ...data }
-  if (typeof result.title === 'string') result.title = await decryptText(key, result.title)
+  const result = await decryptFields(key, data, ['title'])
   // Decrypting and JSON-parsing every page for a list that only shows a title
   // and a cover is the most expensive thing a list could do, so callers have
   // to ask for it.
-  if (withPages && typeof result.pages === 'string') {
-    result.pages = await decryptJSON(key, result.pages)
-  }
-  return result
+  return withPages ? decryptJSONFields(key, result, ['pages']) : result
 }
 
 /**

@@ -60,6 +60,12 @@
     "closeMenu": "Close menu",
     "familyIllustrationAlt": "Family gathering illustration"
   },
+  "unreadable": {
+    "notice_one": "One entry could not be decrypted with your family's key. It is shown without the affected text.",
+    "notice_other": "{{count}} entries could not be decrypted with your family's key. They are shown without the affected text.",
+    "content": "This content could not be decrypted.",
+    "title": "Unreadable entry"
+  },
   "mobileNav": {
     "home": "Home",
     "journal": "Journal",

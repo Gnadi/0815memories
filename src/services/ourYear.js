@@ -21,7 +21,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
+import { decryptFields, decryptJSONFields, encryptJSON, encryptText } from '../utils/encryption'
 import { emptyKeepsakes } from '../utils/ourYear'
 import { subscribeDecrypted, subscribeDecryptedDocument } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
@@ -52,9 +52,7 @@ async function encryptRitual(key, data) {
 
 export async function decryptRitual(key, data) {
   if (!key) return data
-  const out = { ...data }
-  if (typeof out.partners === 'string') out.partners = await decryptJSON(key, out.partners)
-  if (typeof out.occasionLabel === 'string') out.occasionLabel = await decryptText(key, out.occasionLabel)
+  const out = await decryptJSONFields(key, await decryptFields(key, data, ['occasionLabel']), ['partners'])
   if (!Array.isArray(out.partners)) out.partners = []
   return out
 }
@@ -69,13 +67,11 @@ async function encryptChapter(key, data) {
 }
 
 export async function decryptChapter(key, data) {
-  const out = { ...data }
-  if (key) {
-    if (typeof out.title === 'string') out.title = await decryptText(key, out.title)
-    if (typeof out.quizQuestions === 'string') out.quizQuestions = await decryptJSON(key, out.quizQuestions)
-    if (typeof out.quizReactions === 'string') out.quizReactions = await decryptJSON(key, out.quizReactions)
-    if (typeof out.keepsakes === 'string') out.keepsakes = await decryptJSON(key, out.keepsakes)
-  }
+  const out = await decryptJSONFields(
+    key,
+    await decryptFields(key, data, ['title']),
+    ['quizQuestions', 'quizReactions', 'keepsakes'],
+  )
   if (!Array.isArray(out.quizQuestions)) out.quizQuestions = []
   if (!out.quizReactions || typeof out.quizReactions !== 'object') out.quizReactions = {}
   if (!out.keepsakes || typeof out.keepsakes !== 'object') out.keepsakes = emptyKeepsakes()
@@ -83,15 +79,13 @@ export async function decryptChapter(key, data) {
 }
 
 export async function decryptEntry(key, data) {
-  const out = { ...data }
-  if (key && typeof out.answers === 'string') out.answers = await decryptJSON(key, out.answers)
+  const out = await decryptJSONFields(key, { ...data }, ['answers'])
   if (!out.answers || typeof out.answers !== 'object') out.answers = {}
   return out
 }
 
 export async function decryptLetter(key, data) {
-  const out = { ...data }
-  if (key && typeof out.sections === 'string') out.sections = await decryptJSON(key, out.sections)
+  const out = await decryptJSONFields(key, { ...data }, ['sections'])
   if (!out.sections || typeof out.sections !== 'object') out.sections = {}
   return out
 }

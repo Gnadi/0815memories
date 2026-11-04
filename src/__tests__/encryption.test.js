@@ -18,7 +18,14 @@ import {
   encryptBlob,
   decryptBlob,
   MISSING_KEY,
+  DECRYPT_FAILED,
+  isDecryptError,
+  decryptJSONFields,
+  decryptStringArray,
+  hasUnreadableFields,
+  clearDecryptedTextCache,
 } from '../utils/encryption'
+import { unreadableSnapshot } from '../utils/unreadableContent'
 
 // jsdom doesn't provide a functional crypto.subtle — graft Node's webcrypto on
 // the existing `crypto` object so the module under test (which calls
@@ -57,10 +64,70 @@ describe('encryption helpers', () => {
     expect(await decryptText(key, undefined)).toBe(undefined)
   })
 
-  it('returns ciphertext unchanged when decryption fails (legacy plaintext)', async () => {
-    const { key } = await generateEncryptionKey()
-    const decrypted = await decryptText(key, 'not-base64-ciphertext')
-    expect(decrypted).toBe('not-base64-ciphertext')
+  // Every stored value is ciphertext, so one that does not decrypt is damage or
+  // the wrong key. It used to come back as it was, which made both look like
+  // pre-encryption data and put base64 on screen.
+  describe('a value that does not decrypt', () => {
+    it('is an error, not the value handed back', async () => {
+      const { key } = await generateEncryptionKey()
+      await expect(decryptText(key, 'not-base64-ciphertext')).rejects.toMatchObject({ code: DECRYPT_FAILED })
+      await expect(decryptText(key, 'a plain title')).rejects.toSatisfy(isDecryptError)
+    })
+
+    it('is an error under the wrong key', async () => {
+      const { key } = await generateEncryptionKey()
+      const { key: otherKey } = await generateEncryptionKey()
+      const ciphertext = await encryptText(key, 'Sommer am See')
+      await expect(decryptText(otherKey, ciphertext)).rejects.toMatchObject({ code: DECRYPT_FAILED })
+    })
+
+    it('is an error when damaged', async () => {
+      const { key } = await generateEncryptionKey()
+      const ciphertext = await encryptText(key, 'Sommer am See')
+      const damaged = (ciphertext[20] === 'A' ? 'B' : 'A')
+      await expect(decryptText(key, ciphertext.slice(0, 20) + damaged + ciphertext.slice(21)))
+        .rejects.toMatchObject({ code: DECRYPT_FAILED })
+    })
+
+    it('is an error in decryptJSON, also when it decrypts to something that is not JSON', async () => {
+      const { key } = await generateEncryptionKey()
+      await expect(decryptJSON(key, 'not-base64-ciphertext')).rejects.toMatchObject({ code: DECRYPT_FAILED })
+      const notJson = await encryptText(key, 'kein JSON')
+      await expect(decryptJSON(key, notJson)).rejects.toMatchObject({ code: DECRYPT_FAILED })
+    })
+
+    it('leaves the rest of the document readable and names the field', async () => {
+      const { key } = await generateEncryptionKey()
+      const doc = { title: await encryptText(key, 'Sommer'), location: 'damaged', other: 1 }
+      const decrypted = await decryptFields(key, doc, ['title', 'location'])
+      expect(decrypted).toEqual({ title: 'Sommer', location: null, other: 1, unreadableFields: ['location'] })
+      expect(hasUnreadableFields(decrypted, ['location'])).toBe(true)
+      expect(hasUnreadableFields(decrypted, ['title'])).toBe(false)
+    })
+
+    it('collects the unreadable fields of text and JSON alike', async () => {
+      const { key } = await generateEncryptionKey()
+      const doc = { title: 'damaged', pages: 'damaged too', ok: await encryptJSON(key, [1]) }
+      const decrypted = await decryptJSONFields(key, await decryptFields(key, doc, ['title']), ['pages', 'ok'])
+      expect(decrypted.ok).toEqual([1])
+      expect(decrypted.unreadableFields).toEqual(['title', 'pages'])
+    })
+
+    it('leaves an empty slot in a string array', async () => {
+      const { key } = await generateEncryptionKey()
+      const tiny = await encryptText(key, 'data:image/jpeg;base64,xyz')
+      expect(await decryptStringArray(key, [tiny, 'damaged', null])).toEqual(['data:image/jpeg;base64,xyz', null, null])
+    })
+
+    it('is counted for the app-wide notice, once per value', async () => {
+      clearDecryptedTextCache()
+      const { key } = await generateEncryptionKey()
+      await decryptFields(key, { title: 'damaged' }, ['title'])
+      await decryptFields(key, { title: 'damaged' }, ['title'])
+      expect(unreadableSnapshot().count).toBe(1)
+      clearDecryptedTextCache()
+      expect(unreadableSnapshot().count).toBe(0)
+    })
   })
 
   it('produces different ciphertexts for the same plaintext (random IV)', async () => {

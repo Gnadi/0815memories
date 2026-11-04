@@ -91,6 +91,14 @@ The encryption helpers back this up: writing without a key throws, except in
 the demo, whose family is the only one without one. The emulator seed is
 encrypted like any other family, pictures included.
 
+Reading is just as strict. Every stored value is ciphertext, so one that does
+not decrypt is the wrong key or damaged data: `decryptText` and `decryptJSON`
+throw (`encryption/decrypt-failed`) rather than hand the value back.
+`decryptFields` and `decryptJSONFields` catch that per field: the field becomes
+`null` and is named in the document's `unreadableFields`, so a list keeps its
+other documents, and `UnreadableContentNotice` tells the user once that
+something could not be read.
+
 ## Data model
 
 Every top-level collection holds documents for all families, each with a

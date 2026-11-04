@@ -37,6 +37,12 @@ vi.mock('../config/firestore', () => ({
   orderBy: vi.fn(), setDoc: vi.fn(), startAfter: vi.fn(), writeBatch: vi.fn(), arrayUnion: vi.fn(),
   arrayRemove: vi.fn(), Timestamp: { fromDate: vi.fn() },
 }))
+// The other collections' text is read through decryptFields; with no real key
+// here, it hands the fields back as they are.
+vi.mock('../utils/encryption', async (importOriginal) => ({
+  ...(await importOriginal()),
+  decryptFields: async (_key, data) => data,
+}))
 // Stands in for the family key: "decrypting" a memory's rich text parses it.
 vi.mock('../services/memories', () => ({
   decryptMemoryDoc: async (_key, data) => ({ ...data, contentRich: data.contentRich ? JSON.parse(data.contentRich.slice(4)) : null }),

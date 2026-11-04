@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import NotificationPrompt from './NotificationPrompt'
+import UnreadableContentNotice from './UnreadableContentNotice'
 import { isPushOptedOut, listenForegroundMessages, requestAndSaveFCMToken } from '../utils/notifications'
 import { devError } from '../utils/devLog'
 
@@ -58,6 +59,7 @@ export default function AppNotifications() {
   return (
     <>
       {isAuthenticated && <NotificationPrompt familyId={familyId} />}
+      <UnreadableContentNotice />
 
       {/* In-app toast for foreground push messages */}
       {toast && (

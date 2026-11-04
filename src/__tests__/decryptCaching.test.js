@@ -5,6 +5,7 @@ import {
   decryptFields,
   generateEncryptionKey,
   clearDecryptedTextCache,
+  DECRYPT_FAILED,
 } from '../utils/encryption'
 
 let key
@@ -40,16 +41,22 @@ describe('decryptText caching', () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it('caches the failure for data written before encryption existed', async () => {
-    const legacy = 'a plain, never-encrypted title'
+  it('does not remember a value that failed to decrypt', async () => {
+    const damaged = 'not a ciphertext'
+    await expect(decryptText(key, damaged)).rejects.toMatchObject({ code: DECRYPT_FAILED })
 
-    expect(await decryptText(key, legacy)).toBe(legacy)
-
-    // The expensive part of the legacy path is the throw/catch on every field
-    // of every document on every snapshot. It must happen at most once.
+    // A failure is reported every time, never turned into text by the cache.
     const spy = vi.spyOn(crypto.subtle, 'decrypt')
-    expect(await decryptText(key, legacy)).toBe(legacy)
-    expect(spy).not.toHaveBeenCalled()
+    await expect(decryptText(key, damaged)).rejects.toMatchObject({ code: DECRYPT_FAILED })
+    expect(spy).toHaveBeenCalled()
+  })
+
+  it('keeps one memo per key, so another key does not read from it', async () => {
+    const ciphertext = await encryptText(key, 'Sommer am See')
+    expect(await decryptText(key, ciphertext)).toBe('Sommer am See')
+
+    const { key: otherKey } = await generateEncryptionKey()
+    await expect(decryptText(otherKey, ciphertext)).rejects.toMatchObject({ code: DECRYPT_FAILED })
   })
 
   it('clearing the cache makes the next call decrypt again', async () => {

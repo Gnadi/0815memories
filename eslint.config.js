@@ -84,7 +84,7 @@ export default defineConfig([
         }, {
           regex: '(^|/)encryption(\\.js)?$',
           importNames: [
-            'encryptFields', 'decryptFields', 'encryptJSON', 'decryptJSON',
+            'encryptFields', 'decryptFields', 'encryptJSON', 'decryptJSON', 'decryptJSONFields',
             'encryptText', 'decryptText', 'decryptStringArray',
           ],
           message: "Encrypt and decrypt a document's fields in its service in src/services/, which says which of them are encrypted.",

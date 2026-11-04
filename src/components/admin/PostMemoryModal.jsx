@@ -5,7 +5,7 @@ import { Timestamp } from '../../config/firestore'
 import { useAuth } from '../../context/AuthContext'
 import { devError } from '../../utils/devLog'
 import { useMediaUploader } from '../../hooks/useMediaUploader'
-import { decryptMemoryDoc } from '../../services/memories'
+import { decryptMemoryRich } from '../../services/memories'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import PolaroidBorderEditor from './PolaroidBorderEditor'
 import RichTextEditorLazy, { EditorSkeleton } from './RichTextEditorLazy'
@@ -137,13 +137,15 @@ export default function PostMemoryModal({
   const [pendingInline, setPendingInline] = useState(0)
   const [saveError, setSaveError] = useState('')
 
-  // Ensure form fields are plaintext even if the caller passes an
-  // encrypted memory (e.g. direct getDoc reads that bypass the hooks).
+  // The memory comes from the feed, whose text is decrypted but whose rich
+  // description is not. Only that is left to do: decrypting the rest again
+  // would fail, now that a value that does not decrypt is no longer handed back
+  // as it is.
   useEffect(() => {
     if (!memory) return
     let cancelled = false
     const seed = async () => {
-      const decrypted = encryptionKey ? await decryptMemoryDoc(encryptionKey, memory) : memory
+      const decrypted = await decryptMemoryRich(encryptionKey, memory)
       if (cancelled) return
       setForm((prev) => ({
         ...prev,

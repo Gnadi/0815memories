@@ -16,7 +16,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
+import { decryptFields, decryptJSONFields, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
@@ -31,12 +31,8 @@ async function encryptHighlight(key, data) {
 
 export async function decryptHighlight(key, data, { withDoc = true } = {}) {
   if (!key) return data
-  const result = { ...data }
-  if (typeof result.title === 'string') result.title = await decryptText(key, result.title)
-  if (withDoc && typeof result.doc === 'string') {
-    result.doc = await decryptJSON(key, result.doc)
-  }
-  return result
+  const result = await decryptFields(key, data, ['title'])
+  return withDoc ? decryptJSONFields(key, result, ['doc']) : result
 }
 
 /** The family's highlights, newest first; `doc` only for those who ask. */

@@ -27,7 +27,7 @@ import {
   where,
 } from '../config/firestore'
 import { auth, db } from '../config/firebase'
-import { decryptJSON, encryptJSON } from '../utils/encryption'
+import { decryptJSONFields, encryptJSON } from '../utils/encryption'
 import { monthRange } from '../utils/bestOf'
 import { subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate } from './mediaRefs'
@@ -42,8 +42,7 @@ const LIST_LIMIT = 24
 export const bestOfId = (familyId, month) => `${familyId}_${month}`
 
 export async function decryptBestOf(key, data) {
-  if (!key) return data
-  return { ...data, doc: typeof data.doc === 'string' ? await decryptJSON(key, data.doc) : data.doc }
+  return decryptJSONFields(key, data, ['doc'])
 }
 
 /** The family's best-ofs, newest month first. */

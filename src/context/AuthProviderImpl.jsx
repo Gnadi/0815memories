@@ -60,6 +60,9 @@ export function AuthProvider({ children }) {
   // trigger has not written yet.
   const [role, setRole] = useState(null)
   const [familyId, setFamilyId] = useState(() => readStored('fh_familyId'))
+  // Another family is other content under another key: what the last one could
+  // not decrypt says nothing about this one.
+  useEffect(() => clearDecryptedTextCache, [familyId])
   // What "Stay logged in" says for the open session, for the settings switch.
   const [stayLoggedIn, setStayLoggedInState] = useState(() => !isSessionOnly())
   const [loading, setLoading] = useState(true)

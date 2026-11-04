@@ -15,7 +15,7 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptJSON, decryptText, encryptJSON, encryptText } from '../utils/encryption'
+import { decryptFields, decryptJSONFields, encryptJSON, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
@@ -30,16 +30,12 @@ async function encryptCollage(key, data) {
 
 export async function decryptCollage(key, data, { withDoc = true } = {}) {
   if (!key) return data
-  const result = { ...data }
-  if (typeof result.title === 'string') result.title = await decryptText(key, result.title)
+  const result = await decryptFields(key, data, ['title'])
   // Opt-in, same reasoning as scrapbooks: a caller that only lists titles
   // should not JSON-parse every collage's slot list on every snapshot. The
   // gallery does ask for it — it re-draws each collage from the document
   // instead of storing a rendered cover image.
-  if (withDoc && typeof result.doc === 'string') {
-    result.doc = await decryptJSON(key, result.doc)
-  }
-  return result
+  return withDoc ? decryptJSONFields(key, result, ['doc']) : result
 }
 
 /** The family's collages, newest first; `doc` only for those who ask. */
