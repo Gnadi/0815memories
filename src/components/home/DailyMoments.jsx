@@ -76,12 +76,6 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
                     <MomentPlaceholder />
                   </div>
                 )}
-                {/* Video badge: shown when a picture, not the icon, stands for a moment with videos */}
-                {(moment.images?.[0] || moment.videos?.[0]?.posterUrl) && moment.videos?.length > 0 && (
-                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-kaydo rounded-full flex items-center justify-center shadow">
-                    <Video className="w-3 h-3 text-white" />
-                  </span>
-                )}
               </div>
             </div>
             <span className="text-xs text-bark-light max-w-[68px] truncate">
