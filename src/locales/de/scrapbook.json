@@ -32,7 +32,9 @@
     "exportPdf": "Als PDF exportieren",
     "pdf": "PDF",
     "copyShareLink": "Link zum Teilen kopieren",
-    "linkCopied": "Link in die Zwischenablage kopiert!"
+    "linkCopied": "Link in die Zwischenablage kopiert!",
+    "saveFailed": "Nicht gespeichert",
+    "leaveUnsaved": "Deine letzten Änderungen konnten nicht gespeichert werden. Trotzdem verlassen und sie verwerfen?"
   },
   "pageNav": {
     "previousPage": "Vorherige Seite",

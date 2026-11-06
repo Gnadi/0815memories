@@ -24,6 +24,7 @@
  * them.
  */
 import { MEDIA_ASSETS, MEDIA_USAGE } from './mediaSigning.js'
+import { reconcileRef, refOfEntry, refsOf } from './mediaRefs.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -95,10 +96,36 @@ async function dueEntries(db, now) {
     .filter((entry) => isDue(entry, now))
 }
 
-/** Still due? Read again right before the destroy, so a file picked up since is kept. */
+/**
+ * Does the document that let this file go hold it again after all? The
+ * ledger is only as right as the triggers that keep it, and a trigger that
+ * failed for good, or one from before they read the document itself
+ * (functions/mediaRefs.js), can have left a file "detached" that is still
+ * shown. One look at that document before deleting costs a read; a wrong
+ * delete costs a family photo.
+ */
+async function heldWhereItWasLetGo(db, entry) {
+  const [collection, docId, ...rest] = typeof entry.detachedFrom === 'string' ? entry.detachedFrom.split('/') : []
+  if (!collection || !docId || rest.length > 0) return false
+  const source = await db.collection(collection).doc(docId).get()
+  return source.exists && refsOf(source.data()).has(refOfEntry(entry))
+}
+
+/**
+ * Still due? Read again right before the destroy, so a file picked up since is
+ * kept — and put back in the ledger, if the document that let it go holds it.
+ */
 async function stillDue(db, id, now) {
   const snap = await db.collection(MEDIA_ASSETS).doc(id).get()
-  return snap.exists && isDue(snap.data(), now)
+  if (!snap.exists || !isDue(snap.data(), now)) return false
+  const entry = snap.data()
+  if (await heldWhereItWasLetGo(db, entry)) {
+    console.error('[media] a file the ledger called detached is still in use; kept:', id)
+    const [collection, docId] = entry.detachedFrom.split('/')
+    await reconcileRef(db, () => now, refOfEntry(entry), collection, docId)
+    return false
+  }
+  return true
 }
 
 /**
@@ -152,7 +179,13 @@ export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
   const stats = { due: due.length, deleted: 0, kept: 0, failed: 0, raced: 0, dryRun }
 
   if (dryRun) {
-    stats.wouldDelete = due.map((entry) => entry.publicId)
+    // The same last look as a real run takes, so the report the switch to a
+    // real run is judged by does not list a file a document still shows.
+    stats.wouldDelete = []
+    for (const entry of due) {
+      if (await heldWhereItWasLetGo(db, entry)) stats.kept++
+      else stats.wouldDelete.push(entry.publicId)
+    }
     return stats
   }
 

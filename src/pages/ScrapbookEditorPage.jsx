@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useScrapbookWriter } from '../hooks/useScrapbooks'
+import { useAutosave } from '../hooks/useAutosave'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
 import { getScrapbook } from '../services/scrapbooks'
@@ -58,7 +59,6 @@ export default function ScrapbookEditorPage() {
 
   const [loadError, setLoadError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saveStatus, setSaveStatus] = useState('idle')
   const [exporting, setExporting] = useState(false)
   // Set while the print file is drawn: { frame, ratio } — see renderPrintFile.
   const [printCapture, setPrintCapture] = useState(null)
@@ -75,7 +75,6 @@ export default function ScrapbookEditorPage() {
   const { upload, uploading, session: sessionPhotos } = useScrapbookPhotoUpload()
 
   const canvasRef = useRef(null)
-  const saveTimerRef = useRef(null)
 
   // Load scrapbook once on mount
   useEffect(() => {
@@ -91,33 +90,33 @@ export default function ScrapbookEditorPage() {
     })
   }, [id, familyId, encryptionKey])
 
-  // Debounced auto-save
-  const save = useCallback(async (pagesData, currentTitle) => {
-    if (!id) return
-    setSaveStatus('saving')
-    try {
-      let coverImageUrl = null
-      for (const page of pagesData) {
-        const photo = page.elements.find((el) => el.type === 'photo' && el.url)
-        if (photo) { coverImageUrl = photo.url; break }
-      }
-      await updateScrapbook(id, { pages: pagesData, title: currentTitle, coverImageUrl })
-      dispatch({ type: 'MARK_SAVED' })
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch {
-      setSaveStatus('idle')
+  // Debounced autosave, written out before leaving — see useAutosave.
+  const writeBook = useCallback(async (pagesData, currentTitle) => {
+    let coverImageUrl = null
+    for (const page of pagesData) {
+      const photo = page.elements.find((el) => el.type === 'photo' && el.url)
+      if (photo) { coverImageUrl = photo.url; break }
     }
+    await updateScrapbook(id, { pages: pagesData, title: currentTitle, coverImageUrl })
   }, [id, updateScrapbook])
+  const markSaved = useCallback((savedPages, savedTitle) => {
+    dispatch({ type: 'MARK_SAVED', pages: savedPages, title: savedTitle })
+  }, [])
+  const logSaveError = useCallback((err) => devError('Scrapbook save failed', err), [])
+  const { saveStatus, flush: flushSave } = useAutosave({
+    doc: pages,
+    title,
+    isDirty: isDirty && !!id,
+    write: writeBook,
+    onSaved: markSaved,
+    onError: logSaveError,
+  })
 
-  useEffect(() => {
-    if (!isDirty) return
-    clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => save(pages, title), 2000)
-    return () => clearTimeout(saveTimerRef.current)
-  }, [isDirty, pages, title, save])
-
-  useEffect(() => () => clearTimeout(saveTimerRef.current), [])
+  const handleBack = async () => {
+    const saved = await flushSave()
+    if (!saved && !window.confirm(t('editor.leaveUnsaved'))) return
+    navigate('/scrapbook')
+  }
 
   // Force the page switch to commit synchronously so html2canvas reads the
   // freshly-rendered DOM instead of whatever was mounted before.
@@ -392,6 +391,7 @@ export default function ScrapbookEditorPage() {
     <div className="h-dvh flex flex-col overflow-hidden bg-cream">
       {/* Top toolbar */}
       <EditorToolbar
+        onBack={handleBack}
         title={title}
         onTitleChange={handleTitleChange}
         saveStatus={saveStatus}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { db } from '../config/firebase'
 import { devError } from '../utils/devLog'
 import { bothSubmitted, isLetterLocked, isRevealed } from '../utils/ourYear'
@@ -7,10 +7,9 @@ import {
   closeChapter,
   createRitual,
   deleteChapter,
-  markRevealed,
   markSubmitted,
   openLetter,
-  revealEntries,
+  revealAnswers,
   saveLetterDraft,
   sealLetter,
   subscribeChapter,
@@ -141,9 +140,11 @@ export function useOurYearChapter(chapterId, encryptionKey) {
 /**
  * One person's answers to one part of one chapter.
  *
- * The partner's document is only subscribed to once the chapter says the
- * answers are revealed — before that Firestore would refuse the read anyway,
- * and asking for it would just produce a permission error in the console.
+ * The partner's document is only subscribed to once this person's own entry
+ * is revealed, and not while this device's reveal is still on its way: the
+ * rules allow the read only once the server holds `revealed` on the partner's
+ * entry, and a listener the rules refuse is not reopened. The chapter's flag is
+ * not enough — it was once written without the entries following.
  *
  * @param {object} chapter
  * @param {'reflection'|'quiz'} kind
@@ -159,6 +160,8 @@ export function useOurYearEntries(chapter, kind, uid, encryptionKey) {
   const participantUids = useMemo(() => chapter?.participantUids ?? [], [chapter])
   const partnerUid = participantUids.find((u) => u !== uid) ?? null
   const revealed = isRevealed(chapter, kind)
+  const [revealing, setRevealing] = useState(false)
+  const [partnerDenied, setPartnerDenied] = useState(false)
 
   useEffect(() => {
     if (!chapterId || !uid || !db) {
@@ -174,15 +177,18 @@ export function useOurYearEntries(chapter, kind, uid, encryptionKey) {
     })
   }, [chapterId, kind, uid, encryptionKey])
 
+  const ownRevealed = !!own?.revealed
   useEffect(() => {
-    if (!chapterId || !partnerUid || !revealed || !db) {
+    if (!chapterId || !partnerUid || !ownRevealed || revealing || !db) {
       setPartner(null)
       return
     }
+    setPartnerDenied(false)
     return subscribeEntry(chapterId, kind, partnerUid, encryptionKey, setPartner, (error) => {
       devError('Failed to load your partner\'s Our Year answers:', error)
+      if (error?.code === 'permission-denied') setPartnerDenied(true)
     })
-  }, [chapterId, kind, partnerUid, revealed, encryptionKey])
+  }, [chapterId, kind, partnerUid, ownRevealed, revealing, encryptionKey])
 
   const writeOwn = useCallback(
     (answers, submitted) =>
@@ -205,22 +211,27 @@ export function useOurYearEntries(chapter, kind, uid, encryptionKey) {
   // — for their own entry as author, for their partner's through the rule that
   // allows exactly one key to change. Idempotent, so a race between the two
   // devices is harmless.
+  //
+  // What decides is this person's own entry, not the chapter: a chapter can
+  // say "revealed" while the entries were never opened (the two-step write
+  // this replaced left them that way), and running the reveal again repairs
+  // it. A partner's entry the rules still refuse gets one more attempt. Each
+  // attempt runs once per visit, so a write the rules refuse is not retried
+  // in a loop.
+  const attempted = useRef(new Set())
   useEffect(() => {
-    if (!chapterId || !db) return
-    if (revealed || !bothSubmitted(chapter, kind)) return
-    let cancelled = false
-    async function reveal() {
-      try {
-        await markRevealed(chapterId, kind)
-        if (cancelled) return
-        await revealEntries(chapterId, kind, participantUids)
-      } catch (error) {
-        devError('Failed to reveal the Our Year answers:', error)
-      }
-    }
-    reveal()
-    return () => { cancelled = true }
-  }, [chapter, chapterId, kind, participantUids, revealed])
+    if (!chapterId || !db || revealing) return
+    if (!bothSubmitted(chapter, kind) || !own?.submitted) return
+    const repair = ownRevealed && partnerDenied
+    if (ownRevealed && !repair) return
+    const attempt = `${chapterId}/${kind}/${repair ? 'repair' : 'reveal'}`
+    if (attempted.current.has(attempt)) return
+    attempted.current.add(attempt)
+    setRevealing(true)
+    revealAnswers(chapterId, kind, participantUids, { chapterRevealed: revealed })
+      .catch((error) => devError('Failed to reveal the Our Year answers:', error))
+      .finally(() => setRevealing(false))
+  }, [chapter, chapterId, kind, own, ownRevealed, partnerDenied, participantUids, revealed, revealing])
 
   return { own, partner, loading, revealed, saveDraft, submit }
 }

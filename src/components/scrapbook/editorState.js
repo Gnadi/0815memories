@@ -118,7 +118,10 @@ export function editorReducer(state, action) {
       return { ...state, pages: prev, history: rest, isDirty: true, gesture: null }
     }
 
+    // Only what was written counts as saved: an edit made while the write was
+    // on its way still needs its own (useAutosave says why).
     case 'MARK_SAVED':
+      if (state.pages !== action.pages || state.title !== action.title) return state
       return { ...state, isDirty: false }
 
     default:

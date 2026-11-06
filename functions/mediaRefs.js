@@ -71,7 +71,7 @@ export function ledgerIdOf(ref) {
 }
 
 /** The reference a ledger entry answers to. */
-const refOfEntry = (entry) =>
+export const refOfEntry = (entry) =>
   entry.legacy ? `legacy:${entry.resourceType}/${entry.publicId}` : entry.publicId
 
 /** Every public id in a document's `mediaRefs`, or none if it is malformed. */
@@ -112,6 +112,14 @@ export function refChanges(collection, docId, before, after) {
  * Attach or let go of one file for one document, in a transaction, so two
  * documents changing the same file at once cannot lose a reference.
  *
+ * Whether to attach or let go is read from the document as it is now, inside
+ * the transaction, not from the write that triggered this. Triggers can arrive
+ * out of order and more than once: a photo taken out and put back again in
+ * two quick saves could be processed put-back first, and the ledger then
+ * called a file "detached" that the document still showed — which the
+ * clean-up would have deleted a month later. Reading the document makes every
+ * run land on the same, current answer, whatever order they come in.
+ *
  * A file from before the ledger has no entry until a document names it; the
  * first family to do so gets one, marked `legacy`. Those are counted, never
  * deleted: nothing proves which family uploaded them, so a family naming a URL
@@ -119,12 +127,23 @@ export function refChanges(collection, docId, before, after) {
  * no document holds one any more it becomes `unused`, a state the clean-up
  * does not look at.
  *
+ * @param {string} collection
+ * @param {string} docId
+ * @param {string|null} writtenFamily  the family the triggering write named,
+ *   for a document that no longer exists to say it
  * @returns {Promise<'attached'|'detached'|'kept'|'ignored'>}
  */
-async function applyOne(db, now, mediaRef, familyId, path, attach) {
+export async function reconcileRef(db, now, mediaRef, collection, docId, writtenFamily = null) {
+  const path = `${collection}/${docId}`
   const ref = db.collection(MEDIA_ASSETS).doc(ledgerIdOf(mediaRef))
+  const source = db.collection(collection).doc(docId)
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref)
+    const sourceSnap = await tx.get(source)
+    const current = sourceSnap.exists ? sourceSnap.data() : null
+    const attach = refsOf(current).has(mediaRef)
+    const familyId = familyOf(collection, docId, current) ?? (attach ? null : writtenFamily)
+
     const entry = snap.exists ? snap.data() : null
     const legacy = parseLegacyRef(mediaRef)
     if (!entry && legacy && attach && familyId) {
@@ -141,6 +160,12 @@ async function applyOne(db, now, mediaRef, familyId, path, attach) {
       })
       return 'attached'
     }
+    if (!entry && attach && !legacy) {
+      // Every file signUpload signs gets an entry, and only the clean-up
+      // removes one, so this is a document holding a file that has been
+      // deleted — or an id that never was this app's. Worth seeing either way.
+      console.warn('[media] a document names a file the ledger does not know:', path, ledgerIdOf(mediaRef))
+    }
     if (!entry || !familyId || entry.familyId !== familyId || refOfEntry(entry) !== mediaRef) return 'ignored'
 
     const refs = new Set(Array.isArray(entry.refs) ? entry.refs : [])
@@ -153,7 +178,17 @@ async function applyOne(db, now, mediaRef, familyId, path, attach) {
     }
     // A file no document ever held stays pending: it was abandoned, not let go.
     if (entry.state === 'pending') return 'ignored'
-    tx.update(ref, { refs: [], state: entry.legacy ? 'unused' : 'detached', detachedAt: new Date(now()) })
+    // Already let go by an earlier run for the same document: keep the date
+    // the grace period counts from.
+    if (entry.state === 'detached' || entry.state === 'unused') return 'detached'
+    // `detachedFrom` lets the clean-up look at that document once more before
+    // it deletes anything (functions/mediaPurge.js).
+    tx.update(ref, {
+      refs: [],
+      state: entry.legacy ? 'unused' : 'detached',
+      detachedAt: new Date(now()),
+      detachedFrom: path,
+    })
     return 'detached'
   })
 }
@@ -169,13 +204,13 @@ export async function trackMediaRefs({ db, now = Date.now }, { collection, docId
   const stats = { attached: 0, detached: 0, ignored: 0 }
   if (!MEDIA_COLLECTIONS.includes(collection)) return stats
 
-  const path = `${collection}/${docId}`
-  const { added, removed, addedFamily, removedFamily } = refChanges(collection, docId, before, after)
+  // The write only says which files to look at; what each one's state should
+  // be comes from the document itself (reconcileRef says why).
+  const { added, removed, removedFamily } = refChanges(collection, docId, before, after)
 
-  const results = await Promise.all([
-    ...added.map((id) => applyOne(db, now, id, addedFamily, path, true)),
-    ...removed.map((id) => applyOne(db, now, id, removedFamily, path, false)),
-  ])
+  const results = await Promise.all(
+    [...added, ...removed].map((id) => reconcileRef(db, now, id, collection, docId, removedFamily)),
+  )
   for (const result of results) {
     if (result === 'attached') stats.attached++
     else if (result === 'detached') stats.detached++

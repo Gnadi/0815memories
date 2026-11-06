@@ -124,8 +124,11 @@ function collectMediaUrls(data, prefix) {
       // decryptCollectionData has already parsed by the time this runs.
       case 'scrapbooks':
         // pages[].elements[] — photo elements carry `url`, empty slots do not.
-        for (const page of doc.pages ?? []) {
-          addArrayUrls(page?.elements?.filter((el) => el?.url), doc.id, 'photo')
+        // The page index is part of the name: every page counts its photos
+        // from zero, so without it the first photo of each page landed on the
+        // same path and the archive kept only one of them.
+        for (const [p, page] of (doc.pages ?? []).entries()) {
+          addArrayUrls(page?.elements?.filter((el) => el?.url), doc.id, `page-${p}-photo`)
         }
         break
       case 'collages':
@@ -399,6 +402,14 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
     seen.add(entry.url)
     return true
   })
+
+  // JSZip replaces a file written twice to one path, so two files sharing a
+  // path would leave a silently incomplete backup. Better no archive at all.
+  const paths = new Set()
+  for (const { zipPath } of uniqueMedia) {
+    if (paths.has(zipPath)) throw new Error(`Two media files would share the archive path ${zipPath}`)
+    paths.add(zipPath)
+  }
 
   let failedDownloads = []
   let mediaResults = []

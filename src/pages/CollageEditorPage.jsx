@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useReducer, useRef, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useReducer, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { X, Share2, Loader2, MoreVertical, Download, Trash2, LayoutGrid, Square, BookHeart } from 'lucide-react'
@@ -6,6 +6,7 @@ import { Timestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useCollageWriter } from '../hooks/useCollages'
+import { useAutosave } from '../hooks/useAutosave'
 import { useMemoryWriter } from '../hooks/useMemories'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
@@ -90,7 +91,10 @@ function reducer(state, action) {
       return { ...state, doc: prev, history: rest, isDirty: true }
     }
 
+    // Only what was written counts as saved: an edit made while the write was
+    // on its way still needs its own (useAutosave says why).
     case 'MARK_SAVED':
+      if (state.doc !== action.doc || state.title !== action.title) return state
       return { ...state, isDirty: false }
 
     default:
@@ -118,7 +122,6 @@ export default function CollageEditorPage() {
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
-  const [saveStatus, setSaveStatus] = useState('idle')
   const [busy, setBusy] = useState(null) // 'export' | 'share' | 'memory'
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('templates')
@@ -129,7 +132,6 @@ export default function CollageEditorPage() {
 
   const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
   const { upload, uploading, session: sessionPhotos } = useScrapbookPhotoUpload()
-  const saveTimerRef = useRef(null)
 
   // ── Load ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -160,49 +162,31 @@ export default function CollageEditorPage() {
   }, [id, familyId, encryptionKey, t])
 
   // ── Debounced autosave ──────────────────────────────────────────────────
-  const save = useCallback(async (nextDoc, nextTitle) => {
-    if (!id) return
-    setSaveStatus('saving')
-    try {
-      await updateCollage(id, { doc: nextDoc, title: nextTitle })
-      dispatch({ type: 'MARK_SAVED' })
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch (err) {
-      devError('Collage save failed', err)
-      setSaveStatus('idle')
-      setError(t('errors.saveFailed'))
-    }
-  }, [id, updateCollage, t])
-
-  useEffect(() => {
-    if (!isDirty) return
-    clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => save(doc, title), 2000)
-    return () => clearTimeout(saveTimerRef.current)
-  }, [isDirty, doc, title, save])
-
-  // Autosave is debounced, so anything typed or placed in the last two seconds
-  // is still only in memory. Leaving the editor has to write it out — closing
-  // right after dropping in a photo otherwise loses that photo silently.
-  const latestRef = useRef({ doc, title, isDirty, save })
-  latestRef.current = { doc, title, isDirty, save }
-
-  const flushSave = useCallback(async () => {
-    clearTimeout(saveTimerRef.current)
-    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
-    if (dirty) await saveNow(pendingDoc, pendingTitle)
+  // Anything typed or placed in the last two seconds is still only in memory,
+  // so leaving the editor writes it out first — see useAutosave.
+  const writeCollage = useCallback(
+    (nextDoc, nextTitle) => updateCollage(id, { doc: nextDoc, title: nextTitle }),
+    [id, updateCollage],
+  )
+  const markSaved = useCallback((savedDoc, savedTitle) => {
+    dispatch({ type: 'MARK_SAVED', doc: savedDoc, title: savedTitle })
   }, [])
-
-  useEffect(() => () => {
-    clearTimeout(saveTimerRef.current)
-    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
-    // Fire and forget: the component is going away, but the write still has to.
-    if (dirty) saveNow(pendingDoc, pendingTitle)
-  }, [])
+  const showSaveError = useCallback((err) => {
+    devError('Collage save failed', err)
+    setError(t('errors.saveFailed'))
+  }, [t])
+  const { saveStatus, flush: flushSave } = useAutosave({
+    doc,
+    title,
+    isDirty: isDirty && !!id,
+    write: writeCollage,
+    onSaved: markSaved,
+    onError: showSaveError,
+  })
 
   const handleClose = async () => {
-    await flushSave()
+    const saved = await flushSave()
+    if (!saved && !window.confirm(t('editor.leaveUnsaved'))) return
     navigate('/collages')
   }
 
@@ -385,7 +369,7 @@ export default function CollageEditorPage() {
         </button>
 
         <button
-          onClick={() => save(doc, title)}
+          onClick={() => flushSave()}
           disabled={busy != null}
           className="px-5 h-10 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-shadow"
           style={{

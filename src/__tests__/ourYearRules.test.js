@@ -26,6 +26,8 @@ import {
   updateDoc,
   deleteDoc,
   where,
+  writeBatch,
+  serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -234,6 +236,24 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       })
       await setDoc(doc(as(B), entryPath(B)), entry(B))
       await assertFails(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
+    })
+
+    it('accepts the reveal as one batch: the chapter and both entries', async () => {
+      // revealAnswers in src/services/ourYear.js. It was two writes once, and
+      // the second was lost; one batch must still pass every rule involved.
+      await setDoc(doc(as(B), entryPath(B)), entry(B))
+      await updateDoc(doc(as(B), `ourYearChapters/${CHAPTER}`), { reflectionSubmittedBy: [A, B] })
+      const db = as(B)
+      const batch = writeBatch(db)
+      batch.update(doc(db, `ourYearChapters/${CHAPTER}`), {
+        reflectionsRevealedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.update(doc(db, entryPath(A)), { revealed: true })
+      batch.update(doc(db, entryPath(B)), { revealed: true })
+      await assertSucceeds(batch.commit())
+      await assertSucceeds(getDoc(doc(as(B), entryPath(A))))
+      await assertSucceeds(getDoc(doc(as(A), entryPath(B))))
     })
 
     it('opens the answers to both once revealed', async () => {

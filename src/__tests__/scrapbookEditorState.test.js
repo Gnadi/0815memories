@@ -48,3 +48,22 @@ describe('editorReducer undo history', () => {
     expect(state.pages[0].elements[1]).toMatchObject({ url: 'a.enc', offsetY: 0, fit: null })
   })
 })
+
+describe('editorReducer MARK_SAVED', () => {
+  // A write that comes back after a newer edit must not mark that edit as
+  // saved: the debounced save for it would be cancelled and the edit lost.
+  it('marks the editor clean when what was written is still what is shown', () => {
+    const state = editorReducer(start(), { type: 'SET_TITLE', title: 'A' })
+    const saved = editorReducer(state, { type: 'MARK_SAVED', pages: state.pages, title: 'A' })
+    expect(saved.isDirty).toBe(false)
+  })
+
+  it('keeps an edit made while the write was on its way unsaved', () => {
+    const atWrite = editorReducer(start(), { type: 'SET_TITLE', title: 'A' })
+    const later = editorReducer(atWrite, { type: 'SET_TITLE', title: 'B' })
+    expect(editorReducer(later, { type: 'MARK_SAVED', pages: atWrite.pages, title: 'A' }).isDirty).toBe(true)
+
+    const moved = update(atWrite, { width: 150 })
+    expect(editorReducer(moved, { type: 'MARK_SAVED', pages: atWrite.pages, title: 'A' }).isDirty).toBe(true)
+  })
+})
