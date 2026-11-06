@@ -19,6 +19,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptFields, decryptJSONFields, encryptJSON, encryptText } from '../utils/encryption'
@@ -270,23 +271,31 @@ export async function markSubmitted(chapterId, kind, uid) {
   })
 }
 
-/** The first half of the reveal: the chapter says the answers are out. */
-export async function markRevealed(chapterId, kind) {
-  await updateDoc(doc(db, CHAPTERS, chapterId), {
-    [revealedField(kind)]: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
-}
-
-/** The second half: each partner's entry is opened to the other. */
-export async function revealEntries(chapterId, kind, participantUids) {
-  await Promise.all(
-    participantUids.map((participant) =>
-      // `revealed` must be the only key in this write — the rule that lets
-      // one partner touch the other's document allows nothing else.
-      updateDoc(doc(db, ENTRIES, entryId(chapterId, kind, participant)), { revealed: true }),
-    ),
-  )
+/**
+ * The reveal: both partners' entries are opened to each other and, unless it
+ * already says so, the chapter records that they are. One batch, so it lands
+ * whole or not at all. It used to be two writes, and the second was skipped
+ * whenever the chapter's own snapshot arrived first — which, with Firestore
+ * reporting local writes at once, was nearly always: the chapter said
+ * "revealed" while the rules still kept the partner's answers shut.
+ *
+ * Idempotent, so both devices may run it, and a chapter left half-revealed by
+ * the old two-step write is repaired by running it again.
+ */
+export async function revealAnswers(chapterId, kind, participantUids, { chapterRevealed = false } = {}) {
+  const batch = writeBatch(db)
+  if (!chapterRevealed) {
+    batch.update(doc(db, CHAPTERS, chapterId), {
+      [revealedField(kind)]: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  }
+  for (const participant of participantUids) {
+    // `revealed` must be the only key in this write — the rule that lets
+    // one partner touch the other's document allows nothing else.
+    batch.update(doc(db, ENTRIES, entryId(chapterId, kind, participant)), { revealed: true })
+  }
+  await batch.commit()
 }
 
 // ---------------------------------------------------------------------------
