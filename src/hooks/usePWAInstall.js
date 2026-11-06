@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { detectPlatform } from '../utils/platform'
 
 function isStandalone() {
   if (typeof window === 'undefined') return false
@@ -13,9 +14,7 @@ function isStandalone() {
  * the home screen through the share menu, so all we can do is say how.
  */
 export function isIOSBrowser() {
-  if (typeof navigator === 'undefined') return false
-  return /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  return detectPlatform() === 'ios'
 }
 
 // Shared install-prompt state so any component (footer link, install banner,
