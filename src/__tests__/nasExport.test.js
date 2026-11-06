@@ -172,6 +172,27 @@ describe('the collections the export had been leaving behind', () => {
   })
 })
 
+describe('a scrapbook with photos on several pages', () => {
+  // Every page counts its photos from zero. The first photo of each page used
+  // to get the same archive path, and JSZip kept only the last one written.
+  it('keeps every photo as its own file', async () => {
+    respond({
+      collections: {
+        scrapbooks: [{ id: 's1', familyId: FAMILY, title: 'Summer', pages: JSON.stringify([
+          { elements: [{ type: 'photo', url: 'https://cdn/p0a.enc' }, { type: 'photo', url: 'https://cdn/p0b.enc' }] },
+          { elements: [{ type: 'photo', url: 'https://cdn/p1a.enc' }] },
+        ]) }],
+      },
+    })
+    globalThis.fetch = vi.fn(async (url) => ({ ok: true, blob: async () => new Blob([url]) }))
+    await run()
+    const photos = Object.keys(zipFiles).filter((k) => k.includes('/media/scrapbooks/s1/'))
+    expect(photos).toHaveLength(3)
+    expect(photos.map((k) => k.split('/').pop()).sort())
+      .toEqual(['page-0-photo-0.enc', 'page-0-photo-1.enc', 'page-1-photo-0.enc'])
+  })
+})
+
 describe('sealed things stay sealed', () => {
   beforeEach(() => {
     globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) }))
