@@ -43,6 +43,8 @@
     "noMedia": "No media",
     "author": "Family",
     "paused": "Paused",
+    "soundOn": "Turn sound on",
+    "soundOff": "Turn sound off",
     "aria": {
       "moreOptions": "More options",
       "close": "Close",
