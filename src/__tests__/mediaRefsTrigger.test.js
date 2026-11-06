@@ -24,7 +24,17 @@ function ledger(entries) {
 }
 
 const entry = (db, c) => db.collectionData(MEDIA_ASSETS)[hex(c)]
-const run = (db, write) => trackMediaRefs({ db, now: () => NOW }, write)
+// The trigger runs after the write: the document is already what `after` says,
+// and trackMediaRefs reads it from there.
+const store = (db, { collection, docId, after }) => {
+  if (after) db.docs.set(`${collection}/${docId}`, { ...after })
+  else db.docs.delete(`${collection}/${docId}`)
+}
+const process = (db, write) => trackMediaRefs({ db, now: () => NOW }, write)
+const run = (db, write) => {
+  store(db, write)
+  return process(db, write)
+}
 const memory = (mediaRefs, extra = {}) => ({ familyId: 'fam-1', mediaRefs, ...extra })
 
 describe('reading mediaRefs', () => {
@@ -74,7 +84,9 @@ describe('trackMediaRefs', () => {
     const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
     const stats = await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: null })
     expect(stats.detached).toBe(1)
-    expect(entry(db, 'a')).toMatchObject({ state: 'detached', refs: [], detachedAt: new Date(NOW) })
+    expect(entry(db, 'a')).toMatchObject({
+      state: 'detached', refs: [], detachedAt: new Date(NOW), detachedFrom: 'memories/m1',
+    })
   })
 
   it('lets go of a file a write took out, and keeps the rest', async () => {
@@ -116,6 +128,42 @@ describe('trackMediaRefs', () => {
     const db = ledger([['a']])
     await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: null })
     expect(entry(db, 'a').state).toBe('pending')
+  })
+
+  it('keeps a file attached when a take-out and a put-back arrive in reverse order', async () => {
+    // Two quick saves: the photo out, then back in. Triggers promise no order,
+    // and acting on each write's own before/after left the ledger saying
+    // "detached" while the memory showed the photo — a month later the
+    // clean-up would have deleted it.
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    const withPhoto = memory({ images: [pid('a')] })
+    const without = memory({ images: [] })
+    const takeOut = { collection: 'memories', docId: 'm1', before: withPhoto, after: without }
+    const putBack = { collection: 'memories', docId: 'm1', before: without, after: withPhoto }
+    store(db, takeOut)
+    store(db, putBack)
+    await process(db, putBack)
+    await process(db, takeOut)
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+
+  it('lands on the same answer when a write is delivered twice', async () => {
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    const withPhoto = memory({ images: [pid('a')] })
+    const takeOut = { collection: 'memories', docId: 'm1', before: withPhoto, after: memory({ images: [] }) }
+    const putBack = { collection: 'memories', docId: 'm1', before: memory({ images: [] }), after: withPhoto }
+    await run(db, takeOut)
+    await run(db, putBack)
+    // The take-out again, long after: the memory still holds the photo.
+    await process(db, takeOut)
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+
+  it('does not restart the grace period when a deletion is delivered again', async () => {
+    const earlier = new Date(NOW - 5 * 24 * 60 * 60 * 1000)
+    const db = ledger([['a', { state: 'detached', refs: [], detachedAt: earlier, detachedFrom: 'memories/m1' }]])
+    await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: null })
+    expect(entry(db, 'a').detachedAt).toEqual(earlier)
   })
 
   it('ignores collections that hold no media', async () => {

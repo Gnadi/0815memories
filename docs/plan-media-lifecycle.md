@@ -164,7 +164,15 @@ before phase 4.
   collection not in `MEDIA_COLLECTIONS` or a write that left `mediaRefs` as it
   was; otherwise it attaches and lets go in one transaction per file. A file no
   document ever held stays `pending`; one whose last document let it go
-  becomes `detached` with `detachedAt`; one picked up again is `attached`.
+  becomes `detached` with `detachedAt` and `detachedFrom` (that document's
+  path); one picked up again is `attached`.
+- The write that fired the trigger only says which files to look at. Whether
+  a file is attached is read from the document as it is now, inside the
+  transaction (`reconcileRef`). Triggers come in no guaranteed order and can
+  come twice; acting on each write's own before and after once let a photo
+  taken out and put back in two quick saves end up `detached` while the
+  document still showed it. A second delivery of a deletion keeps the
+  original `detachedAt`, so it does not restart the grace period.
 - Rules: only `bestOf` lists its fields, and now allows `mediaRefs` as a map.
   Every other collection already accepted extra fields.
   `src/__tests__/mediaRefsRules.test.js` writes through the rules and runs the
@@ -188,6 +196,20 @@ before phase 4.
   the family's usage, only once Cloudinary confirmed, in a transaction that
   checks once more that it is still due. A refused destroy changes nothing,
   so the next run tries again.
+- Before a `detached` file goes, the document named in `detachedFrom` is read
+  once more. If it holds the file after all — a trigger that failed for good,
+  or an entry from before the triggers read the document — the file is kept,
+  put back as `attached`, and an error is logged. The dry run takes the same
+  look, so its report does not list such a file.
+- What remains: a file can be picked up by a document in the moment between
+  that last check and Cloudinary's delete, or before the trigger for that
+  write has run. The transaction afterwards notices (`raced` in the log) but
+  the bytes are gone. Closing this for good would take a fence the client's
+  write has to pass, which the rules cannot express for a list of ids. It
+  needs a file unused for at least 30 days to be taken up again at the moment
+  of the run, which in this app means an editor kept open for a month; the
+  trigger logs a document naming a file the ledger no longer knows, so it
+  would not go unnoticed.
 - It ships with `MEDIA_PURGE_DRY_RUN=true` and only logs the public ids it
   would delete. It also needs `CLOUDINARY_CLOUD_NAME`; without it, it reports
   only. It is switched on only after a few weeks of logs show nothing that is

@@ -125,6 +125,40 @@ describe('purgeMedia', () => {
     expect(destroy).not.toHaveBeenCalled()
   })
 
+  it('keeps and re-attaches a "detached" file the document that let it go still shows', async () => {
+    // A ledger left wrong by a trigger: the last look at that document is what
+    // stops the delete.
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } }],
+    ]))
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    expect(stats).toMatchObject({ due: 1, kept: 1, deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['memories/m1'], detachedAt: null })
+  })
+
+  it('leaves such a file out of the dry run\'s report', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      detached('b', 40, { detachedFrom: 'memories/m2' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } }],
+      ['memories/m2', { familyId: 'fam-1', mediaRefs: { images: [] } }],
+    ]))
+    const stats = await run(db, destroyAll(), true)
+    expect(stats).toMatchObject({ due: 2, kept: 1, wouldDelete: [`kaydo/fam-1/${hex('b')}`] })
+  })
+
+  it('deletes a file the document that let it go no longer holds', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [] } }],
+    ]))
+    const stats = await run(db, destroyAll())
+    expect(stats).toMatchObject({ due: 1, deleted: 1 })
+  })
+
   it('leaves the ledger alone when Cloudinary refuses, so the next run tries again', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
