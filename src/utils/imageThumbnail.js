@@ -144,3 +144,70 @@ export async function createTinyPreview(file) {
     reader.readAsDataURL(blob)
   })
 }
+
+// Far enough in to be past a fade from black, which many phone clips open on,
+// and early enough to exist in the shortest clip the app accepts.
+const POSTER_SECONDS = 0.5
+
+/**
+ * One frame of a local video, as a still at most THUMBNAIL_MAX_EDGE on its
+ * longest edge. It is the clip's poster: what the story circle shows, and what
+ * the story shows while the clip is still being decrypted. The video itself is
+ * stored encrypted as well, so neither Cloudinary nor the reader can take a
+ * frame from it later; this is the only moment one can be had.
+ *
+ * Resolves null whenever no frame can be had, and callers carry on without a
+ * poster, as they do for clips uploaded before posters existed.
+ *
+ * @param {Blob|File} file
+ * @returns {Promise<Blob|null>}
+ */
+export function createVideoPoster(file) {
+  if (!file || typeof file.type !== 'string' || !file.type.startsWith('video/')) {
+    return Promise.resolve(null)
+  }
+  if (typeof document === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    return Promise.resolve(null)
+  }
+
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    let done = false
+    const finish = (result) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      video.removeAttribute('src')
+      video.load?.()
+      URL.revokeObjectURL(url)
+      resolve(result)
+    }
+    // A file the browser cannot decode may never answer at all.
+    const timer = setTimeout(() => finish(null), 10_000)
+
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    video.onerror = () => finish(null)
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0
+      video.currentTime = Math.min(POSTER_SECONDS, duration / 2)
+    }
+    video.onseeked = async () => {
+      try {
+        const { videoWidth: width, videoHeight: height } = video
+        if (!width || !height) return finish(null)
+        const target = targetSize(width, height, THUMBNAIL_MAX_EDGE) ?? { width, height }
+        const canvas = Object.assign(document.createElement('canvas'), target)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return finish(null)
+        ctx.drawImage(video, 0, 0, target.width, target.height)
+        finish(await encodeCanvas(canvas, THUMBNAIL_TYPE, THUMBNAIL_QUALITY))
+      } catch {
+        finish(null)
+      }
+    }
+    video.src = url
+  })
+}

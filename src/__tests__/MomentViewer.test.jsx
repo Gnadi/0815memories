@@ -257,6 +257,17 @@ describe('the sound of a clip', () => {
     act(() => { fireEvent.click(soundButton()) })
     expect(clip().muted).toBe(false)
   })
+
+  it('opens a clip on its poster while the clip is decrypted', () => {
+    const withPoster = {
+      ...moment('a'),
+      videos: [{ url: 'https://cdn/a-clip.enc', posterUrl: 'https://cdn/a-poster.enc' }],
+    }
+    render(<MomentViewer moments={[withPoster]} initialIndex={0} onClose={noop} />)
+    next()
+    expect(stages()[0].getAttribute('data-src')).toBe('https://cdn/a-poster.enc')
+    expect(stages()[0].getAttribute('data-hold')).toBe('false')
+  })
 })
 
 describe('leaving a clip', () => {

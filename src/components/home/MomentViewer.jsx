@@ -34,7 +34,8 @@ const HOLD_MS = 220
 //
 // Images carry their derivatives with them: `thumbUrl` is the 1024px copy the
 // story circle already decrypted, `tinyPreview` the ~20px blur-up that rides on
-// the document. Videos have neither — there is one asset and it is the clip.
+// the document. A video has at most a poster: one frame of it, taken in the
+// browser when it was uploaded (older clips have none).
 function buildMediaItems(moment) {
   const images = moment?.images ?? []
   const videos = moment?.videos ?? []
@@ -46,7 +47,7 @@ function buildMediaItems(moment) {
       tinyPreview: tinyPreviewAt(moment, i),
       focus: focusStyleAt(moment, i),
     })),
-    ...videos.map((v) => ({ type: 'video', url: v.url })),
+    ...videos.map((v) => ({ type: 'video', url: v.url, poster: v.posterUrl || '' })),
   ]
 }
 
@@ -112,6 +113,9 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   // a new object identity must not look like a new slide.
   const currentUrl = currentItem?.url ?? ''
   const currentThumb = currentItem?.type === 'image' ? currentItem.thumbUrl : ''
+  // A clip's poster stands in for it on the stage until the clip has a frame
+  // of its own. Without one, the stage holds the previous picture instead.
+  const currentPoster = isVideo ? currentItem.poster : ''
   const currentTiny = currentItem?.type === 'image' ? currentItem.tinyPreview : ''
 
   // The clock starts when there is something to look at: the photo (not its
@@ -523,11 +527,11 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
     return (
       <CrossfadeImage
-        src={isVideo ? '' : currentUrl}
+        src={isVideo ? currentPoster : currentUrl}
         thumbSrc={isVideo ? '' : currentThumb}
         tinyPreview={isVideo ? '' : currentTiny}
         focus={isVideo ? undefined : currentItem?.focus}
-        hold={isVideo && !videoShown}
+        hold={isVideo && !videoShown && !currentPoster}
         alt={moment.caption}
         className={className}
         onSettled={setSettledUrl}

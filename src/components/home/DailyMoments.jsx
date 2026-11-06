@@ -61,6 +61,12 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
                     style={focusStyleAt(moment, 0)}
                     className="w-16 h-16 rounded-full object-cover"
                   />
+                ) : moment.videos?.[0]?.posterUrl ? (
+                  <EncryptedImage
+                    src={moment.videos[0].posterUrl}
+                    alt={moment.caption}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
                 ) : moment.videos?.length > 0 ? (
                   <div className="w-16 h-16 rounded-full bg-bark/20 flex items-center justify-center">
                     <Video className="w-6 h-6 text-bark-muted" />
@@ -70,8 +76,8 @@ export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf
                     <MomentPlaceholder />
                   </div>
                 )}
-                {/* Video badge: shown when moment has videos alongside images */}
-                {moment.images?.[0] && moment.videos?.length > 0 && (
+                {/* Video badge: shown when a picture, not the icon, stands for a moment with videos */}
+                {(moment.images?.[0] || moment.videos?.[0]?.posterUrl) && moment.videos?.length > 0 && (
                   <span className="absolute bottom-0 right-0 w-5 h-5 bg-kaydo rounded-full flex items-center justify-center shadow">
                     <Video className="w-3 h-3 text-white" />
                   </span>

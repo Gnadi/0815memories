@@ -17,7 +17,12 @@ function mediaDraft(images, videos) {
     ...(thumbs.some(Boolean) ? { thumbs } : {}),
     videos: videos
       .filter((v) => v.url)
-      .map((v) => ({ url: v.url, publicId: v.publicId, title: v.title || '' })),
+      .map((v) => ({
+        url: v.url,
+        publicId: v.publicId,
+        title: v.title || '',
+        ...(v.posterUrl ? { posterUrl: v.posterUrl, posterPublicId: v.posterPublicId || '' } : {}),
+      })),
   }
 }
 
