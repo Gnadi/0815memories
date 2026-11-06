@@ -9,6 +9,8 @@ import {
   Pause,
   Pencil,
   Trash2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
@@ -32,7 +34,8 @@ const HOLD_MS = 220
 //
 // Images carry their derivatives with them: `thumbUrl` is the 1024px copy the
 // story circle already decrypted, `tinyPreview` the ~20px blur-up that rides on
-// the document. Videos have neither — there is one asset and it is the clip.
+// the document. A video has at most a poster: one frame of it, taken in the
+// browser when it was uploaded (older clips have none).
 function buildMediaItems(moment) {
   const images = moment?.images ?? []
   const videos = moment?.videos ?? []
@@ -44,7 +47,7 @@ function buildMediaItems(moment) {
       tinyPreview: tinyPreviewAt(moment, i),
       focus: focusStyleAt(moment, i),
     })),
-    ...videos.map((v) => ({ type: 'video', url: v.url })),
+    ...videos.map((v) => ({ type: 'video', url: v.url, poster: v.posterUrl || '' })),
   ]
 }
 
@@ -78,6 +81,14 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
+  // Clips play with their sound. The switch is for this viewing only, so the
+  // next story starts with sound again. `soundBlocked` is the browser's say:
+  // without a recent tap it may refuse to start a clip with sound, and then the
+  // clip plays muted rather than not at all, until the switch is tapped or the
+  // next slide tries again.
+  const [soundOn, setSoundOn] = useState(true)
+  const [soundBlocked, setSoundBlocked] = useState(false)
+  const clipMuted = !soundOn || soundBlocked
 
   // Every way out of the viewer goes through close, so the back gesture on a
   // phone closes it too, rather than leaving the app.
@@ -102,6 +113,9 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   // a new object identity must not look like a new slide.
   const currentUrl = currentItem?.url ?? ''
   const currentThumb = currentItem?.type === 'image' ? currentItem.thumbUrl : ''
+  // A clip's poster stands in for it on the stage until the clip has a frame
+  // of its own. Without one, the stage holds the previous picture instead.
+  const currentPoster = isVideo ? currentItem.poster : ''
   const currentTiny = currentItem?.type === 'image' ? currentItem.tinyPreview : ''
 
   // The clock starts when there is something to look at: the photo (not its
@@ -138,6 +152,9 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     setPaused(false)
     // Every slide gets a new clip element (keyed on the slide), with no frame yet.
     setVideoReady(false)
+    // And asks for its sound again: the tap that got here may be all the
+    // browser was waiting for.
+    setSoundBlocked(false)
   }
   if (!currentItem && leavingClip) setLeavingClip(null)
   if (renderedMoment !== currentMomentIndex) {
@@ -283,10 +300,30 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   // The clip being played gets videoRef. One taken back from being left already
   // has its frame, and no loadeddata is coming for it.
+  //
+  // Clips are started from here rather than with autoplay: an autoplay the
+  // browser refuses for its sound fails silently, and the story would sit on a
+  // clip that never starts. A refused play() can be retried muted.
+  const pausedRef = useRef(paused)
+  useEffect(() => {
+    pausedRef.current = paused
+  }, [paused])
+  const playClip = useCallback((el) => {
+    if (!el || pausedRef.current) return
+    el.play()?.catch?.((err) => {
+      if (err?.name !== 'NotAllowedError' || el.muted) return
+      el.muted = true
+      setSoundBlocked(true)
+      el.play()?.catch?.(() => {})
+    })
+  }, [])
   const attachClip = useCallback((el) => {
     videoRef.current = el
-    if (el && el.readyState >= 2) setVideoReady(true)
-  }, [])
+    if (el && el.readyState >= 2) {
+      setVideoReady(true)
+      playClip(el)
+    }
+  }, [playClip])
   const pauseClip = useCallback((el) => {
     el?.pause()
   }, [])
@@ -302,17 +339,41 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   }, [paused])
   const showPaused = paused && held
 
-  // Auto-play video when current item is a video
+  // Holding the story pauses the clip, letting go resumes it.
   useEffect(() => {
     if (!isVideo) return
     const vid = videoRef.current
     if (!vid) return
-    if (paused) {
-      vid.pause()
-    } else {
-      vid.play().catch(() => {})
-    }
-  }, [isVideo, paused])
+    if (paused) vid.pause()
+    // A clip without a frame yet is started by its loadeddata instead.
+    else if (vid.readyState >= 2) playClip(vid)
+  }, [isVideo, paused, playClip])
+
+  // In the tap's own handler, where the browser lets sound begin, and on the
+  // element as well as in state: the muted property must change before the
+  // clip is played again.
+  const toggleSound = () => {
+    const next = clipMuted
+    setSoundOn(next)
+    setSoundBlocked(false)
+    const vid = videoRef.current
+    if (!vid) return
+    vid.muted = !next
+    if (vid.paused) playClip(vid)
+  }
+
+  const renderSoundButton = (className, iconClassName) => isVideo && (
+    <button
+      onClick={(e) => { e.stopPropagation(); toggleSound() }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={className}
+      aria-label={clipMuted ? t('moment.soundOn') : t('moment.soundOff')}
+      aria-pressed={!clipMuted}
+      data-testid="moment-sound"
+    >
+      {clipMuted ? <VolumeX className={iconClassName} /> : <Volume2 className={iconClassName} />}
+    </button>
+  )
 
   // Keyboard navigation (registered once; delegates through refs to stay fresh)
   useEffect(() => {
@@ -451,12 +512,14 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           key={slideKey}
           ref={attachClip}
           src={currentItem.url}
-          autoPlay
-          muted
+          muted={clipMuted}
           playsInline
           className={`${clipClassName} z-10 transition-opacity duration-200 ease-out motion-reduce:transition-none`}
           style={{ opacity: videoShown ? 1 : 0 }}
-          onLoadedData={() => setVideoReady(true)}
+          onLoadedData={(e) => {
+            setVideoReady(true)
+            playClip(e.currentTarget)
+          }}
           onTimeUpdate={handleVideoTimeUpdate}
           onEnded={handleSlideEnded}
         />,
@@ -464,11 +527,11 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     }
     return (
       <CrossfadeImage
-        src={isVideo ? '' : currentUrl}
+        src={isVideo ? currentPoster : currentUrl}
         thumbSrc={isVideo ? '' : currentThumb}
         tinyPreview={isVideo ? '' : currentTiny}
         focus={isVideo ? undefined : currentItem?.focus}
-        hold={isVideo && !videoShown}
+        hold={isVideo && !videoShown && !currentPoster}
         alt={moment.caption}
         className={className}
         onSettled={setSettledUrl}
@@ -514,6 +577,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {renderSoundButton('text-white/80 hover:text-white', 'w-6 h-6')}
               {isAdmin && (
                 <div className="relative">
                   <button
@@ -651,6 +715,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {renderSoundButton('text-bark-muted hover:text-bark p-1', 'w-5 h-5')}
             {isAdmin && (
               <div className="relative">
                 <button

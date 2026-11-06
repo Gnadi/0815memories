@@ -35,10 +35,22 @@ function buildInitialVideos(moment) {
       preview: v.url,
       url: v.url,
       publicId: v.publicId,
+      posterUrl: v.posterUrl || '',
+      posterPublicId: v.posterPublicId || '',
       uploading: false,
     }))
   }
   return []
+}
+
+// A clip's poster, when it has one, travels with it. Older clips have none,
+// and no empty fields are written for them.
+function videoField(v) {
+  return {
+    url: v.url,
+    publicId: v.publicId,
+    ...(v.posterUrl ? { posterUrl: v.posterUrl, posterPublicId: v.posterPublicId || '' } : {}),
+  }
 }
 
 /**
@@ -66,6 +78,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
   } = useMediaUploader(encryptionKey, {
     initialImages: buildInitialImages(moment || draft),
     initialVideos: buildInitialVideos(moment || draft),
+    videoPosters: true,
   })
 
   const seed = moment || draft
@@ -133,7 +146,7 @@ export default function PostMomentModal({ moment, draft, converting, onClose, on
         // Which part of each photo stays in view when a frame crops it.
         ...(focus ? { focus } : {}),
         ...tinyPreviewsUpdate(readyImages, isEditing ? moment.images || [] : null),
-        videos: readyVideos.map((v) => ({ url: v.url, publicId: v.publicId })),
+        videos: readyVideos.map(videoField),
       }
       if (isEditing) {
         await onSave(moment.id, data)

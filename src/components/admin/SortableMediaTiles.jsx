@@ -13,6 +13,15 @@ function Preview({ item, kind }) {
   const style = focusStyle(parseFocus(item.focus))
   const local = item.preview?.startsWith('blob:')
   if (kind === 'video') {
+    // A stored clip with a poster shows the poster: decrypting the whole clip
+    // for an 80px tile is what the poster is there to spare.
+    if (!local && item.posterUrl) {
+      return (
+        <div className="w-20 h-20 rounded-xl overflow-hidden">
+          <EncryptedImage src={item.posterUrl} draggable={false} className={`${className} bg-black`} />
+        </div>
+      )
+    }
     return local ? (
       <video src={item.preview} className={`${className} bg-black`} muted playsInline />
     ) : (

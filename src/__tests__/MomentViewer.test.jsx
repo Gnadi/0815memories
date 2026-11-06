@@ -47,11 +47,12 @@ vi.mock('../components/media/CrossfadeImage', async () => {
   }
 })
 vi.mock('../components/media/EncryptedVideo', () => ({
-  default: ({ src, onLoadedData, style, ref, className }) => (
+  default: ({ src, onLoadedData, style, ref, className, muted }) => (
     <video
       ref={ref}
       data-kind="video"
       data-src={src}
+      muted={muted}
       className={className}
       onLoadedData={onLoadedData}
       style={style}
@@ -200,6 +201,72 @@ describe('pausing a clip', () => {
     HTMLMediaElement.prototype.pause.mockClear()
     fireEvent.pointerDown(document.querySelector('[data-kind="video"]'))
     expect(HTMLMediaElement.prototype.pause).not.toHaveBeenCalled()
+  })
+})
+
+// Clips used to play muted, always, with no way to hear them.
+describe('the sound of a clip', () => {
+  const withVideo = () => ({ ...moment('a'), videos: [{ url: 'https://cdn/a-clip.enc' }] })
+  const clip = () => document.querySelector('[data-kind="video"]')
+  const soundButton = () => document.querySelector('[data-testid="moment-sound"]')
+
+  it('plays a clip with its sound once it has a frame', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    fireEvent.loadedData(clip())
+
+    expect(clip().muted).toBe(false)
+    expect(HTMLMediaElement.prototype.play.mock.contexts).toContain(clip())
+    expect(soundButton().getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('shows the switch on clips only', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    expect(soundButton()).toBeNull()
+    next()
+    expect(soundButton()).not.toBeNull()
+  })
+
+  it('plays muted rather than not at all when the browser refuses the sound', async () => {
+    const refusal = Object.assign(new Error('no gesture'), { name: 'NotAllowedError' })
+    HTMLMediaElement.prototype.play = vi.fn(function play() {
+      return this.muted ? Promise.resolve() : Promise.reject(refusal)
+    })
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    await act(async () => { fireEvent.loadedData(clip()) })
+
+    expect(clip().muted).toBe(true)
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+    expect(soundButton().getAttribute('aria-pressed')).toBe('false')
+
+    // The tap on the switch is the gesture the browser waited for.
+    HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve())
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(false)
+    expect(soundButton().getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('mutes and unmutes the clip from the switch', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    fireEvent.loadedData(clip())
+
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(true)
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(false)
+  })
+
+  it('opens a clip on its poster while the clip is decrypted', () => {
+    const withPoster = {
+      ...moment('a'),
+      videos: [{ url: 'https://cdn/a-clip.enc', posterUrl: 'https://cdn/a-poster.enc' }],
+    }
+    render(<MomentViewer moments={[withPoster]} initialIndex={0} onClose={noop} />)
+    next()
+    expect(stages()[0].getAttribute('data-src')).toBe('https://cdn/a-poster.enc')
+    expect(stages()[0].getAttribute('data-hold')).toBe('false')
   })
 })
 

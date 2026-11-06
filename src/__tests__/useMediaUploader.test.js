@@ -8,12 +8,16 @@ vi.mock('../utils/encryptedUpload', () => ({
   encryptAndUpload: vi.fn(),
   encryptAndUploadWithThumb: vi.fn(),
 }))
+vi.mock('../utils/imageThumbnail', () => ({
+  createVideoPoster: vi.fn(),
+}))
 vi.mock('../utils/devLog', () => ({
   devError: vi.fn(),
   devWarn: vi.fn(),
 }))
 
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
+import { createVideoPoster } from '../utils/imageThumbnail'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -21,6 +25,7 @@ import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 beforeEach(() => {
   encryptAndUpload.mockReset()
   encryptAndUploadWithThumb.mockReset()
+  createVideoPoster.mockReset()
   if (!URL.createObjectURL) {
     URL.createObjectURL = vi.fn(() => 'blob:fake')
     URL.revokeObjectURL = vi.fn()
@@ -260,5 +265,67 @@ describe('useMediaUploader', () => {
     act(() => result.current.moveVideo('c', 'a'))
     expect(result.current.videos.map((v) => v.id)).toEqual(['c', 'a', 'b'])
     expect(result.current.videos[0].title).toBe('C')
+  })
+
+  // The story circle showed an icon for every clip: the clip is encrypted, so
+  // nothing but the uploading browser can take a frame from it.
+  describe('video posters', () => {
+    const clip = () => makeFile('clip.mp4', 'video/mp4', 1024)
+
+    it('uploads one frame of the clip beside it when the form asks for posters', async () => {
+      const restore = stubVideoDuration(13)
+      const frame = new Blob(['frame'], { type: 'image/webp' })
+      createVideoPoster.mockResolvedValue(frame)
+      encryptAndUpload.mockImplementation(async (file) =>
+        file === frame
+          ? { url: 'https://cdn/poster.enc', publicId: 'p1' }
+          : { url: 'https://cdn/v.enc', publicId: 'v1' })
+      try {
+        const { result } = renderHook(() => useMediaUploader({ fakeKey: true }, { videoPosters: true }))
+        await act(async () => { await result.current.addVideo(clip()) })
+
+        expect(result.current.videos[0]).toMatchObject({
+          url: 'https://cdn/v.enc',
+          publicId: 'v1',
+          posterUrl: 'https://cdn/poster.enc',
+          posterPublicId: 'p1',
+          uploading: false,
+        })
+      } finally {
+        restore()
+      }
+    })
+
+    it('keeps the clip when no poster can be made or uploaded', async () => {
+      const restore = stubVideoDuration(13)
+      createVideoPoster.mockResolvedValue(new Blob(['frame']))
+      encryptAndUpload
+        .mockResolvedValueOnce({ url: 'https://cdn/v.enc', publicId: 'v1' })
+        .mockRejectedValueOnce(new Error('poster upload failed'))
+      try {
+        const { result } = renderHook(() => useMediaUploader({ fakeKey: true }, { videoPosters: true }))
+        await act(async () => { await result.current.addVideo(clip()) })
+
+        expect(result.current.videoError).toBe('')
+        expect(result.current.videos[0].url).toBe('https://cdn/v.enc')
+        expect(result.current.videos[0].posterUrl).toBeUndefined()
+      } finally {
+        restore()
+      }
+    })
+
+    it('makes no poster for forms that do not show one', async () => {
+      const restore = stubVideoDuration(13)
+      encryptAndUpload.mockResolvedValue({ url: 'https://cdn/v.enc', publicId: 'v1' })
+      try {
+        const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+        await act(async () => { await result.current.addVideo(clip()) })
+
+        expect(createVideoPoster).not.toHaveBeenCalled()
+        expect(encryptAndUpload).toHaveBeenCalledTimes(1)
+      } finally {
+        restore()
+      }
+    })
   })
 })
