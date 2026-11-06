@@ -9,6 +9,7 @@ import FeaturedJourney from '../components/home/FeaturedJourney'
 import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
+import AdventHomeCard from '../components/advent/AdventHomeCard'
 import PostEntryModal from '../components/admin/PostEntryModal'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
@@ -103,6 +104,7 @@ export default function HomePage() {
             onViewAll={() => navigate('/moments')}
           />
           <div className="mx-auto w-full max-w-[44rem]">
+            <AdventHomeCard />
             <FeaturedJourney memory={featuredMemory} memories={memories} />
           </div>
           <MemoryFeed
