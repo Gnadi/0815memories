@@ -43,30 +43,48 @@ const sha256 = (value) => createHash('sha256').update(value).digest('hex')
 export const safeKey = (prefix, value) =>
   `${prefix}__${String(value).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 96)}`
 
-async function isBlocked(db, key, now) {
-  const snap = await db.doc(`rateLimits/${key}`).get()
-  const blockedUntil = snap.exists ? snap.data().blockedUntil : null
-  return !!blockedUntil && blockedUntil.toMillis() > now
-}
+/**
+ * Counts an attempt against every key, or refuses it when one of them is
+ * blocked. The attempts are counted before the password is compared, in one
+ * transaction, so that concurrent requests are serialised on the counter and
+ * cannot all pass the check before any of them is recorded. A successful
+ * login clears the records again.
+ *
+ * The counter starts over only after a quiet period: FAILURE_WINDOW_MS since
+ * the last attempt, or since the end of the last block if that came later. It
+ * never starts over while a block is active, so the blocks keep growing for as
+ * long as someone keeps guessing.
+ *
+ * @returns {Promise<boolean>} whether the attempt may go on to the comparison
+ */
+async function reserveAttempt(db, keys, now) {
+  const refs = keys.map((key) => db.doc(`rateLimits/${key}`))
+  return db.runTransaction(async (tx) => {
+    // All reads come before the first write.
+    const snaps = await Promise.all(refs.map((ref) => tx.get(ref)))
+    const records = snaps.map((snap) => (snap.exists ? snap.data() : null))
 
-async function recordFailure(db, key, now) {
-  const ref = db.doc(`rateLimits/${key}`)
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref)
-    const data = snap.exists ? snap.data() : null
-    const windowStart = data?.firstFailureAt?.toMillis?.() ?? now
-    const withinWindow = now - windowStart < FAILURE_WINDOW_MS
+    if (records.some((data) => (data?.blockedUntil?.toMillis?.() ?? 0) > now)) return false
 
-    const failures = (withinWindow ? data?.failures ?? 0 : 0) + 1
-    const over = failures - MAX_FAILURES
-    const blockMs = over >= 0 ? Math.min(BASE_BLOCK_MS * 2 ** over, MAX_BLOCK_MS) : 0
+    refs.forEach((ref, i) => {
+      const data = records[i]
+      const lastActivity = Math.max(
+        data?.updatedAt?.toMillis?.() ?? 0,
+        data?.blockedUntil?.toMillis?.() ?? 0,
+      )
+      const quiet = !data || now - lastActivity >= FAILURE_WINDOW_MS
 
-    tx.set(ref, {
-      failures,
-      firstFailureAt: withinWindow && data?.firstFailureAt ? data.firstFailureAt : new Date(now),
-      blockedUntil: blockMs > 0 ? new Date(now + blockMs) : null,
-      updatedAt: new Date(now),
+      const failures = (quiet ? 0 : data.failures ?? 0) + 1
+      const over = failures - MAX_FAILURES
+      const blockMs = over >= 0 ? Math.min(BASE_BLOCK_MS * 2 ** over, MAX_BLOCK_MS) : 0
+
+      tx.set(ref, {
+        failures,
+        blockedUntil: blockMs > 0 ? new Date(now + blockMs) : null,
+        updatedAt: new Date(now),
+      })
     })
+    return true
   })
 }
 
@@ -107,19 +125,23 @@ export async function checkViewerLogin(deps, input) {
     : [safeKey('viewerLogin', familyId), safeKey('viewerLoginIp', input.ip || 'unknown')]
 
   // Before any work — the bcrypt comparison is deliberately expensive, so an
-  // attacker must not be able to make us run it.
-  for (const key of keys) {
-    if (await isBlocked(db, key, now())) return { outcome: 'blocked' }
-  }
+  // attacker must not be able to make us run it. Reserving the attempt here
+  // also counts it, so a wrong guess needs no recording afterwards.
+  // A transaction that keeps losing to others on the same counter gives up
+  // with ABORTED. That only happens under a burst of attempts, so it is
+  // answered like a block: the comparison is not run, and the caller gets a
+  // clear answer instead of an internal error.
+  const reserved = await reserveAttempt(db, keys, now()).catch((err) => {
+    if (err?.code === 10 || err?.code === 'aborted') return false
+    throw err
+  })
+  if (!reserved) return { outcome: 'blocked' }
 
   // The only place a hash lives.
   const secretSnap = await db.doc(`families/${familyId}/secrets/auth`).get()
   const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
 
-  if (!hash || !(await compare(password, hash))) {
-    await Promise.all(keys.map((key) => recordFailure(db, key, now())))
-    return { outcome: 'denied' }
-  }
+  if (!hash || !(await compare(password, hash))) return { outcome: 'denied' }
 
   await Promise.all(keys.map((key) => clearFailures(db, key)))
   const token = await mintToken(familyId)
