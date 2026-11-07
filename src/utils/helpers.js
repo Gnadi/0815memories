@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 /**
  * Returns true if `date` falls on the same month and day as `referenceDate`
  * (year-independent). Handles Firestore Timestamps, JS Dates, and date strings.
@@ -10,27 +12,46 @@ export function isOnThisDay(date, referenceDate = new Date()) {
   return d.getMonth() === referenceDate.getMonth() && d.getDate() === referenceDate.getDate()
 }
 
+// helpers.js is imported by signed-in screens only, but the i18n module is
+// already part of the startup bundle (the public shell imports it statically),
+// so reading the language here adds nothing to it.
+const currentLocale = () => i18n.language || 'en'
+
 export function formatDate(date) {
   if (!date) return ''
   const d = date.toDate ? date.toDate() : new Date(date)
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(currentLocale(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
 }
 
+// Whole calendar days from `d` to `now`, counted on local dates. Comparing
+// elapsed 24h windows made 13 hours ago read "Today" when it was last evening.
+// Rounding absorbs the 23h and 25h days around a DST change.
+const calendarDaysAgo = (d, now) => {
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate())
+  return Math.round((startOf(now) - startOf(d)) / 86400000)
+}
+
+// numeric: 'auto' gives "today"/"yesterday" ("heute"/"gestern") for free, so
+// the words come from the browser's locale data and need no locale strings.
+const relativeFormat = () => new Intl.RelativeTimeFormat(currentLocale(), { numeric: 'auto' })
+
+// The formatter writes "today" and "heute" in lower case; these labels stand
+// on their own, so they start with a capital like the words they replace.
+const capitalize = (text) => text.charAt(0).toLocaleUpperCase(currentLocale()) + text.slice(1)
+
 export function formatRelativeDate(date) {
   if (!date) return ''
   const d = date.toDate ? date.toDate() : new Date(date)
-  const now = new Date()
-  const diffMs = now - d
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffDays = calendarDaysAgo(d, new Date())
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays} days ago`
-  return formatDate(date)
+  // A future date would read "in 3 days", which is wrong for what these labels
+  // describe (when something happened), so it gets the plain date instead.
+  if (diffDays < 0 || diffDays >= 7) return formatDate(date)
+  return capitalize(relativeFormat().format(-diffDays, 'day'))
 }
 
 export function timeAgo(date) {
@@ -38,14 +59,18 @@ export function timeAgo(date) {
   const d = date.toDate ? date.toDate() : new Date(date)
   const now = new Date()
   const diffMs = now - d
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+  // A clock a little ahead of the server's can put "now" slightly in the
+  // future; only a clearly future date falls back to the plain date.
+  if (diffMs < -60000) return formatDate(date)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} minutes ago`
-  if (diffHours < 24) return `${diffHours} hours ago`
-  if (diffDays === 1) return 'Yesterday'
+  const rtf = relativeFormat()
+  const diffMins = Math.max(0, Math.floor(diffMs / 60000))
+  const diffHours = Math.floor(diffMs / 3600000)
+
+  if (diffMins < 1) return capitalize(rtf.format(0, 'second'))
+  if (diffMins < 60) return capitalize(rtf.format(-diffMins, 'minute'))
+  if (diffHours < 24) return capitalize(rtf.format(-diffHours, 'hour'))
+  if (calendarDaysAgo(d, now) === 1) return capitalize(rtf.format(-1, 'day'))
   return formatDate(date)
 }
 
