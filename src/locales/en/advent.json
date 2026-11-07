@@ -1,0 +1,35 @@
+{
+  "title": "Advent calendar",
+  "subtitle": "Every day until Christmas a door opens — and behind it waits a memory from your family.",
+  "back": "Back",
+  "error": "The calendar could not be loaded just now. Try again in a moment.",
+  "empty": "There are no memories or moments from before 1 December yet. Once you share some, they will fill the doors next Advent.",
+  "countdown_one": "{{count}} more day until the first door opens.",
+  "countdown_other": "{{count}} more days until the first door opens.",
+  "doorLabel": "Door {{day}}",
+  "openDoor": "Open door {{day}}",
+  "lockedDoor": "Door {{day}} opens on {{date}}",
+  "lockedToast": "Patience! Door {{day}} opens on {{date}}.",
+  "onThisDay_one": "{{count}} year ago today",
+  "onThisDay_other": "{{count}} years ago today",
+  "fromDate": "From {{date}}",
+  "openMemory": "View memory",
+  "openMoment": "View moment",
+  "close": "Close",
+  "greetingTitle": "Happy Advent!",
+  "greetings": [
+    "Nothing behind this door yet — maybe today is the day for a new memory?",
+    "Time for cookies, candlelight and a photo of both.",
+    "An empty door is a place for what this year still has in store."
+  ],
+  "home": {
+    "eyebrow": "Advent calendar",
+    "teaserTitle_one": "The first door opens in {{count}} day",
+    "teaserTitle_other": "The first door opens in {{count}} days",
+    "todayTitle": "Door {{day}} is waiting for you",
+    "openedTitle": "Door {{day}} is open",
+    "afterTitle": "All 24 doors are open",
+    "body": "A memory from your family on every day of Advent.",
+    "cta": "Open the calendar"
+  }
+}

@@ -31,7 +31,7 @@ const MEMORY_IMAGES = [
   ['kitchen.webp', 'pie.webp'],
   ['pancakes.webp'],
   ['cake.webp'],
-  [],
+  ['leo.webp'],
   ['treehouse.webp'],
   // Last month's: enough for a best-of, with a busy day among them.
   ['lake.webp', 'picnic.webp', 'sunset.webp', 'walk.webp'],

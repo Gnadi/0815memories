@@ -1,0 +1,35 @@
+{
+  "title": "Adventskalender",
+  "subtitle": "Jeden Tag bis Weihnachten öffnet sich ein Türchen — dahinter wartet eine Erinnerung aus eurer Familie.",
+  "back": "Zurück",
+  "error": "Der Kalender konnte gerade nicht geladen werden. Versuch es gleich noch einmal.",
+  "empty": "Noch gibt es keine Erinnerungen und Momente von vor dem 1. Dezember. Sobald ihr welche teilt, füllen sie im nächsten Advent die Türchen.",
+  "countdown_one": "Noch {{count}} Tag, dann öffnet sich das erste Türchen.",
+  "countdown_other": "Noch {{count}} Tage, dann öffnet sich das erste Türchen.",
+  "doorLabel": "Türchen {{day}}",
+  "openDoor": "Türchen {{day}} öffnen",
+  "lockedDoor": "Türchen {{day}} öffnet sich am {{date}}",
+  "lockedToast": "Geduld! Türchen {{day}} öffnet sich erst am {{date}}.",
+  "onThisDay_one": "Heute vor {{count}} Jahr",
+  "onThisDay_other": "Heute vor {{count}} Jahren",
+  "fromDate": "Vom {{date}}",
+  "openMemory": "Erinnerung ansehen",
+  "openMoment": "Moment ansehen",
+  "close": "Schließen",
+  "greetingTitle": "Frohe Adventszeit!",
+  "greetings": [
+    "Hinter diesem Türchen ist noch nichts — vielleicht ist heute der Tag für eine neue Erinnerung?",
+    "Zeit für Plätzchen, Kerzenschein und ein Foto davon.",
+    "Ein leeres Türchen ist ein Platz für das, was dieses Jahr noch kommt."
+  ],
+  "home": {
+    "eyebrow": "Adventskalender",
+    "teaserTitle_one": "In {{count}} Tag öffnet sich das erste Türchen",
+    "teaserTitle_other": "In {{count}} Tagen öffnet sich das erste Türchen",
+    "todayTitle": "Türchen {{day}} wartet auf euch",
+    "openedTitle": "Türchen {{day}} ist offen",
+    "afterTitle": "Alle 24 Türchen sind offen",
+    "body": "Jeden Tag im Advent eine Erinnerung aus eurer Familie.",
+    "cta": "Zum Kalender"
+  }
+}

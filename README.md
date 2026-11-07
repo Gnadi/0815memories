@@ -10,6 +10,7 @@ A private, encrypted family memory platform — your family's own corner of the 
 - **Memory feed** — rich memory cards with photos, videos, voice memos, stories and quotes
 - **Daily Moments** — story circles for quick everyday snapshots
 - **Monthly best-of** — on the 1st, a story of last month in the moments row and a push to say it is there: the month's photos with camera moves, albums as animated collages, its clips, themes and how many there were, awards like *place of the month* and *busiest day*, and music synthesized in the browser. It is chosen from what the family wrote — featured memories, places, days — never by analysing the photos. See `docs/best-of.md`
+- **Advent calendar** — from 1 to 24 December a door opens every day, with a memory or moment from the family's past behind it: one from the same day in an earlier year when there is one, the featured memory on Christmas Eve. Worked out on each device from the entries before 1 December, so the whole family sees the same calendar and nothing new is stored. See `docs/advent.md`
 - **Smart timeline** — memories grouped by season, with "on this day" lookbacks
 
 ### Preserve
