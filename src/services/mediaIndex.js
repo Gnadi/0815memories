@@ -106,6 +106,9 @@ export async function scanMediaDocuments(familyId, uid) {
  * transaction, so an edit made meanwhile is not overwritten with a map worked
  * out from the version before it.
  *
+ * Throws for a document with fields that cannot be decrypted; the run counts
+ * it as failed.
+ *
  * @returns {Promise<'updated'|'unchanged'|'skipped'>}
  */
 export async function indexDocument({ path, decrypt }, key) {
@@ -116,6 +119,14 @@ export async function indexDocument({ path, decrypt }, key) {
       if (!snap.exists()) return 'skipped'
       const data = snap.data()
       const plain = await decrypt(key, data)
+      // A field that did not decrypt comes back as null, so its media would be
+      // missing from the map worked out here. Writing that map would make the
+      // trigger detach files the document still uses, and the nightly clean-up
+      // could then delete them for good. Failing leaves the document untouched
+      // and keeps the family from being marked as indexed.
+      if (plain?.unreadableFields?.length) {
+        throw new Error(`Unreadable fields, media not indexed: ${plain.unreadableFields.join(', ')}`)
+      }
       const { mediaRefs } = mediaRefsForCreate(withoutRefs(plain))
       if (same(mediaRefs, data.mediaRefs)) return 'unchanged'
       tx.update(ref, { mediaRefs })
