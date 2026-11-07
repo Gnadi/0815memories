@@ -87,7 +87,8 @@ jobs:
   deploy:
     name: Deploy to Firebase
     needs: [validate, changes]
-    if: needs.changes.outputs.deploy == 'true'
+    # workflow_dispatch can start this from any branch; only main may use the production credentials.
+    if: needs.changes.outputs.deploy == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

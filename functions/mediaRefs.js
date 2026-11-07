@@ -39,8 +39,11 @@ export const MEDIA_COLLECTIONS = [
   'families',
 ]
 
-// More than this in one document is not a document the app wrote, and is
-// ignored rather than let fan out into hundreds of ledger transactions.
+// More than this in one document is not a document the app wrote. The trigger
+// does not act on it rather than let it fan out into hundreds of ledger
+// transactions — but that means "unknown", never "references nothing": reading
+// it as empty would let go of every file it shows, and the clean-up would
+// delete them. See isOverCap.
 export const MAX_MEDIA_REFS = 500
 
 // The ids signUpload makes: `kaydo/<familyId>/<32 hex>`, or under
@@ -74,7 +77,11 @@ export function ledgerIdOf(ref) {
 export const refOfEntry = (entry) =>
   entry.legacy ? `legacy:${entry.resourceType}/${entry.publicId}` : entry.publicId
 
-/** Every public id in a document's `mediaRefs`, or none if it is malformed. */
+/**
+ * Every public id in a document's `mediaRefs`, or none if it is malformed.
+ * The cap is not applied here: callers that must not trust a document this
+ * size ask isOverCap, so no caller can mistake it for an empty one.
+ */
 export function refsOf(data) {
   const map = data?.mediaRefs
   if (!map || typeof map !== 'object' || Array.isArray(map)) return new Set()
@@ -83,8 +90,15 @@ export function refsOf(data) {
     if (!Array.isArray(list)) continue
     for (const id of list) if (ledgerIdOf(id)) ids.add(id)
   }
-  return ids.size > MAX_MEDIA_REFS ? new Set() : ids
+  return ids
 }
+
+/**
+ * Does this document name more files than the app ever writes? Its references
+ * are then unknown: nothing may be attached to it or let go because of it, and
+ * the clean-up must treat every file it names as still held.
+ */
+export const isOverCap = (data) => refsOf(data).size > MAX_MEDIA_REFS
 
 /** The family a document belongs to. */
 export function familyOf(collection, docId, data) {
@@ -203,6 +217,10 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
 export async function trackMediaRefs({ db, now = Date.now }, { collection, docId, before, after }) {
   const stats = { attached: 0, detached: 0, ignored: 0 }
   if (!MEDIA_COLLECTIONS.includes(collection)) return stats
+  // Neither side of an over-cap write can be trusted to say what was lost, and
+  // letting go of what the other side lacks would detach files still shown.
+  // Leaving the ledger alone is the safe answer: the files stay as they were.
+  if (isOverCap(before) || isOverCap(after)) return stats
 
   // The write only says which files to look at; what each one's state should
   // be comes from the document itself (reconcileRef says why).

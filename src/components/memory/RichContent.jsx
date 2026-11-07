@@ -4,6 +4,7 @@ import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { SingleMemoPlayer } from './VoiceMemoPlayer'
 import { isRichDoc } from '../../utils/richText'
+import { safeHref } from '../../utils/safeHref'
 
 /**
  * Renders a rich memory description straight from its ProseMirror JSON.
@@ -13,22 +14,9 @@ import { isRichDoc } from '../../utils/richText'
  * (EncryptedImage and friends decrypt into object URLs). Walking the JSON keeps
  * TipTap out of the read bundle entirely and means no HTML string ever exists.
  *
- * That is not the same as being sanitizer-free — see safeHref below.
+ * That is not the same as being sanitizer-free — links go through safeHref
+ * (utils/safeHref.js).
  */
-
-// Link hrefs are user input. React does not reliably block `javascript:`, so
-// this allowlist is the one deliberate sanitization point in the read path.
-const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:']
-
-function safeHref(href) {
-  if (typeof href !== 'string' || !href) return null
-  try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://kaydo.app'
-    return SAFE_PROTOCOLS.includes(new URL(href, base).protocol) ? href : null
-  } catch {
-    return null
-  }
-}
 
 // Guards against a pathologically nested document costing an unbounded render.
 const MAX_DEPTH = 12

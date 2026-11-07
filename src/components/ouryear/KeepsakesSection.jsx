@@ -4,6 +4,7 @@ import { Check, ExternalLink, Image as ImageIcon, Loader2, Music, Quote, Sparkle
 import EncryptedImage from '../media/EncryptedImage'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import { devError } from '../../utils/devLog'
+import { safeHref } from '../../utils/safeHref'
 import { emptyKeepsakes, keepsakesFilledCount } from '../../utils/ourYear'
 import DictationField from '../../components/DictationField'
 import { appendDictation } from '../../hooks/useDictation'
@@ -237,9 +238,9 @@ function ReadOnlyKeepsakes({ keepsakes }) {
               {keepsakes.song.title}
               {keepsakes.song.artist ? ` · ${keepsakes.song.artist}` : ''}
             </p>
-            {keepsakes.song.link && (
+            {safeHref(keepsakes.song.link) && (
               <a
-                href={keepsakes.song.link}
+                href={safeHref(keepsakes.song.link)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-kaydo font-medium hover:underline mt-0.5"

@@ -89,6 +89,15 @@ describe('indexDocument', () => {
   })
 })
 
+describe('indexDocument with unreadable fields', () => {
+  it('writes nothing, so media of a field that did not decrypt is not detached', async () => {
+    store.docs.set('moments/n1', { familyId: 'fam-1', images: [LEGACY_URL], mediaRefs: { images: ['legacy:raw/kaydo/encrypted/old1.dat'], contentRich: [NEW_ID] } })
+    const decrypt = async (_key, data) => ({ ...data, contentRich: null, unreadableFields: ['contentRich'] })
+    await expect(indexDocument({ path: ['moments', 'n1'], decrypt }, 'key')).rejects.toThrow(/contentRich/)
+    expect(store.updates).toEqual([])
+  })
+})
+
 describe('indexFamilyMedia', () => {
   it('visits the family’s documents, its capsules’ letters and the family document, then notes the date', async () => {
     store.docs.set('moments/n1', { familyId: 'fam-1', images: [LEGACY_URL] })

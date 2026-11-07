@@ -15,6 +15,7 @@ import {
   PENDING_GRACE_DAYS,
 } from '../../functions/mediaPurge.js'
 import { MEDIA_ASSETS, MEDIA_USAGE } from '../../functions/mediaSigning.js'
+import { MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-23T04:15:00Z')
@@ -148,6 +149,23 @@ describe('purgeMedia', () => {
     ]))
     const stats = await run(db, destroyAll(), true)
     expect(stats).toMatchObject({ due: 2, kept: 1, wouldDelete: [`kaydo/fam-1/${hex('b')}`] })
+  })
+
+  it('keeps a file whose source document is over the reference cap, in a real run and in the dry run', async () => {
+    // Too many ids to trust means "unknown", not "empty": the file is kept even
+    // though the document does not name it among the ones it can be read for.
+    const many = Array.from({ length: MAX_MEDIA_REFS + 1 }, (_, i) => `kaydo/fam-1/${i.toString(16).padStart(32, '0')}`)
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: many } }],
+    ]))
+    const dry = await run(db, destroyAll(), true)
+    expect(dry).toMatchObject({ due: 1, kept: 1, wouldDelete: [] })
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    expect(stats).toMatchObject({ due: 1, kept: 1, deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(Object.keys(ledger(db))).toEqual([hex('a')])
   })
 
   it('deletes a file the document that let it go no longer holds', async () => {
