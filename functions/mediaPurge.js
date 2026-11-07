@@ -24,7 +24,7 @@
  * them.
  */
 import { MEDIA_ASSETS, MEDIA_USAGE } from './mediaSigning.js'
-import { reconcileRef, refOfEntry, refsOf } from './mediaRefs.js'
+import { isOverCap, reconcileRef, refOfEntry, refsOf } from './mediaRefs.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -108,7 +108,11 @@ async function heldWhereItWasLetGo(db, entry) {
   const [collection, docId, ...rest] = typeof entry.detachedFrom === 'string' ? entry.detachedFrom.split('/') : []
   if (!collection || !docId || rest.length > 0) return false
   const source = await db.collection(collection).doc(docId).get()
-  return source.exists && refsOf(source.data()).has(refOfEntry(entry))
+  if (!source.exists) return false
+  // A document too big to trust cannot show that it lets the file go, so it
+  // counts as holding it: a file kept by mistake costs space, a wrong delete a photo.
+  if (isOverCap(source.data())) return true
+  return refsOf(source.data()).has(refOfEntry(entry))
 }
 
 /**

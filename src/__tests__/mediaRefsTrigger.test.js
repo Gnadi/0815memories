@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { MEDIA_ASSETS } from '../../functions/mediaSigning.js'
-import { ledgerIdOf, parseLegacyRef, refChanges, refsOf, trackMediaRefs, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
+import { ledgerIdOf, parseLegacyRef, refChanges, isOverCap, refsOf, trackMediaRefs, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-23T10:00:00Z')
@@ -53,9 +53,27 @@ describe('reading mediaRefs', () => {
     expect(refsOf({})).toEqual(new Set())
   })
 
-  it('ignores a document naming more files than the app ever writes', () => {
+  it('flags a document naming more files than the app ever writes, instead of reading it as empty', () => {
     const many = Array.from({ length: MAX_MEDIA_REFS + 1 }, (_, i) => `kaydo/fam-1/${i.toString(16).padStart(32, '0')}`)
-    expect(refsOf(memory({ images: many })).size).toBe(0)
+    expect(isOverCap(memory({ images: many }))).toBe(true)
+    expect(isOverCap(memory({ images: many.slice(1) }))).toBe(false)
+    expect(refsOf(memory({ images: many })).size).toBe(MAX_MEDIA_REFS + 1)
+  })
+
+  it('lets nothing go when the document after a write is over the cap', async () => {
+    const many = Array.from({ length: MAX_MEDIA_REFS + 1 }, (_, i) => `kaydo/fam-1/${i.toString(16).padStart(32, '0')}`)
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: memory({ images: many }) })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+
+  it('lets nothing go when the document before a write was over the cap', async () => {
+    const many = Array.from({ length: MAX_MEDIA_REFS + 1 }, (_, i) => `kaydo/fam-1/${i.toString(16).padStart(32, '0')}`)
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: many }), after: memory({ images: [pid('a')] }) })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(entry(db, 'a').state).toBe('attached')
   })
 
   it('takes the family document’s family from its id', () => {
