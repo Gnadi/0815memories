@@ -252,6 +252,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         setDoc(doc(asViewer(VIEWER, FAMILY), 'fcmTokens', 'token-hash-viewer'), {
           familyId: FAMILY,
           token: 'fcm-token-viewer',
+          uid: VIEWER,
         }),
       )
     })
@@ -356,6 +357,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin'), {
           familyId: FAMILY,
           token: 'fcm-token-admin',
+          uid: ADMIN,
         }),
       )
     })
@@ -367,6 +369,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         setDoc(doc(asStranger(), 'fcmTokens', 'token-hash-stranger'), {
           familyId: FAMILY,
           token: 'fcm-token-stranger',
+          uid: 'anyone',
         }),
       )
     })
@@ -376,6 +379,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-x'), {
           familyId: FAMILY,
           token: 'fcm-token-x',
+          uid: OTHER_VIEWER,
         }),
       )
     })
@@ -384,6 +388,32 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       // The whole reason the document id is derived from the token: the client
       // cannot look one up, so it must be able to compute where to write.
       await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin')))
+    })
+
+    it('carry the writer’s own uid and only the fields the client writes', async () => {
+      const ref = (db) => doc(db, 'fcmTokens', 'token-hash-shape')
+      const base = { familyId: FAMILY, token: 'fcm-token-shape', lang: 'de', uid: ADMIN }
+      await assertSucceeds(setDoc(ref(asAdmin(ADMIN, FAMILY)), { ...base, updatedAt: new Date() }))
+      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s2'), { ...base, uid: 'someone-else' }))
+      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s3'), { familyId: FAMILY, token: 'fcm-token-shape' }))
+      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s4'), { ...base, extra: 'x' }))
+      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s5'), { ...base, token: 'x'.repeat(4096) }))
+    })
+
+    it('stay with the family that registered them', async () => {
+      const base = { familyId: FAMILY, token: 'fcm-token-own', uid: ADMIN }
+      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), base))
+      // Another family cannot overwrite the document, nor move it to theirs.
+      await assertFails(
+        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-own'), {
+          familyId: OTHER_FAMILY, token: 'fcm-token-own', uid: OTHER_VIEWER,
+        }),
+      )
+      await assertFails(
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), { ...base, familyId: OTHER_FAMILY }),
+      )
+      // The owner may refresh it.
+      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), { ...base, lang: 'en' }))
     })
 
     it('are deleted by their own family on logout', async () => {
@@ -471,6 +501,15 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
     it('cannot change anything but adminUids on the way in', async () => {
       await assertFails(redeem(asNewAccount(NEWBIE), { extra: { familyName: 'Mine now' } }))
+    })
+
+    it('cannot be revoked on the strength of a stale admin claim', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'families', FAMILY, 'admins', 'uid-target'), { viaInvite: 'x' })
+      })
+      // Removed from adminUids, but the claim in the token still says admin.
+      await assertFails(deleteDoc(doc(asAdmin(OUTSIDER, FAMILY), 'families', FAMILY, 'admins', 'uid-target')))
+      await assertSucceeds(deleteDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'admins', 'uid-target')))
     })
 
     it('cannot be replayed by an admin who was removed', async () => {

@@ -285,8 +285,10 @@ service cloud.firestore {
                     && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.redeemedBy == request.auth.uid
                     && request.auth.uid in getAfter(/databases/$(database)/documents/families/$(familyId)).data.get('adminUids', []);
       allow update: if false;
-      // Admin can revoke (used when removing an admin from the family).
-      allow delete: if isFamilyAdmin(familyId);
+      // Admin can revoke (used when removing an admin from the family). Asks
+      // the family document, like invites: removing an admin is destructive,
+      // and the claim of an admin who was just removed outlives the removal.
+      allow delete: if request.auth != null && isAdminByDocument(familyId);
     }
 
     // Invites subcollection — one-time tokens that grant family-admin status
@@ -772,8 +774,16 @@ service cloud.firestore {
       return encryptedOk(d, 'occasionLabel') && encryptedOk(d, 'partners');
     }
 
+    // Being a participant is not enough on its own: the caller must still be an
+    // admin of the family, so a partner who was removed as admin loses access.
+    // A list cannot ask that — the queries filter on participantUids, which is
+    // what proves the rule, but not on familyId — so `list` keeps the
+    // participant test and every read of a single document asks for both.
     match /ourYearRituals/{ritualId} {
-      allow read: if request.auth != null
+      allow get: if request.auth != null
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
+      allow list: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', []);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
@@ -787,11 +797,13 @@ service cloud.firestore {
       // someone else.
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && ritualEncryptedOk();
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
     }
 
     // One chapter = one review of a self-chosen period. Carries only metadata
@@ -803,8 +815,20 @@ service cloud.firestore {
         && encryptedOk(d, 'quizReactions') && encryptedOk(d, 'keepsakes');
     }
 
+    // Is there a letter for this chapter that is sealed and not yet due?
+    function letterIsSealed(chapterId) {
+      let path = /databases/$(database)/documents/ourYearLetters/$(chapterId);
+      return exists(path)
+        && get(path).data.get('sealedAt', null) != null
+        && request.time < get(path).data.openAt;
+    }
+
     match /ourYearChapters/{chapterId} {
-      allow read: if request.auth != null
+      allow get: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)));
+      allow list: if request.auth != null
                     && (resource == null
                         || request.auth.uid in resource.data.get('participantUids', []));
       allow create: if request.auth != null
@@ -819,6 +843,7 @@ service cloud.firestore {
       // then). Everything else is frozen for good.
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (
@@ -827,8 +852,15 @@ service cloud.firestore {
                            .hasOnly(['letterStatus', 'letterOpenedAt', 'updatedAt'])
                     )
                     && chapterEncryptedOk();
+      // A chapter whose letter is still sealed is not discarded: the letter
+      // cannot go before its open date (see ourYearLetters), and a chapter
+      // deleted around it would leave the letter behind with nothing pointing
+      // at it. The letter document is asked rather than the chapter's own
+      // `letterStatus`, which the partners can edit.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
+                    && !letterIsSealed(chapterId);
     }
 
     // Has the caller handed in their own answers to the same part of the same
@@ -849,25 +881,45 @@ service cloud.firestore {
       return encryptedOk(d, 'answers');
     }
 
+    // `submitted` is what lets a partner open the other's answers (see
+    // callerHandedIn), so it cannot be set on an entry that holds none.
+    function handedInOnlyWithAnswers() {
+      let d = request.resource.data;
+      return d.get('submitted', false) != true || d.get('answers', null) != null;
+    }
+
     match /ourYearEntries/{entryId} {
       // `resource == null` covers a document that does not exist yet: a client
       // subscribes to its own entry before writing it, and denying that read
       // would kill the listener instead of reporting an empty answer sheet.
       // Nothing leaks — there is nothing there.
-      allow read: if request.auth != null
+      allow get: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
+                            && (resource.data.get('authorUid', '') == request.auth.uid
+                                || resource.data.get('revealed', false) == true)));
+      allow list: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
+      // A new entry starts unrevealed, and may be handed in only with its
+      // answers. The document id is not bound to the author here: the rules
+      // that matter (callerHandedIn, the reveal) look the canonical id up
+      // themselves, so an entry stored under any other id opens nothing.
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
                     && request.resource.data.get('authorUid', '') == request.auth.uid
+                    && request.resource.data.get('revealed', false) != true
+                    && handedInOnlyWithAnswers()
                     && entryEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && (
                       // Your own answers, yours to edit until you hand them in.
                       // After that they are fixed, or the look at your
@@ -876,6 +928,7 @@ service cloud.firestore {
                       // revealed, are not the author's to change either.
                       (resource.data.get('authorUid', '') == request.auth.uid
                         && resource.data.get('submitted', false) != true
+                        && handedInOnlyWithAnswers()
                         && !request.resource.data.diff(resource.data).affectedKeys()
                               .hasAny(['familyId', 'participantUids', 'authorUid', 'chapterId', 'kind', 'revealed']))
                       // The reveal: whoever finishes second flips this flag on
@@ -901,6 +954,7 @@ service cloud.firestore {
       // for exactly this reason.
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && (resource.data.get('submitted', false) != true
                         || !exists(/databases/$(database)/documents/ourYearChapters/$(resource.data.chapterId)));
     }
@@ -915,7 +969,13 @@ service cloud.firestore {
     }
 
     match /ourYearLetters/{chapterId} {
-      allow read: if request.auth != null
+      allow get: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
+                            && (resource.data.get('sealedAt', null) == null
+                                || request.time >= resource.data.openAt)));
+      allow list: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
                             && (resource.data.get('sealedAt', null) == null
@@ -929,15 +989,31 @@ service cloud.firestore {
                     && letterSectionsEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (resource.data.get('sealedAt', null) == null
                         || request.time >= resource.data.openAt)
                     && letterSectionsEncryptedOk();
-      // Deleting is allowed (a chapter can be discarded while it is open);
-      // reading early is not, which is the property that matters.
+      // Deleting is allowed while the letter is a draft or once it is due (a
+      // chapter can be discarded while it is open). A sealed letter stays until
+      // its open date: removing it early would destroy what the seal promised.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
+                    && (resource.data.get('sealedAt', null) == null
+                        || request.time >= resource.data.openAt);
+    }
+
+    function tokenWellFormed() {
+      let d = request.resource.data;
+      return request.auth != null
+        && d.keys().hasOnly(['familyId', 'token', 'lang', 'uid', 'updatedAt'])
+        && d.familyId is string
+        && d.uid == request.auth.uid
+        && d.token is string
+        && d.token.size() > 0
+        && d.token.size() < 4096;
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.
@@ -951,11 +1027,16 @@ service cloud.firestore {
     // identity — it is since viewerLogin started minting them, so this is no
     // longer an anonymously writable collection.
     match /fcmTokens/{tokenId} {
-      allow create, update: if request.resource.data.familyId is string
-                            && isFamilyMember(request.resource.data.familyId)
-                            && request.resource.data.token is string
-                            && request.resource.data.token.size() > 0
-                            && request.resource.data.token.size() < 4096;
+      // The fields src/services/pushTokens.js writes, and nothing else. `uid`
+      // is the signed-in caller, which the triggers use to skip the device that
+      // created a memory.
+      allow create: if tokenWellFormed()
+                    && isFamilyMember(request.resource.data.familyId);
+      // An existing document is only touched by its own family, and does not
+      // move to another one.
+      allow update: if tokenWellFormed()
+                    && isFamilyMember(resource.data.familyId)
+                    && request.resource.data.familyId == resource.data.familyId;
       // A device unsubscribing on logout. Scoped to the family, so no one can
       // silence another family's devices.
       allow delete: if isFamilyMember(resource.data.familyId);
