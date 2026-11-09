@@ -3,7 +3,7 @@
  * document, not the order in which trigger events happen to arrive.
  */
 import { describe, expect, it } from 'vitest'
-import { syncClaimsForFamily } from '../../functions/adminClaims.js'
+import { reconcileAdminClaims, syncClaimsForFamily } from '../../functions/adminClaims.js'
 
 const FAMILY = 'fam1'
 
@@ -88,25 +88,145 @@ describe('syncClaimsForFamily', () => {
     )
   })
 
-  it('carries on with the other uids when one fails', async () => {
-    const { calls, run } = setup({ current: { adminUids: ['a', 'b', 'c'] } })
-    const failing = {
+  it('throws when a set fails but still processes the other uids', async () => {
+    const calls = []
+    const db = {
       doc: () => ({ get: async () => ({ exists: true, data: () => ({ adminUids: ['a', 'b', 'c'] }) }) }),
     }
     const auth = {
       setCustomUserClaims: async (uid, value) => {
-        if (uid === 'b') throw new Error('boom')
+        if (uid === 'b') throw Object.assign(new Error('boom'), { code: 'auth/internal-error' })
         calls.push(['set', uid, value])
       },
     }
     await expect(
-      syncClaimsForFamily({ db: failing, auth }, {
+      syncClaimsForFamily({ db, auth }, {
         familyId: FAMILY,
-        before: { adminUids: ['a'] },
+        before: { adminUids: [] },
         after: { adminUids: ['a', 'b', 'c'] },
       }),
+    ).rejects.toThrow()
+    expect(calls).toEqual(
+      expect.arrayContaining([['set', 'a', admin], ['set', 'c', admin]]),
+    )
+    expect(calls).toHaveLength(2)
+  })
+
+  it('does not treat a deleted user as a failure', async () => {
+    const gone = Object.assign(new Error('no user'), { code: 'auth/user-not-found' })
+    const db = {
+      doc: () => ({ get: async () => ({ exists: true, data: () => ({ adminUids: ['a'] }) }) }),
+    }
+    const auth = {
+      getUser: async () => { throw gone },
+      setCustomUserClaims: async () => { throw gone },
+    }
+    await expect(
+      syncClaimsForFamily({ db, auth }, {
+        familyId: FAMILY,
+        before: { adminUids: ['a', 'b'] },
+        after: { adminUids: ['a'] },
+      }),
     ).resolves.toBeUndefined()
-    expect(calls).toEqual([['set', 'c', admin]])
-    expect(run).toBeTypeOf('function')
+  })
+})
+
+describe('reconcileAdminClaims', () => {
+  // `families` is what the pass lists at its start; `familiesNow` is what a
+  // single family reads as afterwards, for a change made while the pass runs.
+  function setupReconcile({ families, familiesNow = families, users, failFor = [] }) {
+    const calls = []
+    const db = {
+      collection: () => ({
+        get: async () => ({
+          forEach: (fn) => Object.entries(families).forEach(([id, data]) => fn({ id, data: () => data })),
+        }),
+      }),
+      doc: (path) => ({
+        get: async () => {
+          const data = familiesNow[path.replace('families/', '')]
+          return { exists: !!data, data: () => data }
+        },
+      }),
+    }
+    const auth = {
+      getUser: async (uid) => {
+        if (!(uid in users)) throw Object.assign(new Error('none'), { code: 'auth/user-not-found' })
+        return { uid, customClaims: users[uid] }
+      },
+      listUsers: async () => ({
+        users: Object.entries(users).map(([uid, customClaims]) => ({ uid, customClaims })),
+      }),
+      setCustomUserClaims: async (uid, value) => {
+        if (failFor.includes(uid)) throw new Error('boom')
+        calls.push(['set', uid, value])
+      },
+      revokeRefreshTokens: async (uid) => calls.push(['revoke', uid]),
+    }
+    return { calls, run: () => reconcileAdminClaims({ db, auth }) }
+  }
+
+  it('grants a missing claim and skips users that no longer exist', async () => {
+    const { calls, run } = setupReconcile({
+      families: { [FAMILY]: { adminUids: ['a', 'ghost'] } },
+      users: { a: undefined },
+    })
+    const stats = await run()
+    expect(calls).toEqual([['set', 'a', admin]])
+    expect(stats).toEqual({ families: 1, granted: 1, cleared: 0, failed: 0 })
+  })
+
+  it('clears and revokes a stale claim', async () => {
+    const { calls, run } = setupReconcile({
+      families: { [FAMILY]: { adminUids: ['a'] } },
+      users: { a: admin, old: admin },
+    })
+    const stats = await run()
+    expect(calls).toEqual([['set', 'old', null], ['revoke', 'old']])
+    expect(stats.cleared).toBe(1)
+  })
+
+  it('leaves viewers, claimless users and correct claims alone', async () => {
+    const { calls, run } = setupReconcile({
+      families: { [FAMILY]: { adminUids: ['a'] } },
+      users: {
+        a: admin,
+        'viewer:fam1': { familyId: FAMILY, role: 'viewer' },
+        plain: undefined,
+      },
+    })
+    await run()
+    expect(calls).toEqual([])
+  })
+
+  it('keeps a claim that points at another family that still lists the user', async () => {
+    const { calls, run } = setupReconcile({
+      families: { [FAMILY]: { adminUids: ['a'] }, fam2: { adminUids: ['a'] } },
+      users: { a: { familyId: 'fam2', role: 'admin' } },
+    })
+    await run()
+    expect(calls).toEqual([])
+  })
+
+  it('finishes the pass when one user fails, then reports it', async () => {
+    const { calls, run } = setupReconcile({
+      families: { [FAMILY]: { adminUids: ['a', 'b'] } },
+      users: { a: undefined, b: undefined, old: admin },
+      failFor: ['a'],
+    })
+    await expect(run()).rejects.toThrow(/1 user/)
+    expect(calls).toEqual([['set', 'b', admin], ['set', 'old', null], ['revoke', 'old']])
+  })
+
+  it('judges someone who joined or left during the pass by the family as it is now', async () => {
+    const { calls, run } = setupReconcile({
+      families: { fam: { adminUids: ['left'] } },
+      familiesNow: { fam: { adminUids: ['joined'] } },
+      users: { left: null, joined: { familyId: 'fam', role: 'admin' } },
+    })
+    await run()
+    // `left` gets no claim although the list still named them, and `joined`
+    // keeps theirs although the list did not know them yet.
+    expect(calls).toEqual([])
   })
 })

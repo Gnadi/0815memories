@@ -29,7 +29,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
-import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
+import { adminUidsOf, reconcileAdminClaims, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
@@ -517,16 +517,35 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
  * place where admin status is decided. A future flow that adds an admin gets
  * the claim without knowing this function exists.
  */
-export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (event) => {
-  await syncClaimsForFamily(
-    { db: getFirestore(), auth: getAuth() },
-    {
-      familyId: event.params.familyId,
-      before: event.data?.before?.exists ? event.data.before.data() : null,
-      after: event.data?.after?.exists ? event.data.after.data() : null,
-    },
-  )
-})
+export const syncAdminClaims = onDocumentWritten(
+  // retry: a failed claim write must not end the event for good. The handler is
+  // idempotent (it reads the current family document, not the event), so a
+  // redelivery is harmless; Firebase retries the event for a limited time, and
+  // reconcileAdminClaims below repairs whatever still got through.
+  { document: 'families/{familyId}', retry: true },
+  async (event) => {
+    await syncClaimsForFamily(
+      { db: getFirestore(), auth: getAuth() },
+      {
+        familyId: event.params.familyId,
+        before: event.data?.before?.exists ? event.data.before.data() : null,
+        after: event.data?.after?.exists ? event.data.after.data() : null,
+      },
+    )
+  },
+)
+
+/**
+ * Nightly safety net for the trigger above: grants missing claims and clears
+ * stale ones, so a lost event or an exhausted retry does not leave a claim
+ * wrong for good. Runs at a time no other scheduled function uses.
+ */
+export const reconcileAdminClaimsNightly = onSchedule(
+  { schedule: '45 2 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 540 },
+  async () => {
+    await reconcileAdminClaims({ db: getFirestore(), auth: getAuth() })
+  },
+)
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
