@@ -64,6 +64,22 @@
         }
       } catch (e) { /* storage blocked — normal size */ }
     </script>
+    <!-- A family's address (<slug>.kaydo.app, the demo family's included) is
+         served the landing page's HTML too, and must never show up in search
+         results. vercel.json sends X-Robots-Tag for it; this is the same in
+         the page, for wherever the header is lost. The landing page's own
+         robots tag says index, and crawlers obey the stricter of the two. -->
+    <script>
+      (function () {
+        var host = location.hostname
+        if (/\.kaydo\.app$/.test(host) && host !== 'www.kaydo.app') {
+          var robots = document.createElement('meta')
+          robots.name = 'robots'
+          robots.content = 'noindex, nofollow'
+          document.head.appendChild(robots)
+        }
+      })()
+    </script>
     <style>
       html.kaydo-restoring body { background: #FDF6EC; }
       html.kaydo-restoring #root { visibility: hidden; }

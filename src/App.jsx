@@ -15,6 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 
 import { getSubdomainSlug } from './utils/familySlug'
+import { FEATURE_PAGES } from './seoRoutes'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
 import { demoTarget, enterDemo, exitDemo } from './demo/demoMode'
@@ -37,6 +38,9 @@ const lazyPage = (loader) =>
 // translations that are in the startup bundle, so these are plain lazy pages.
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const SignupPage = lazy(() => import('./pages/SignupPage'))
+// Brings its own translations (the `features` namespace), so it does not wait
+// for the signed-in app's.
+const FeaturePage = lazy(() => import('./pages/FeaturePage'))
 const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
 const AppNotifications = lazy(() => import('./components/AppNotifications'))
 // The bar is for admins only, and brings the scrapbook layout presets with it.
@@ -325,6 +329,13 @@ export const routes = [
       { path: 'privacy-policy', element: <LegalPage docKey="privacy-policy" /> },
       { path: 'contact', element: <LegalPage docKey="contact" /> },
       { path: 'safety', element: <LegalPage docKey="safety" /> },
+      // Feature pages, one address per language (src/seoRoutes.js).
+      ...FEATURE_PAGES.flatMap(({ id, paths }) =>
+        Object.entries(paths).map(([lng, path]) => ({
+          path: path.slice(1),
+          element: <FeaturePage id={id} lng={lng} />,
+        })),
+      ),
       { path: 'home', element: protect(<HomePage />) },
       { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
       { path: 'moments', element: protect(<MomentsAllPage />) },

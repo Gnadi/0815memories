@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:local": "node scripts/dev-local.mjs",
-    "build": "vite-react-ssg build",
+    "build": "vite-react-ssg build && node scripts/seo-build.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

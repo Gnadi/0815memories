@@ -36,6 +36,8 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS } from '../i18n'
+import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
+import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
@@ -75,7 +77,7 @@ export default function LandingPage({ lng }) {
   // against a canonical that JavaScript moves.
   const lang = t('seo.ogLocale').slice(0, 2)
   const ownPath = LANDING_PATHS[lng ?? 'en']
-  const canonicalUrl = `https://kaydo.app${ownPath}`
+  const canonicalUrl = absoluteUrl(ownPath)
   const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
   // Picking a language goes to its address; changeLanguage carries the choice
   // on into the app and remembers it.
@@ -105,10 +107,10 @@ export default function LandingPage({ lng }) {
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href={canonicalUrl} />
 
-        {/* hreflang alternates — mirror the entries in public/sitemap.xml */}
-        <link rel="alternate" hrefLang="en" href="https://kaydo.app/" />
-        <link rel="alternate" hrefLang="de" href="https://kaydo.app/de" />
-        <link rel="alternate" hrefLang="x-default" href="https://kaydo.app/" />
+        {/* hreflang alternates, the same the sitemap lists (src/seoRoutes.js) */}
+        {alternatesFor(ownPath).map(([hrefLang, href]) => (
+          <link key={hrefLang} rel="alternate" hrefLang={hrefLang} href={href} />
+        ))}
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
@@ -130,37 +132,15 @@ export default function LandingPage({ lng }) {
         <meta name="twitter:image" content={ogImageUrl} />
         <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
-        {/* Structured data */}
+        {/* Structured data: what "Kaydo" is (src/utils/structuredData.js) */}
         <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'SoftwareApplication',
-            name: 'Kaydo',
+          {JSON.stringify(landingStructuredData({
+            lang,
             description: t('seo.ldDescription'),
-            url: 'https://kaydo.app',
-            applicationCategory: 'LifestyleApplication',
-            operatingSystem: 'Web',
-            inLanguage: ['en', 'de'],
-            offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-            ],
-            screenshot: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
-              .map((key) => `https://kaydo.app${shot(key).src}`),
-            featureList: t('seo.ldFeatures', { returnObjects: true }),
-            publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
-          })}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: t('faq.items', { returnObjects: true }).map(({ q, a }) => ({
-              '@type': 'Question',
-              name: q,
-              acceptedAnswer: { '@type': 'Answer', text: a },
-            })),
-          })}
+            features: t('seo.ldFeatures', { returnObjects: true }),
+            screenshots: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
+              .map((key) => absoluteUrl(shot(key).src)),
+          }))}
         </script>
       </Head>
 
@@ -228,6 +208,11 @@ export default function LandingPage({ lng }) {
             <em className="not-italic font-serif text-kaydo italic">{t('hero.titleEmphasis')}</em>{' '}
             {t('hero.titleSuffix')}
           </h1>
+          {/* The heading is a promise; this says in plain words what Kaydo is,
+              the words people search for before they know the name. */}
+          <p className="text-bark text-lg leading-relaxed mb-4 max-w-md">
+            {t('hero.summary')}
+          </p>
           <p className="text-bark-light text-lg leading-relaxed mb-8 max-w-md">
             {t('hero.subtitlePrefix')}{' '}
             <span className="font-semibold text-bark">{t('hero.subtitleExample')}</span>{' '}
@@ -296,6 +281,7 @@ export default function LandingPage({ lng }) {
                     </li>
                   ))}
                 </ul>
+                <FeatureLink id="photoSharing" lang={lang} t={t} className="mt-6" />
               </div>
 
               {/* Right — media type badges + real mobile screenshot */}
@@ -341,6 +327,7 @@ export default function LandingPage({ lng }) {
                   </li>
                 ))}
               </ul>
+              <FeatureLink id="timeCapsule" lang={lang} t={t} />
               {/* Real Black Box vault screenshot */}
               <BrowserFrame
                 {...shot('blackbox')}
@@ -386,6 +373,7 @@ export default function LandingPage({ lng }) {
                 <p className="text-bark-light text-sm leading-relaxed">
                   {t('pillars.recipe.desc')}
                 </p>
+                <FeatureLink id="recipeBook" lang={lang} t={t} className="mt-4" />
               </div>
               {/* Real recipe evolution tree screenshot */}
               <BrowserFrame
@@ -452,6 +440,7 @@ export default function LandingPage({ lng }) {
                 >
                   {t('pillars.scrapbook.button')}
                 </button>
+                <FeatureLink id="photoBook" lang={lang} t={t} className="mt-4" />
               </div>
 
               {/* Right — real scrapbook editor screenshot, with the dialog
@@ -831,7 +820,7 @@ export default function LandingPage({ lng }) {
         </div>
       </section>
 
-      {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
+      {/* ── FAQ ── */}
       <section className="bg-warm-white py-20">
         <div className="max-w-2xl mx-auto px-5">
           <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
@@ -947,6 +936,20 @@ export default function LandingPage({ lng }) {
             <span>Kaydo</span>
           </div>
 
+          {/* Feature pages (src/seoRoutes.js) */}
+          <nav aria-label={t('featurePages.title')} className="text-center">
+            <p className="text-xs font-bold text-bark-muted tracking-widest uppercase mb-3">{t('featurePages.title')}</p>
+            <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-bark-light">
+              {FEATURE_PAGES.map((page) => (
+                <li key={page.id}>
+                  <Link to={page.paths[lang] ?? page.paths.en} className="hover:text-bark transition-colors">
+                    {t(`featurePages.${page.id}`)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-xs font-semibold text-bark-muted tracking-wider uppercase">
             {t('footer.links', { returnObjects: true }).map((link) => (
@@ -977,6 +980,23 @@ export default function LandingPage({ lng }) {
         </div>
       </footer>
     </div>
+  )
+}
+
+/**
+ * A link from a feature card to the page that tells more about it, in the
+ * page's language, named after it so the words say where it leads.
+ */
+function FeatureLink({ id, lang, t, className = '' }) {
+  const page = FEATURE_PAGES.find((p) => p.id === id)
+  return (
+    <Link
+      to={page.paths[lang] ?? page.paths.en}
+      className={`inline-flex items-center gap-1.5 text-sm font-semibold text-kaydo-dark underline underline-offset-4 hover:text-kaydo transition-colors ${className}`}
+    >
+      {t(`featurePages.${id}`)}
+      <span aria-hidden="true">&rarr;</span>
+    </Link>
   )
 }
 

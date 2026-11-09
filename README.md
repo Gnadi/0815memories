@@ -1,6 +1,6 @@
-# Kaydo
+# Kaydo – private, encrypted family memory app
 
-A private, encrypted family memory platform — your family's own corner of the internet. Every family claims its own address (`yourname.kaydo.app`) and gets a warm, ad-free space for photos, stories, recipes and letters across generations.
+[Kaydo](https://kaydo.app) is a private, encrypted family memory platform — your family's own corner of the internet. Every family claims its own address (`yourname.kaydo.app`) and gets a warm, ad-free space for photos, stories, recipes and letters across generations.
 
 **Live demo:** [kaydo.app/demo](https://kaydo.app/demo) — a demo family that lives in your browser, no account needed · **Website:** [kaydo.app](https://kaydo.app)
 
