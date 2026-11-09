@@ -235,6 +235,24 @@ The deploy runs without `--force`: a function that exists in Firebase and is
 gone from `functions/` stops it rather than being deleted. Delete that one by
 hand (`firebase functions:delete <name>`) and run the workflow again.
 
+### What to be told about
+
+The functions only write to the log, so nobody hears of a failure unless an
+alert is set on it. In the Google Cloud console, Logging → Log-based alerts,
+one alert for any of these texts in the functions' logs is enough to start
+with:
+
+| Log text | Means |
+| --- | --- |
+| `gave up on an event after retrying` | A trigger failed for an hour: the media ledger, an admin claim or the public mirror is out of step with a document |
+| `a file the ledger called unused is still in use` | The clean-up was about to delete a file a document shows. It kept it, but the ledger was wrong |
+| `a file was picked up again while it was being deleted` | A file was deleted in the moment a document took it up again. The file is gone |
+| `destroy failed` | Cloudinary refused a delete; the next run tries again |
+| `a document names a file the ledger does not know` | A document shows a file that was deleted, or that was never uploaded through the app |
+
+An alert on `severity>=ERROR` for the functions catches these and every
+uncaught failure as well, at the price of more noise.
+
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
