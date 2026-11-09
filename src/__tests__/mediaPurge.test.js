@@ -177,6 +177,62 @@ describe('purgeMedia', () => {
     expect(stats).toMatchObject({ due: 1, deleted: 1 })
   })
 
+  it('keeps and attaches a "pending" file a document of the family names', async () => {
+    // The attach never arrived: a lost trigger, or functions that did not know
+    // the collection yet. The ledger alone says "abandoned upload".
+    const db = fakeAdminFirestore(Object.fromEntries([
+      pending('a', 10),
+      pending('b', 10),
+      ['recipes/r1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } }],
+    ]))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    error.mockRestore()
+    expect(stats).toMatchObject({ due: 2, kept: 1, deleted: 1 })
+    expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('b')}`])
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['recipes/r1'] })
+  })
+
+  it('keeps a "detached" file another document of the family names', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['scrapbooks/s1', { familyId: 'fam-1', mediaRefs: { pages: [`kaydo/fam-1/${hex('a')}`] } }],
+    ]))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stats = await run(db, destroyAll())
+    error.mockRestore()
+    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['scrapbooks/s1'] })
+  })
+
+  it('keeps a file the family document names for its login page', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      pending('a', 10),
+      ['families/fam-1', { mediaRefs: { loginHeaderImage: [`kaydo/fam-1/${hex('a')}`] } }],
+    ]))
+    const dry = await run(db, destroyAll(), true)
+    expect(dry).toMatchObject({ due: 1, kept: 1, wouldDelete: [] })
+  })
+
+  it('does not keep a file only another family\'s document names', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      pending('a', 10),
+      ['memories/m9', { familyId: 'fam-2', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } }],
+    ]))
+    expect(await run(db, destroyAll())).toMatchObject({ due: 1, deleted: 1 })
+  })
+
+  it('keeps a file whose ledger entry names no family', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10, { familyId: undefined })]))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    error.mockRestore()
+    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
   it('leaves the ledger alone when Cloudinary refuses, so the next run tries again', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})

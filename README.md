@@ -183,6 +183,7 @@ Every pull request and every push to `main` runs:
 | `ci.yml` → Lint, test, build | ESLint, the Vitest suite, the production build — and the bundle size, compared with the last build of `main` in the job summary. The *shell* is what every visit downloads before the first paint; a pull request that grows it by more than 10 KB (gzip) gets a warning |
 | `ci.yml` → End-to-end smoke tests | `npm run test:e2e`: the landing page, an admin sign-in (and a wrong password) and every main section, in Chromium against the seeded emulators. On failure the Playwright report is attached to the run |
 | `firebase-firestore.yml` | The Firestore rules tests; on `main` also the deploy (below) |
+| `firebase-functions.yml` | Nothing; on `main` it deploys the Cloud Functions, once switched on (below) |
 | `npm-audit.yml` | Known vulnerabilities in both lockfiles (below) |
 | `codeql.yml` | CodeQL security analysis of the JavaScript and of the workflows; findings under Security → Code scanning |
 | `actionlint.yml` | The workflow files themselves, when they change |
@@ -192,8 +193,65 @@ moved. Dependabot (`.github/dependabot.yml`) opens a weekly pull request that
 moves the pins, and one per lockfile for npm minor and patch updates; major
 updates come one at a time. The Node version for all of it is in `.nvmrc`.
 
-The Cloud Functions in `functions/` are not deployed from CI yet — see
-Getting started.
+## Cloud Functions
+
+`functions/` is deployed by GitHub Actions
+(`.github/workflows/firebase-functions.yml`) when a change to it lands on
+`main` — once you switch that on. Until then the workflow does nothing and the
+functions are deployed by hand, as in Getting started.
+
+Deploying them with the merge matters because the app, the rules and the
+functions share contracts, and the app goes out with every merge. A collection
+that starts holding media, for one, is named in the app and in
+`functions/mediaRefs.js`; with the functions left behind, its uploads stay
+`pending` in the media ledger. The daily clean-up reads the family's documents
+before it deletes anything, so such a file is kept, but the ledger is wrong
+until then.
+
+To switch it on, in Settings → Secrets and variables → Actions → Variables:
+
+| Name | Value |
+| --- | --- |
+| `DEPLOY_FUNCTIONS` | `true` |
+| `FUNCTIONS_ENV` | The contents of your `functions/.env.<project-id>`: one `NAME=value` per line for the parameters you have changed (`MEDIA_PURGE_DRY_RUN`, `CLOUDINARY_CLOUD_NAME`, `PEECHO_API_BASE`, the `MEDIA_*` limits). A parameter left out is deployed with its default, so the media clean-up goes back to a dry run if `MEDIA_PURGE_DRY_RUN=false` is missing here |
+
+The secrets (`CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `PEECHO_API_KEY`)
+stay in Secret Manager and are not part of this.
+
+The workflow uses the same `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_PROJECT_ID`
+as the rules deploy below, and the service account needs more roles for it.
+Firebase's documentation lists them for a functions deploy; for this project
+they are Cloud Functions Admin, Cloud Run Admin, Eventarc Admin, Cloud
+Scheduler Admin, Service Account User, Secret Manager Viewer and Artifact
+Registry Administrator. This list has not been tried against a real project
+from here: start the workflow by hand once (Actions → Cloud Functions → Run
+workflow), and if a role is missing the deploy's error names the permission.
+
+Run `firebase functions:artifacts:setpolicy` once by hand as well. Without a
+clean-up policy for the build images the CLI asks about one, which a
+non-interactive deploy cannot answer.
+
+The deploy runs without `--force`: a function that exists in Firebase and is
+gone from `functions/` stops it rather than being deleted. Delete that one by
+hand (`firebase functions:delete <name>`) and run the workflow again.
+
+### What to be told about
+
+The functions only write to the log, so nobody hears of a failure unless an
+alert is set on it. In the Google Cloud console, Logging → Log-based alerts,
+one alert for any of these texts in the functions' logs is enough to start
+with:
+
+| Log text | Means |
+| --- | --- |
+| `gave up on an event after retrying` | A trigger failed for an hour: the media ledger, an admin claim or the public mirror is out of step with a document |
+| `a file the ledger called unused is still in use` | The clean-up was about to delete a file a document shows. It kept it, but the ledger was wrong |
+| `a file was picked up again while it was being deleted` | A file was deleted in the moment a document took it up again. The file is gone |
+| `destroy failed` | Cloudinary refused a delete; the next run tries again |
+| `a document names a file the ledger does not know` | A document shows a file that was deleted, or that was never uploaded through the app |
+
+An alert on `severity>=ERROR` for the functions catches these and every
+uncaught failure as well, at the price of more noise.
 
 ## Firestore rules & indexes
 
