@@ -201,6 +201,15 @@ before phase 4.
   or an entry from before the triggers read the document — the file is kept,
   put back as `attached`, and an error is logged. The dry run takes the same
   look, so its report does not list such a file.
+- Before any file goes, `pending` ones included, the family's documents are
+  read (`holdersOfFamily`: `mediaRefs` of every document in
+  `MEDIA_COLLECTIONS`, once per family and run). A file one of them names is
+  kept and attached. This is for the attach that never arrived — a trigger
+  that failed for good, or functions deployed before they knew the
+  collection — which left a file in daily use looking like an abandoned
+  upload, due after a week, with no `detachedFrom` to look at.
+- `trackMediaReferences` retries a failed run for up to an hour
+  (`functions/retries.js`).
 - What remains: a file can be picked up by a document in the moment between
   that last check and Cloudinary's delete, or before the trigger for that
   write has run. The transaction afterwards notices (`raced` in the log) but
