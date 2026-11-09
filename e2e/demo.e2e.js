@@ -85,6 +85,25 @@ test('what the visitor adds stays in the tab until a reload', async ({ page }) =
   await expect(page.getByText('Mia', { exact: true })).toHaveCount(0)
 })
 
+test('a memory opened from far down the feed opens at its top, and back finds its card', async ({ page }) => {
+  await openDemo(page)
+  const cards = page.locator('[data-memory-id]')
+  await expect(cards.nth(4)).toBeVisible()
+  const card = cards.last()
+  const id = await card.getAttribute('data-memory-id')
+  await card.scrollIntoViewIfNeeded()
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1000)
+
+  await card.click()
+  await expect(page).toHaveURL(new RegExp(`/memory/${id}$`))
+  await expect(page.locator('header button').first()).toBeVisible()
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+  await page.locator('header button').first().click()
+  await expect(page).toHaveURL(/\/home$/)
+  await expect(page.locator(`[data-memory-id="${id}"]`)).toBeInViewport()
+})
+
 test("the visitor's answers reveal the partner's, and the time locks hold", async ({ page }) => {
   await openDemo(page)
   await page.goto('/our-year/demo-chapter-3')

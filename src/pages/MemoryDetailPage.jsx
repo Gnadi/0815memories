@@ -25,6 +25,13 @@ export default function MemoryDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const menuRef = useRef(null)
 
+  // A memory opens at its top. The window keeps the scroll position of the
+  // feed it was opened from, which is further down than this page is long, so
+  // without this the memory opened at its end.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [id])
+
   useEffect(() => {
     // Null for a memory of another family as for one that is gone; a read that
     // fails shows the same, instead of a spinner that never stops.
