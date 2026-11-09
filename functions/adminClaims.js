@@ -30,7 +30,7 @@ export async function syncClaimsForFamily({ db, auth }, { familyId, before, afte
   const snap = await db.doc(`families/${familyId}`).get()
   const current = snap.exists ? adminUidsOf(snap.data()) : []
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     changed.map(async (uid) => {
       if (current.includes(uid)) {
         await auth.setCustomUserClaims(uid, { familyId, role: 'admin' })
@@ -48,4 +48,10 @@ export async function syncClaimsForFamily({ db, auth }, { familyId, before, afte
       await auth.revokeRefreshTokens(uid)
     }),
   )
+  // Every uid is tried before any failure is reported, so one account Firebase
+  // Auth refuses does not hold up the others. Then it is thrown: the trigger
+  // retries, and a removed admin whose claim could not be cleared is not left
+  // with it.
+  const failed = results.find((result) => result.status === 'rejected')
+  if (failed) throw failed.reason
 }

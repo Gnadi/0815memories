@@ -88,7 +88,7 @@ describe('syncClaimsForFamily', () => {
     )
   })
 
-  it('carries on with the other uids when one fails', async () => {
+  it('carries on with the other uids when one fails, then fails so the trigger retries', async () => {
     const { calls, run } = setup({ current: { adminUids: ['a', 'b', 'c'] } })
     const failing = {
       doc: () => ({ get: async () => ({ exists: true, data: () => ({ adminUids: ['a', 'b', 'c'] }) }) }),
@@ -105,7 +105,7 @@ describe('syncClaimsForFamily', () => {
         before: { adminUids: ['a'] },
         after: { adminUids: ['a', 'b', 'c'] },
       }),
-    ).resolves.toBeUndefined()
+    ).rejects.toThrow('boom')
     expect(calls).toEqual([['set', 'c', admin]])
     expect(run).toBeTypeOf('function')
   })

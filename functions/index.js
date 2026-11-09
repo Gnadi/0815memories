@@ -40,6 +40,7 @@ import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
+import { givenUp } from './retries.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
   COPY,
@@ -301,6 +302,14 @@ const MEDIA_MAX_FILE_MB = defineInt('MEDIA_MAX_FILE_MB', {
 // message, which is a format string.
 const loggable = (value) => String(value).replace(/[^A-Za-z0-9_./~:-]/g, '').slice(0, 300)
 
+// For the triggers that retry — see functions/retries.js. True once an event
+// has failed for long enough to stop, which it says in the log.
+function abandoned(name, event) {
+  if (!givenUp(event)) return false
+  console.error(`[${name}] gave up on an event after retrying:`, loggable(event.document ?? ''))
+  return true
+}
+
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
  * `mediaAssets` ledger before it exists.
@@ -340,9 +349,10 @@ export const signUpload = onCall(
  * MEDIA_COLLECTIONS, not a new function to deploy. Writes elsewhere return
  * before reading anything.
  */
-export const trackMediaReferences = onDocumentWritten('{collection}/{docId}', async (event) => {
+export const trackMediaReferences = onDocumentWritten({ document: '{collection}/{docId}', retry: true }, async (event) => {
   const { collection, docId } = event.params
   if (!MEDIA_COLLECTIONS.includes(collection)) return
+  if (abandoned('media', event)) return
   const before = event.data?.before?.exists ? event.data.before.data() : null
   const after = event.data?.after?.exists ? event.data.after.data() : null
   if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
@@ -476,7 +486,8 @@ const PUBLIC_FAMILY_FIELDS = [
 
 // ── 1. Public mirror ────────────────────────────────────────────────────────
 
-export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async (event) => {
+export const mirrorFamilyPublic = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
+  if (abandoned('mirror', event)) return
   const { familyId } = event.params
   const db = getFirestore()
   const before = event.data?.before?.exists ? event.data.before.data() : null
@@ -517,7 +528,8 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
  * place where admin status is decided. A future flow that adds an admin gets
  * the claim without knowing this function exists.
  */
-export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (event) => {
+export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
+  if (abandoned('claims', event)) return
   await syncClaimsForFamily(
     { db: getFirestore(), auth: getAuth() },
     {
