@@ -301,6 +301,13 @@
     "crafted": "Mit Liebe für Erinnerungen gemacht.",
     "story": "Die Geschichte hinter Kaydo"
   },
+  "featurePages": {
+    "title": "Funktionen",
+    "photoSharing": "Familienfotos privat teilen",
+    "timeCapsule": "Zeitkapsel für Kinder",
+    "recipeBook": "Familien-Rezeptbuch",
+    "photoBook": "Familien-Fotobuch und Sammelalbum"
+  },
   "claim": {
     "namePlaceholder": "Die Müllers",
     "nameAriaLabel": "Euer Familienname",

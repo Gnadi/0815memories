@@ -16,6 +16,30 @@ export const SITE_ORIGIN = 'https://kaydo.app'
  * `frame` the device it is shown in.
  */
 export const FEATURE_PAGES = [
+  {
+    id: 'photoSharing',
+    paths: { en: '/private-family-photo-sharing', de: '/de/familienfotos-privat-teilen' },
+    screenshot: 'homeMobile',
+    frame: 'phone',
+  },
+  {
+    id: 'timeCapsule',
+    paths: { en: '/family-time-capsule', de: '/de/zeitkapsel-fuer-kinder' },
+    screenshot: 'blackbox',
+    frame: 'browser',
+  },
+  {
+    id: 'recipeBook',
+    paths: { en: '/family-recipe-book', de: '/de/familien-rezeptbuch' },
+    screenshot: 'recipeTree',
+    frame: 'browser',
+  },
+  {
+    id: 'photoBook',
+    paths: { en: '/family-scrapbook-photo-book', de: '/de/familien-fotobuch' },
+    screenshot: 'scrapbook',
+    frame: 'browser',
+  },
 ]
 
 // The landing page's addresses. src/i18n re-exports them as LANDING_PATHS.

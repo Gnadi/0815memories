@@ -41,7 +41,10 @@ export const LAZY_NAMESPACES = [
   'feedback', 'sky', 'demo', 'bestOf', 'advent',
 ]
 
-export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]
+// Loaded by the one page that uses them, in its own chunk (src/pages/FeaturePage.jsx).
+export const PAGE_NAMESPACES = ['features']
+
+export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES, ...PAGE_NAMESPACES]
 export const SUPPORTED_LANGUAGES = ['en', 'de']
 
 // The landing page's address in each language. Crawlers detect no language,

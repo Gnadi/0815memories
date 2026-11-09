@@ -301,6 +301,13 @@
     "crafted": "Crafted for memories.",
     "story": "The story behind Kaydo"
   },
+  "featurePages": {
+    "title": "Features",
+    "photoSharing": "Private family photo sharing",
+    "timeCapsule": "Family time capsule",
+    "recipeBook": "Family recipe book",
+    "photoBook": "Family scrapbook and photo book"
+  },
   "claim": {
     "namePlaceholder": "The Millers",
     "nameAriaLabel": "Your family name",

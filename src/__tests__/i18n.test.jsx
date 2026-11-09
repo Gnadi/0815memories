@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import i18n, { NAMESPACES, EAGER_NAMESPACES, LAZY_NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
+import i18n, { NAMESPACES, EAGER_NAMESPACES, PAGE_NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 // Read the locale files straight from disk rather than through the i18n module:
@@ -50,11 +50,12 @@ describe('i18n translation completeness', () => {
     expect(resources.de.common.language.de).toBe('Deutsch')
   })
 
-  it('every namespace on disk is registered as either eager or lazy', () => {
+  it('every namespace on disk is registered as eager, lazy or a page\'s own', () => {
     const onDisk = Object.keys(resources.en).sort()
     expect([...NAMESPACES].sort()).toEqual(onDisk)
-    // A namespace in both lists would be shipped twice; in neither, never at all.
-    expect(EAGER_NAMESPACES.filter((ns) => LAZY_NAMESPACES.includes(ns))).toEqual([])
+    // A namespace in two lists would be shipped twice; in none, never at all.
+    expect(new Set(NAMESPACES).size).toBe(NAMESPACES.length)
+    expect(PAGE_NAMESPACES).toEqual(['features'])
   })
 
   it('keeps the public shell namespaces in the startup bundle', () => {

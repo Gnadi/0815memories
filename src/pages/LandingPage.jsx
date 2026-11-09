@@ -36,7 +36,7 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS } from '../i18n'
-import { absoluteUrl, alternatesFor } from '../seoRoutes'
+import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -281,6 +281,7 @@ export default function LandingPage({ lng }) {
                     </li>
                   ))}
                 </ul>
+                <FeatureLink id="photoSharing" lang={lang} t={t} className="mt-6" />
               </div>
 
               {/* Right — media type badges + real mobile screenshot */}
@@ -326,6 +327,7 @@ export default function LandingPage({ lng }) {
                   </li>
                 ))}
               </ul>
+              <FeatureLink id="timeCapsule" lang={lang} t={t} />
               {/* Real Black Box vault screenshot */}
               <BrowserFrame
                 {...shot('blackbox')}
@@ -371,6 +373,7 @@ export default function LandingPage({ lng }) {
                 <p className="text-bark-light text-sm leading-relaxed">
                   {t('pillars.recipe.desc')}
                 </p>
+                <FeatureLink id="recipeBook" lang={lang} t={t} className="mt-4" />
               </div>
               {/* Real recipe evolution tree screenshot */}
               <BrowserFrame
@@ -437,6 +440,7 @@ export default function LandingPage({ lng }) {
                 >
                   {t('pillars.scrapbook.button')}
                 </button>
+                <FeatureLink id="photoBook" lang={lang} t={t} className="mt-4" />
               </div>
 
               {/* Right — real scrapbook editor screenshot, with the dialog
@@ -932,6 +936,20 @@ export default function LandingPage({ lng }) {
             <span>Kaydo</span>
           </div>
 
+          {/* Feature pages (src/seoRoutes.js) */}
+          <nav aria-label={t('featurePages.title')} className="text-center">
+            <p className="text-xs font-bold text-bark-muted tracking-widest uppercase mb-3">{t('featurePages.title')}</p>
+            <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-bark-light">
+              {FEATURE_PAGES.map((page) => (
+                <li key={page.id}>
+                  <Link to={page.paths[lang] ?? page.paths.en} className="hover:text-bark transition-colors">
+                    {t(`featurePages.${page.id}`)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-xs font-semibold text-bark-muted tracking-wider uppercase">
             {t('footer.links', { returnObjects: true }).map((link) => (
@@ -962,6 +980,23 @@ export default function LandingPage({ lng }) {
         </div>
       </footer>
     </div>
+  )
+}
+
+/**
+ * A link from a feature card to the page that tells more about it, in the
+ * page's language, named after it so the words say where it leads.
+ */
+function FeatureLink({ id, lang, t, className = '' }) {
+  const page = FEATURE_PAGES.find((p) => p.id === id)
+  return (
+    <Link
+      to={page.paths[lang] ?? page.paths.en}
+      className={`inline-flex items-center gap-1.5 text-sm font-semibold text-kaydo-dark underline underline-offset-4 hover:text-kaydo transition-colors ${className}`}
+    >
+      {t(`featurePages.${id}`)}
+      <span aria-hidden="true">&rarr;</span>
+    </Link>
   )
 }
 

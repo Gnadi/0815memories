@@ -43,6 +43,13 @@ desktops as an app.
 
 - Kaydo is free, with no credit card required. Only a printed book costs money, paid to the print shop (Peecho) directly.
 
+## Features
+
+- [Private family photo sharing](https://kaydo.app/private-family-photo-sharing): The family feed, Daily Moments, one shared password for the inner circle. German: https://kaydo.app/de/familienfotos-privat-teilen
+- [Family time capsule](https://kaydo.app/family-time-capsule): The Vault, letters and journals for children. German: https://kaydo.app/de/zeitkapsel-fuer-kinder
+- [Family recipe book](https://kaydo.app/family-recipe-book): The recipe tree with versions and forks. German: https://kaydo.app/de/familien-rezeptbuch
+- [Family scrapbook and photo book](https://kaydo.app/family-scrapbook-photo-book): Scrapbooks, PDF export, printed books, collages. German: https://kaydo.app/de/familien-fotobuch
+
 ## Legal
 
 - [Terms of Service](https://kaydo.app/terms)
