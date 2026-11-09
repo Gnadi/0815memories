@@ -476,6 +476,8 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
   // goes out its way beneath it.
   const renderSlide = (shown, key, current) => {
     const Slide = SLIDES[shown.kind]
+    const video = shown.kind === 'video'
+    const outro = shown.kind === 'outro'
     return (
       <div
         key={key}
@@ -494,16 +496,16 @@ export default function BestOfViewer({ bestOf, onClose, onRemake }) {
           beatMs={beatMs}
           slideMs={Math.round(beatsOf(shown, still, beatMs) * beatMs)}
           onReady={current ? markReady : noop}
-          {...(shown.kind === 'video'
-            ? {
-              muted: true,
-              videoRef: current ? videoRef : undefined,
-              onProgress: current ? onClipProgress : noop,
-              onEnded: current ? timeUp : noop,
-              onFailed: current ? markClipFailed : noop,
-            }
-            : null)}
-          {...(shown.kind === 'outro' ? { onRestart: restart, onRemake } : null)}
+          // Props, not a spread object: the React Compiler reads an object
+          // that holds the video ref as a ref passed into a function during
+          // render, and refuses the component.
+          muted={video || undefined}
+          videoRef={video && current ? videoRef : undefined}
+          onProgress={video ? (current ? onClipProgress : noop) : undefined}
+          onEnded={video ? (current ? timeUp : noop) : undefined}
+          onFailed={video ? (current ? markClipFailed : noop) : undefined}
+          onRestart={outro ? restart : undefined}
+          onRemake={outro ? onRemake : undefined}
         />
       </div>
     )
