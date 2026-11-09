@@ -190,6 +190,33 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
   })
 
+  describe('a partner who is no longer a family admin', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'families', FAMILY), { adminUids: [A, OUTSIDER] })
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B, { submitted: false }))
+      })
+    })
+
+    it('keeps no access to the ritual, chapter or their own answers', async () => {
+      const db = as(B)
+      await assertFails(getDoc(doc(db, 'ourYearRituals/ritual-1')))
+      await assertFails(getDoc(doc(db, 'ourYearChapters', CHAPTER)))
+      await assertFails(getDoc(doc(db, entryPath(B))))
+      await assertFails(updateDoc(doc(db, 'ourYearRituals/ritual-1'), { occasionKey: 'newYear' }))
+      await assertFails(updateDoc(doc(db, 'ourYearChapters', CHAPTER), { title: sealed('x') }))
+      await assertFails(updateDoc(doc(db, entryPath(B)), { answers: sealed('x') }))
+      await assertFails(deleteDoc(doc(db, entryPath(B))))
+      await assertFails(deleteDoc(doc(db, 'ourYearChapters', CHAPTER)))
+      await assertFails(deleteDoc(doc(db, 'ourYearRituals/ritual-1')))
+    })
+
+    it('while the partner who still is an admin carries on', async () => {
+      await assertSucceeds(getDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await assertSucceeds(updateDoc(doc(as(A), 'ourYearRituals/ritual-1'), { occasionKey: 'newYear' }))
+    })
+  })
+
   describe('answers before the reveal', () => {
     beforeEach(async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
@@ -310,6 +337,47 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
   })
 
+  describe('handing in', () => {
+    it('cannot create an entry that is handed in but empty', async () => {
+      const { answers: _omit, ...noAnswers } = entry(A)
+      await assertFails(setDoc(doc(as(A), entryPath(A)), noAnswers))
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { answers: null })))
+    })
+
+    it('can create an entry that is handed in with its answers', async () => {
+      await assertSucceeds(setDoc(doc(as(A), entryPath(A)), entry(A)))
+    })
+
+    it('cannot create an entry already revealed', async () => {
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { revealed: true })))
+    })
+
+    it('cannot flip a draft without answers to handed in', async () => {
+      const { answers: _omit, ...noAnswers } = entry(A, { submitted: false })
+      await setDoc(doc(as(A), entryPath(A)), noAnswers)
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: true }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { submitted: true, answers: sealed('done') }))
+    })
+
+    it('does not let an empty hand-in unlock the partner’s answers', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B))
+      })
+      const { answers: _omit, ...noAnswers } = entry(A, { submitted: false })
+      await setDoc(doc(as(A), entryPath(A)), noAnswers)
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: true }))
+      await assertFails(updateDoc(doc(as(A), entryPath(B)), { revealed: true }))
+    })
+
+    it('lets the second partner reveal once both really handed in', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B))
+      })
+      await setDoc(doc(as(A), entryPath(A)), entry(A))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(B)), { revealed: true }))
+    })
+  })
+
   describe('a draft', () => {
     beforeEach(async () => {
       await setDoc(doc(as(A), entryPath(A)), entry(A, { submitted: false }))
@@ -374,6 +442,31 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       await assertFails(
         updateDoc(doc(as(A), letterPath), { openAt: Timestamp.fromDate(new Date(2020, 0, 1)) }),
       )
+    })
+
+    it('cannot be deleted before the chosen day', async () => {
+      await seedLetter(new Date(Date.now() + 30 * 24 * 3600 * 1000))
+      await assertFails(deleteDoc(doc(as(A), letterPath)))
+      await assertFails(deleteDoc(doc(as(B), letterPath)))
+    })
+
+    it('can be deleted as a draft, and once the day has arrived', async () => {
+      await seedLetter(null, false)
+      await assertSucceeds(deleteDoc(doc(as(A), letterPath)))
+      await seedLetter(new Date(Date.now() - 1000))
+      await assertSucceeds(deleteDoc(doc(as(B), letterPath)))
+    })
+
+    it('keeps its chapter from being discarded until the day has arrived', async () => {
+      await seedLetter(new Date(Date.now() + 30 * 24 * 3600 * 1000))
+      await assertFails(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await seedLetter(new Date(Date.now() - 1000))
+      await assertSucceeds(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+    })
+
+    it('does not stop a chapter with a draft letter being discarded', async () => {
+      await seedLetter(null, false)
+      await assertSucceeds(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
     })
 
     it('opens to both partners once the day has arrived', async () => {

@@ -65,6 +65,8 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
 
   const admin = () => testEnv.authenticatedContext(ADMIN, { familyId: FAMILY, role: 'admin' }).storage()
   const newAdmin = () => testEnv.authenticatedContext(NEW_ADMIN).storage()
+  // Still holds the admin claim, but the family document no longer lists them.
+  const removedAdmin = () => testEnv.authenticatedContext('uid-removed', { familyId: FAMILY, role: 'admin' }).storage()
   const otherAdmin = () => testEnv.authenticatedContext(OTHER_ADMIN, { familyId: OTHER_FAMILY, role: 'admin' }).storage()
   const viewer = () => testEnv.authenticatedContext(`viewer:${FAMILY}`, { familyId: FAMILY, role: 'viewer' }).storage()
   const anonymous = () => testEnv.unauthenticatedContext().storage()
@@ -82,6 +84,13 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
 
   it('lets an admin whose claim has not landed yet store one too', async () => {
     await assertSucceeds(newAdmin().ref(path('book.pdf')).put(bytes(), PDF))
+  })
+
+  it('does not take an admin claim the family document no longer backs', async () => {
+    await assertFails(removedAdmin().ref(path('book.pdf')).put(bytes(), PDF))
+    await seed()
+    await assertFails(removedAdmin().ref(path('book.pdf')).getMetadata())
+    await assertFails(removedAdmin().ref(path('book.pdf')).delete())
   })
 
   it('keeps everyone else from storing one', async () => {
