@@ -208,6 +208,11 @@ export default function LandingPage({ lng }) {
             <em className="not-italic font-serif text-kaydo italic">{t('hero.titleEmphasis')}</em>{' '}
             {t('hero.titleSuffix')}
           </h1>
+          {/* The heading is a promise; this says in plain words what Kaydo is,
+              the words people search for before they know the name. */}
+          <p className="text-bark text-lg leading-relaxed mb-4 max-w-md">
+            {t('hero.summary')}
+          </p>
           <p className="text-bark-light text-lg leading-relaxed mb-8 max-w-md">
             {t('hero.subtitlePrefix')}{' '}
             <span className="font-semibold text-bark">{t('hero.subtitleExample')}</span>{' '}

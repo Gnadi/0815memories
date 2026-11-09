@@ -100,14 +100,14 @@ describe('LandingPage renders in both languages', () => {
 
   it('links the story behind Kaydo, and says in English that it is German', async () => {
     renderLanding()
-    const link = screen.getByText('Read the story behind it').closest('a')
+    const link = screen.getByText('Read the story behind Kaydo').closest('a')
     expect(link.getAttribute('href')).toBe('https://blog.gnadlinger.me/blog/kaydo/')
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
     expect(screen.getByText('(in German)')).toBeInTheDocument()
     cleanup()
     await i18n.changeLanguage('de')
     renderLanding()
-    expect(screen.getByText('Lies die Geschichte dahinter')).toBeInTheDocument()
+    expect(screen.getByText('Lies die Geschichte hinter Kaydo')).toBeInTheDocument()
     expect(screen.getByText('Die Geschichte hinter Kaydo').closest('a').getAttribute('href'))
       .toBe('https://blog.gnadlinger.me/blog/kaydo/')
   })

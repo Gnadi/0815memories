@@ -1,7 +1,7 @@
 {
   "seo": {
-    "title": "Kaydo — Private, Encrypted Family Memory App",
-    "description": "Kaydo is a private, encrypted sanctuary for your family's memories. No ads, no AI training, no data selling — just your stories, preserved forever.",
+    "title": "Kaydo – Free, Private & Encrypted Family Memory App",
+    "description": "Kaydo is a free, private and encrypted app for your family's photos, letters, recipes and journals. No ads, no AI training, no credit card.",
     "ogTitle": "Kaydo — Your Private Digital Home",
     "ogDescription": "A private, encrypted sanctuary for your family's memories. No ads, no AI training — just your stories, preserved forever.",
     "ogImageAlt": "Kaydo — Your Private Digital Home",
@@ -34,6 +34,7 @@
     "titlePrefix": "Claim your family's",
     "titleEmphasis": "home",
     "titleSuffix": "of the web.",
+    "summary": "Kaydo is a free, private app for your family: share photos and videos, write encrypted letters and journals for your children, keep the family's recipes and make scrapbooks.",
     "subtitlePrefix": "Every family gets its own private address. Check if",
     "subtitleExample": "yourname.kaydo.app",
     "subtitleSuffix": "is still available and make it yours in seconds.",
@@ -225,6 +226,10 @@
     "sectionTitle": "Frequently asked questions",
     "items": [
       {
+        "q": "Is Kaydo free?",
+        "a": "Yes. Kaydo is free, and no credit card is required. The only thing that costs money is a scrapbook you order as a printed book, and you pay the print shop, Peecho, directly."
+      },
+      {
         "q": "Why not just use a WhatsApp group?",
         "a": "Keep it — for talking. In a chat, photos get buried between messages; in Kaydo they stay where you can find them: in a feed and a timeline by season and \"on this day\", with the stories behind them. And next to them there is room for what a family keeps besides photos: letters and journals for your children, time capsules, recipes and scrapbooks."
       },
@@ -239,10 +244,6 @@
       {
         "q": "How is Kaydo different from FamilyAlbum?",
         "a": "FamilyAlbum is made for sharing photos and videos of your children with your family. Kaydo does that too, and around the photos it has room for more: letters and journals for your children, time capsules that open on a birthday or a wedding, the family's recipes with all their versions, and a recurring look back for the two of you. Kaydo is also open source: anyone can read its code, and you can run it for your family yourself."
-      },
-      {
-        "q": "What does Kaydo cost?",
-        "a": "Kaydo is free. No credit card required. Only a printed book costs money, and you pay the print shop, Peecho, directly."
       },
       {
         "q": "Are my photos encrypted?",
@@ -332,7 +333,7 @@
   },
   "story": {
     "question": "Why does Kaydo exist?",
-    "link": "Read the story behind it",
+    "link": "Read the story behind Kaydo",
     "note": "(in German)",
     "url": "https://blog.gnadlinger.me/blog/kaydo/"
   }

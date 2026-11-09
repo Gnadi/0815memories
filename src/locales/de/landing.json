@@ -1,7 +1,7 @@
 {
   "seo": {
-    "title": "Kaydo — Private, verschlüsselte App für Familienerinnerungen",
-    "description": "Kaydo ist ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training, kein Datenverkauf — nur eure Geschichten, für immer bewahrt.",
+    "title": "Kaydo – Kostenlose, private Familien-App mit Verschlüsselung",
+    "description": "Kaydo ist eine kostenlose, private und verschlüsselte App für Familienfotos, Briefe und Rezepte. Keine Werbung, kein KI-Training, keine Kreditkarte.",
     "ogTitle": "Kaydo — Euer privates digitales Zuhause",
     "ogDescription": "Ein privater, verschlüsselter Rückzugsort für die Erinnerungen deiner Familie. Keine Werbung, kein KI-Training — nur eure Geschichten, für immer bewahrt.",
     "ogImageAlt": "Kaydo — Euer privates digitales Zuhause",
@@ -34,6 +34,7 @@
     "titlePrefix": "Schaffe deiner Familie ein eigenes",
     "titleEmphasis": "Zuhause",
     "titleSuffix": "im Netz.",
+    "summary": "Kaydo ist eine kostenlose, private App für deine Familie: Fotos und Videos teilen, verschlüsselte Briefe und Tagebücher für deine Kinder schreiben, die Rezepte der Familie aufheben und Sammelalben gestalten.",
     "subtitlePrefix": "Jede Familie bekommt ihre eigene private Adresse. Prüfe, ob",
     "subtitleExample": "deinname.kaydo.app",
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
@@ -225,6 +226,10 @@
     "sectionTitle": "Häufige Fragen",
     "items": [
       {
+        "q": "Kostet Kaydo etwas?",
+        "a": "Nein. Kaydo ist kostenlos, und du brauchst keine Kreditkarte. Geld kostet nur ein Sammelalbum, das du als gedrucktes Buch bestellst, und das bezahlst du direkt bei der Druckerei Peecho."
+      },
+      {
         "q": "Warum nicht einfach eine WhatsApp-Gruppe?",
         "a": "Behalte sie — zum Reden. Im Chat gehen Fotos zwischen den Nachrichten unter; in Kaydo bleiben sie, wo man sie wiederfindet: in einem Feed und einer Timeline nach Jahreszeit und \"Heute vor ...\", mit den Geschichten dazu. Und daneben ist Platz für das, was eine Familie außer Fotos aufhebt: Briefe und Tagebücher für deine Kinder, Zeitkapseln, Rezepte und Sammelalben."
       },
@@ -239,10 +244,6 @@
       {
         "q": "Was ist anders als bei FamilyAlbum?",
         "a": "FamilyAlbum ist dafür gemacht, Fotos und Videos deiner Kinder mit der Familie zu teilen. Das kann Kaydo auch, und rund um die Fotos ist Platz für mehr: Briefe und Tagebücher für deine Kinder, Zeitkapseln, die sich an einem Geburtstag oder einer Hochzeit öffnen, die Rezepte der Familie mit all ihren Versionen und einen wiederkehrenden Rückblick für euch zwei. Außerdem ist Kaydo Open Source: Jeder kann den Code lesen, und du kannst es für deine Familie selbst betreiben."
-      },
-      {
-        "q": "Was kostet Kaydo?",
-        "a": "Kaydo ist kostenlos. Keine Kreditkarte nötig. Nur ein gedrucktes Buch kostet Geld, und das bezahlst du direkt bei der Druckerei Peecho."
       },
       {
         "q": "Sind meine Fotos verschlüsselt?",
@@ -332,7 +333,7 @@
   },
   "story": {
     "question": "Warum gibt es Kaydo?",
-    "link": "Lies die Geschichte dahinter",
+    "link": "Lies die Geschichte hinter Kaydo",
     "note": "",
     "url": "https://blog.gnadlinger.me/blog/kaydo/"
   }
