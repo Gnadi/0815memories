@@ -128,7 +128,8 @@ describe('pre-rendered HTML check', () => {
     expect(checkPage(page({ ld: '{' }), '/de')[0]).toMatch(/JSON-LD block 1 is not valid JSON/)
   })
 
-  it('fails on rating or review markup', () => {
+  it('fails on FAQPage, rating or review markup', () => {
+    expect(checkPage(page({ ld: '{"@type":"FAQPage"}' }), '/de')).toEqual(['JSON-LD contains FAQPage'])
     expect(checkPage(page({ ld: '{"@type":"WebApplication","aggregateRating":{"ratingValue":5}}' }), '/de'))
       .toEqual(['JSON-LD contains AggregateRating'])
   })

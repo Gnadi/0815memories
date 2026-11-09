@@ -62,7 +62,7 @@ describe('landing page screenshots', () => {
     // shot('key') in the page, and the keys of the list the structured data
     // maps through shot(key).
     const direct = [...page.matchAll(/shot\('(\w+)'\)/g)].map((m) => m[1])
-    const listed = page.match(/screenshot: \[([^\]]*)\]\s*\.map\(\(key\) =>/)[1].match(/\w+/g)
+    const listed = page.match(/screenshots?: \[([^\]]*)\]\s*\.map\(\(key\) =>/)[1].match(/\w+/g)
     const used = [...direct, ...listed]
     expect(used.length).toBeGreaterThan(0)
     for (const key of used) expect(Object.keys(SCREENSHOTS)).toContain(key)

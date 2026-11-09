@@ -7,7 +7,7 @@ import { absoluteUrl, alternatesFor } from '../src/seoRoutes.js'
 
 // Markup for claims a page cannot back up, or that Google no longer shows for
 // a site like this one (FAQPage).
-const FORBIDDEN_TYPES = ['AggregateRating', 'Review']
+const FORBIDDEN_TYPES = ['FAQPage', 'AggregateRating', 'Review']
 
 const count = (html, pattern) => (html.match(pattern) ?? []).length
 

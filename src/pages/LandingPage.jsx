@@ -37,6 +37,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS } from '../i18n'
 import { absoluteUrl, alternatesFor } from '../seoRoutes'
+import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
@@ -131,37 +132,15 @@ export default function LandingPage({ lng }) {
         <meta name="twitter:image" content={ogImageUrl} />
         <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
-        {/* Structured data */}
+        {/* Structured data: what "Kaydo" is (src/utils/structuredData.js) */}
         <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'SoftwareApplication',
-            name: 'Kaydo',
+          {JSON.stringify(landingStructuredData({
+            lang,
             description: t('seo.ldDescription'),
-            url: 'https://kaydo.app',
-            applicationCategory: 'LifestyleApplication',
-            operatingSystem: 'Web',
-            inLanguage: ['en', 'de'],
-            offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-            ],
-            screenshot: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
-              .map((key) => `https://kaydo.app${shot(key).src}`),
-            featureList: t('seo.ldFeatures', { returnObjects: true }),
-            publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
-          })}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: t('faq.items', { returnObjects: true }).map(({ q, a }) => ({
-              '@type': 'Question',
-              name: q,
-              acceptedAnswer: { '@type': 'Answer', text: a },
-            })),
-          })}
+            features: t('seo.ldFeatures', { returnObjects: true }),
+            screenshots: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
+              .map((key) => absoluteUrl(shot(key).src)),
+          }))}
         </script>
       </Head>
 
@@ -832,7 +811,7 @@ export default function LandingPage({ lng }) {
         </div>
       </section>
 
-      {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
+      {/* ── FAQ ── */}
       <section className="bg-warm-white py-20">
         <div className="max-w-2xl mx-auto px-5">
           <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
