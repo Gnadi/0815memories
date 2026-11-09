@@ -156,7 +156,16 @@ the top of `functions/index.js`.
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
-The functions are deployed by hand for now (README, *Getting started*).
+They are deployed from CI on merge once that is switched on, and by hand until
+then (README, *Cloud Functions*).
+
+The triggers that keep something in step with the documents —
+`trackMediaReferences`, `syncAdminClaims`, `mirrorFamilyPublic` — retry a run
+that failed, for up to an hour (`functions/retries.js`). They can because each
+decides from the document as it is now, not from the event, so a second run
+lands on the same answer; a trigger added to that list has to work the same
+way. The push triggers do not retry: a second run would be a second
+notification.
 
 ## The front end (`src/`)
 
