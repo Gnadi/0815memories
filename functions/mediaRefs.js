@@ -7,7 +7,8 @@
  * browser before the field is encrypted. When a document is written, the ids
  * it gained are attached to it in the ledger, and the ids it lost — all of
  * them when it is deleted — are let go. A file no document holds any more is
- * `detached`, which is what the clean-up of phase 4 will look for.
+ * `detached`, which is what the clean-up of phase 4 will look for. An attach
+ * to a file the clean-up has reserved (`deleting`) cancels the reservation.
  *
  * Only files of the document's own family are touched. A document can name
  * any id it likes; an id whose ledger entry belongs to another family, or that
@@ -186,7 +187,23 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
     if (attach) refs.add(path)
     else refs.delete(path)
 
+    // Past the point of no return (functions/mediaPurge.js): the file is being
+    // or has been destroyed and cannot be saved. Only record the reference, so
+    // the clean-up sees the conflict and reports it; the state is not touched.
+    if (entry.state === 'destroying' || entry.state === 'lost') {
+      tx.update(ref, { refs: [...refs].sort() })
+      return attach ? 'attached' : 'detached'
+    }
     if (refs.size > 0) {
+      // A reference cancels a reservation in this same transaction: the
+      // clean-up moves `deleting` to `destroying` in a transaction on this
+      // entry too, so exactly one of the two wins. The file is in use, so
+      // its grace period starts over whenever it is let go next.
+      // (Nulls, as this module has no FieldValue.delete to remove the fields.)
+      if (entry.state === 'deleting') {
+        tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null, deletingSince: null, deletingFrom: null })
+        return attach ? 'attached' : 'kept'
+      }
       tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null })
       return attach ? 'attached' : 'kept'
     }
@@ -194,7 +211,8 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
     if (entry.state === 'pending') return 'ignored'
     // Already let go by an earlier run for the same document: keep the date
     // the grace period counts from.
-    if (entry.state === 'detached' || entry.state === 'unused') return 'detached'
+    // A reservation stays one: the file was let go, and the clean-up decides.
+    if (entry.state === 'detached' || entry.state === 'unused' || entry.state === 'deleting') return 'detached'
     // `detachedFrom` lets the clean-up look at that document once more before
     // it deletes anything (functions/mediaPurge.js).
     tx.update(ref, {

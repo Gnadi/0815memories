@@ -12,12 +12,36 @@
  *
  * - Only files signed into the ledger are touched. A file from before it is
  *   never deleted here, whether or not a document names it.
- * - Each file is checked again, in a transaction, right before it goes. One a
- *   document picked up again since the query is kept.
  * - The grace periods are long: a week for a pending file, because an editor
  *   can stay open over a weekend before it saves; thirty days for a detached
  *   one, time to notice a mistake.
- * - It starts as a dry run that only reports what it would delete.
+ * - It starts as a dry run that only reports what it would delete, and a dry
+ *   run changes nothing in the ledger.
+ *
+ * A file is deleted in two steps, a night apart, on its ledger entry:
+ *
+ * 1. A run that finds a file due *reserves* it: `deleting`, with the time.
+ *    Nothing is destroyed. A document write and the trigger that records it
+ *    (functions/mediaRefs.js) are asynchronous, so a check before the destroy
+ *    cannot see a reference whose trigger has not run yet, and a conflict
+ *    noticed after the destroy protects nothing. The reservation moves the
+ *    conflict in front of the delete: a trigger that attaches the file
+ *    cancels the reservation in a transaction on the same entry, and the
+ *    clean-up and the trigger exclude each other there. A reservation gives
+ *    every pending trigger a full run interval to land.
+ * 2. A run at least RESERVATION_MS later looks once more at the document that
+ *    let the file go, then, in a transaction that needs the entry still to be
+ *    `deleting` with no references, moves it to `destroying`. That is the
+ *    point of no return: from there a trigger can only record the reference
+ *    (so the conflict is visible), not save the file. Only then is Cloudinary
+ *    asked. An entry stays `destroying`, and every later run asks again, until
+ *    Cloudinary confirms the file is gone (one it no longer has counts as
+ *    gone); then the entry leaves the ledger. A file that gained a reference
+ *    while `destroying` is kept as `lost`, reported, and never destroyed again.
+ *
+ * What remains: a document whose trigger never runs within the reservation
+ * window is caught only by the look at the document named in `detachedFrom`,
+ * and a pending file has no such document to look at.
  *
  * Nothing here imports firebase-admin or firebase-functions: Firestore, the
  * Cloudinary call and the clock come in as arguments, so the tests can stub
@@ -26,10 +50,16 @@
 import { MEDIA_ASSETS, MEDIA_USAGE } from './mediaSigning.js'
 import { isOverCap, reconcileRef, refOfEntry, refsOf } from './mediaRefs.js'
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const HOUR_MS = 60 * 60 * 1000
+const DAY_MS = 24 * HOUR_MS
 
 export const PENDING_GRACE_DAYS = 7
 export const DETACHED_GRACE_DAYS = 30
+
+// How long a reservation must have stood before the file may be destroyed.
+// Under a day, so the nightly run always qualifies the previous night's
+// reservations; over any jitter in the schedule, so it never qualifies its own.
+export const RESERVATION_MS = 12 * HOUR_MS
 
 // Cloudinary's Admin API deletes at most 100 public ids per call.
 export const DESTROY_BATCH = 100
@@ -54,6 +84,9 @@ export function isDue(entry, now) {
   if (!entry || entry.legacy || (Array.isArray(entry.refs) && entry.refs.length > 0)) return false
   if (entry.state === 'pending') return millis(entry.createdAt) <= now - PENDING_GRACE_DAYS * DAY_MS
   if (entry.state === 'detached') return millis(entry.detachedAt) <= now - DETACHED_GRACE_DAYS * DAY_MS
+  // `deleting`, `destroying` and `lost` are the clean-up's own states and are
+  // not due: a reservation is not reserved twice, and a lost file is not
+  // destroyed again.
   return false
 }
 
@@ -83,17 +116,29 @@ export function cloudinaryDestroyer({ fetch, cloudName, apiKey, secret }) {
   }
 }
 
+const entriesOf = (snaps) => snaps.flatMap((snap) => snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+
 async function dueEntries(db, now) {
   const pendingCutoff = new Date(now - PENDING_GRACE_DAYS * DAY_MS)
   const detachedCutoff = new Date(now - DETACHED_GRACE_DAYS * DAY_MS)
   const assets = db.collection(MEDIA_ASSETS)
-  const [pending, detached] = await Promise.all([
+  const snaps = await Promise.all([
     assets.where('state', '==', 'pending').where('createdAt', '<=', pendingCutoff).limit(PURGE_PAGE).get(),
     assets.where('state', '==', 'detached').where('detachedAt', '<=', detachedCutoff).limit(PURGE_PAGE).get(),
   ])
-  return [...pending.docs, ...detached.docs]
-    .map((snap) => ({ id: snap.id, ...snap.data() }))
-    .filter((entry) => isDue(entry, now))
+  return entriesOf(snaps).filter((entry) => isDue(entry, now))
+}
+
+// Reservations that have stood long enough (a composite index on state and
+// deletingSince), and every entry whose destroy is not confirmed yet.
+async function destroyableEntries(db, now) {
+  const cutoff = new Date(now - RESERVATION_MS)
+  const assets = db.collection(MEDIA_ASSETS)
+  const [deleting, destroying] = await Promise.all([
+    assets.where('state', '==', 'deleting').where('deletingSince', '<=', cutoff).limit(PURGE_PAGE).get(),
+    assets.where('state', '==', 'destroying').limit(PURGE_PAGE).get(),
+  ])
+  return { deleting: entriesOf([deleting]), destroying: entriesOf([destroying]) }
 }
 
 /**
@@ -116,27 +161,58 @@ async function heldWhereItWasLetGo(db, entry) {
 }
 
 /**
- * Still due? Read again right before the destroy, so a file picked up since is
- * kept — and put back in the ledger, if the document that let it go holds it.
+ * Keep a file the document that let it go holds after all: put it back in the
+ * ledger (which also cancels a reservation) and log it. True if it was held.
  */
-async function stillDue(db, id, now) {
-  const snap = await db.collection(MEDIA_ASSETS).doc(id).get()
-  if (!snap.exists || !isDue(snap.data(), now)) return false
-  const entry = snap.data()
-  if (await heldWhereItWasLetGo(db, entry)) {
-    console.error('[media] a file the ledger called detached is still in use; kept:', id)
-    const [collection, docId] = entry.detachedFrom.split('/')
-    await reconcileRef(db, () => now, refOfEntry(entry), collection, docId)
-    return false
-  }
+async function keepIfHeld(db, entry, now) {
+  if (!(await heldWhereItWasLetGo(db, entry))) return false
+  console.error('[media] a file the ledger called detached is still in use; kept:', entry.id)
+  const [collection, docId] = entry.detachedFrom.split('/')
+  await reconcileRef(db, () => now, refOfEntry(entry), collection, docId)
   return true
 }
 
 /**
+ * Step one: reserve a due file. Read again first, so a file picked up since
+ * the query is kept; the transaction then checks once more and writes.
+ * `deletingFrom` and the dates stay, so a cancelled reservation can go back.
+ */
+async function reserve(db, entry, now) {
+  const ref = db.collection(MEDIA_ASSETS).doc(entry.id)
+  const snap = await ref.get()
+  if (!snap.exists || !isDue(snap.data(), now)) return false
+  if (await keepIfHeld(db, { id: entry.id, ...snap.data() }, now)) return false
+  return db.runTransaction(async (tx) => {
+    const current = await tx.get(ref)
+    if (!current.exists || !isDue(current.data(), now)) return false
+    tx.update(ref, { state: 'deleting', deletingSince: new Date(now), deletingFrom: current.data().state })
+    return true
+  })
+}
+
+/**
+ * Step two: the point of no return. Only an entry still `deleting`, without
+ * references and reserved long enough, becomes `destroying`; a trigger that
+ * attached the file in the meantime has already cancelled the reservation.
+ */
+async function commitToDestroy(db, entry, now) {
+  if (await keepIfHeld(db, entry, now)) return false
+  const ref = db.collection(MEDIA_ASSETS).doc(entry.id)
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return false
+    const current = snap.data()
+    if (current.state !== 'deleting' || (Array.isArray(current.refs) && current.refs.length > 0)) return false
+    if (!(millis(current.deletingSince) <= now - RESERVATION_MS)) return false
+    tx.update(ref, { state: 'destroying', destroyingSince: new Date(now) })
+    return true
+  })
+}
+
+/**
  * Remove a destroyed file from the ledger and its size from the family's
- * usage, in one transaction. Removed only while it is still due: an entry a
- * document picked up in the moment between the check and the destroy is kept
- * and reported, because its file is gone.
+ * usage, in one transaction. A file that gained a reference after the point of
+ * no return is gone, so the entry is kept as `lost` and reported instead.
  */
 async function forget(db, id, now) {
   const ref = db.collection(MEDIA_ASSETS).doc(id)
@@ -144,7 +220,11 @@ async function forget(db, id, now) {
     const snap = await tx.get(ref)
     if (!snap.exists) return 'gone'
     const entry = snap.data()
-    if (!isDue(entry, now)) return 'raced'
+    if (entry.state !== 'destroying') return 'gone'
+    if (Array.isArray(entry.refs) && entry.refs.length > 0) {
+      tx.update(ref, { state: 'lost', lostAt: new Date(now) })
+      return 'raced'
+    }
 
     // A file with a size gives it back; one whose size was never known (an
     // upload that never happened, as a rule) gives back the estimate it was
@@ -171,16 +251,62 @@ async function forget(db, id, now) {
   })
 }
 
+const byResourceType = (entries) => {
+  const byType = new Map()
+  for (const entry of entries) {
+    if (typeof entry.publicId !== 'string' || !entry.resourceType) continue
+    const list = byType.get(entry.resourceType) ?? []
+    list.push(entry)
+    byType.set(entry.resourceType, list)
+  }
+  return byType
+}
+
+/** Destroy entries that are `destroying`, forget the confirmed ones. */
+async function destroyAndForget(db, destroy, entries, now, stats) {
+  for (const [resourceType, group] of byResourceType(entries)) {
+    for (let i = 0; i < group.length; i += DESTROY_BATCH) {
+      const batch = group.slice(i, i + DESTROY_BATCH)
+      let gone
+      try {
+        gone = await destroy(resourceType, batch.map((entry) => entry.publicId))
+      } catch (error) {
+        // The entries stay `destroying`, so every later run asks again.
+        console.error('[media] destroy failed; will be retried', error)
+        stats.failed += batch.length
+        continue
+      }
+
+      for (const entry of batch) {
+        if (!gone.has(entry.publicId)) {
+          console.error('[media] destroy not confirmed; will be retried:', entry.id)
+          stats.failed++
+          continue
+        }
+        const result = await forget(db, entry.id, now)
+        if (result === 'raced') {
+          stats.raced++
+          console.error('[media] a file was picked up again while it was being deleted; kept as lost:', entry.id)
+        } else if (result === 'forgotten') {
+          stats.deleted++
+        }
+      }
+    }
+  }
+}
+
 /**
- * One run of the clean-up.
+ * One run of the clean-up: destroy what an earlier run reserved, then reserve
+ * what is due now. In that order, so a file is never reserved and destroyed in
+ * the same run.
  *
  * @param {{ db: any, destroy: (resourceType: string, publicIds: string[]) => Promise<Set<string>>, dryRun: boolean, now?: () => number }} deps
- * @returns {Promise<{ due: number, deleted: number, kept: number, failed: number, raced: number, dryRun: boolean, wouldDelete?: string[] }>}
+ * @returns {Promise<{ due: number, reserved: number, deleted: number, kept: number, failed: number, raced: number, dryRun: boolean, wouldDelete?: string[], inFlight?: number }>}
  */
 export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
   const at = now()
   const due = await dueEntries(db, at)
-  const stats = { due: due.length, deleted: 0, kept: 0, failed: 0, raced: 0, dryRun }
+  const stats = { due: due.length, reserved: 0, deleted: 0, kept: 0, failed: 0, raced: 0, dryRun }
 
   if (dryRun) {
     // The same last look as a real run takes, so the report the switch to a
@@ -190,50 +316,29 @@ export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
       if (await heldWhereItWasLetGo(db, entry)) stats.kept++
       else stats.wouldDelete.push(entry.publicId)
     }
+    // Reservations and destroys an earlier real run left: a dry run neither
+    // continues nor cancels them, it only says they are there.
+    const assets = db.collection(MEDIA_ASSETS)
+    const [deleting, destroying] = await Promise.all([
+      assets.where('state', '==', 'deleting').limit(PURGE_PAGE).get(),
+      assets.where('state', '==', 'destroying').limit(PURGE_PAGE).get(),
+    ])
+    stats.inFlight = deleting.docs.length + destroying.docs.length
     return stats
   }
 
-  const byType = new Map()
+  const earlier = await destroyableEntries(db, at)
+  const destroying = [...earlier.destroying]
+  for (const entry of earlier.deleting) {
+    if (await commitToDestroy(db, entry, at)) destroying.push(entry)
+    else stats.kept++
+  }
+  await destroyAndForget(db, destroy, destroying, at, stats)
+
   for (const entry of due) {
     if (typeof entry.publicId !== 'string' || !entry.resourceType) continue
-    const list = byType.get(entry.resourceType) ?? []
-    list.push(entry)
-    byType.set(entry.resourceType, list)
-  }
-
-  for (const [resourceType, entries] of byType) {
-    for (let i = 0; i < entries.length; i += DESTROY_BATCH) {
-      const checked = []
-      for (const entry of entries.slice(i, i + DESTROY_BATCH)) {
-        if (await stillDue(db, entry.id, at)) checked.push(entry)
-        else stats.kept++
-      }
-      if (checked.length === 0) continue
-
-      let gone
-      try {
-        gone = await destroy(resourceType, checked.map((entry) => entry.publicId))
-      } catch (error) {
-        // Nothing in the ledger changed, so the next run tries these again.
-        console.error('[media] destroy failed', error)
-        stats.failed += checked.length
-        continue
-      }
-
-      for (const entry of checked) {
-        if (!gone.has(entry.publicId)) {
-          stats.failed++
-          continue
-        }
-        const result = await forget(db, entry.id, at)
-        if (result === 'raced') {
-          stats.raced++
-          console.error('[media] a file was picked up again while it was being deleted:', entry.id)
-        } else {
-          stats.deleted++
-        }
-      }
-    }
+    if (await reserve(db, entry, at)) stats.reserved++
+    else stats.kept++
   }
   return stats
 }

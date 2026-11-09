@@ -59,7 +59,8 @@ mediaAssets/{assetId}
   publicId, resourceType where it is on Cloudinary
   kind                   'encrypted' | 'public' (the login header)
   bytes                  looked up on Cloudinary once a day; null until then
-  state                  'pending' | 'attached' | 'detached'
+  state                  'pending' | 'attached' | 'detached' | 'unused'
+                         | 'deleting' | 'destroying' | 'lost'
   refs                   document paths that reference it
   createdAt, detachedAt
 ```
@@ -189,7 +190,7 @@ before phase 4.
   `functions/mediaPurge.js`: selects `pending` entries older than 7 days and
   `detached` ones older than 30 (two composite indexes on `mediaAssets` in
   `firestore.indexes.json`), at most 500 of each per run.
-- Each file is read again right before it goes, and kept if a document picked
+- Each file is read again before it is reserved, and kept if a document picked
   it up since the query. Cloudinary's Admin API destroys them a hundred at a
   time per resource type (original and thumbnail are separate entries, so both
   go); `not_found` counts as gone. An entry leaves the ledger, and its bytes
@@ -201,15 +202,25 @@ before phase 4.
   or an entry from before the triggers read the document — the file is kept,
   put back as `attached`, and an error is logged. The dry run takes the same
   look, so its report does not list such a file.
-- What remains: a file can be picked up by a document in the moment between
-  that last check and Cloudinary's delete, or before the trigger for that
-  write has run. The transaction afterwards notices (`raced` in the log) but
-  the bytes are gone. Closing this for good would take a fence the client's
-  write has to pass, which the rules cannot express for a list of ids. It
-  needs a file unused for at least 30 days to be taken up again at the moment
-  of the run, which in this app means an editor kept open for a month; the
-  trigger logs a document naming a file the ledger no longer knows, so it
-  would not go unnoticed.
+- Deletion is two steps on the ledger entry. A run that finds a file due
+  *reserves* it (`deleting`, `deletingSince`, `deletingFrom`) and destroys
+  nothing; a document write and its trigger are asynchronous, so no check
+  before a destroy can see a reference whose trigger has not run. The trigger
+  attaching the file cancels the reservation (back to `attached`) in a
+  transaction on the same entry. A run at least 12 hours later (`RESERVATION_MS`)
+  looks once more at `detachedFrom`, then moves the entry to `destroying` in a
+  transaction that needs it still `deleting` without references: the point of
+  no return. Only then is Cloudinary asked, and the entry stays `destroying`
+  and is retried by every run until Cloudinary confirms. A reference that
+  arrives while `destroying` is only recorded; the entry is then kept as
+  `lost` (with `lostAt`), reported as `raced`, and never destroyed again.
+  A dry run changes nothing and reports earlier reservations as `inFlight`.
+  A third composite index on `mediaAssets` (`state`, `deletingSince`) serves
+  the query for reservations that have stood long enough.
+- What remains: a document whose trigger never runs within the reservation
+  window is caught only by the look at `detachedFrom` (and a `pending` file has
+  no such document). The trigger logs a document naming a file the ledger no
+  longer knows, so a loss would not go unnoticed.
 - It ships with `MEDIA_PURGE_DRY_RUN=true` and only logs the public ids it
   would delete. It also needs `CLOUDINARY_CLOUD_NAME`; without it, it reports
   only. It is switched on only after a few weeks of logs show nothing that is
