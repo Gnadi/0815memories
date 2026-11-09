@@ -455,13 +455,24 @@ describe('admins and invites', () => {
     expect(invites.map((i) => i.id)).toEqual([open])
   })
 
-  it('removes an admin together with the invites they minted', async () => {
+  it('stamps an invite with the family\'s invite epoch', async () => {
+    const before = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(before))).data().epoch).toBe(0)
+    await fs.updateDoc(family(), { inviteEpoch: 3 })
+    const after = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(after))).data().epoch).toBe(3)
+  })
+
+  it('removes an admin together with every pending invite, and raises the invite epoch', async () => {
     const theirs = await createInvite('fam', 'uid-b')
+    const others = await createInvite('fam', 'uid-a')
     await fs.setDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'), { email: 'b@example.com' })
 
-    await removeAdmin('fam', 'uid-b', [theirs])
+    await removeAdmin('fam', 'uid-b', [theirs, others])
 
     expect((await fs.getDoc(invite(theirs))).exists()).toBe(false)
+    expect((await fs.getDoc(invite(others))).exists()).toBe(false)
+    expect((await fs.getDoc(family())).data().inviteEpoch).toBe(1)
     expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'))).exists()).toBe(false)
     expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a'])
   })

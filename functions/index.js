@@ -26,9 +26,10 @@ import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-f
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
+import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
@@ -69,11 +70,6 @@ const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 
 // Mirrored by SettingsPanel, which says so before the round trip.
 const MIN_SHARED_PASSWORD_LENGTH = 8
-
-/** The admins of a family document. */
-function adminUidsOf(data) {
-  return Array.isArray(data?.adminUids) ? data.adminUids : []
-}
 
 // ---------------------------------------------------------------------------
 // Push notifications
@@ -522,30 +518,13 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
  * the claim without knowing this function exists.
  */
 export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (event) => {
-  const { familyId } = event.params
-  const before = adminUidsOf(event.data?.before?.exists ? event.data.before.data() : null)
-  const after = adminUidsOf(event.data?.after?.exists ? event.data.after.data() : null)
-
-  const added = after.filter((uid) => !before.includes(uid))
-  const removed = before.filter((uid) => !after.includes(uid))
-  const auth = getAuth()
-
-  await Promise.allSettled(
-    added.map((uid) => auth.setCustomUserClaims(uid, { familyId, role: 'admin' })),
-  )
-
-  // Removal has to revoke as well as clear: a cleared claim still sits in the
-  // ID token the removed admin is holding, which stays valid for up to an hour.
-  await Promise.allSettled(
-    removed.map(async (uid) => {
-      const user = await auth.getUser(uid).catch(() => null)
-      if (!user) return
-      // Only clear a claim that points at *this* family, so an admin who moved
-      // families does not lose the claim they were just given.
-      if (user.customClaims?.familyId && user.customClaims.familyId !== familyId) return
-      await auth.setCustomUserClaims(uid, null)
-      await auth.revokeRefreshTokens(uid)
-    }),
+  await syncClaimsForFamily(
+    { db: getFirestore(), auth: getAuth() },
+    {
+      familyId: event.params.familyId,
+      before: event.data?.before?.exists ? event.data.before.data() : null,
+      after: event.data?.after?.exists ? event.data.after.data() : null,
+    },
   )
 })
 
@@ -572,8 +551,15 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       // too. The payoff is revocation: changing the password revokes every
       // viewer in a single call. The cost is that a single device cannot be
       // locked out alone.
-      mintToken: (familyId) =>
-        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer' }),
+      //
+      // `sv` is the family's viewer session version. The rules compare it with
+      // the family document, so a token minted before a password change stops
+      // working at once instead of living out its hour.
+      mintToken: async (familyId) => {
+        const snap = await getFirestore().doc(`families/${familyId}`).get()
+        const sv = snap.data()?.viewerSessionVersion || 0
+        return getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv })
+      },
     },
     {
       familyId: request.data?.familyId,
@@ -623,7 +609,12 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   })
 
   // Everyone who logged in with the old password loses their session. That is
-  // the point of changing it.
+  // the point of changing it. Revoking refresh tokens stops renewals; the
+  // version bump is what ends ID tokens already issued, which the rules compare
+  // with the token's `sv` claim.
+  await getFirestore()
+    .doc(`families/${familyId}`)
+    .update({ viewerSessionVersion: FieldValue.increment(1) })
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
 
   return { ok: true }

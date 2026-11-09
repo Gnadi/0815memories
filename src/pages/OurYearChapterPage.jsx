@@ -42,7 +42,7 @@ export default function OurYearChapterPage() {
 
   const { ritual } = useOurYearRitual(familyId, uid, encryptionKey)
   const { chapter, loading, missing, updateChapter, closeChapter } = useOurYearChapter(chapterId, encryptionKey)
-  const { deleteChapter } = useOurYearChapters(null, null, encryptionKey)
+  const { deleteChapter } = useOurYearChapters(familyId, null, null, encryptionKey)
 
   const [step, setStep] = useState('reflection')
   const sectionRefs = useRef({})

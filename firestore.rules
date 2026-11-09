@@ -19,38 +19,46 @@ service cloud.firestore {
       return request.auth != null ? request.auth.token.get('role', '') : '';
     }
 
-    // Reads the family document, for an admin who is in `adminUids` but whose
-    // claim has not landed yet.
+    // Is the caller in the family's `adminUids` right now?
     //
-    // This is not migration debt to be cleaned up later. The claim is written by
-    // the syncAdminClaims trigger, so it always arrives *after* the write that
-    // makes someone an admin — and an invited admin takes their encryption key
-    // from this very document. Without this branch they would hold no key until
-    // the claim arrived and something re-subscribed, which nothing does.
+    // The role claim in the ID token is not consulted for this. It is minted by
+    // syncAdminClaims and stays in an issued token for up to an hour after the
+    // admin is removed, because revoking refresh tokens does not reach a token
+    // that was already issued. Membership is therefore read from the family
+    // document, which also covers a new admin whose claim has not landed yet:
+    // an invited admin takes their encryption key from this very document.
     //
-    // It is free in the common case: isFamilyAdmin checks the claim first and
-    // `||` short-circuits, so this runs only for a caller who has none.
+    // This costs one get() of the family document per request. Firestore
+    // caches a document that is read more than once in the same request, so a
+    // rule that asks several times still counts it once against the limit.
     function isAdminByDocument(familyId) {
       let fam = get(/databases/$(database)/documents/families/$(familyId)).data;
       return request.auth != null && request.auth.uid in fam.adminUids;
     }
 
     function isFamilyAdmin(familyId) {
-      return request.auth != null
-        && ((tokenFamily() == familyId && tokenRole() == 'admin')
-            || isAdminByDocument(familyId));
+      return request.auth != null && isAdminByDocument(familyId);
     }
 
     // A viewer reads, and only within their own family. Nothing grants a viewer
     // write access anywhere — every write rule below asks for isFamilyAdmin.
+    //
+    // The token's `sv` claim must match the family's viewerSessionVersion, which
+    // the setSharedPassword function raises on every password change. Revoking
+    // refresh tokens alone leaves ID tokens already issued valid for up to an
+    // hour; this makes them stop working at once. A family that has never
+    // changed its password has no version (0) and a token from before the claim
+    // existed has no `sv` (0), so those keep working until the first change.
     function isFamilyViewer(familyId) {
-      return tokenFamily() == familyId && tokenRole() == 'viewer';
+      return tokenFamily() == familyId && tokenRole() == 'viewer'
+          && request.auth.token.get('sv', 0)
+             == get(/databases/$(database)/documents/families/$(familyId)).data.get('viewerSessionVersion', 0);
     }
 
-    // Viewer first, deliberately: the check is pure token arithmetic, so a
-    // viewer never falls through to the get() inside isAdminByDocument. On a
-    // feed listing dozens of documents that is the difference between no
-    // document reads and one per evaluation.
+    // Viewer first: it is a cheap token comparison before the get() inside
+    // isAdminByDocument, and both read the same family document, which Firestore
+    // caches within a request, so a feed listing dozens of documents still reads
+    // it once.
     function isFamilyMember(familyId) {
       return isFamilyViewer(familyId) || isFamilyAdmin(familyId);
     }
@@ -129,6 +137,24 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
+    // The invite epoch counts admin removals. An invite carries the epoch it was
+    // minted under and is redeemable only while the family is still on it, so
+    // removing an admin retires every link that was pending, whoever made it.
+    // A family that has never removed an admin has no `inviteEpoch` (0), and an
+    // invite from before the field existed has no `epoch` (0) either, so those
+    // keep working until the first removal and die at it.
+    function inviteEpochUnchanged() {
+      return request.resource.data.get('inviteEpoch', 0) == resource.data.get('inviteEpoch', 0);
+    }
+
+    // The viewer session version is raised by the setSharedPassword function
+    // (Admin SDK, which bypasses these rules) and by nothing else. A client that
+    // could write it could log every viewer out, or, by lowering it, bring back
+    // the tokens a password change had retired.
+    function viewerSessionVersionUnchanged() {
+      return request.resource.data.get('viewerSessionVersion', 0) == resource.data.get('viewerSessionVersion', 0);
+    }
+
     // The family's AES key. The family's content is encrypted with it, so a
     // write that replaced or removed it would leave all of that unreadable for
     // every member at once — whether by a bug, by two devices racing, or by a
@@ -183,6 +209,8 @@ service cloud.firestore {
                       (
                         request.auth.uid in resource.data.adminUids
                         && request.resource.data.adminUids == resource.data.adminUids
+                        && inviteEpochUnchanged()
+                        && viewerSessionVersionUnchanged()
                       )
                       // Path C: invite redemption — caller adds exactly themselves,
                       // and changes nothing else.
@@ -200,6 +228,8 @@ service cloud.firestore {
                         && request.resource.data.adminUids.size() == resource.data.adminUids.size() + 1
                         && request.resource.data.adminUids.hasAll(resource.data.adminUids)
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids'])
+                        && inviteEpochUnchanged()
+                        && viewerSessionVersionUnchanged()
                         && !exists(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
                         && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
                       )
@@ -211,6 +241,9 @@ service cloud.firestore {
                         && request.resource.data.adminUids.size() == resource.data.adminUids.size() - 1
                         && resource.data.adminUids.hasAll(request.resource.data.adminUids)
                         && resource.data.adminUid in request.resource.data.adminUids
+                        // Retires the pending invites; see inviteEpochUnchanged.
+                        && request.resource.data.get('inviteEpoch', 0) == resource.data.get('inviteEpoch', 0) + 1
+                        && viewerSessionVersionUnchanged()
                       )
                     );
       allow delete: if false;
@@ -283,6 +316,8 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.expiresAt > request.time
                     && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == true
                     && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.redeemedBy == request.auth.uid
+                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.get('epoch', 0)
+                        == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0)
                     && request.auth.uid in getAfter(/databases/$(database)/documents/families/$(familyId)).data.get('adminUids', []);
       allow update: if false;
       // Admin can revoke (used when removing an admin from the family). Asks
@@ -311,7 +346,9 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.used == false
                     && request.resource.data.redeemedBy == null
-                    && request.resource.data.expiresAt is timestamp;
+                    && request.resource.data.expiresAt is timestamp
+                    && request.resource.data.get('epoch', 0)
+                        == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0);
       // The redeemer marks the invite as used, in the batch that also creates
       // their admins/{uid} document. Strict false → true transition; immutable
       // createdBy / expiresAt.
@@ -776,15 +813,15 @@ service cloud.firestore {
 
     // Being a participant is not enough on its own: the caller must still be an
     // admin of the family, so a partner who was removed as admin loses access.
-    // A list cannot ask that — the queries filter on participantUids, which is
-    // what proves the rule, but not on familyId — so `list` keeps the
-    // participant test and every read of a single document asks for both.
+    // Every read asks for both. A list proves the second from its own filter,
+    // so the queries filter on familyId as well as on participantUids.
     match /ourYearRituals/{ritualId} {
       allow get: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && isFamilyAdmin(resource.data.familyId);
       allow list: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -830,7 +867,8 @@ service cloud.firestore {
                             && isFamilyAdmin(resource.data.familyId)));
       allow list: if request.auth != null
                     && (resource == null
-                        || request.auth.uid in resource.data.get('participantUids', []));
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -902,6 +940,7 @@ service cloud.firestore {
       allow list: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
       // A new entry starts unrevealed, and may be handed in only with its
@@ -978,6 +1017,7 @@ service cloud.firestore {
       allow list: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
                             && (resource.data.get('sealedAt', null) == null
                                 || request.time >= resource.data.openAt)));
       allow create: if request.auth != null

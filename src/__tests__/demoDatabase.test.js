@@ -166,6 +166,15 @@ describe('demo database: writes', () => {
     expect((await fs.getDoc(ref)).get('submittedBy')).toEqual(['b'])
   })
 
+  it('increments a number, starting from zero when there is none', async () => {
+    const fs = setup()
+    const ref = fs.doc(DB, 'families', 'fam')
+    await fs.setDoc(ref, { name: 'x' })
+    await fs.updateDoc(ref, { inviteEpoch: fs.increment(1) })
+    await fs.updateDoc(ref, { inviteEpoch: fs.increment(1) })
+    expect((await fs.getDoc(ref)).get('inviteEpoch')).toBe(2)
+  })
+
   it('refuses what Firestore refuses', async () => {
     const fs = setup()
     await expect(fs.updateDoc(fs.doc(DB, 'memories', 'missing'), { title: 'x' }))
