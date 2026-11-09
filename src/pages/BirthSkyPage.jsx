@@ -88,14 +88,21 @@ export default function BirthSkyPage() {
     }
   }, [kid, form])
 
-  const dateStr = birthDateString(kid?.birthdate)
+  // A string, as the React Compiler can see: from an unknown function it would
+  // take the result for an object a later call might change, and give up the
+  // memoization of the sky and poster below.
+  const birthDay = birthDateString(kid?.birthdate)
+  const dateStr = birthDay ? String(birthDay) : null
 
+  // Only place and time move the stars; the sky is not recomputed while the
+  // title or dedication is typed.
+  const place = form?.birthPlace
+  const birthTime = form?.birthTime
   const sky = useMemo(() => {
-    if (!catalog || !dateStr || !form?.birthPlace) return null
-    const place = form.birthPlace
-    const date = zonedTimeToUtc(dateStr, form.birthTime || DEFAULT_NIGHT_TIME, place.tz)
+    if (!catalog || !dateStr || !place) return null
+    const date = zonedTimeToUtc(dateStr, birthTime || DEFAULT_NIGHT_TIME, place.tz)
     return computeSky({ date, lat: place.lat, lon: place.lon, ...catalog })
-  }, [catalog, dateStr, form?.birthPlace, form?.birthTime])
+  }, [catalog, dateStr, place, birthTime])
 
   const posterOptions = useMemo(() => {
     if (!form || !dateStr) return null

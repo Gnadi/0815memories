@@ -14,6 +14,10 @@ export default function ManageAdminsPanel() {
   const { t } = useTranslation('settings')
   const [ownerUid, setOwnerUid] = useState(null)
   const [adminUids, setAdminUids] = useState([])
+  // Read once, when the panel opens: render must be pure, and expiry is
+  // shown in whole days, so a clock that stands still while it is open is
+  // exact enough.
+  const [now] = useState(() => Date.now())
   const [adminMeta, setAdminMeta] = useState({})
   const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
@@ -177,7 +181,7 @@ export default function ManageAdminsPanel() {
   }
 
   const formatExpiry = (ms) => {
-    const days = Math.max(0, Math.round((ms - Date.now()) / (24 * 60 * 60 * 1000)))
+    const days = Math.max(0, Math.round((ms - now) / (24 * 60 * 60 * 1000)))
     if (days === 0) return t('admins.expiresToday')
     if (days === 1) return t('admins.expiresInOneDay')
     return t('admins.expiresInDays', { count: days })
