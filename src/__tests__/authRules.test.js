@@ -46,6 +46,7 @@ import {
   writeBatch,
   arrayUnion,
   arrayRemove,
+  increment,
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
@@ -298,6 +299,16 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       )
     })
 
+    it('is no longer let in on a claim the family document does not back', async () => {
+      // Removed from adminUids, but the claim in the ID token they still hold
+      // says admin. Their access ends with the membership, not with the token.
+      const removed = asAdmin('uid-removed', FAMILY)
+      await assertFails(getDoc(doc(removed, 'families', FAMILY)))
+      await assertFails(getDoc(doc(removed, 'journals', 'journal-1')))
+      await assertFails(deleteDoc(doc(removed, 'memories', 'mem-1')))
+      await assertSucceeds(deleteDoc(doc(asAdmin(ADMIN, FAMILY), 'memories', 'mem-1')))
+    })
+
     it('is still let in without a claim, via adminUids', async () => {
       // The fallback that keeps admins working through the rollout, before the
       // claim trigger has written to their account.
@@ -518,7 +529,10 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       // What ManageAdminsPanel.handleRemove does.
       const owner = asAdmin(ADMIN, FAMILY)
       await assertSucceeds(deleteDoc(doc(owner, 'families', FAMILY, 'admins', NEWBIE)))
-      await assertSucceeds(updateDoc(doc(owner, 'families', FAMILY), { adminUids: arrayRemove(NEWBIE) }))
+      await assertSucceeds(updateDoc(doc(owner, 'families', FAMILY), {
+        adminUids: arrayRemove(NEWBIE),
+        inviteEpoch: increment(1),
+      }))
 
       // The spent invite still names them as its redeemer, and has not expired.
       // syncAdminClaims has cleared their claim.
@@ -529,6 +543,73 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       batch.set(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN })
       batch.update(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) })
       await assertFails(batch.commit())
+    })
+
+    // An admin removal raises the family's inviteEpoch in the same write, and
+    // an invite is only good for the epoch it was minted under.
+    describe('across an admin removal', () => {
+      const GONE = 'uid-gone'
+      const dayAhead = () => Timestamp.fromDate(new Date(Date.now() + 86_400_000))
+      const inviteData = (extra = {}) => ({
+        createdBy: ADMIN,
+        used: false,
+        redeemedBy: null,
+        expiresAt: dayAhead(),
+        ...extra,
+      })
+
+      beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+          await updateDoc(doc(ctx.firestore(), 'families', FAMILY), { adminUids: [ADMIN, GONE] })
+        })
+      })
+
+      const removeGone = (epoch = increment(1)) => updateDoc(
+        doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY),
+        epoch === null ? { adminUids: arrayRemove(GONE) } : { adminUids: arrayRemove(GONE), inviteEpoch: epoch },
+      )
+
+      it('retires an invite minted before it, even one that is still unexpired', async () => {
+        await assertSucceeds(removeGone())
+        await assertFails(redeem(asNewAccount(NEWBIE)))
+      })
+
+      it('keeps working for an invite from before the field existed, until the first removal', async () => {
+        // The fixture invite has no `epoch` and the family no `inviteEpoch`.
+        await assertSucceeds(redeem(asNewAccount(NEWBIE)))
+      })
+
+      it('accepts an invite minted under the new epoch', async () => {
+        await assertSucceeds(removeGone())
+        await assertSucceeds(
+          setDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', 'epoch-1'), inviteData({ epoch: 1 })),
+        )
+        await assertSucceeds(redeem(asNewAccount(NEWBIE), { token: 'epoch-1' }))
+      })
+
+      it('cannot be minted for another epoch than the family\'s current one', async () => {
+        const admin = asAdmin(ADMIN, FAMILY)
+        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'future'), inviteData({ epoch: 1 })))
+        await assertSucceeds(removeGone())
+        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'past'), inviteData({ epoch: 0 })))
+        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'unstamped'), inviteData()))
+      })
+
+      it('only ever moves with a removal, and by exactly one', async () => {
+        const admin = asAdmin(ADMIN, FAMILY)
+        const family = doc(admin, 'families', FAMILY)
+        await assertFails(updateDoc(family, { inviteEpoch: increment(1) }))
+        await assertFails(updateDoc(family, { familyName: 'X', inviteEpoch: 5 }))
+        await assertFails(removeGone(increment(2)))
+        await assertFails(removeGone(null))
+        await assertFails(removeGone(increment(-1)))
+        await assertSucceeds(removeGone(increment(1)))
+        await assertFails(updateDoc(family, { inviteEpoch: increment(1) }))
+      })
+
+      it('cannot be moved by the redeemer on the way in', async () => {
+        await assertFails(redeem(asNewAccount(NEWBIE), { extra: { inviteEpoch: increment(1) } }))
+      })
     })
 
     it('cannot be minted or listed on a claim the family document no longer backs', async () => {
@@ -656,8 +737,12 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       const db = asAdmin(ADMIN, FAMILY)
       const newKey = { k: 'a-new-key', kty: 'oct' }
       // Removing an admin.
-      await assertFails(updateDoc(family(db), { adminUids: [ADMIN], encryptionKeyJwk: newKey }))
-      await assertSucceeds(updateDoc(family(db), { adminUids: [ADMIN] }))
+      await assertFails(updateDoc(family(db), {
+        adminUids: [ADMIN],
+        inviteEpoch: increment(1),
+        encryptionKeyJwk: newKey,
+      }))
+      await assertSucceeds(updateDoc(family(db), { adminUids: [ADMIN], inviteEpoch: increment(1) }))
     })
 
     it('is not handed to a family from before encryption', async () => {
@@ -716,6 +801,58 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(newFamily({ kty: 'oct' }))
       await assertFails(newFamily({ k: 'the-secret-key', kty: 'RSA' }))
       await assertSucceeds(newFamily(KEY))
+    })
+  })
+
+  // ── 8. Viewer sessions end with the shared password ────────────────────────
+
+  describe('viewer session version', () => {
+    const asVersionedViewer = (sv) => {
+      const claims = { familyId: FAMILY, role: 'viewer' }
+      if (sv !== undefined) claims.sv = sv
+      return testEnv.authenticatedContext(VIEWER, claims).firestore()
+    }
+    const setVersion = (version) =>
+      testEnv.withSecurityRulesDisabled((ctx) =>
+        updateDoc(doc(ctx.firestore(), 'families', FAMILY), { viewerSessionVersion: version }),
+      )
+    const feed = (db) =>
+      getDocs(query(collection(db, 'memories'), where('familyId', '==', FAMILY)))
+
+    it('lets a token whose sv matches the family version read', async () => {
+      await setVersion(2)
+      await assertSucceeds(getDoc(doc(asVersionedViewer(2), 'families', FAMILY)))
+      await assertSucceeds(feed(asVersionedViewer(2)))
+    })
+
+    it('denies a token issued before the version was raised', async () => {
+      await setVersion(1)
+      await assertFails(getDoc(doc(asVersionedViewer(0), 'families', FAMILY)))
+      await assertFails(feed(asVersionedViewer(0)))
+      await assertFails(getDoc(doc(asVersionedViewer(undefined), 'families', FAMILY)))
+    })
+
+    it('lets a token without sv read while the family has no version', async () => {
+      await assertSucceeds(getDoc(doc(asVersionedViewer(undefined), 'families', FAMILY)))
+      await assertSucceeds(feed(asVersionedViewer(undefined)))
+    })
+
+    it('denies a token without sv once the version is 1', async () => {
+      await setVersion(1)
+      await assertFails(feed(asVersionedViewer(undefined)))
+    })
+
+    it('denies a token from the future version', async () => {
+      await assertFails(getDoc(doc(asVersionedViewer(1), 'families', FAMILY)))
+    })
+
+    it('does not let an admin change or reset the version', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      await assertFails(updateDoc(doc(admin, 'families', FAMILY), { viewerSessionVersion: 5 }))
+      await setVersion(3)
+      await assertFails(updateDoc(doc(admin, 'families', FAMILY), { viewerSessionVersion: 0 }))
+      await assertFails(updateDoc(doc(admin, 'families', FAMILY), { viewerSessionVersion: deleteField() }))
+      await assertSucceeds(updateDoc(doc(admin, 'families', FAMILY), { familyName: 'The Millers II' }))
     })
   })
 })

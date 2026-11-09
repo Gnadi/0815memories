@@ -26,7 +26,7 @@ import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-f
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
@@ -551,8 +551,15 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       // too. The payoff is revocation: changing the password revokes every
       // viewer in a single call. The cost is that a single device cannot be
       // locked out alone.
-      mintToken: (familyId) =>
-        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer' }),
+      //
+      // `sv` is the family's viewer session version. The rules compare it with
+      // the family document, so a token minted before a password change stops
+      // working at once instead of living out its hour.
+      mintToken: async (familyId) => {
+        const snap = await getFirestore().doc(`families/${familyId}`).get()
+        const sv = snap.data()?.viewerSessionVersion || 0
+        return getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv })
+      },
     },
     {
       familyId: request.data?.familyId,
@@ -602,7 +609,12 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   })
 
   // Everyone who logged in with the old password loses their session. That is
-  // the point of changing it.
+  // the point of changing it. Revoking refresh tokens stops renewals; the
+  // version bump is what ends ID tokens already issued, which the rules compare
+  // with the token's `sv` claim.
+  await getFirestore()
+    .doc(`families/${familyId}`)
+    .update({ viewerSessionVersion: FieldValue.increment(1) })
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
 
   return { ok: true }

@@ -15,6 +15,7 @@
 import {
   addDoc as sdkAddDoc,
   arrayRemove as sdkArrayRemove,
+  increment as sdkIncrement,
   arrayUnion as sdkArrayUnion,
   collection as sdkCollection,
   deleteDoc as sdkDeleteDoc,
@@ -78,6 +79,7 @@ export const doc = (...args) => (demo('doc') ?? sdkDoc)(...args)
 export const getCountFromServer = (...args) => (demo('getCountFromServer') ?? sdkGetCountFromServer)(...args)
 export const getDoc = (...args) => (demo('getDoc') ?? sdkGetDoc)(...args)
 export const getDocs = (...args) => (demo('getDocs') ?? sdkGetDocs)(...args)
+export const increment = (...args) => (demo('increment') ?? sdkIncrement)(...args)
 export const limit = (...args) => (demo('limit') ?? sdkLimit)(...args)
 export const onSnapshot = (...args) => (demo('onSnapshot') ?? sdkOnSnapshot)(...args)
 export const orderBy = (...args) => (demo('orderBy') ?? sdkOrderBy)(...args)

@@ -13,6 +13,8 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
+  increment,
   onSnapshot,
   query,
   serverTimestamp,
@@ -57,11 +59,19 @@ export function subscribeOpenInvites(familyId, onData, onError) {
   )
 }
 
-/** A new invite from `createdBy`; returns its token, which the link carries. */
+/**
+ * A new invite from `createdBy`; returns its token, which the link carries.
+ *
+ * It is stamped with the family's invite epoch, which every admin removal
+ * raises (see removeAdmin). The rules accept a redemption only while the
+ * invite's epoch is the family's current one.
+ */
 export async function createInvite(familyId, createdBy) {
   const token = generateInviteToken()
+  const family = await getDoc(doc(db, FAMILIES, familyId))
   await setDoc(inviteRef(familyId, token), {
     createdBy,
+    epoch: family.data()?.inviteEpoch ?? 0,
     createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_MS),
     used: false,
@@ -76,13 +86,21 @@ export async function revokeInvite(familyId, token) {
 }
 
 /**
- * Removes an admin. The invites they minted go first: the link is the
- * credential, and they still hold it — left pending, any one of them lets
- * them straight back in. Then the two writes the rules check one by one: the
- * owner always stays in adminUids, and only an admin may change it.
+ * Removes an admin. Every pending invite goes first, not only the ones they
+ * minted: all admins can list and copy all pending links, so the removed admin
+ * may hold any of them, and a link that is left pending lets them straight
+ * back in. Then the two writes the rules check one by one: the owner always
+ * stays in adminUids, and only an admin may change it.
+ *
+ * The family update also raises `inviteEpoch` in the same write. That is the
+ * backstop for a link this call did not delete, such as one created
+ * concurrently: the rules refuse to redeem an invite from an earlier epoch.
  */
-export async function removeAdmin(familyId, uid, theirInviteIds = []) {
-  await Promise.all(theirInviteIds.map((token) => revokeInvite(familyId, token)))
+export async function removeAdmin(familyId, uid, pendingInviteIds = []) {
+  await Promise.all(pendingInviteIds.map((token) => revokeInvite(familyId, token)))
   await deleteDoc(adminRef(familyId, uid))
-  await updateDoc(doc(db, FAMILIES, familyId), { adminUids: arrayRemove(uid) })
+  await updateDoc(doc(db, FAMILIES, familyId), {
+    adminUids: arrayRemove(uid),
+    inviteEpoch: increment(1),
+  })
 }

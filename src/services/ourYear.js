@@ -102,10 +102,13 @@ export async function decryptLetter(key, data) {
  */
 export function subscribeRitual(familyId, uid, key, onData, onError) {
   return subscribeDecrypted(
-    query(collection(db, RITUALS), where('participantUids', 'array-contains', uid)),
+    query(
+      collection(db, RITUALS),
+      where('familyId', '==', familyId),
+      where('participantUids', 'array-contains', uid),
+    ),
     async (docs) => {
-      const own = docs.filter((d) => !familyId || d.familyId === familyId)
-      const [first] = await Promise.all(own.map((d) => decryptRitual(key, d)))
+      const [first] = await Promise.all(docs.map((d) => decryptRitual(key, d)))
       return first ?? null
     },
     onData,
@@ -141,12 +144,14 @@ export async function updateRitual(key, id, data) {
  * makes the query legal. Security rules are not filters: for a list, Firestore
  * rejects the whole query unless its constraints prove the read rule holds for
  * every possible match. The rule allows a chapter only to its participants, so
- * the query has to say so.
+ * the query has to say so. The `familyId` filter does the same for the other half
+ * of the rule: a participant who is no longer an admin of the family is refused.
  */
-export function subscribeChapters(ritualId, uid, key, onData, onError) {
+export function subscribeChapters(familyId, ritualId, uid, key, onData, onError) {
   return subscribeDecrypted(
     query(
       collection(db, CHAPTERS),
+      where('familyId', '==', familyId),
       where('participantUids', 'array-contains', uid),
       where('ritualId', '==', ritualId),
       orderBy('periodStart', 'desc'),

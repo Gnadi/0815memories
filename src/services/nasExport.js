@@ -270,6 +270,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const ritualSnap = await getDocs(query(
     collection(db, 'ourYearRituals'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
   ))
   const rituals = ritualSnap.docs
@@ -279,6 +280,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const chapterSnap = await getDocs(query(
     collection(db, 'ourYearChapters'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
   ))
   const ritualIds = new Set(rituals.map((r) => r.id))
@@ -288,6 +290,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
 
   const entrySnap = await getDocs(query(
     collection(db, 'ourYearEntries'),
+    where('familyId', '==', familyId),
     where('participantUids', 'array-contains', uid),
     where('authorUid', '==', uid),
   ))

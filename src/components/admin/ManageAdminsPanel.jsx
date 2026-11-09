@@ -124,11 +124,9 @@ export default function ManageAdminsPanel() {
     setNotice('')
     setRemovingUid(targetUid)
     try {
-      // With the invites they minted, which would let them straight back in.
-      const theirInvites = pendingInvites
-        .filter((invite) => invite.createdBy === targetUid)
-        .map((invite) => invite.id)
-      await removeAdmin(familyId, targetUid, theirInvites)
+      // With every pending invite, not just theirs: any admin can copy any
+      // link, so the removed admin may hold one made by someone else.
+      await removeAdmin(familyId, targetUid, pendingInvites.map((invite) => invite.id))
       await loadFamily()
       setNotice(t('admins.removed'))
       setTimeout(() => setNotice(''), 4000)

@@ -120,6 +120,8 @@ function resolveFieldValue(value, current, path) {
       }
       return result
     }
+    case 'increment':
+      return (typeof current === 'number' ? current : 0) + value.items
     case 'arrayRemove':
       return (Array.isArray(current) ? current : [])
         .filter((existing) => !value.items.some((item) => valuesEqual(existing, item)))
@@ -588,6 +590,7 @@ export function createDemoDatabase({ documents = [], uid }) {
     deleteField: () => new FieldValue('deleteField'),
     arrayUnion: (...items) => new FieldValue('arrayUnion', items),
     arrayRemove: (...items) => new FieldValue('arrayRemove', items),
+    increment: (amount) => new FieldValue('increment', amount),
 
     async getDoc(ref) {
       return readDocument(ref)
