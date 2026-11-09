@@ -4,11 +4,12 @@
    and crawlers index the landing page's title under its URL. */
 import { describe, it, expect } from 'vitest'
 import vercel from '../../vercel.json'
-import sitemap from '../../public/sitemap.xml?raw'
+import { buildSitemap } from '../../scripts/sitemap.mjs'
 import { PRERENDERED_PATHS } from '../prerenderedRoutes'
 import { LANDING_PATHS } from '../i18n'
 import { routes } from '../App'
 
+const sitemap = buildSitemap()
 const catchAll = vercel.rewrites.findIndex((r) => r.source === '/(.*)')
 
 describe('pre-rendered pages', () => {

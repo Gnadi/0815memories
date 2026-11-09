@@ -3,6 +3,7 @@ import { Head } from 'vite-react-ssg'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import KaydoLogo from '../components/KaydoLogo'
+import { absoluteUrl } from '../seoRoutes'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 // Renders a single legal / informational document. All copy lives in the
@@ -20,6 +21,9 @@ export default function LegalPage({ docKey }) {
         <title>{doc.seoTitle}</title>
         <meta name="description" content={doc.seoDescription} />
         <meta name="robots" content="index,follow" />
+        {/* The route's path is the document's key. Each legal page has one
+            address in every language, so it has no hreflang alternates. */}
+        <link rel="canonical" href={absoluteUrl(`/${docKey}`)} />
       </Head>
 
       {/* ── Top bar ── */}

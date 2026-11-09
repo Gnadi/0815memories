@@ -1,6 +1,12 @@
 {
   "redirects": [
     {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.kaydo.app" }],
+      "destination": "https://kaydo.app/:path",
+      "permanent": true
+    },
+    {
       "source": "/",
       "has": [{ "type": "query", "key": "lang", "value": "de" }],
       "destination": "/de",
@@ -84,6 +90,14 @@
         { "key": "Content-Security-Policy", "value": "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": ".+\\.kaydo\\.app" }],
+      "missing": [{ "type": "host", "value": "www.kaydo.app" }],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
     }
   ]

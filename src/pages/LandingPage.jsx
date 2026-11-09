@@ -36,6 +36,7 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS } from '../i18n'
+import { absoluteUrl, alternatesFor } from '../seoRoutes'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
@@ -75,7 +76,7 @@ export default function LandingPage({ lng }) {
   // against a canonical that JavaScript moves.
   const lang = t('seo.ogLocale').slice(0, 2)
   const ownPath = LANDING_PATHS[lng ?? 'en']
-  const canonicalUrl = `https://kaydo.app${ownPath}`
+  const canonicalUrl = absoluteUrl(ownPath)
   const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
   // Picking a language goes to its address; changeLanguage carries the choice
   // on into the app and remembers it.
@@ -105,10 +106,10 @@ export default function LandingPage({ lng }) {
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href={canonicalUrl} />
 
-        {/* hreflang alternates — mirror the entries in public/sitemap.xml */}
-        <link rel="alternate" hrefLang="en" href="https://kaydo.app/" />
-        <link rel="alternate" hrefLang="de" href="https://kaydo.app/de" />
-        <link rel="alternate" hrefLang="x-default" href="https://kaydo.app/" />
+        {/* hreflang alternates, the same the sitemap lists (src/seoRoutes.js) */}
+        {alternatesFor(ownPath).map(([hrefLang, href]) => (
+          <link key={hrefLang} rel="alternate" hrefLang={hrefLang} href={href} />
+        ))}
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />

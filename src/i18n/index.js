@@ -20,6 +20,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import { LANDING_PAGE_PATHS, pathLanguage } from '../seoRoutes'
 
 import enCommon from '../locales/en/common.json'
 import enLanding from '../locales/en/landing.json'
@@ -48,17 +49,16 @@ export const SUPPORTED_LANGUAGES = ['en', 'de']
 // address of its own, pre-rendered in it (src/prerenderedRoutes.js). "/" is
 // English to them and the visitor's language to everyone else; "/de" is German
 // to all. index.html's inline script names these paths too.
-export const LANDING_PATHS = { en: '/', de: '/de' }
+export const LANDING_PATHS = LANDING_PAGE_PATHS
 
-// A visit that starts on "/de" is in German whatever the visitor's settings
-// say. "/" names no language of its own.
+// A visit that starts on "/de", or on a feature page (src/seoRoutes.js), is in
+// that page's language whatever the visitor's settings say. "/" names no
+// language of its own.
 const landingPath = {
   name: 'landingPath',
   lookup() {
     if (typeof window === 'undefined') return undefined
-    return SUPPORTED_LANGUAGES.find(
-      (lng) => LANDING_PATHS[lng] !== '/' && LANDING_PATHS[lng] === window.location.pathname,
-    )
+    return pathLanguage(window.location.pathname)
   },
 }
 const languageDetector = new LanguageDetector()
