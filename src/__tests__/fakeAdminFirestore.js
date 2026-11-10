@@ -49,7 +49,8 @@ export function fakeAdminFirestore(seed = {}) {
     async runTransaction(fn) {
       const writes = []
       const tx = {
-        get: async (r) => snapshot(r.path),
+        // A document, or a query, as the real one takes either.
+        get: async (r) => (typeof r.path === 'string' ? snapshot(r.path) : r.get()),
         set: (r, data) => { writes.push(() => docs.set(r.path, { ...data })) },
         delete: (r) => { writes.push(() => docs.delete(r.path)) },
         update: (r, data) => {

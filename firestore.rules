@@ -69,9 +69,9 @@ service cloud.firestore {
     // the account over. Without this check, an admin who signed up with a typo,
     // or with someone else's address, handed a family — key included — to
     // whoever owns that address. So an account becomes an admin only once its
-    // address is confirmed: when it founds a family, and when it redeems an
-    // invite. Admins from before this check keep their access; the app asks
-    // them to confirm.
+    // address is confirmed: when it founds a family, here, and when it redeems
+    // an invite, in functions/membership.js. Admins from before this check
+    // keep their access; the app asks them to confirm.
     function hasVerifiedEmail() {
       return request.auth != null
           && request.auth.token.get('email_verified', false) == true;
@@ -137,7 +137,8 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
-    // The invite epoch counts admin removals. An invite carries the epoch it was
+    // The invite epoch counts admin removals, and only the removal itself
+    // raises it (functions/membership.js). An invite carries the epoch it was
     // minted under and is redeemable only while the family is still on it, so
     // removing an admin retires every link that was pending, whoever made it.
     // A family that has never removed an admin has no `inviteEpoch` (0), and an
@@ -182,9 +183,9 @@ service cloud.firestore {
 
     // Families — readable by the family only. The password check that used to
     // need a public read now happens in the viewerLogin Cloud Function.
-    // Updates fall into one of four explicit paths; everything else is denied.
-    // Admin-list mutations only happen via these gated paths — there is no
-    // server endpoint with elevated privileges in this app.
+    // A client updates the family's own fields and nothing else: the admin
+    // list, the invite epoch, the viewer session version, the key and the
+    // deletion date each have a function that writes them, or nothing does.
     match /families/{familyId} {
       // Was `if true`, which handed the encryption key and the password hash to
       // anyone who knew the family id — and the login page handed the id out.
@@ -214,48 +215,15 @@ service cloud.firestore {
                     && loginCustomOk()
                     && keepsEncryptionKey()
                     && deletionUnchanged()
-                    && (
-                      // Path A: existing admin edits regular fields; adminUids unchanged.
-                      (
-                        request.auth.uid in resource.data.adminUids
-                        && request.resource.data.adminUids == resource.data.adminUids
-                        && inviteEpochUnchanged()
-                        && viewerSessionVersionUnchanged()
-                      )
-                      // Path C: invite redemption — caller adds exactly themselves,
-                      // and changes nothing else.
-                      //
-                      // The proof is an `admins/{caller}` document created in this
-                      // same batch; its rule only allows that while consuming a
-                      // fresh invite. It has to be new: a document that merely
-                      // exists proves only that an invite was redeemed once, and
-                      // accepting that let a removed admin whose old document was
-                      // recreated from the spent invite walk straight back in.
-                      || (
-                        hasVerifiedEmail()
-                        && !(request.auth.uid in resource.data.adminUids)
-                        && request.auth.uid in request.resource.data.adminUids
-                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() + 1
-                        && request.resource.data.adminUids.hasAll(resource.data.adminUids)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids'])
-                        && inviteEpochUnchanged()
-                        && viewerSessionVersionUnchanged()
-                        && !exists(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
-                        && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
-                      )
-                      // Path D: existing admin removes another admin (or self, leaving owner).
-                      // The owner is always retained because `adminUid` is unchanged AND
-                      // the resulting array must still contain `adminUid`.
-                      || (
-                        request.auth.uid in resource.data.adminUids
-                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() - 1
-                        && resource.data.adminUids.hasAll(request.resource.data.adminUids)
-                        && resource.data.adminUid in request.resource.data.adminUids
-                        // Retires the pending invites; see inviteEpochUnchanged.
-                        && request.resource.data.get('inviteEpoch', 0) == resource.data.get('inviteEpoch', 0) + 1
-                        && viewerSessionVersionUnchanged()
-                      )
-                    );
+                    // An admin edits the family's own fields. Who the admins
+                    // are is not among them: joining with an invite and
+                    // removing an admin are transactions of
+                    // functions/membership.js, so no write from a client
+                    // changes `adminUids`, however it is put together.
+                    && request.auth.uid in resource.data.adminUids
+                    && request.resource.data.adminUids == resource.data.adminUids
+                    && inviteEpochUnchanged()
+                    && viewerSessionVersionUnchanged();
       allow delete: if false;
     }
 
@@ -304,36 +272,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Admins subcollection — display metadata for the Manage Admins UI AND
-    // the proof of redemption for the invite flow (via `viaInvite`).
-    //
-    // Redemption is one batch of three writes, and each rule insists on the
-    // other two: the invite is consumed, this document is created, and the
-    // caller joins `adminUids` (Path C above). It used to be three separate
-    // writes, and the invite stayed `used` by the redeemer until it expired —
-    // so an admin removed within a week of joining could recreate this document
-    // from their spent invite and re-add themselves.
+    // Admins subcollection — what the settings show about each admin. Written
+    // with the admin list itself, by functions/membership.js: an entry is
+    // made when an invite is redeemed and deleted when the admin is removed.
+    // It used to double as the proof of a redemption the rules checked, which
+    // a removed admin could recreate from their spent invite.
     match /families/{familyId}/admins/{uid} {
       allow read: if isFamilyAdmin(familyId);
-      // Only while consuming an invite that was still unused before this batch
-      // and is used by this caller after it, and only while joining adminUids.
-      allow create: if request.auth != null
-                    && tokenRole() != 'viewer'
-                    && hasVerifiedEmail()
-                    && request.auth.uid == uid
-                    && request.resource.data.viaInvite is string
-                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == false
-                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.expiresAt > request.time
-                    && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == true
-                    && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.redeemedBy == request.auth.uid
-                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.get('epoch', 0)
-                        == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0)
-                    && request.auth.uid in getAfter(/databases/$(database)/documents/families/$(familyId)).data.get('adminUids', []);
-      allow update: if false;
-      // Admin can revoke (used when removing an admin from the family). Asks
-      // the family document, like invites: removing an admin is destructive,
-      // and the claim of an admin who was just removed outlives the removal.
-      allow delete: if request.auth != null && isAdminByDocument(familyId);
+      allow write: if false;
     }
 
     // Invites subcollection — one-time tokens that grant family-admin status
@@ -359,19 +305,9 @@ service cloud.firestore {
                     && request.resource.data.expiresAt is timestamp
                     && request.resource.data.get('epoch', 0)
                         == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0);
-      // The redeemer marks the invite as used, in the batch that also creates
-      // their admins/{uid} document. Strict false → true transition; immutable
-      // createdBy / expiresAt.
-      allow update: if request.auth != null
-                    && tokenRole() != 'viewer'
-                    && hasVerifiedEmail()
-                    && resource.data.used == false
-                    && resource.data.expiresAt > request.time
-                    && request.resource.data.used == true
-                    && request.resource.data.redeemedBy == request.auth.uid
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.expiresAt == resource.data.expiresAt
-                    && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid));
+      // Redeeming is the redeemFamilyInvite function's, in the transaction
+      // that adds the redeemer to the family.
+      allow update: if false;
       // Admins can revoke pending invites.
       allow delete: if isFamilyAdmin(familyId);
     }

@@ -41,6 +41,7 @@ import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { givenUp } from './retries.js'
+import { MembershipError, redeemInvite, removeAdmin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
@@ -608,6 +609,42 @@ export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId
     },
   )
 })
+
+// ── 2b. Joining and leaving ─────────────────────────────────────────────────
+
+const membershipCall = (action) =>
+  onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+    try {
+      return await action(request)
+    } catch (error) {
+      if (error instanceof MembershipError) throw new HttpsError(error.code, error.message)
+      console.error('[membership] call failed', error)
+      throw new HttpsError('internal', 'Could not change the admins')
+    }
+  })
+
+/**
+ * Join a family as an admin with an invite link — see functions/membership.js.
+ * Who is asking, and whether their address is confirmed, is read from the
+ * verified ID token, never from what the browser sent.
+ */
+export const redeemFamilyInvite = membershipCall((request) =>
+  redeemInvite(
+    { db: getFirestore() },
+    {
+      uid: request.auth?.uid,
+      email: request.auth?.token?.email,
+      emailVerified: request.auth?.token?.email_verified,
+      role: request.auth?.token?.role,
+    },
+    request.data,
+  ),
+)
+
+/** Remove an admin from a family, with every pending invite. */
+export const removeFamilyAdmin = membershipCall((request) =>
+  removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data),
+)
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
