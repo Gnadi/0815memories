@@ -34,15 +34,22 @@ anything the client can edit:
   `AuthContext`); the answer never says whether an account exists. The
   password protects the account only: the family key does not depend on it,
   so a reset loses nothing. Because the reset goes to the account's address,
-  an account becomes an admin only once that address is confirmed: the rules
-  refuse founding a family and redeeming an invite without `email_verified`
-  on the token (`hasVerifiedEmail()`). `/signup` and `/invite` lead through
+  an account becomes an admin only once that address is confirmed: founding a
+  family (the rules, `hasVerifiedEmail()`) and redeeming an invite (the
+  `redeemFamilyInvite` function) are refused without `email_verified` on the
+  token. `/signup` and `/invite` lead through
   the confirmation, and `ProtectedRoute` sends an account no family lists
   back to `/signup` to finish. Admins from before that check keep their
   access and are asked on the home page to confirm. The `syncAdminClaims` trigger
   puts `{ familyId, role: 'admin' }` on their token whenever the family's
   `adminUids` change. The rules also accept an admin listed in `adminUids`
   whose claim has not arrived yet (`isAdminByDocument` in `firestore.rules`).
+  Who the admins are changes in two places only, both transactions in
+  `functions/membership.js`: `redeemFamilyInvite` adds the holder of an
+  invite link, and `removeFamilyAdmin` takes an admin out together with every
+  pending invite. The rules refuse a client any change to `adminUids`. The
+  browser used to make these writes itself, and telling a real redemption
+  from a replayed one was the part of the rules that kept needing repairs.
 - **Viewers** have no account. They enter the family's shared password. The
   `viewerLogin` callable function checks it against a bcrypt hash in
   `families/{id}/secrets/auth`, with rate limiting, and returns a custom token
@@ -117,7 +124,8 @@ family.
 | --- | --- | --- |
 | `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design; `deletion`, the date the family is deleted on, written by the deletion functions only | admins |
 | `families/{id}/secrets/auth` | bcrypt hash of the shared password | `setSharedPassword` function only |
-| `families/{id}/admins`, `/invites` | admin metadata, co-admin invites | admins |
+| `families/{id}/admins` | what the settings show about each admin | the membership functions only |
+| `families/{id}/invites` | co-admin invite links; minted and revoked by admins, redeemed by `redeemFamilyInvite` | admins |
 | `familyPublic/{id}` | the public login-page subset | `mirrorFamilyPublic` function only |
 | `familySlugs/{slug}` | slug → family | functions only |
 | `memories`, `moments`, `albums` | the feed | admins |
@@ -145,6 +153,8 @@ the top of `functions/index.js`.
 | --- | --- | --- |
 | `viewerLogin` | callable | password check, rate limit, viewer token |
 | `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions |
+| `redeemFamilyInvite` | callable, a confirmed account holding an invite | makes the caller an admin and spends the invite |
+| `removeFamilyAdmin` | callable, admins | removes an admin, their entry and every pending invite; raises the invite epoch |
 | `syncAdminClaims` | `families/{id}` written | admin role claims |
 | `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |

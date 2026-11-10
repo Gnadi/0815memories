@@ -145,8 +145,8 @@ export default function InviteRedeemPage() {
         setError(t('invite.errors.notVerified'))
         return
       }
-      // Redeem the invite in one batch — see services/invites.js.
-      await redeemInvite(familyId, token, { uid: user.uid, email: (user.email || '').trim().toLowerCase() })
+      // One transaction on the server — see services/invites.js.
+      await redeemInvite(familyId, token)
 
       // Bind the session to this family explicitly. The onAuthStateChanged
       // handler ran before adminUids included us, so its resolveFamilyId()
@@ -160,9 +160,9 @@ export default function InviteRedeemPage() {
       // The account stays: it belongs to no family, so it can still found one
       // on /signup or join with a fresh invite.
       const messages = {
-        // The rules refused the redemption batch: the invite was used, revoked
-        // or expired after this page checked it.
-        'permission-denied': 'invite.errors.invalidOrRevoked',
+        // The invite was used, revoked or expired after this page checked it,
+        // or an admin was removed since, which retires every pending link.
+        'functions/failed-precondition': 'invite.errors.invalidOrRevoked',
       }
       setError(t(messages[err.code] || 'invite.errors.generic'))
     } finally {

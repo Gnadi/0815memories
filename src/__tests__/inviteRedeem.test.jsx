@@ -4,7 +4,7 @@
  *
  * A password reset goes to the address an account was registered with, so an
  * account whose address nobody confirmed belongs to whoever reads that mailbox.
- * firestore.rules refuses the redemption to such an account (hasVerifiedEmail);
+ * The redeemFamilyInvite function refuses the redemption to such an account;
  * the page must not even try, and must lead the person through confirming.
  *
  * An account that belongs to no family yet carries on here where it stopped —
@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const mockCommit = vi.fn()
+const mockRedeem = vi.fn()
 const mockNavigate = vi.fn()
 const mockSetActiveFamilyId = vi.fn()
 const mockSignup = vi.fn()
@@ -37,7 +37,10 @@ function setSession({ user = null, familyId = null, isViewer = false, emailVerif
   })
 }
 
-vi.mock('../config/firebase', () => ({ auth: { name: 'test-auth' }, db: { name: 'test-db' } }))
+vi.mock('../config/firebase', () => ({ auth: { name: 'test-auth' }, db: { name: 'test-db' }, functions: { name: 'test-functions' } }))
+
+// The redemption itself is the redeemFamilyInvite function's.
+vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (data) => mockRedeem(name, data) }))
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }))
 
@@ -57,7 +60,6 @@ vi.mock('firebase/firestore', () => ({
         ? { familyName: 'The Millers' }
         : { used: false, expiresAt: { toMillis: () => Date.now() + 86_400_000 } },
   })),
-  writeBatch: () => ({ update: vi.fn(), set: vi.fn(), commit: mockCommit }),
   serverTimestamp: vi.fn(),
   arrayUnion: vi.fn(),
 }))
@@ -96,7 +98,7 @@ describe('InviteRedeemPage', () => {
     await waitFor(() => expect(mockSignup).toHaveBeenCalledWith(
       'new@example.com', 'secret123', 'Sam', undefined, 'en',
     ))
-    expect(mockCommit).not.toHaveBeenCalled()
+    expect(mockRedeem).not.toHaveBeenCalled()
     expect(mockSetActiveFamilyId).not.toHaveBeenCalled()
   })
 
@@ -106,18 +108,19 @@ describe('InviteRedeemPage', () => {
 
     expect(await screen.findAllByText('Confirm your email address')).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Join The Millers' })).toBeNull()
-    expect(mockCommit).not.toHaveBeenCalled()
+    expect(mockRedeem).not.toHaveBeenCalled()
   })
 
   it('joins once the address is confirmed, with a fresh token', async () => {
     setSession({ user: NEW_ACCOUNT, emailVerified: true })
     mockCheckEmailVerified.mockResolvedValue(true)
-    mockCommit.mockResolvedValue()
+    mockRedeem.mockResolvedValue({ data: { ok: true } })
     await join()
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/home', { replace: true }))
     expect(mockCheckEmailVerified).toHaveBeenCalled()
-    expect(mockCommit).toHaveBeenCalledTimes(1)
+    expect(mockRedeem).toHaveBeenCalledTimes(1)
+    expect(mockRedeem).toHaveBeenCalledWith('redeemFamilyInvite', { familyId: 'fam-1', token: 'tok-1' })
     expect(mockSetActiveFamilyId).toHaveBeenCalledWith('fam-1')
   })
 
@@ -127,14 +130,14 @@ describe('InviteRedeemPage', () => {
     await join()
 
     expect(await screen.findAllByText('Your email address is not confirmed yet')).not.toHaveLength(0)
-    expect(mockCommit).not.toHaveBeenCalled()
+    expect(mockRedeem).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('reports a refused redemption and keeps the account', async () => {
     setSession({ user: NEW_ACCOUNT, emailVerified: true })
     mockCheckEmailVerified.mockResolvedValue(true)
-    mockCommit.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }))
+    mockRedeem.mockRejectedValue(Object.assign(new Error('spent'), { code: 'functions/failed-precondition' }))
     await join()
 
     expect(await screen.findAllByText('This invite link is invalid or has been revoked.')).not.toHaveLength(0)
