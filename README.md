@@ -78,43 +78,7 @@ directly, and `firestore.rules` decide every read and write. Cloud Functions do
 only what a browser must not: hold a secret, change who belongs to a family,
 or reach into more than one system.
 
-```mermaid
-flowchart TB
-  subgraph browser["Browser: React app and service worker"]
-    ui["Pages and hooks"]
-    services["Services<br/>encrypt and decrypt with the family key"]
-    ui --> services
-  end
-
-  rules{{"firestore.rules<br/>who may read and write"}}
-  firestore[("Firestore<br/>ciphertext, media ledger")]
-  cloudinary[("Cloudinary<br/>encrypted files")]
-
-  subgraph functions["Cloud Functions, europe-west3"]
-    commands["Commands, callable<br/>viewer login, shared password, upload signature,<br/>invites and admins, family deletion, print checkout"]
-    reactions["Reactions, triggers with retries<br/>admin claims, login-page mirror, media ledger, push"]
-    reconcilers["Reconcilers, scheduled<br/>unused media, print files, family deletion, reminders"]
-  end
-
-  auth["Firebase Auth"]
-  fcm["Cloud Messaging"]
-  storage[("Storage<br/>print files")]
-  peecho["Peecho"]
-
-  services -- "reads and writes" --> rules --> firestore
-  services -- "signed upload" --> cloudinary
-  services -- "calls" --> commands
-  commands -- "transactions" --> firestore
-  commands -- "tokens" --> auth
-  commands -- "checkout" --> peecho
-  firestore -- "document written" --> reactions
-  reactions -- "ledger, mirror" --> firestore
-  reactions -- "claims" --> auth
-  reactions --> fcm
-  reconcilers <-->|"checks against the documents"| firestore
-  reconcilers -- "deletes" --> cloudinary
-  reconcilers -- "deletes" --> storage
-```
+![Kaydo's architecture: the browser reads and writes Firestore directly through firestore.rules and uploads encrypted files to Cloudinary; Cloud Functions act as commands, reactions and reconcilers](docs/architecture.svg)
 
 The functions come in three kinds, and a new one should be one of them:
 
