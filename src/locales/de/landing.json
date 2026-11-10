@@ -343,5 +343,10 @@
     "link": "Lies die Geschichte hinter Kaydo",
     "note": "",
     "url": "https://blog.gnadlinger.me/blog/kaydo/"
+  },
+  "lightbox": {
+    "close": "Schließen",
+    "previous": "Vorheriges Bild",
+    "next": "Nächstes Bild"
   }
 }

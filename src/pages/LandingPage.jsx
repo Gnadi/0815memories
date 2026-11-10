@@ -41,6 +41,7 @@ import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
+import { LightboxProvider, ZoomTarget } from '../components/landing/ImageLightbox'
 import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
 import usePWAInstall from '../hooks/usePWAInstall'
@@ -94,8 +95,10 @@ export default function LandingPage({ lng }) {
   // sent to the admin login, which is no use to someone without an account.
   const openFeature = (path) => navigate(isAdmin ? path : isAuthenticated ? '/home' : `/demo?to=${path}`)
 
+  const lightboxLabels = { close: t('lightbox.close'), previous: t('lightbox.previous'), next: t('lightbox.next') }
+
   return (
-    <div className="min-h-screen bg-cream font-sans">
+    <LightboxProvider labels={lightboxLabels} className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
       <Head>
         {/* Emitted first in <head> so the charset declaration lands within the
@@ -434,13 +437,17 @@ export default function LandingPage({ lng }) {
                     )
                   })}
                 </ul>
-                <button
-                  onClick={() => openFeature('/scrapbook')}
-                  className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
-                >
-                  {t('pillars.scrapbook.button')}
-                </button>
-                <FeatureLink id="photoBook" lang={lang} t={t} className="mt-4" />
+                {/* The link is inline-flex like the button: without a wrapper
+                    the two sat on one line, touching. */}
+                <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
+                  <button
+                    onClick={() => openFeature('/scrapbook')}
+                    className="px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
+                  >
+                    {t('pillars.scrapbook.button')}
+                  </button>
+                  <FeatureLink id="photoBook" lang={lang} t={t} />
+                </div>
               </div>
 
               {/* Right — real scrapbook editor screenshot, with the dialog
@@ -451,13 +458,15 @@ export default function LandingPage({ lng }) {
                   alt={t('screens.scrapbookAlt')}
                 />
                 <figure className="relative -mt-10 ml-auto w-3/4 max-w-xs rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white">
-                  <img
-                    {...shot('printDialog')}
-                    alt={t('screens.printDialogAlt')}
-                    loading="lazy"
-                    decoding="async"
-                    className="block w-full h-auto"
-                  />
+                  <ZoomTarget src={shot('printDialog').src} alt={t('screens.printDialogAlt')} className="block w-full">
+                    <img
+                      {...shot('printDialog')}
+                      alt={t('screens.printDialogAlt')}
+                      loading="lazy"
+                      decoding="async"
+                      className="block w-full h-auto"
+                    />
+                  </ZoomTarget>
                 </figure>
               </div>
             </div>
@@ -979,7 +988,7 @@ export default function LandingPage({ lng }) {
           </p>
         </div>
       </footer>
-    </div>
+    </LightboxProvider>
   )
 }
 
