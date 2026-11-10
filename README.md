@@ -193,9 +193,10 @@ an in-memory database (`src/demo/demoDatabase.js`) filled with the family
 from `src/demo/demoFamily.js`. Pictures added in the demo stay in the tab as
 object URLs. What only a server can do — the viewer password, invite links,
 ordering a printed book, push notifications, feedback — says so instead of
-pretending. The pictures in `public/demo-media/` are drawn by
-`scripts/generate-demo-media.mjs`; replace them with WebP files of the same
-names to show photos instead. More in `docs/architecture.md`.
+pretending. The pictures in `public/demo-media/` are photographs of invented
+people; `scripts/generate-demo-media.mjs` can redraw them as flat
+illustrations instead (it overwrites the files). Any WebP files of the same
+names work. More in `docs/architecture.md`.
 
 ## Continuous integration
 
