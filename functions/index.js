@@ -41,6 +41,7 @@ import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { givenUp } from './retries.js'
+import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
   COPY,
@@ -455,6 +456,74 @@ export const reportLegacyMedia = onSchedule(
     })
     console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
     if (unclaimedSample.length) console.log('[media] unclaimed, for example:', unclaimedSample.map(loggable).join(' '))
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Deleting a family — see functions/familyDeletion.js
+// ---------------------------------------------------------------------------
+
+const deletionCall = (action) =>
+  onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+    try {
+      return await action({ db: getFirestore() }, request.auth?.uid, request.data)
+    } catch (error) {
+      if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
+      console.error('[deletion] call failed', error)
+      throw new HttpsError('internal', 'Could not change the deletion')
+    }
+  })
+
+/** Schedule the caller's family for deletion. Owner only. */
+export const requestFamilyDeletion = deletionCall(requestDeletion)
+
+/** Take a scheduled deletion back, until it has begun. Owner only. */
+export const cancelFamilyDeletion = deletionCall(cancelDeletion)
+
+/**
+ * Once a day: delete the families whose date has come, and carry on with the
+ * ones an earlier run could not finish. One family failing does not stop the
+ * others; it is tried again tomorrow.
+ */
+export const deleteScheduledFamilies = onSchedule(
+  {
+    schedule: '45 2 * * *',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const started = Date.now()
+    const db = getFirestore()
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    const destroy = cloudName
+      ? cloudinaryDestroyer({
+          fetch,
+          cloudName,
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+        })
+      : null
+
+    for (const familyId of await familiesToDelete(db, started)) {
+      try {
+        const stats = await deleteFamily(
+          // A minute short of the timeout, so the run ends between two steps
+          // rather than in the middle of one.
+          { db, bucket: getStorage().bucket(), auth: getAuth(), destroy, deadline: started + 480 * 1000 },
+          familyId,
+        )
+        const line = `[deletion] family=${loggable(familyId)} ${JSON.stringify(stats)}`
+        if (stats.outcome === 'incomplete') {
+          console.error(`${line} did not finish; the next run carries on`)
+          if (!destroy) console.error('[deletion] CLOUDINARY_CLOUD_NAME is not set, so no file can be deleted')
+        } else {
+          console.log(line)
+        }
+      } catch (error) {
+        console.error(`[deletion] family=${loggable(familyId)} failed; the next run carries on`, error)
+      }
+    }
   },
 )
 

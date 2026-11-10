@@ -1,6 +1,7 @@
 /**
  * Just enough of the Admin SDK's Firestore for the media functions' unit
- * tests: documents by path, get/set, queries with `==`, `<=`, a limit and select,
+ * tests: documents by path, get/set/delete, queries with `==`, `<=`,
+ * `array-contains` (on dotted field paths too), a limit and select,
  * and transactions that apply their writes only when the callback returns.
  * The rules suites run the same functions against the emulator.
  *
@@ -16,12 +17,14 @@ export function fakeAdminFirestore(seed = {}) {
     path,
     get: async () => snapshot(path),
     set: async (data) => { docs.set(path, { ...data }) },
+    delete: async () => { docs.delete(path) },
   })
 
   const comparable = (v) => (v instanceof Date ? v.getTime() : v)
   const matches = (data, [field, op, value]) => {
-    const have = comparable(data[field])
+    const have = comparable(field.split('.').reduce((at, key) => at?.[key], data))
     if (op === '==') return have === comparable(value)
+    if (op === 'array-contains') return Array.isArray(have) && have.includes(value)
     if (op === '<=') return have != null && have <= comparable(value)
     throw new Error(`Unsupported operator ${op}`)
   }
@@ -35,7 +38,7 @@ export function fakeAdminFirestore(seed = {}) {
         .filter(([path]) => path.startsWith(`${name}/`) && !path.slice(name.length + 1).includes('/'))
         .filter(([, data]) => filters.every((f) => matches(data, f)))
         .slice(0, max)
-        .map(([path]) => ({ id: path.slice(name.length + 1), ...snapshot(path) })),
+        .map(([path]) => ({ id: path.slice(name.length + 1), ref: ref(path), ...snapshot(path) })),
     }),
   })
 
