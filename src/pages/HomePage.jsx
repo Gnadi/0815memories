@@ -12,6 +12,7 @@ import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import AdventHomeCard from '../components/advent/AdventHomeCard'
 import PostEntryModal from '../components/admin/PostEntryModal'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
+import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
 import { useAuth } from '../context/AuthContext'
@@ -92,6 +93,7 @@ export default function HomePage() {
             into two columns; the other sections keep their single-column width. */}
         <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl min-[88rem]:max-w-[92rem] mx-auto w-full">
           <div className="mx-auto w-full max-w-[44rem]">
+            <FamilyDeletionBanner />
             <VerifyEmailBanner />
           </div>
           <DailyMoments

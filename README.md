@@ -249,6 +249,7 @@ with:
 | `a file was picked up again while it was being deleted` | A file was deleted in the moment a document took it up again. The file is gone |
 | `destroy failed` | Cloudinary refused a delete; the next run tries again |
 | `a document names a file the ledger does not know` | A document shows a file that was deleted, or that was never uploaded through the app |
+| `[deletion]` with `did not finish` or `failed` | A family's deletion stopped halfway; the next daily run carries on. If it repeats, part of a family the owner asked to be deleted is still stored |
 
 An alert on `severity>=ERROR` for the functions catches these and every
 uncaught failure as well, at the price of more noise.

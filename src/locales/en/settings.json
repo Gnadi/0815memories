@@ -230,5 +230,19 @@
     "previewAlt": "Preview",
     "clickToUpload": "Click to upload a photo",
     "uploadFailed": "Upload failed"
+  },
+  "deleteFamily": {
+    "label": "Delete family",
+    "description": "Deletes everything this family has stored: every memory, photo and video, the journals, the Vault, the recipes and all settings. Your account is deleted with it, unless you are an admin of another family. Other admins keep their accounts and lose access to this family. Nothing is deleted for {{days}} days, and until then you can take it back. After that it cannot be undone, so download a backup above first if you want to keep anything.",
+    "confirmLabel": "Type the family's name to confirm: {{name}}",
+    "submit": "Delete in {{days}} days",
+    "scheduledTitle": "This family will be deleted on {{date}}",
+    "scheduledOwner": "Everything it has stored will be gone for good. Until then you can take this back.",
+    "scheduledAdmin": "The family's owner asked for this. Everything the family has stored will be gone for good, so download a backup above if you want to keep anything. Only the owner can take it back.",
+    "cancel": "Keep the family",
+    "cancelled": "The family stays. Nothing was deleted.",
+    "failed": "That did not work. Please try again.",
+    "notOwner": "Only the family's owner can do this.",
+    "alreadyBegun": "The deletion has already begun and can no longer be stopped."
   }
 }

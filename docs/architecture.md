@@ -115,7 +115,7 @@ family.
 
 | Collection | Holds | Written by |
 | --- | --- | --- |
-| `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design | admins |
+| `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design; `deletion`, the date the family is deleted on, written by the deletion functions only | admins |
 | `families/{id}/secrets/auth` | bcrypt hash of the shared password | `setSharedPassword` function only |
 | `families/{id}/admins`, `/invites` | admin metadata, co-admin invites | admins |
 | `familyPublic/{id}` | the public login-page subset | `mirrorFamilyPublic` function only |
@@ -130,6 +130,7 @@ family.
 | `fcmTokens` | devices registered for push; never readable by clients | family members |
 | `notificationsQueue` | retired; closed in the rules | nobody |
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
+| `familyDeletions` | one marker per family whose deletion has begun | functions only |
 | `feedback` | app feedback, deliberately unencrypted, append-only | family members |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
@@ -153,6 +154,16 @@ the top of `functions/index.js`.
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger; counts claimed ones, reports the rest, deletes nothing |
+| `requestFamilyDeletion`, `cancelFamilyDeletion` | callable, the owner | set and clear the date a family is deleted on, 14 days out |
+| `deleteScheduledFamilies` | schedule, 02:45 Europe/Berlin | deletes the families whose date has come: documents, files, print files, the viewer identity, the owner's account, the family document |
+
+Deleting a family reaches into three systems and can stop halfway, so
+`functions/familyDeletion.js` keeps no record of how far it got: every step
+deletes whatever of the family is still there, and a run that stops is started
+again the next day. A collection added to `firestore.rules` goes into
+`FAMILY_COLLECTIONS` or `OTHER_COLLECTIONS` there, or
+`familyDeletionCoverage.test.js` fails: a new collection has to say what
+happens to it when its family is deleted.
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.

@@ -230,5 +230,19 @@
     "previewAlt": "Vorschau",
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
     "uploadFailed": "Upload fehlgeschlagen"
+  },
+  "deleteFamily": {
+    "label": "Familie löschen",
+    "description": "Löscht alles, was diese Familie gespeichert hat: jede Erinnerung, jedes Foto und Video, die Tagebücher, den Tresor, die Rezepte und alle Einstellungen. Dein Konto wird mitgelöscht, außer du bist Admin einer weiteren Familie. Andere Admins behalten ihr Konto und verlieren den Zugang zu dieser Familie. {{days}} Tage lang wird nichts gelöscht, und so lange kannst du es zurücknehmen. Danach lässt es sich nicht rückgängig machen. Lade deshalb vorher oben ein Backup herunter, wenn du etwas behalten willst.",
+    "confirmLabel": "Gib zur Bestätigung den Namen der Familie ein: {{name}}",
+    "submit": "In {{days}} Tagen löschen",
+    "scheduledTitle": "Diese Familie wird am {{date}} gelöscht",
+    "scheduledOwner": "Alles, was sie gespeichert hat, ist dann endgültig weg. Bis dahin kannst du das zurücknehmen.",
+    "scheduledAdmin": "Der Besitzer der Familie hat das veranlasst. Alles, was die Familie gespeichert hat, ist dann endgültig weg. Lade oben ein Backup herunter, wenn du etwas behalten willst. Zurücknehmen kann es nur der Besitzer.",
+    "cancel": "Familie behalten",
+    "cancelled": "Die Familie bleibt. Es wurde nichts gelöscht.",
+    "failed": "Das hat nicht geklappt. Bitte versuch es noch einmal.",
+    "notOwner": "Das kann nur der Besitzer der Familie.",
+    "alreadyBegun": "Das Löschen hat bereits begonnen und lässt sich nicht mehr aufhalten."
   }
 }
