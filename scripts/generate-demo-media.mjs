@@ -5,9 +5,10 @@
  *   node scripts/generate-demo-media.mjs
  *
  * Drawn rather than photographed so nothing in them belongs to anyone: no
- * real family, no licence to keep track of. To show photos instead, drop
- * WebP files with the same names into public/demo-media/ — src/demo/
- * demoFamily.js refers to them by name only.
+ * real family, no licence to keep track of. The files in public/demo-media/
+ * are currently photographs of invented people, and running this script
+ * overwrites them with the drawings. src/demo/demoFamily.js refers to the
+ * files by name only, so either kind works.
  *
  * Nothing here is random from run to run, so regenerating gives the same
  * files and an unchanged picture never shows up in a diff.
