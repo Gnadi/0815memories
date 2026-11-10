@@ -7,22 +7,15 @@
  * write it (firestore.rules). Nothing is deleted before that date; a daily run
  * on the server does it afterwards.
  */
-import { functions } from '../config/firebase'
+import { callFunction } from './callable'
 
 /** Mirrors DELETION_GRACE_DAYS in functions/familyDeletion.js. */
 export const DELETION_GRACE_DAYS = 14
 
-async function call(name, familyId) {
-  if (!functions) throw new Error('Firebase is not configured')
-  const { httpsCallable } = await import('firebase/functions')
-  const { data } = await httpsCallable(functions, name)({ familyId })
-  return data
-}
-
 /** @returns {Promise<{ deleteAfter: string }>} */
-export const requestFamilyDeletion = (familyId) => call('requestFamilyDeletion', familyId)
+export const requestFamilyDeletion = (familyId) => callFunction('requestFamilyDeletion', { familyId })
 
-export const cancelFamilyDeletion = (familyId) => call('cancelFamilyDeletion', familyId)
+export const cancelFamilyDeletion = (familyId) => callFunction('cancelFamilyDeletion', { familyId })
 
 /** The day a family document says it is deleted on, or null. */
 export function scheduledDeletion(family) {

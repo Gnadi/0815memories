@@ -466,43 +466,38 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
   })
 
-  // ── 7. Redeeming an invite ────────────────────────────────────────────────
+  // ── 7. Who the admins are ─────────────────────────────────────────────────
   //
-  // Redemption is one batch: consume the invite, create admins/{uid}, join
-  // adminUids. Each rule insists on the other two writes, which is what keeps
-  // a spent invite from being replayed.
+  // Joining with an invite and removing an admin are transactions of
+  // functions/membership.js (membership.test.js, membershipRules.test.js).
+  // The browser used to make these writes itself, and the rules had to tell a
+  // real redemption from a replayed one. Now no write from a client changes
+  // who the admins are, so every shape those writes ever had is refused here.
 
-  describe('redeeming an invite', () => {
+  describe('the admin list', () => {
     const NEWBIE = 'uid-newbie'
     const TOKEN = 'invite-token-1'
+    const GONE = 'uid-gone'
 
-    /** What InviteRedeemPage writes, as one batch. */
-    const redeem = (db, { token = TOKEN, extra = {} } = {}) => {
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'families', FAMILY, 'invites', token), {
-        used: true,
-        redeemedBy: NEWBIE,
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await updateDoc(doc(ctx.firestore(), 'families', FAMILY), { adminUids: [ADMIN, GONE] })
+        await setDoc(doc(ctx.firestore(), 'families', FAMILY, 'admins', GONE), { viaInvite: 'x' })
       })
-      batch.set(doc(db, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: token })
+    })
+
+    /** What the invite page used to write, as one batch. */
+    const redeem = (db, extra = {}) => {
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'families', FAMILY, 'invites', TOKEN), { used: true, redeemedBy: NEWBIE })
+      batch.set(doc(db, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN })
       batch.update(doc(db, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE), ...extra })
       return batch.commit()
     }
 
-    it('makes the redeemer an admin', async () => {
-      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
-      await assertSucceeds(getDoc(doc(asClaimlessAdmin(NEWBIE), 'families', FAMILY)))
-    })
-
-    // A password reset goes to the account's address, so an account whose
-    // address nobody confirmed belongs to whoever reads that mailbox.
-    it('needs a confirmed email address', async () => {
-      await assertFails(redeem(asNewAccount(NEWBIE, { verified: false })))
-      await assertFails(redeem(asClaimlessAdmin(NEWBIE)))
-      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
-    })
-
-    it('cannot be done in separate writes', async () => {
+    it('cannot be joined from the browser, as a batch or in separate writes', async () => {
       const db = asNewAccount(NEWBIE)
+      await assertFails(redeem(db))
       await assertFails(
         updateDoc(doc(db, 'families', FAMILY, 'invites', TOKEN), { used: true, redeemedBy: NEWBIE }),
       )
@@ -510,106 +505,60 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(updateDoc(doc(db, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
     })
 
-    it('cannot change anything but adminUids on the way in', async () => {
-      await assertFails(redeem(asNewAccount(NEWBIE), { extra: { familyName: 'Mine now' } }))
+    it('cannot be extended by an admin either', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      await assertFails(updateDoc(doc(admin, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN }))
     })
 
-    it('cannot be revoked on the strength of a stale admin claim', async () => {
-      await testEnv.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), 'families', FAMILY, 'admins', 'uid-target'), { viaInvite: 'x' })
-      })
-      // Removed from adminUids, but the claim in the token still says admin.
-      await assertFails(deleteDoc(doc(asAdmin(OUTSIDER, FAMILY), 'families', FAMILY, 'admins', 'uid-target')))
-      await assertSucceeds(deleteDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'admins', 'uid-target')))
+    it('cannot be shortened from the browser, by the owner or by the one leaving', async () => {
+      for (const db of [asAdmin(ADMIN, FAMILY), asAdmin(GONE, FAMILY)]) {
+        const family = doc(db, 'families', FAMILY)
+        await assertFails(updateDoc(family, { adminUids: arrayRemove(GONE), inviteEpoch: increment(1) }))
+        await assertFails(updateDoc(family, { adminUids: arrayRemove(GONE) }))
+        await assertFails(updateDoc(family, { adminUids: [ADMIN] }))
+        await assertFails(deleteDoc(doc(db, 'families', FAMILY, 'admins', GONE)))
+      }
     })
 
-    it('cannot be replayed by an admin who was removed', async () => {
-      await assertSucceeds(redeem(asNewAccount(NEWBIE)))
-
-      // What ManageAdminsPanel.handleRemove does.
-      const owner = asAdmin(ADMIN, FAMILY)
-      await assertSucceeds(deleteDoc(doc(owner, 'families', FAMILY, 'admins', NEWBIE)))
-      await assertSucceeds(updateDoc(doc(owner, 'families', FAMILY), {
-        adminUids: arrayRemove(NEWBIE),
-        inviteEpoch: increment(1),
-      }))
-
-      // The spent invite still names them as its redeemer, and has not expired.
-      // syncAdminClaims has cleared their claim.
-      const removed = asNewAccount(NEWBIE)
-      await assertFails(setDoc(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN }))
-      await assertFails(updateDoc(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) }))
-      const batch = writeBatch(removed)
-      batch.set(doc(removed, 'families', FAMILY, 'admins', NEWBIE), { viaInvite: TOKEN })
-      batch.update(doc(removed, 'families', FAMILY), { adminUids: arrayUnion(NEWBIE) })
-      await assertFails(batch.commit())
+    it('leaves the invite epoch to the removal that raises it', async () => {
+      const family = doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY)
+      await assertFails(updateDoc(family, { inviteEpoch: increment(1) }))
+      await assertFails(updateDoc(family, { familyName: 'X', inviteEpoch: 5 }))
+      await assertSucceeds(updateDoc(family, { familyName: 'X' }))
     })
 
-    // An admin removal raises the family's inviteEpoch in the same write, and
-    // an invite is only good for the epoch it was minted under.
-    describe('across an admin removal', () => {
-      const GONE = 'uid-gone'
-      const dayAhead = () => Timestamp.fromDate(new Date(Date.now() + 86_400_000))
-      const inviteData = (extra = {}) => ({
-        createdBy: ADMIN,
-        used: false,
-        redeemedBy: null,
-        expiresAt: dayAhead(),
-        ...extra,
-      })
+    it('still shows the admins to an admin, and to nobody else', async () => {
+      await assertSucceeds(getDocs(collection(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'admins')))
+      await assertFails(getDocs(collection(asViewer(VIEWER, FAMILY), 'families', FAMILY, 'admins')))
+      await assertFails(getDocs(collection(asAdmin(OUTSIDER, FAMILY), 'families', FAMILY, 'admins')))
+    })
+  })
 
-      beforeEach(async () => {
-        await testEnv.withSecurityRulesDisabled(async (ctx) => {
-          await updateDoc(doc(ctx.firestore(), 'families', FAMILY), { adminUids: [ADMIN, GONE] })
-        })
-      })
+  describe('minting invites', () => {
+    const dayAhead = () => Timestamp.fromDate(new Date(Date.now() + 86_400_000))
+    const inviteData = (extra = {}) => ({
+      createdBy: ADMIN,
+      used: false,
+      redeemedBy: null,
+      expiresAt: dayAhead(),
+      ...extra,
+    })
 
-      const removeGone = (epoch = increment(1)) => updateDoc(
-        doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY),
-        epoch === null ? { adminUids: arrayRemove(GONE) } : { adminUids: arrayRemove(GONE), inviteEpoch: epoch },
+    it('is for the family\'s current epoch and no other', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'future'), inviteData({ epoch: 1 })))
+      // What a removal does, through the Admin SDK.
+      await testEnv.withSecurityRulesDisabled((ctx) =>
+        updateDoc(doc(ctx.firestore(), 'families', FAMILY), { inviteEpoch: 1 }),
       )
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'past'), inviteData({ epoch: 0 })))
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'unstamped'), inviteData()))
+      await assertSucceeds(setDoc(doc(admin, 'families', FAMILY, 'invites', 'current'), inviteData({ epoch: 1 })))
+    })
 
-      it('retires an invite minted before it, even one that is still unexpired', async () => {
-        await assertSucceeds(removeGone())
-        await assertFails(redeem(asNewAccount(NEWBIE)))
-      })
-
-      it('keeps working for an invite from before the field existed, until the first removal', async () => {
-        // The fixture invite has no `epoch` and the family no `inviteEpoch`.
-        await assertSucceeds(redeem(asNewAccount(NEWBIE)))
-      })
-
-      it('accepts an invite minted under the new epoch', async () => {
-        await assertSucceeds(removeGone())
-        await assertSucceeds(
-          setDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', 'epoch-1'), inviteData({ epoch: 1 })),
-        )
-        await assertSucceeds(redeem(asNewAccount(NEWBIE), { token: 'epoch-1' }))
-      })
-
-      it('cannot be minted for another epoch than the family\'s current one', async () => {
-        const admin = asAdmin(ADMIN, FAMILY)
-        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'future'), inviteData({ epoch: 1 })))
-        await assertSucceeds(removeGone())
-        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'past'), inviteData({ epoch: 0 })))
-        await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'unstamped'), inviteData()))
-      })
-
-      it('only ever moves with a removal, and by exactly one', async () => {
-        const admin = asAdmin(ADMIN, FAMILY)
-        const family = doc(admin, 'families', FAMILY)
-        await assertFails(updateDoc(family, { inviteEpoch: increment(1) }))
-        await assertFails(updateDoc(family, { familyName: 'X', inviteEpoch: 5 }))
-        await assertFails(removeGone(increment(2)))
-        await assertFails(removeGone(null))
-        await assertFails(removeGone(increment(-1)))
-        await assertSucceeds(removeGone(increment(1)))
-        await assertFails(updateDoc(family, { inviteEpoch: increment(1) }))
-      })
-
-      it('cannot be moved by the redeemer on the way in', async () => {
-        await assertFails(redeem(asNewAccount(NEWBIE), { extra: { inviteEpoch: increment(1) } }))
-      })
+    it('can be taken back by an admin', async () => {
+      await assertSucceeds(deleteDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', 'invite-token-1')))
     })
 
     it('cannot be minted or listed on a claim the family document no longer backs', async () => {
@@ -736,13 +685,12 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       })
       const db = asAdmin(ADMIN, FAMILY)
       const newKey = { k: 'a-new-key', kty: 'oct' }
-      // Removing an admin.
+      // What removing an admin used to look like, from the browser.
       await assertFails(updateDoc(family(db), {
         adminUids: [ADMIN],
         inviteEpoch: increment(1),
         encryptionKeyJwk: newKey,
       }))
-      await assertSucceeds(updateDoc(family(db), { adminUids: [ADMIN], inviteEpoch: increment(1) }))
     })
 
     it('is not handed to a family from before encryption', async () => {

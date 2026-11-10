@@ -20,12 +20,10 @@ import {
   assertSucceeds,
 } from '@firebase/rules-unit-testing'
 import {
-  arrayRemove,
   deleteDoc,
   deleteField,
   doc,
   getDoc,
-  increment,
   setDoc,
   Timestamp,
   updateDoc,
@@ -114,13 +112,6 @@ describe.skipIf(!EMULATOR)('family deletion rules', () => {
     }
     // The date does not get in the way of an ordinary edit.
     await assertSucceeds(updateDoc(family(as(OWNER)), { familyName: 'The Millers!' }))
-  })
-
-  it('does not let removing an admin carry a deletion date along', async () => {
-    await seed()
-    const removal = { adminUids: arrayRemove(CO_ADMIN), inviteEpoch: increment(1) }
-    await assertFails(updateDoc(family(as(OWNER)), { ...removal, deletion: inTwoWeeks() }))
-    await assertSucceeds(updateDoc(family(as(OWNER)), removal))
   })
 
   it('refuses a family founded with a deletion date', async () => {
