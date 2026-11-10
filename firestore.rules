@@ -155,6 +155,14 @@ service cloud.firestore {
       return request.resource.data.get('viewerSessionVersion', 0) == resource.data.get('viewerSessionVersion', 0);
     }
 
+    // The date a family is deleted on, set and cleared by the functions of
+    // functions/familyDeletion.js for the owner alone (Admin SDK, which
+    // bypasses these rules). A client that could write it could schedule a
+    // family's deletion as any admin, or pull the date to today.
+    function deletionUnchanged() {
+      return request.resource.data.get('deletion', null) == resource.data.get('deletion', null);
+    }
+
     // The family's AES key. The family's content is encrypted with it, so a
     // write that replaced or removed it would leave all of that unreadable for
     // every member at once — whether by a bug, by two devices racing, or by a
@@ -199,11 +207,13 @@ service cloud.firestore {
                     && request.resource.data.adminUid == request.auth.uid
                     && request.resource.data.adminUids == [request.auth.uid]
                     && hasEncryptionKey()
+                    && !('deletion' in request.resource.data)
                     && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
                     && loginCustomOk()
                     && keepsEncryptionKey()
+                    && deletionUnchanged()
                     && (
                       // Path A: existing admin edits regular fields; adminUids unchanged.
                       (
@@ -1081,6 +1091,12 @@ service cloud.firestore {
       // silence another family's devices.
       allow delete: if isFamilyMember(resource.data.familyId);
       allow read: if false;
+    }
+
+    // One marker per family whose deletion has begun, kept by the daily run
+    // of functions/familyDeletion.js so it can finish what it started.
+    match /familyDeletions/{familyId} {
+      allow read, write: if false;
     }
 
     // Login throttle counters, written by the viewerLogin function through the
