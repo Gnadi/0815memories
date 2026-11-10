@@ -71,6 +71,65 @@
 - **i18next** — EN/DE localization
 - **Vitest** — test suite
 
+## Architecture
+
+There is no server of Kaydo's own. The browser encrypts and talks to Firestore
+directly, and `firestore.rules` decide every read and write. Cloud Functions do
+only what a browser must not: hold a secret, change who belongs to a family,
+or reach into more than one system.
+
+```mermaid
+flowchart TB
+  subgraph browser["Browser: React app and service worker"]
+    ui["Pages and hooks"]
+    services["Services<br/>encrypt and decrypt with the family key"]
+    ui --> services
+  end
+
+  rules{{"firestore.rules<br/>who may read and write"}}
+  firestore[("Firestore<br/>ciphertext, media ledger")]
+  cloudinary[("Cloudinary<br/>encrypted files")]
+
+  subgraph functions["Cloud Functions, europe-west3"]
+    commands["Commands, callable<br/>viewer login, shared password, upload signature,<br/>invites and admins, family deletion, print checkout"]
+    reactions["Reactions, triggers with retries<br/>admin claims, login-page mirror, media ledger, push"]
+    reconcilers["Reconcilers, scheduled<br/>unused media, print files, family deletion, reminders"]
+  end
+
+  auth["Firebase Auth"]
+  fcm["Cloud Messaging"]
+  storage[("Storage<br/>print files")]
+  peecho["Peecho"]
+
+  services -- "reads and writes" --> rules --> firestore
+  services -- "signed upload" --> cloudinary
+  services -- "calls" --> commands
+  commands -- "transactions" --> firestore
+  commands -- "tokens" --> auth
+  commands -- "checkout" --> peecho
+  firestore -- "document written" --> reactions
+  reactions -- "ledger, mirror" --> firestore
+  reactions -- "claims" --> auth
+  reactions --> fcm
+  reconcilers <-- "checks against the documents" --> firestore
+  reconcilers -- "deletes" --> cloudinary
+  reconcilers -- "deletes" --> storage
+```
+
+The functions come in three kinds, and a new one should be one of them:
+
+- **Commands** are called by the app and answer at once. Each checks the
+  caller against the family document, then writes in one transaction.
+- **Reactions** follow a document write. They decide from the document as it
+  is now, not from the event, so a retried or repeated run lands on the same
+  answer.
+- **Reconcilers** run on a schedule and put right what is out of step. Before
+  one deletes anything it asks the documents, not only its own bookkeeping,
+  and a run that stops halfway is simply started again the next day.
+
+[docs/architecture.md](docs/architecture.md) has the map in detail: roles,
+encryption, the data model, every function, and where things live in `src/`.
+
 ## Getting started
 
 ### Just look around
