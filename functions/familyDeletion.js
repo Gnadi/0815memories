@@ -26,7 +26,7 @@
  * tests can stub them.
  */
 import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE } from './mediaSigning.js'
-import { DESTROY_BATCH } from './mediaPurge.js'
+import { DESTROY_BATCH, destroyUnderOtherTypes } from './mediaPurge.js'
 import { PRINT_FILES_PREFIX } from './printFiles.js'
 import { releaseFamilySlug } from './slugs.js'
 import { DEVICES, safeKey } from './viewerLogin.js'
@@ -239,6 +239,8 @@ async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
       for (let i = 0; i < entries.length; i += DESTROY_BATCH) {
         const batch = entries.slice(i, i + DESTROY_BATCH)
         const gone = await destroy(resourceType, batch.map((entry) => entry.publicId))
+        // A signature can be used once per resource type (mediaPurge.js).
+        await destroyUnderOtherTypes(destroy, resourceType, batch.map((entry) => entry.publicId).filter((id) => gone.has(id)))
         for (const entry of batch) {
           if (gone.has(entry.publicId)) forget.push(entry.snap)
           else refused++

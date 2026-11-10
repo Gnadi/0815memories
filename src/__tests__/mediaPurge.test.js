@@ -109,7 +109,40 @@ describe('purgeMedia', () => {
     ]))
     const destroy = destroyAll()
     await run(db, destroy)
-    expect(destroy.mock.calls.map(([type]) => type).sort()).toEqual(['image', 'raw'])
+    // First each file under the kind it was signed for…
+    expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('a')}`])
+    expect(destroy).toHaveBeenCalledWith('image', [`kaydo/public/fam-1/${hex('b')}`])
+  })
+
+  it('clears the other kinds a signature could have been used for, once the file is gone', async () => {
+    // Cloudinary does not sign resource_type: one signature stores up to three
+    // files under one id, and the ledger knows of one.
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    expect(destroy.mock.calls).toEqual([
+      ['raw', [`kaydo/fam-1/${hex('a')}`]],
+      ['image', [`kaydo/fam-1/${hex('a')}`]],
+      ['video', [`kaydo/fam-1/${hex('a')}`]],
+    ])
+    expect(stats).toMatchObject({ deleted: 1, failed: 0 })
+  })
+
+  it('does not touch the other kinds of a file Cloudinary kept, and survives their refusal', async () => {
+    const kept = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const refuse = vi.fn(async () => new Set())
+    await run(kept, refuse)
+    expect(refuse.mock.calls.map(([type]) => type)).toEqual(['raw'])
+
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stats = await run(db, vi.fn(async (type, ids) => {
+      if (type !== 'raw') throw new Error('503')
+      return new Set(ids)
+    }))
+    error.mockRestore()
+    expect(stats).toMatchObject({ deleted: 1, failed: 0 })
+    expect(Object.keys(ledger(db))).toEqual([])
   })
 
   it('keeps a file a document picked up again after the query', async () => {

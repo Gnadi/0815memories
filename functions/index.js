@@ -446,16 +446,19 @@ export const reportLegacyMedia = onSchedule(
       console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no inventory')
       return
     }
-    const { unclaimedSample, ...counts } = await inventoryLegacyMedia({
+    const cloudinary = { fetch, cloudName, apiKey: CLOUDINARY_API_KEY.value(), secret: CLOUDINARY_API_SECRET.value() }
+    const { unclaimedSample, misfiledSample, ...counts } = await inventoryLegacyMedia({
       db: getFirestore(),
-      list: cloudinaryLister({
-        fetch,
-        cloudName,
-        apiKey: CLOUDINARY_API_KEY.value(),
-        secret: CLOUDINARY_API_SECRET.value(),
-      }),
+      list: cloudinaryLister(cloudinary),
+      // Files stored as another kind than their signature was for; deleted
+      // under the same switch as the daily clean-up.
+      destroy: cloudinaryDestroyer(cloudinary),
+      dryRun: MEDIA_PURGE_DRY_RUN.value(),
     })
     console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
+    if (misfiledSample.length) {
+      console.error('[media] files stored as another kind than signed, for example:', misfiledSample.map(loggable).join(' '))
+    }
     if (unclaimedSample.length) console.log('[media] unclaimed, for example:', unclaimedSample.map(loggable).join(' '))
   },
 )

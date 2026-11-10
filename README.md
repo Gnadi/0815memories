@@ -71,6 +71,29 @@
 - **i18next** — EN/DE localization
 - **Vitest** — test suite
 
+## Architecture
+
+There is no server of Kaydo's own. The browser encrypts and talks to Firestore
+directly, and `firestore.rules` decide every read and write. Cloud Functions do
+only what a browser must not: hold a secret, change who belongs to a family,
+or reach into more than one system.
+
+![Kaydo's architecture: the browser reads and writes Firestore directly through firestore.rules and uploads encrypted files to Cloudinary; Cloud Functions act as commands, reactions and reconcilers](docs/architecture.svg)
+
+The functions come in three kinds, and a new one should be one of them:
+
+- **Commands** are called by the app and answer at once. Each checks the
+  caller against the family document, then writes in one transaction.
+- **Reactions** follow a document write. They decide from the document as it
+  is now, not from the event, so a retried or repeated run lands on the same
+  answer.
+- **Reconcilers** run on a schedule and put right what is out of step. Before
+  one deletes anything it asks the documents, not only its own bookkeeping,
+  and a run that stops halfway is simply started again the next day.
+
+[docs/architecture.md](docs/architecture.md) has the map in detail: roles,
+encryption, the data model, every function, and where things live in `src/`.
+
 ## Getting started
 
 ### Just look around
@@ -250,6 +273,7 @@ with:
 | `a file was picked up again while it was being deleted` | A file was deleted in the moment a document took it up again. The file is gone |
 | `destroy failed` | Cloudinary refused a delete; the next run tries again |
 | `a document names a file the ledger does not know` | A document shows a file that was deleted, or that was never uploaded through the app |
+| `files stored as another kind than signed` | Someone used an upload signature for a second file under another resource type, which takes a tampered app. The weekly run deletes such files once `MEDIA_PURGE_DRY_RUN` is `false` |
 | `[deletion]` with `did not finish` or `failed` | A family's deletion stopped halfway; the next daily run carries on. If it repeats, part of a family the owner asked to be deleted is still stored |
 
 An alert on `severity>=ERROR` for the functions catches these and every
