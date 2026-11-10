@@ -111,7 +111,7 @@ flowchart TB
   reactions -- "ledger, mirror" --> firestore
   reactions -- "claims" --> auth
   reactions --> fcm
-  reconcilers <-- "checks against the documents" --> firestore
+  reconcilers <-->|"checks against the documents"| firestore
   reconcilers -- "deletes" --> cloudinary
   reconcilers -- "deletes" --> storage
 ```
