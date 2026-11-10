@@ -2,8 +2,10 @@
 /**
  * The inventory of files from before the ledger — functions/mediaInventory.js.
  *
- * It decides nothing irreversible: it counts the files families claimed into
- * their usage, once, and reports the rest. These hold it to that.
+ * For those files it decides nothing irreversible: it counts the ones families
+ * claimed into their usage, once, and reports the rest. The one thing it
+ * deletes is a file stored as another kind than its upload was signed for,
+ * and only on the ledger's word.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { cloudinaryLister, inventoryLegacyMedia, MEDIA_REPORTS } from '../../functions/mediaInventory.js'
@@ -63,6 +65,71 @@ describe('inventoryLegacyMedia', () => {
     const before = Object.keys(db.collectionData(MEDIA_ASSETS))
     await inventoryLegacyMedia({ db, list, now: () => NOW })
     expect(Object.keys(db.collectionData(MEDIA_ASSETS))).toEqual(before)
+  })
+})
+
+describe('files stored as another kind than signed', () => {
+  // Cloudinary leaves resource_type out of the signature, so one signature for
+  // a raw file also stores an image and a video under the same id.
+  const ID = `kaydo/fam-1/${'a'.repeat(32)}`
+  const ORPHAN = `kaydo/fam-1/${'b'.repeat(32)}`
+  const signedPages = {
+    'raw:': { resources: [{ public_id: ID, bytes: 10 }] },
+    'image:': { resources: [{ public_id: ID, bytes: 500 }, { public_id: ORPHAN, bytes: 70 }] },
+    'video:': { resources: [{ public_id: ID, bytes: 9000 }] },
+  }
+  const listSigned = async (type, cursor) => signedPages[`${type}:${cursor ?? ''}`]
+  const withEntry = () => fakeAdminFirestore({
+    [`${MEDIA_ASSETS}/${'a'.repeat(32)}`]: { familyId: 'fam-1', publicId: ID, resourceType: 'raw', state: 'attached', refs: ['memories/m1'] },
+  })
+  const destroyAll = () => vi.fn(async (_type, ids) => new Set(ids))
+
+  it('deletes them, and leaves the file the ledger knows', async () => {
+    const db = withEntry()
+    const destroy = destroyAll()
+    const report = await inventoryLegacyMedia({ db, list: listSigned, destroy, dryRun: false, now: () => NOW })
+
+    expect(report).toMatchObject({ misfiled: 2, misfiledBytes: 9500, misfiledDeleted: 2, signedUnknown: 1 })
+    expect(destroy.mock.calls).toEqual([['image', [ID]], ['video', [ID]]])
+    expect(Object.keys(db.collectionData(MEDIA_ASSETS))).toEqual(['a'.repeat(32)])
+  })
+
+  it('only reports them while it is a dry run, or without a way to delete', async () => {
+    const destroy = destroyAll()
+    const dry = await inventoryLegacyMedia({ db: withEntry(), list: listSigned, destroy, now: () => NOW })
+    expect(dry).toMatchObject({ misfiled: 2, misfiledDeleted: 0, misfiledSample: [`image/${ID}`, `video/${ID}`] })
+    expect(destroy).not.toHaveBeenCalled()
+
+    const none = await inventoryLegacyMedia({ db: withEntry(), list: listSigned, dryRun: false, now: () => NOW })
+    expect(none).toMatchObject({ misfiled: 2, misfiledDeleted: 0 })
+  })
+
+  it('deletes nothing the ledger does not know, however the id looks', async () => {
+    // A lost ledger must not turn the inventory into deleting every file.
+    const destroy = destroyAll()
+    const report = await inventoryLegacyMedia({ db: fakeAdminFirestore(), list: listSigned, destroy, dryRun: false, now: () => NOW })
+    expect(report).toMatchObject({ misfiled: 0, signedUnknown: 4 })
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
+  it('does not take an entry for another id as proof', async () => {
+    const db = fakeAdminFirestore({
+      [`${MEDIA_ASSETS}/${'a'.repeat(32)}`]: { familyId: 'fam-2', publicId: `kaydo/fam-2/${'a'.repeat(32)}`, resourceType: 'raw' },
+    })
+    const destroy = destroyAll()
+    const report = await inventoryLegacyMedia({ db, list: listSigned, destroy, dryRun: false, now: () => NOW })
+    expect(report.misfiled).toBe(0)
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
+  it('leaves a refused delete for the next run', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const report = await inventoryLegacyMedia({
+      db: withEntry(), list: listSigned, dryRun: false, now: () => NOW,
+      destroy: vi.fn(async () => { throw new Error('503') }),
+    })
+    error.mockRestore()
+    expect(report).toMatchObject({ misfiled: 2, misfiledDeleted: 0 })
   })
 })
 

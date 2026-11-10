@@ -163,7 +163,7 @@ the top of `functions/index.js`.
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
-| `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger; counts claimed ones, reports the rest, deletes nothing |
+| `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
 | `requestFamilyDeletion`, `cancelFamilyDeletion` | callable, the owner | set and clear the date a family is deleted on, 14 days out |
 | `deleteScheduledFamilies` | schedule, 02:45 Europe/Berlin | deletes the families whose date has come: documents, files, print files, the viewer identity, the owner's account, the family document |
 
@@ -231,6 +231,16 @@ through `services/mediaRefs.js`: the server keeps a ledger of uploaded files
 and cannot read rich text to see which are in use (`docs/plan-media-lifecycle.md`).
 A collection that starts holding media is added to `MEDIA_COLLECTIONS` in
 `functions/mediaRefs.js` as well.
+
+An upload signature covers the file's public id but not its kind: Cloudinary
+leaves `resource_type` out of what is signed. So the signature for one `raw`
+file also lets a tampered browser store an `image` and a `video` under the
+same id, and the ledger knows of one. Those extra files are deleted in two
+places: with the file the ledger knows, when the clean-up or a family's
+deletion removes it (`destroyUnderOtherTypes`), and by the weekly
+`reportLegacyMedia` run, which lists the whole account and deletes a signed id
+found under another kind than its ledger entry names. Until that run, such a
+file does not count against the family's storage.
 
 Build and delivery details that affect many changes:
 

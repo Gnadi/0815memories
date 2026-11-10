@@ -37,6 +37,35 @@ export const DETACHED_GRACE_DAYS = 30
 // Cloudinary's Admin API deletes at most 100 public ids per call.
 export const DESTROY_BATCH = 100
 
+// The kinds of file Cloudinary keeps apart. A public id can exist once under
+// each of them.
+export const RESOURCE_TYPES = ['raw', 'image', 'video']
+
+/**
+ * Destroy the same public ids under the other resource types as well.
+ *
+ * Cloudinary leaves `resource_type` out of what an upload signature covers
+ * (it is part of the address, not a parameter), so the signature for one
+ * `raw` file also lets a browser that was tampered with store an `image` and
+ * a `video` under the same id. The ledger knows of one file. When that one
+ * goes, its entry goes with it, and afterwards nothing would say whose the
+ * other two are — so they go now.
+ *
+ * Best effort: the file the ledger knows is gone by the time this runs, and a
+ * refusal here must not make that look undone. The weekly inventory
+ * (functions/mediaInventory.js) deletes such files too, while their entry is
+ * still there to prove them.
+ */
+export async function destroyUnderOtherTypes(destroy, resourceType, publicIds) {
+  if (publicIds.length === 0) return
+  for (const other of RESOURCE_TYPES) {
+    if (other === resourceType) continue
+    await destroy(other, publicIds).catch((error) => {
+      console.error('[media] could not clear the other resource types of deleted files', error)
+    })
+  }
+}
+
 // Per state and run. What is left over waits for the next day.
 export const PURGE_PAGE = 500
 
@@ -279,6 +308,8 @@ export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
         stats.failed += checked.length
         continue
       }
+
+      await destroyUnderOtherTypes(destroy, resourceType, checked.map((entry) => entry.publicId).filter((id) => gone.has(id)))
 
       for (const entry of checked) {
         if (!gone.has(entry.publicId)) {
