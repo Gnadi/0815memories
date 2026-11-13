@@ -127,7 +127,7 @@
     "heading": "Polaroid-Rahmen",
     "intro": "Passe an, wie diese Erinnerung im Polaroid-Feed aussieht. Jede Erinnerung kann ihren eigenen Rahmen haben.",
     "theme": "Thema",
-    "customHint": "Lade ein kleines Bild hoch, das als Rahmentextur dieser Karte dient. Es füllt die gesamte Rahmenfläche.",
+    "customHint": "Lade ein kleines Bild hoch, das als Rahmentextur dieser Karte dient. Es füllt die gesamte Rahmenfläche. Anders als Fotos und Erinnerungen wird ein eigenes Rahmenbild nicht verschlüsselt gespeichert – lade also nur ein Bild hoch, das auch andere sehen dürfen.",
     "color": "Farbe",
     "borderColorAria": "Rahmenfarbe {{color}}",
     "width": "Breite",

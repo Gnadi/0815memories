@@ -127,7 +127,7 @@
     "heading": "Polaroid border",
     "intro": "Customize how this memory looks in the polaroid feed. Each memory can have its own frame.",
     "theme": "Theme",
-    "customHint": "Upload a small image to use as this card's polaroid frame texture. It fills the entire frame area.",
+    "customHint": "Upload a small image to use as this card's polaroid frame texture. It fills the entire frame area. Unlike photos and memories, a custom frame image is not encrypted, so only upload an image you are happy for others to see.",
     "color": "Color",
     "borderColorAria": "Border color {{color}}",
     "width": "Width",
