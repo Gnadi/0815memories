@@ -82,6 +82,7 @@ describe('sitemap', () => {
     expect(entry).toContain(`hreflang="en" href="${SITE_ORIGIN}/"`)
     expect(entry).toContain(`hreflang="de" href="${SITE_ORIGIN}/de"`)
     expect(entry).toContain(`hreflang="ar" href="${SITE_ORIGIN}/ar"`)
+    expect(entry).toContain(`hreflang="fr" href="${SITE_ORIGIN}/fr"`)
     expect(entry).toContain(`hreflang="x-default" href="${SITE_ORIGIN}/"`)
   })
 
@@ -95,13 +96,14 @@ describe('language of an address', () => {
     expect(pathLanguage('/')).toBeUndefined()
     expect(pathLanguage('/de')).toBe('de')
     expect(pathLanguage('/ar')).toBe('ar')
+    expect(pathLanguage('/fr')).toBe('fr')
     expect(pathLanguage('/terms')).toBeUndefined()
     expect(pathLanguage('/home')).toBeUndefined()
   })
 
   it('has alternates only where there is a second language', () => {
     expect(alternatesFor('/terms')).toEqual([])
-    expect(alternatesFor('/de').map(([lng]) => lng)).toEqual(['en', 'de', 'ar', 'x-default'])
+    expect(alternatesFor('/de').map(([lng]) => lng)).toEqual(['en', 'de', 'ar', 'fr', 'x-default'])
     // Arabic has the landing page only; the feature pages stay in two languages.
     expect(alternatesFor('/family-recipe-book').map(([lng]) => lng)).toEqual(['en', 'de', 'x-default'])
   })
@@ -114,6 +116,7 @@ describe('pre-rendered HTML check', () => {
     <link rel="alternate" hreflang="en" href="https://kaydo.app/">
     <link rel="alternate" hreflang="de" href="https://kaydo.app/de">
     <link rel="alternate" hreflang="ar" href="https://kaydo.app/ar">
+    <link rel="alternate" hreflang="fr" href="https://kaydo.app/fr">
     <link rel="alternate" hreflang="x-default" href="https://kaydo.app/">
     <script type="application/ld+json">${ld}</script>${extra}</head><body><h1>Hi</h1></body></html>`
 

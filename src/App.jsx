@@ -320,6 +320,7 @@ export const routes = [
       // The landing page in German, at an address of its own (LANDING_PATHS).
       { path: 'de', element: <RootRoute lng="de" /> },
       { path: 'ar', element: <RootRoute lng="ar" /> },
+      { path: 'fr', element: <RootRoute lng="fr" /> },
       { path: 'login', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'family/:slug', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },

@@ -33,7 +33,8 @@
     "description": "Wähle die Sprache für die App-Oberfläche.",
     "en": "English",
     "de": "Deutsch",
-    "ar": "العربية"
+    "ar": "العربية",
+    "fr": "Français"
   },
   "textSize": {
     "label": "Schriftgröße",

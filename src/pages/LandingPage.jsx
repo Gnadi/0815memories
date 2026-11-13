@@ -46,7 +46,7 @@ import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '.
 import { generateSlug } from '../utils/familySlug'
 import usePWAInstall from '../hooks/usePWAInstall'
 
-const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR' }
+const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR', fr: 'fr_FR' }
 
 function OctocatIcon({ className }) {
   return (

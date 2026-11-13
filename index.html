@@ -88,7 +88,7 @@
       (function () {
         var builtFor = document.documentElement.getAttribute('data-prerendered')
         var cover = location.pathname !== builtFor
-        if (!cover && (builtFor === '/' || builtFor === '/de' || builtFor === '/ar')) {
+        if (!cover && (builtFor === '/' || builtFor === '/de' || builtFor === '/ar' || builtFor === '/fr')) {
           try {
             cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId') ||
               sessionStorage.getItem('kaydo_demo'))

@@ -33,7 +33,8 @@ function leafKeys(obj, prefix = '') {
 // Languages that translate the public shell only. Every namespace of the
 // signed-in app and the feature pages is therefore allowed to be absent, but
 // the shell's own must all exist.
-const PARTIAL_LANGUAGES = { ar: NAMESPACES.filter((ns) => !EAGER_NAMESPACES.includes(ns)) }
+const SHELL_ONLY = NAMESPACES.filter((ns) => !EAGER_NAMESPACES.includes(ns))
+const PARTIAL_LANGUAGES = { ar: SHELL_ONLY, fr: SHELL_ONLY }
 
 describe('i18n translation completeness', () => {
   it('every namespace has matching key sets across all languages', () => {
@@ -41,7 +42,7 @@ describe('i18n translation completeness', () => {
       const reference = new Set(leafKeys(resources.en[ns]))
       for (const lng of SUPPORTED_LANGUAGES) {
         if (lng === 'en') continue
-        // Arabic covers the public shell only; the rest falls back to English.
+        // Arabic and French cover the public shell only; the rest falls back to English.
         if (!resources[lng][ns]) {
           expect(PARTIAL_LANGUAGES[lng], `${lng}/${ns} is missing`).toContain(ns)
           continue
@@ -87,6 +88,12 @@ describe('language detection', () => {
     localStorage.setItem('kaydo_lang', 'en')
     window.history.replaceState(null, '', '/de')
     expect(i18n.services.languageDetector.detect()[0]).toBe('de')
+  })
+
+  it('opens /fr in French', () => {
+    window.history.replaceState(null, '', '/fr')
+    expect(i18n.services.languageDetector.detect()[0]).toBe('fr')
+    expect(isRtl('fr')).toBe(false)
   })
 
   it('opens /ar in Arabic, right to left', () => {

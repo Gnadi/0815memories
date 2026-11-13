@@ -33,7 +33,8 @@
     "description": "Choose the language for the app interface.",
     "en": "English",
     "de": "Deutsch",
-    "ar": "العربية"
+    "ar": "العربية",
+    "fr": "Français"
   },
   "textSize": {
     "label": "Text size",

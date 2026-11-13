@@ -33,7 +33,8 @@
     "description": "اختر لغة واجهة التطبيق.",
     "en": "English",
     "de": "Deutsch",
-    "ar": "العربية"
+    "ar": "العربية",
+    "fr": "Français"
   },
   "textSize": {
     "label": "حجم النص",
