@@ -421,6 +421,7 @@ describe('the family', () => {
   beforeEach(async () => {
     await fs.setDoc(fs.doc(null, 'families', 'fam-new'), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
     await fs.setDoc(fs.doc(null, 'familyPublic', 'fam-new'), { familySlug: 'the-millers', familyName: 'The Millers' })
+    await fs.setDoc(fs.doc(null, 'familySlugs', 'the-millers'), { familyId: 'fam-new' })
   })
 
   it('finds the families someone is an admin of', async () => {
@@ -430,12 +431,26 @@ describe('the family', () => {
     await expect(findAdminFamilies('uid-nobody')).resolves.toEqual([])
   })
 
-  it('looks an address up in the public copy, and keeps it free for its own family only', async () => {
+  it('looks an address up in the registry and then the public copy, and keeps it free for its own family only', async () => {
     await expect(resolveFamilyBySlug('the-millers')).resolves.toMatchObject({ id: 'fam-new', familyName: 'The Millers' })
     await expect(resolveFamilyBySlug('nobody')).resolves.toBeNull()
     await expect(isSlugAvailable('the-millers')).resolves.toBe(false)
     await expect(isSlugAvailable('the-millers', 'fam-new')).resolves.toBe(true)
     await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
+  })
+
+  it('does not resolve an address whose public copy does not carry it', async () => {
+    // A rename the mirror has not caught up with, or a registry entry whose
+    // family is gone: the login page shows nothing rather than the wrong family.
+    await fs.setDoc(fs.doc(null, 'familySlugs', 'the-smiths'), { familyId: 'fam-new' })
+    await expect(resolveFamilyBySlug('the-smiths')).resolves.toBeNull()
+    await fs.setDoc(fs.doc(null, 'familySlugs', 'ghost'), { familyId: 'fam-gone' })
+    await expect(resolveFamilyBySlug('ghost')).resolves.toBeNull()
+  })
+
+  it('never turns a malformed address into a document path', async () => {
+    await expect(resolveFamilyBySlug('a/b')).resolves.toBeNull()
+    await expect(isSlugAvailable('a/b')).resolves.toBe(false)
   })
 })
 

@@ -71,9 +71,11 @@ startup files from importing Firebase again.
 
 A family is addressed by its slug: `<slug>.kaydo.app` in production and
 `/family/<slug>` anywhere (`src/utils/familySlug.js`). Before sign-in, the
-login page can read only `familyPublic/{familyId}`: the family name and the
+login page can read two documents, each by its id and neither as a list:
+`familySlugs/{slug}`, which names the family holding an address and keeps
+slugs unique, and `familyPublic/{familyId}`, the family name and the
 login-page design, mirrored there by `mirrorFamilyPublic` from a fixed
-allowlist. `familySlugs/{slug}` keeps slugs unique.
+allowlist. Nobody without an account can list the families.
 
 ## Encryption
 

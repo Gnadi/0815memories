@@ -74,26 +74,38 @@ export async function getFamilyPublic(familyId) {
   return snap.exists() ? snap.data() : null
 }
 
+const FAMILY_SLUGS = 'familySlugs'
+
+// What generateSlug() produces. Anything else is not an address, and would not
+// be a valid document id to look up (a slash makes doc() throw).
+const isSlug = (value) => typeof value === 'string' && /^[a-z0-9-]{1,100}$/.test(value)
+
 /**
  * Look up a family by its slug.
  *
- * Reads `familyPublic`, not `families`. The two carry the same slug, but only
- * `familyPublic` is world-readable — and it is written by a Cloud Function from
- * a fixed allowlist, so it cannot carry the encryption key or the password hash
- * however the private document grows. Callers here are unauthenticated by
- * definition: this is the login page and the signup form.
+ * Two single-document reads, because familyPublic cannot be listed: the
+ * registry `familySlugs/{slug}` names the family holding the address, and
+ * `familyPublic/{familyId}` is its public face. A query on familyPublic would
+ * hand every login-page visitor the whole customer directory. The public copy
+ * is world-readable and written by a Cloud Function from a fixed allowlist, so
+ * it cannot carry the encryption key or the password hash however the private
+ * document grows. Callers here are unauthenticated by definition: this is the
+ * login page and the signup form.
  *
  * Returns { id, ...publicFields } or null.
  */
 export async function resolveFamilyBySlug(slug) {
-  if (!db || !slug) return null
+  if (!db || !isSlug(slug)) return null
 
-  const q = query(collection(db, FAMILY_PUBLIC), where('familySlug', '==', slug))
-  const snapshot = await getDocs(q)
+  const claim = await getDoc(doc(db, FAMILY_SLUGS, slug))
+  const familyId = claim.exists() ? claim.data().familyId : null
+  if (!familyId) return null
 
-  if (snapshot.empty) return null
+  const found = await getDoc(doc(db, FAMILY_PUBLIC, familyId))
+  // The mirror moves a moment after the registry on a rename; a copy that does
+  // not carry the address yet is not this family's login page.
+  if (!found.exists() || found.data().familySlug !== slug) return null
 
-  const [found] = snapshot.docs
   return { id: found.id, ...found.data() }
 }
 
@@ -101,20 +113,16 @@ export async function resolveFamilyBySlug(slug) {
  * Check if a slug is available (not already taken by another family).
  *
  * Runs during signup, before the account exists, so it has to work without a
- * token — hence `familyPublic` again.
+ * token — hence the registry, which is readable by address. A family from
+ * before the registry is not in it until its next write, so this can say
+ * "free" for such an address; the mirror function refuses the claim then.
  */
 export async function isSlugAvailable(slug, excludeFamilyId = null) {
-  if (!db || !slug) return false
+  if (!db || !isSlug(slug)) return false
 
-  const q = query(collection(db, FAMILY_PUBLIC), where('familySlug', '==', slug))
-  const snapshot = await getDocs(q)
+  const claim = await getDoc(doc(db, FAMILY_SLUGS, slug))
+  if (!claim.exists()) return true
 
-  if (snapshot.empty) return true
-
-  // If we're excluding a specific family (for edits), check if the match is that family
-  if (excludeFamilyId) {
-    return snapshot.docs.every((d) => d.id === excludeFamilyId)
-  }
-
-  return false
+  // If we're excluding a specific family (for edits), check if the claim is that family's
+  return Boolean(excludeFamilyId) && claim.data().familyId === excludeFamilyId
 }

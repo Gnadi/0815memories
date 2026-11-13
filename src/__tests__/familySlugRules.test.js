@@ -13,8 +13,8 @@
  * (Skipped by default — `npm test` stays emulator-free.)
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
@@ -114,10 +114,40 @@ describe.skipIf(!EMULATOR)('family slugs', () => {
     })
   })
 
-  it('is out of reach for clients', async () => {
+  describe('the lookup the login page makes', () => {
+    beforeEach(async () => {
+      await claimFamilySlug(db, 'fam-a', 'the-millers')
+      await claimFamilySlug(db, 'fam-b', 'the-smiths')
+      await db.doc('familyPublic/fam-a').set({ familySlug: 'the-millers', familyName: 'The Millers' })
+      await db.doc('familyPublic/fam-b').set({ familySlug: 'the-smiths', familyName: 'The Smiths' })
+    })
+
+    it('finds a family by address without an account: registry first, then its public copy', async () => {
+      const anon = testEnv.unauthenticatedContext().firestore()
+      const claim = await assertSucceeds(getDoc(doc(anon, SLUGS, 'the-millers')))
+      expect(claim.data().familyId).toBe('fam-a')
+      const found = await assertSucceeds(getDoc(doc(anon, 'familyPublic', claim.data().familyId)))
+      expect(found.data().familyName).toBe('The Millers')
+    })
+
+    it('cannot list the families of the project', async () => {
+      const anon = testEnv.unauthenticatedContext().firestore()
+      await assertFails(getDocs(collection(anon, 'familyPublic')))
+      await assertFails(getDocs(query(collection(anon, 'familyPublic'), where('familySlug', '==', 'the-millers'))))
+      await assertFails(getDocs(collection(anon, SLUGS)))
+      // Signing in does not change that.
+      const member = testEnv.authenticatedContext('uid-a', { familyId: 'fam-a', role: 'admin' }).firestore()
+      await assertFails(getDocs(collection(member, 'familyPublic')))
+      await assertFails(getDocs(collection(member, SLUGS)))
+    })
+  })
+
+  it('is read-only for clients', async () => {
     await claimFamilySlug(db, 'fam-a', 'the-millers')
     const client = testEnv.authenticatedContext('uid-a', { familyId: 'fam-a', role: 'admin' }).firestore()
-    await assertFails(getDoc(doc(client, SLUGS, 'the-millers')))
+    await assertSucceeds(getDoc(doc(client, SLUGS, 'the-millers')))
     await assertFails(setDoc(doc(client, SLUGS, 'the-smiths'), { familyId: 'fam-a' }))
+    await assertFails(setDoc(doc(client, SLUGS, 'the-millers'), { familyId: 'fam-z' }))
+    await assertFails(setDoc(doc(client, 'familyPublic', 'fam-a'), { familySlug: 'the-millers', familyName: 'Hijacked' }))
   })
 })

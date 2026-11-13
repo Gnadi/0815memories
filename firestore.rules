@@ -237,16 +237,22 @@ service cloud.firestore {
     // authenticated, and nothing else. Written only by the mirrorFamilyPublic
     // trigger from a fixed allowlist, so a field added to `families` later
     // cannot surface here by accident.
+    //
+    // Readable by id, never listable: a list would hand anyone without an
+    // account the name and address of every family in the project. The login
+    // page finds the id through familySlugs below.
     match /familyPublic/{familyId} {
-      allow read: if true;
-      allow write: if false;
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // Who owns which family address (`<slug>.kaydo.app`). Kept by the same
-    // trigger through the Admin SDK — see functions/slugs.js. Clients only ever
-    // see the result, as familyPublic.familySlug.
+    // trigger through the Admin SDK — see functions/slugs.js. An address is
+    // public by nature (it is a hostname), so looking one up by name is open;
+    // the registry cannot be enumerated.
     match /familySlugs/{slug} {
-      allow read, write: if false;
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // Every file uploaded to Cloudinary: which family and admin it belongs to,
@@ -282,6 +288,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The id is the credential, so the rules insist on what generateInviteToken
+    // (src/utils/inviteToken.js) produces: 32 random bytes as 43 URL-safe
+    // characters. Without that, an admin session could leave behind an invite
+    // called `a` that anyone can guess; the lifetime cap (the client asks for
+    // seven days) keeps one from outliving the admin who made it.
+    function inviteIdWellFormed(slotId) {
+      return slotId.size() >= 32 && slotId.size() <= 128 && slotId.matches('^[A-Za-z0-9_-]+$');
+    }
+
     // Invites subcollection — one-time tokens that grant family-admin status
     // when redeemed. Possessing the slotId (doc ID) is the credential.
     //
@@ -303,6 +318,11 @@ service cloud.firestore {
                     && request.resource.data.used == false
                     && request.resource.data.redeemedBy == null
                     && request.resource.data.expiresAt is timestamp
+                    && inviteIdWellFormed(slotId)
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.expiresAt <= request.time + duration.value(14, 'd')
+                    && request.resource.data.keys().hasOnly(['createdBy', 'used', 'redeemedBy', 'redeemedAt',
+                                                             'epoch', 'createdAt', 'expiresAt'])
                     && request.resource.data.get('epoch', 0)
                         == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0);
       // Redeeming is the redeemFamilyInvite function's, in the transaction
@@ -1013,7 +1033,11 @@ service cloud.firestore {
                         || request.time >= resource.data.openAt);
     }
 
-    function tokenWellFormed() {
+    // The id must be the token's SHA-256 in lowercase hex, as notifications.js
+    // derives it: a member cannot fill the collection with documents under ids
+    // of their choosing, and the supported languages are the only ones the
+    // functions have texts for (SUPPORTED_LANGUAGES in src/i18n/index.js).
+    function tokenWellFormed(tokenId) {
       let d = request.resource.data;
       return request.auth != null
         && d.keys().hasOnly(['familyId', 'token', 'lang', 'uid', 'updatedAt'])
@@ -1021,7 +1045,9 @@ service cloud.firestore {
         && d.uid == request.auth.uid
         && d.token is string
         && d.token.size() > 0
-        && d.token.size() < 4096;
+        && d.token.size() < 4096
+        && tokenId == hashing.sha256(d.token).toHexString().lower()
+        && d.get('lang', 'de') in ['en', 'de'];
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.
@@ -1038,11 +1064,11 @@ service cloud.firestore {
       // The fields src/services/pushTokens.js writes, and nothing else. `uid`
       // is the signed-in caller, which the triggers use to skip the device that
       // created a memory.
-      allow create: if tokenWellFormed()
+      allow create: if tokenWellFormed(tokenId)
                     && isFamilyMember(request.resource.data.familyId);
       // An existing document is only touched by its own family, and does not
       // move to another one.
-      allow update: if tokenWellFormed()
+      allow update: if tokenWellFormed(tokenId)
                     && isFamilyMember(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId;
       // A device unsubscribing on logout. Scoped to the family, so no one can

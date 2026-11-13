@@ -50,6 +50,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
@@ -63,6 +64,11 @@ const VIEWER = `viewer:${FAMILY}`
 const OTHER_VIEWER = `viewer:${OTHER_FAMILY}`
 
 let testEnv
+
+// The id notifications.js gives a device's document: the token's SHA-256, hex.
+const tokenId = (token) => createHash('sha256').update(token).digest('hex')
+// What generateInviteToken writes: 43 URL-safe characters.
+const INVITE_ID = 'A'.repeat(43)
 
 /** A signed-in context carrying the claims the Cloud Functions mint. */
 const asViewer = (uid, familyId) =>
@@ -121,6 +127,8 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
         familySlug: 'the-millers',
         loginPageMode: 'classic',
       })
+      // …and the registry entry it keeps for the address.
+      await setDoc(doc(db, 'familySlugs', 'the-millers'), { familyId: FAMILY })
 
       await setDoc(doc(db, 'families', FAMILY, 'secrets', 'auth'), {
         sharedPassword: '$2a$10$notarealhash',
@@ -183,13 +191,19 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
   // ── 2. The login page ─────────────────────────────────────────────────────
 
   describe('the login page, before anyone signs in', () => {
-    it('resolves a family by slug through familyPublic', async () => {
-      const snap = await assertSucceeds(
-        getDocs(
-          query(collection(asStranger(), 'familyPublic'), where('familySlug', '==', 'the-millers')),
-        ),
+    it('resolves a family by slug through the registry and familyPublic, document by document', async () => {
+      const claim = await assertSucceeds(getDoc(doc(asStranger(), 'familySlugs', 'the-millers')))
+      expect(claim.data().familyId).toBe(FAMILY)
+      const snap = await assertSucceeds(getDoc(doc(asStranger(), 'familyPublic', claim.data().familyId)))
+      expect(snap.data().familySlug).toBe('the-millers')
+    })
+
+    it('cannot list the families, with or without a filter', async () => {
+      await assertFails(getDocs(collection(asStranger(), 'familyPublic')))
+      await assertFails(
+        getDocs(query(collection(asStranger(), 'familyPublic'), where('familySlug', '==', 'the-millers'))),
       )
-      expect(snap.docs[0].id).toBe(FAMILY)
+      await assertFails(getDocs(collection(asStranger(), 'familySlugs')))
     })
 
     it('finds no secret there to read', async () => {
@@ -250,7 +264,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
     it('may register their own device for push', async () => {
       await assertSucceeds(
-        setDoc(doc(asViewer(VIEWER, FAMILY), 'fcmTokens', 'token-hash-viewer'), {
+        setDoc(doc(asViewer(VIEWER, FAMILY), 'fcmTokens', tokenId('fcm-token-viewer')), {
           familyId: FAMILY,
           token: 'fcm-token-viewer',
           uid: VIEWER,
@@ -365,7 +379,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
   describe('push tokens', () => {
     it('are written by an admin of the family', async () => {
       await assertSucceeds(
-        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin'), {
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', tokenId('fcm-token-admin')), {
           familyId: FAMILY,
           token: 'fcm-token-admin',
           uid: ADMIN,
@@ -377,7 +391,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       // They used to be: the rule asked only for a well-formed shape, because
       // viewers had no identity to check. They have one now.
       await assertFails(
-        setDoc(doc(asStranger(), 'fcmTokens', 'token-hash-stranger'), {
+        setDoc(doc(asStranger(), 'fcmTokens', tokenId('fcm-token-stranger')), {
           familyId: FAMILY,
           token: 'fcm-token-stranger',
           uid: 'anyone',
@@ -387,7 +401,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
     it('cannot be registered for someone else\'s family', async () => {
       await assertFails(
-        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-x'), {
+        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', tokenId('fcm-token-x')), {
           familyId: FAMILY,
           token: 'fcm-token-x',
           uid: OTHER_VIEWER,
@@ -398,33 +412,56 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     it('are never readable by a client', async () => {
       // The whole reason the document id is derived from the token: the client
       // cannot look one up, so it must be able to compute where to write.
-      await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-admin')))
+      await assertFails(getDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', tokenId('fcm-token-admin'))))
     })
 
     it('carry the writer’s own uid and only the fields the client writes', async () => {
-      const ref = (db) => doc(db, 'fcmTokens', 'token-hash-shape')
+      const admin = asAdmin(ADMIN, FAMILY)
       const base = { familyId: FAMILY, token: 'fcm-token-shape', lang: 'de', uid: ADMIN }
-      await assertSucceeds(setDoc(ref(asAdmin(ADMIN, FAMILY)), { ...base, updatedAt: new Date() }))
-      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s2'), { ...base, uid: 'someone-else' }))
-      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s3'), { familyId: FAMILY, token: 'fcm-token-shape' }))
-      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s4'), { ...base, extra: 'x' }))
-      await assertFails(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-s5'), { ...base, token: 'x'.repeat(4096) }))
+      const ref = (data) => doc(admin, 'fcmTokens', tokenId(data.token))
+      await assertSucceeds(setDoc(ref(base), { ...base, updatedAt: new Date() }))
+      await assertFails(setDoc(ref(base), { ...base, uid: 'someone-else' }))
+      await assertFails(setDoc(ref(base), { familyId: FAMILY, token: base.token }))
+      await assertFails(setDoc(ref(base), { ...base, extra: 'x' }))
+      const long = { ...base, token: 'x'.repeat(4096) }
+      await assertFails(setDoc(ref(long), long))
+    })
+
+    it('live under the hash of their token, whatever the writer would like to call them', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      const base = { familyId: FAMILY, token: 'fcm-token-id', uid: ADMIN }
+      await assertSucceeds(setDoc(doc(admin, 'fcmTokens', tokenId(base.token)), base))
+      await assertFails(setDoc(doc(admin, 'fcmTokens', 'token-hash-chosen'), base))
+      // Not the hash of some other token either, nor its uppercase spelling.
+      await assertFails(setDoc(doc(admin, 'fcmTokens', tokenId('another-token')), base))
+      await assertFails(setDoc(doc(admin, 'fcmTokens', tokenId(base.token).toUpperCase()), base))
+    })
+
+    it('are written in a language the notifications exist in', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      const base = { familyId: FAMILY, token: 'fcm-token-lang', uid: ADMIN }
+      const ref = doc(admin, 'fcmTokens', tokenId(base.token))
+      await assertFails(setDoc(ref, { ...base, lang: 'x'.repeat(100_000) }))
+      await assertFails(setDoc(ref, { ...base, lang: 'fr' }))
+      await assertSucceeds(setDoc(ref, { ...base, lang: 'en' }))
+      await assertSucceeds(setDoc(ref, { ...base, lang: 'de' }))
     })
 
     it('stay with the family that registered them', async () => {
       const base = { familyId: FAMILY, token: 'fcm-token-own', uid: ADMIN }
-      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), base))
+      const id = tokenId(base.token)
+      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', id), base))
       // Another family cannot overwrite the document, nor move it to theirs.
       await assertFails(
-        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', 'token-hash-own'), {
-          familyId: OTHER_FAMILY, token: 'fcm-token-own', uid: OTHER_VIEWER,
+        setDoc(doc(asViewer(OTHER_VIEWER, OTHER_FAMILY), 'fcmTokens', id), {
+          familyId: OTHER_FAMILY, token: base.token, uid: OTHER_VIEWER,
         }),
       )
       await assertFails(
-        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), { ...base, familyId: OTHER_FAMILY }),
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', id), { ...base, familyId: OTHER_FAMILY }),
       )
       // The owner may refresh it.
-      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', 'token-hash-own'), { ...base, lang: 'en' }))
+      await assertSucceeds(setDoc(doc(asAdmin(ADMIN, FAMILY), 'fcmTokens', id), { ...base, lang: 'en' }))
     })
 
     it('are deleted by their own family on logout', async () => {
@@ -547,14 +584,14 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
 
     it('is for the family\'s current epoch and no other', async () => {
       const admin = asAdmin(ADMIN, FAMILY)
-      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'future'), inviteData({ epoch: 1 })))
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', INVITE_ID + 'f'), inviteData({ epoch: 1 })))
       // What a removal does, through the Admin SDK.
       await testEnv.withSecurityRulesDisabled((ctx) =>
         updateDoc(doc(ctx.firestore(), 'families', FAMILY), { inviteEpoch: 1 }),
       )
-      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'past'), inviteData({ epoch: 0 })))
-      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', 'unstamped'), inviteData()))
-      await assertSucceeds(setDoc(doc(admin, 'families', FAMILY, 'invites', 'current'), inviteData({ epoch: 1 })))
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', INVITE_ID + 'p'), inviteData({ epoch: 0 })))
+      await assertFails(setDoc(doc(admin, 'families', FAMILY, 'invites', INVITE_ID + 'u'), inviteData()))
+      await assertSucceeds(setDoc(doc(admin, 'families', FAMILY, 'invites', INVITE_ID + 'c'), inviteData({ epoch: 1 })))
     })
 
     it('can be taken back by an admin', async () => {
@@ -566,7 +603,7 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       // an hour. Minting or listing invites would turn that into a way back in.
       const stale = asAdmin('uid-removed', FAMILY)
       await assertFails(
-        setDoc(doc(stale, 'families', FAMILY, 'invites', 'fresh-token'), {
+        setDoc(doc(stale, 'families', FAMILY, 'invites', INVITE_ID), {
           createdBy: 'uid-removed',
           used: false,
           redeemedBy: null,
@@ -576,9 +613,40 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(getDocs(collection(stale, 'families', FAMILY, 'invites')))
     })
 
+    it('needs an id as long and random-looking as the client\'s tokens', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      const mint = (id) => setDoc(doc(admin, 'families', FAMILY, 'invites', id), inviteData({ epoch: 0 }))
+      // The backdoor an admin session could leave behind: an id anyone can guess.
+      await assertFails(mint('a'))
+      await assertFails(mint('A'.repeat(31)))
+      await assertFails(mint('A'.repeat(31) + '.'))
+      await assertFails(mint('A'.repeat(200)))
+      await assertSucceeds(mint('A'.repeat(32)))
+    })
+
+    it('cannot outlive the week or two the client asks for', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      const days = (n) => Timestamp.fromDate(new Date(Date.now() + n * 86_400_000))
+      const mint = (suffix, expiresAt) =>
+        setDoc(doc(admin, 'families', FAMILY, 'invites', INVITE_ID + suffix), inviteData({ epoch: 0, expiresAt }))
+      await assertFails(mint('a', days(365_000)))
+      await assertFails(mint('b', days(15)))
+      await assertFails(mint('c', days(-1)))
+      await assertSucceeds(mint('d', days(7)))
+    })
+
+    it('carries the fields the client writes and no others', async () => {
+      const admin = asAdmin(ADMIN, FAMILY)
+      const ref = doc(admin, 'families', FAMILY, 'invites', INVITE_ID)
+      await assertFails(setDoc(ref, inviteData({ epoch: 0, role: 'owner' })))
+      await assertSucceeds(
+        setDoc(ref, inviteData({ epoch: 0, createdAt: new Date(), redeemedAt: null })),
+      )
+    })
+
     it('can still be minted by a current admin', async () => {
       await assertSucceeds(
-        setDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', 'fresh-token'), {
+        setDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY, 'invites', INVITE_ID), {
           createdBy: ADMIN,
           used: false,
           redeemedBy: null,
