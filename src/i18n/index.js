@@ -30,6 +30,10 @@ import deCommon from '../locales/de/common.json'
 import deLanding from '../locales/de/landing.json'
 import deAuth from '../locales/de/auth.json'
 
+import arCommon from '../locales/ar/common.json'
+import arLanding from '../locales/ar/landing.json'
+import arAuth from '../locales/ar/auth.json'
+
 // Loaded before first paint: the public pages and the globally mounted chrome
 // (bottom nav, install/notification prompts, error screen) use only these.
 export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
@@ -45,7 +49,13 @@ export const LAZY_NAMESPACES = [
 export const PAGE_NAMESPACES = ['features']
 
 export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES, ...PAGE_NAMESPACES]
-export const SUPPORTED_LANGUAGES = ['en', 'de']
+export const SUPPORTED_LANGUAGES = ['en', 'de', 'ar']
+
+// Languages written right to left. Only the public shell (landing page and
+// sign-in) is translated into Arabic so far; the signed-in app and the feature
+// pages fall back to English until their namespaces exist (fallbackLng below).
+export const RTL_LANGUAGES = ['ar']
+export const isRtl = (lng) => RTL_LANGUAGES.includes((lng || '').split('-')[0])
 
 // The landing page's address in each language. Crawlers detect no language,
 // and most of them run no JavaScript, so a language reaches them only at an
@@ -70,6 +80,7 @@ languageDetector.addDetector(landingPath)
 export const resources = {
   en: { common: enCommon, landing: enLanding, auth: enAuth },
   de: { common: deCommon, landing: deLanding, auth: deAuth },
+  ar: { common: arCommon, landing: arLanding, auth: arAuth },
 }
 
 let appTranslationsPromise = null
@@ -84,6 +95,8 @@ export function ensureAppTranslations() {
       .then(({ default: bundles }) => {
         for (const lng of SUPPORTED_LANGUAGES) {
           for (const ns of LAZY_NAMESPACES) {
+            // A language may cover only part of the app; the rest comes from English.
+            if (!bundles[lng]?.[ns]) continue
             i18n.addResourceBundle(lng, ns, bundles[lng][ns], true, true)
           }
         }

@@ -320,7 +320,7 @@ function SignupForm({
         </div>
         {slugPreview && (
           <p className="text-xs text-bark-muted mt-1.5">
-            {t('signup.form.familyUrl')} <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
+            {t('signup.form.familyUrl')} <span dir="ltr" className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
           </p>
         )}
       </div>
@@ -454,7 +454,7 @@ function FamilyStep({ familyName, setFamilyName, slugPreview, error, loading, ha
         </div>
         {slugPreview && (
           <p className="text-xs text-bark-muted mt-1.5">
-            {t('signup.form.familyUrl')} <span className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
+            {t('signup.form.familyUrl')} <span dir="ltr" className="font-medium text-kaydo">{window.location.origin}/family/{slugPreview}</span>
           </p>
         )}
       </div>

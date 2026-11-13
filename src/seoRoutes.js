@@ -43,7 +43,7 @@ export const FEATURE_PAGES = [
 ]
 
 // The landing page's addresses. src/i18n re-exports them as LANDING_PATHS.
-export const LANDING_PAGE_PATHS = { en: '/', de: '/de' }
+export const LANDING_PAGE_PATHS = { en: '/', de: '/de', ar: '/ar' }
 
 // The legal pages exist at one address each, in the visitor's language.
 export const SINGLE_LANGUAGE_PATHS = ['/terms', '/privacy-policy', '/contact', '/safety']

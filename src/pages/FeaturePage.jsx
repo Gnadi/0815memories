@@ -41,7 +41,9 @@ export default function FeaturePage({ id, lng }) {
   // choice on into the app, as on the landing page.
   const showLanguage = (next) => {
     i18n.changeLanguage(next)
-    if (page.paths[next] !== path) navigate(page.paths[next])
+    // A language without this page, like Arabic, goes to its landing page.
+    const target = page.paths[next] ?? LANDING_PATHS[next]
+    if (target !== path) navigate(target)
   }
 
   return (

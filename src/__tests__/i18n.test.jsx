@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import i18n, { NAMESPACES, EAGER_NAMESPACES, PAGE_NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
+import i18n, { NAMESPACES, EAGER_NAMESPACES, PAGE_NAMESPACES, SUPPORTED_LANGUAGES, isRtl } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 // Read the locale files straight from disk rather than through the i18n module:
@@ -30,12 +30,22 @@ function leafKeys(obj, prefix = '') {
   return out
 }
 
+// Languages that translate the public shell only. Every namespace of the
+// signed-in app and the feature pages is therefore allowed to be absent, but
+// the shell's own must all exist.
+const PARTIAL_LANGUAGES = { ar: NAMESPACES.filter((ns) => !EAGER_NAMESPACES.includes(ns)) }
+
 describe('i18n translation completeness', () => {
   it('every namespace has matching key sets across all languages', () => {
     for (const ns of NAMESPACES) {
       const reference = new Set(leafKeys(resources.en[ns]))
       for (const lng of SUPPORTED_LANGUAGES) {
         if (lng === 'en') continue
+        // Arabic covers the public shell only; the rest falls back to English.
+        if (!resources[lng][ns]) {
+          expect(PARTIAL_LANGUAGES[lng], `${lng}/${ns} is missing`).toContain(ns)
+          continue
+        }
         const keys = new Set(leafKeys(resources[lng][ns]))
         const missing = [...reference].filter((k) => !keys.has(k))
         const extra = [...keys].filter((k) => !reference.has(k))
@@ -77,6 +87,14 @@ describe('language detection', () => {
     localStorage.setItem('kaydo_lang', 'en')
     window.history.replaceState(null, '', '/de')
     expect(i18n.services.languageDetector.detect()[0]).toBe('de')
+  })
+
+  it('opens /ar in Arabic, right to left', () => {
+    window.history.replaceState(null, '', '/ar')
+    expect(i18n.services.languageDetector.detect()[0]).toBe('ar')
+    expect(isRtl('ar')).toBe(true)
+    expect(isRtl('ar-MA')).toBe(true)
+    expect(isRtl('de')).toBe(false)
   })
 
   it('leaves the language of every other address to the visitor', () => {

@@ -19,6 +19,7 @@
     { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
     { "source": "/.well-known/(.*)", "destination": "/.well-known/$1" },
     { "source": "/de", "destination": "/de.html" },
+    { "source": "/ar", "destination": "/ar.html" },
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
     { "source": "/contact", "destination": "/contact.html" },

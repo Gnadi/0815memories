@@ -245,7 +245,7 @@ file does not count against the family's storage.
 Build and delivery details that affect many changes:
 
 - **Pre-rendering.** `vite-react-ssg` renders the landing page to static
-  HTML at build time, at `/` in English and at `/de` in German
+  HTML at build time, at `/` in English, at `/de` in German and at `/ar` in Arabic (right to left; only the landing page and sign-in are translated, the rest of the app falls back to English)
   (`LANDING_PATHS` in `src/i18n/`): crawlers detect no language, so each
   language needs an address of its own. Anything on the public routes must
   render in Node, without `window`. The signed-in app is client-only and
