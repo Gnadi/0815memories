@@ -67,6 +67,14 @@ depend only on them will be closed with a pointer here:
 - The login page's design (`familyPublic/{familyId}`) is public by design:
   it has to render before anyone is signed in.
 - App feedback is stored unencrypted on purpose; the form says so.
+- Moments (the short photo entries) store their caption, place, category and
+  label unencrypted in Firestore, and so does a child's birth date. The images
+  themselves and the rest of the content are encrypted.
+- Access to media that was already uploaded cannot be taken away from a former
+  member who kept the family key and the addresses of the files. The key is not
+  rotated, and the encrypted files can be fetched without signing in, by their
+  address, which cannot be guessed. Changing a password or removing an admin
+  locks Firestore, not these files.
 
 ## Supported versions
 
