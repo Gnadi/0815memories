@@ -56,7 +56,10 @@ A few rules the codebase depends on:
 
 - **Every user-facing string goes through i18next, in English and German.**
   Strings live in `src/locales/{en,de}/<namespace>.json`, and a test fails
-  when the two languages have different keys. A new namespace must also be
+  when the two languages have different keys. Arabic (`src/locales/ar/`,
+  right to left) and French (`src/locales/fr/`) cover the public shell only — `common`, `landing` and `auth`
+  — and must match English key for key there; their other namespaces may be
+  absent, and the app then shows English. A new namespace must also be
   registered as eager or lazy in `src/i18n/` — `src/i18n/index.js` explains
   which is which. If you don't speak German, add the English text in both
   files and say so in the pull request; someone will translate it.

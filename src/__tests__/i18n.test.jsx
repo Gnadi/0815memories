@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import i18n, { NAMESPACES, EAGER_NAMESPACES, PAGE_NAMESPACES, SUPPORTED_LANGUAGES } from '../i18n'
+import i18n, { NAMESPACES, EAGER_NAMESPACES, PAGE_NAMESPACES, SUPPORTED_LANGUAGES, isRtl } from '../i18n'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 
 // Read the locale files straight from disk rather than through the i18n module:
@@ -30,12 +30,23 @@ function leafKeys(obj, prefix = '') {
   return out
 }
 
+// Languages that translate the public shell only. Every namespace of the
+// signed-in app and the feature pages is therefore allowed to be absent, but
+// the shell's own must all exist.
+const SHELL_ONLY = NAMESPACES.filter((ns) => !EAGER_NAMESPACES.includes(ns))
+const PARTIAL_LANGUAGES = { ar: SHELL_ONLY, fr: SHELL_ONLY }
+
 describe('i18n translation completeness', () => {
   it('every namespace has matching key sets across all languages', () => {
     for (const ns of NAMESPACES) {
       const reference = new Set(leafKeys(resources.en[ns]))
       for (const lng of SUPPORTED_LANGUAGES) {
         if (lng === 'en') continue
+        // Arabic and French cover the public shell only; the rest falls back to English.
+        if (!resources[lng][ns]) {
+          expect(PARTIAL_LANGUAGES[lng], `${lng}/${ns} is missing`).toContain(ns)
+          continue
+        }
         const keys = new Set(leafKeys(resources[lng][ns]))
         const missing = [...reference].filter((k) => !keys.has(k))
         const extra = [...keys].filter((k) => !reference.has(k))
@@ -79,6 +90,20 @@ describe('language detection', () => {
     expect(i18n.services.languageDetector.detect()[0]).toBe('de')
   })
 
+  it('opens /fr in French', () => {
+    window.history.replaceState(null, '', '/fr')
+    expect(i18n.services.languageDetector.detect()[0]).toBe('fr')
+    expect(isRtl('fr')).toBe(false)
+  })
+
+  it('opens /ar in Arabic, right to left', () => {
+    window.history.replaceState(null, '', '/ar')
+    expect(i18n.services.languageDetector.detect()[0]).toBe('ar')
+    expect(isRtl('ar')).toBe(true)
+    expect(isRtl('ar-MA')).toBe(true)
+    expect(isRtl('de')).toBe(false)
+  })
+
   it('leaves the language of every other address to the visitor', () => {
     for (const path of ['/', '/demo', '/login']) {
       window.history.replaceState(null, '', path)
@@ -95,9 +120,10 @@ describe('LanguageSwitcher', () => {
 
   it('switches the active language and persists the choice', () => {
     render(<LanguageSwitcher variant="sidebar" />)
-    // Both language options are rendered as buttons.
-    const german = screen.getByRole('button', { name: 'Deutsch' })
-    fireEvent.click(german)
+    // The languages are the options of one dropdown, each in its own language.
+    const select = screen.getByRole('combobox', { name: 'Language' })
+    expect([...select.options].map((o) => o.text)).toEqual(['English', 'Deutsch', 'العربية', 'Français'])
+    fireEvent.change(select, { target: { value: 'de' } })
     expect(i18n.language.split('-')[0]).toBe('de')
     expect(localStorage.getItem('kaydo_lang')).toBe('de')
   })

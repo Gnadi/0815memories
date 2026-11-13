@@ -1,0 +1,126 @@
+{
+  "brand": {
+    "livingRoom": "Le Salon",
+    "privateSpace": "Notre espace privé"
+  },
+  "nav": {
+    "home": "Accueil",
+    "timeline": "Chronologie",
+    "scrapbooks": "Albums scrapbook",
+    "recipes": "Recettes",
+    "kidJournals": "Journaux d'enfants",
+    "blackBox": "Boîte noire",
+    "ourYear": "Notre année",
+    "settings": "Paramètres",
+    "collages": "Collages",
+    "highlights": "Vidéos souvenirs"
+  },
+  "buttons": {
+    "postMemory": "Publier un souvenir",
+    "leaveRoom": "Quitter le salon",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "confirm": "Confirmer",
+    "loading": "Chargement…"
+  },
+  "language": {
+    "label": "Langue",
+    "description": "Choisissez la langue de l'interface de l'application.",
+    "en": "English",
+    "de": "Deutsch",
+    "ar": "العربية",
+    "fr": "Français"
+  },
+  "textSize": {
+    "label": "Taille du texte",
+    "description": "Agrandissez ou réduisez le texte. Cela ne change que cet appareil.",
+    "adjust": "Ajuster la taille du texte",
+    "percent": "{{value}} %"
+  },
+  "errorScreen": {
+    "updating": "Mise à jour vers la dernière version…",
+    "title": "Une erreur s'est produite",
+    "message": "Une erreur inattendue est survenue. Recharger la page la résout généralement — vos souvenirs sont en sécurité.",
+    "reload": "Recharger la page"
+  },
+  "familyKey": {
+    "title": "Impossible d'ouvrir votre famille",
+    "missing": "Cette famille n'a pas de clé de chiffrement, et Kaydo n'ouvre que les familles chiffrées.",
+    "unreadable": "Ce navigateur ne peut pas charger la clé de chiffrement de votre famille. Essayez un navigateur à jour.",
+    "unavailable": "Votre famille n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
+    "signOut": "Se déconnecter"
+  },
+  "actions": {
+    "dismiss": "Fermer",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "familyIllustrationAlt": "Illustration d'une réunion de famille"
+  },
+  "unreadable": {
+    "notice_one": "Une entrée n'a pas pu être déchiffrée avec la clé de votre famille. Elle s'affiche sans le texte concerné.",
+    "notice_other": "{{count}} entrées n'ont pas pu être déchiffrées avec la clé de votre famille. Elles s'affichent sans le texte concerné.",
+    "content": "Ce contenu n'a pas pu être déchiffré.",
+    "title": "Entrée illisible"
+  },
+  "mobileNav": {
+    "home": "Accueil",
+    "journal": "Journal",
+    "blackBox": "BlackBox",
+    "scrapbooks": "Scrapbooks",
+    "create": "Créer"
+  },
+  "createSheet": {
+    "title": "Que souhaitez-vous créer ?",
+    "postMemory": "Publier un souvenir",
+    "postMemoryDesc": "Partagez photos, histoires, vidéos et notes vocales",
+    "createScrapbook": "Créer un scrapbook",
+    "createScrapbookDesc": "Composez de belles pages de souvenirs avec photos et autocollants",
+    "defaultScrapbookTitle": "Mon scrapbook",
+    "notAuthenticated": "Non connecté — veuillez recharger l'application.",
+    "createError": "Impossible de créer le scrapbook. Veuillez réessayer.",
+    "ourYearChapter": "Notre année",
+    "ourYearChapterDesc": "Un regard partagé sur le passé, en couple — rien que pour vous deux",
+    "createCollage": "Créer un collage",
+    "createCollageDesc": "Choisissez un modèle et remplissez-le avec vos photos",
+    "createHighlight": "Vidéo souvenirs",
+    "createHighlightDesc": "Transformez une année, une saison ou un voyage en un court film"
+  },
+  "pwa": {
+    "dialogLabel": "Installer Kaydo",
+    "tagline": "Ajoutez-le à votre écran d'accueil pour une expérience optimale — il fonctionne aussi hors ligne.",
+    "dismiss": "Fermer l'invitation à installer",
+    "install": "Ajouter à l'écran d'accueil",
+    "notNow": "Pas maintenant"
+  },
+  "notifications": {
+    "title": "Restez informé",
+    "body": "Soyez averti lorsqu'un nouveau souvenir ou moment est partagé.",
+    "enable": "Activer",
+    "enabling": "Activation…",
+    "notNow": "Pas maintenant",
+    "failed": "Cela n'a pas fonctionné. Vérifiez les paramètres de notification de votre navigateur.",
+    "retry": "Réessayer"
+  },
+  "upload": {
+    "failed": "Échec de l'envoi. Veuillez réessayer.",
+    "tooLarge": "Ce fichier fait {{size}} — la limite est de {{limit}} par fichier. Veuillez utiliser un extrait plus court ou plus compressé.",
+    "videoTooLong": "La vidéo doit durer {{seconds}} secondes au maximum.",
+    "rateLimited": "Vous avez envoyé beaucoup de fichiers durant la dernière heure. Veuillez patienter un peu et réessayer.",
+    "storageFull": "L'espace de stockage de votre famille est épuisé : plus aucun envoi n'est possible pour le moment."
+  },
+  "dictation": {
+    "start": "Dicter",
+    "stop": "Arrêter la dictée",
+    "notice": "Écoute en cours… Votre navigateur peut envoyer l'audio à son éditeur pour la reconnaissance vocale.",
+    "error": {
+      "denied": "L'accès au micro a été refusé. Autorisez-le dans les paramètres de votre navigateur pour dicter.",
+      "unavailable": "La dictée n'est pas disponible pour le moment."
+    }
+  }
+}

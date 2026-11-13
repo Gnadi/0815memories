@@ -7,7 +7,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
-import i18n, { ensureAppTranslations, LANDING_PATHS } from './i18n'
+import i18n, { ensureAppTranslations, isRtl, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -244,6 +244,7 @@ function HtmlLangSync() {
     if (typeof document === 'undefined') return
     const apply = (lng) => {
       document.documentElement.lang = (lng || 'en').split('-')[0]
+      document.documentElement.dir = isRtl(lng) ? 'rtl' : 'ltr'
     }
     apply(i18nInstance.language)
     i18nInstance.on('languageChanged', apply)
@@ -318,6 +319,8 @@ export const routes = [
       { index: true, element: <RootRoute /> },
       // The landing page in German, at an address of its own (LANDING_PATHS).
       { path: 'de', element: <RootRoute lng="de" /> },
+      { path: 'ar', element: <RootRoute lng="ar" /> },
+      { path: 'fr', element: <RootRoute lng="fr" /> },
       { path: 'login', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'family/:slug', element: <OutsideDemo><LoginPage /></OutsideDemo> },
       { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },
