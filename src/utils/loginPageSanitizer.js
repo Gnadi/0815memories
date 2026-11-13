@@ -60,11 +60,51 @@ export function sanitizeLoginHtml(html) {
 // breakout) and shadow scoping stops any selector from reaching the login
 // form. Stripping @import only prevents loading third-party stylesheets
 // (visitor-IP privacy); the rest is belt-and-braces for legacy engines.
+// An at-keyword may be written with CSS escapes (`@\69mport`, `@im\70ort`),
+// which a plain-text match misses but the browser still reads as @import. So
+// each at-keyword is decoded before it is compared. Escapes elsewhere in the
+// stylesheet (like `.md\:flex`) are left alone.
+const AT_KEYWORD = /@((?:\\[0-9a-f]{1,6}[ \t\n\r\f]?|\\[^\n\r\f0-9a-f]|[a-z0-9_-])+)/gi
+
+function decodeCssIdent(ident) {
+  return ident.replace(/\\(?:([0-9a-f]{1,6})[ \t\n\r\f]?|([^\n\r\f]))/gi, (_, hex, char) => {
+    if (char) return char
+    const code = parseInt(hex, 16)
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '\uFFFD'
+  })
+}
+
+function stripImportsOnce(css) {
+  let out = ''
+  let from = 0
+  AT_KEYWORD.lastIndex = 0
+  let m
+  while ((m = AT_KEYWORD.exec(css))) {
+    if (decodeCssIdent(m[1]).toLowerCase() !== 'import') continue
+    // The rule runs to its semicolon, or to the end of the text without one.
+    const semicolon = css.indexOf(';', AT_KEYWORD.lastIndex)
+    const end = semicolon === -1 ? css.length : semicolon + 1
+    out += css.slice(from, m.index)
+    from = end
+    AT_KEYWORD.lastIndex = end
+  }
+  return out + css.slice(from)
+}
+
+function stripImports(css) {
+  // Repeated until stable: removing one rule can join the text around it
+  // into a new one ("@imp@import;ort").
+  let previous
+  do {
+    previous = css
+    css = stripImportsOnce(css)
+  } while (css !== previous)
+  return css
+}
+
 export function sanitizeLoginCss(css) {
   if (!css || typeof css !== 'string') return ''
-  return css
-    .slice(0, MAX_LOGIN_CSS_LENGTH)
-    .replace(/@import\b[^;]*(;|$)/gi, '')
+  return stripImports(css.slice(0, MAX_LOGIN_CSS_LENGTH))
     .replace(/expression\s*\(/gi, 'blocked(')
     .replace(/javascript\s*:/gi, 'blocked:')
 }
