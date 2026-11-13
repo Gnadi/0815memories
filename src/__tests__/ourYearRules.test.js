@@ -40,6 +40,7 @@ const FAMILY = 'family-1'
 const A = 'uid-a'
 const B = 'uid-b'
 const OUTSIDER = 'uid-c'
+const MALLORY = 'uid-mallory'
 const PARTICIPANTS = [A, B]
 const CHAPTER = 'chapter-1'
 
@@ -427,6 +428,54 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
   })
 
+  describe('an entry that is not the partner’s to invent', () => {
+    // The reveal rules look the caller's own entry up under its canonical id,
+    // so what may be created under that id is what they trust.
+    it('cannot be handed in for a chapter that does not exist', async () => {
+      // The attack: unlock B's answers with a hand-in invented for a chapter
+      // nobody has, then take it back (the delete rule lets a hand-in go once
+      // its chapter is gone).
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B))
+      })
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { chapterId: 'no-such-chapter' })))
+      await assertFails(setDoc(doc(as(A), `ourYearEntries/no-such-chapter_reflection_${A}`), entry(A, { chapterId: 'no-such-chapter' })))
+      await assertFails(updateDoc(doc(as(A), entryPath(B)), { revealed: true }))
+    })
+
+    it('cannot sit under an id other than <chapter>_<kind>_<uid>', async () => {
+      await assertFails(setDoc(doc(as(A), `ourYearEntries/${CHAPTER}_reflection_${B}`), entry(A)))
+      await assertFails(setDoc(doc(as(A), 'ourYearEntries/anything'), entry(A)))
+      await assertFails(setDoc(doc(as(A), `ourYearEntries/${CHAPTER}_quiz_${A}`), entry(A)))
+    })
+
+    it('has to be a kind the client writes', async () => {
+      await assertFails(setDoc(doc(as(A), `ourYearEntries/${CHAPTER}_secret_${A}`), entry(A, { kind: 'secret' })))
+      await assertSucceeds(setDoc(doc(as(A), `ourYearEntries/${CHAPTER}_quiz_${A}`), entry(A, { kind: 'quiz' })))
+    })
+
+    it('has to carry the family and the couple of its chapter', async () => {
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { participantUids: [A] })))
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { participantUids: [A, B, OUTSIDER] })))
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { familyId: 'family-2' })))
+      await assertSucceeds(setDoc(doc(as(A), entryPath(A)), entry(A)))
+    })
+
+    it('cannot be planted in another family’s chapter by an admin of a different family', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'families', 'family-2'), {
+          adminUid: MALLORY,
+          adminUids: [MALLORY],
+          familyName: 'Other',
+        })
+      })
+      const id = `ourYearEntries/${CHAPTER}_reflection_${MALLORY}`
+      const planted = entry(MALLORY, { familyId: 'family-2', participantUids: [MALLORY] })
+      await assertFails(setDoc(doc(as(MALLORY), id), planted))
+      await assertFails(setDoc(doc(as(MALLORY), id), { ...planted, familyId: FAMILY, participantUids: PARTICIPANTS }))
+    })
+  })
+
   describe('a draft', () => {
     beforeEach(async () => {
       await setDoc(doc(as(A), entryPath(A)), entry(A, { submitted: false }))
@@ -537,6 +586,58 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
           openAt: Timestamp.fromDate(new Date(2030, 0, 1)),
         }),
       )
+    })
+  })
+
+  describe('a letter that is not the couple’s to occupy', () => {
+    const letterPath = `ourYearLetters/${CHAPTER}`
+    const draft = (overrides = {}) => ({
+      familyId: FAMILY,
+      chapterId: CHAPTER,
+      participantUids: PARTICIPANTS,
+      sections: CIPHERTEXT,
+      sealedAt: null,
+      openAt: null,
+      openedAt: null,
+      ...overrides,
+    })
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'families', 'family-2'), {
+          adminUid: MALLORY,
+          adminUids: [MALLORY],
+          familyName: 'Other',
+        })
+      })
+    })
+
+    it('lets the couple start the letter of their chapter', async () => {
+      await assertSucceeds(setDoc(doc(as(A), letterPath), draft()))
+    })
+
+    it('cannot be claimed by an admin of another family who knows the chapter id', async () => {
+      await assertFails(setDoc(doc(as(MALLORY), letterPath), draft({ familyId: 'family-2', participantUids: [MALLORY] })))
+      // …nor under the couple's family and couple, which Mallory is not part of.
+      await assertFails(setDoc(doc(as(MALLORY), letterPath), draft()))
+    })
+
+    it('needs a chapter to exist, with the same family and couple', async () => {
+      await assertFails(setDoc(doc(as(A), 'ourYearLetters/no-such-chapter'), draft({ chapterId: 'no-such-chapter' })))
+      await assertFails(setDoc(doc(as(A), letterPath), draft({ participantUids: [A] })))
+      await assertFails(setDoc(doc(as(A), letterPath), draft({ familyId: 'family-2' })))
+    })
+
+    it('does not keep a chapter from being discarded because of a sealed letter of another family', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), letterPath), draft({
+          familyId: 'family-2',
+          participantUids: [MALLORY],
+          sealedAt: Timestamp.fromDate(new Date(2026, 0, 1)),
+          openAt: Timestamp.fromDate(new Date(2999, 0, 1)),
+        }))
+      })
+      await assertSucceeds(deleteDoc(doc(as(A), `ourYearChapters/${CHAPTER}`)))
     })
   })
 

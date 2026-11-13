@@ -798,10 +798,25 @@ service cloud.firestore {
         && encryptedOk(d, 'quizReactions') && encryptedOk(d, 'keepsakes');
     }
 
+    // Does this document name the chapter it belongs to, with that chapter's
+    // family and couple? Entries and letters are addressed by the chapter id,
+    // so without this any admin of any family could occupy the ids of another
+    // couple's chapter, or point the reveal rules at a chapter that is not
+    // there (see callerHandedIn).
+    function belongsToChapter(chapterId) {
+      let path = /databases/$(database)/documents/ourYearChapters/$(chapterId);
+      let d = request.resource.data;
+      return exists(path)
+        && get(path).data.familyId == d.familyId
+        && get(path).data.participantUids == d.participantUids;
+    }
+
     // Is there a letter for this chapter that is sealed and not yet due?
-    function letterIsSealed(chapterId) {
+    // A letter of another family under the same id does not count.
+    function letterIsSealed(chapterId, familyId) {
       let path = /databases/$(database)/documents/ourYearLetters/$(chapterId);
       return exists(path)
+        && get(path).data.familyId == familyId
         && get(path).data.get('sealedAt', null) != null
         && request.time < get(path).data.openAt;
     }
@@ -844,7 +859,7 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && isFamilyAdmin(resource.data.familyId)
-                    && !letterIsSealed(chapterId);
+                    && !letterIsSealed(chapterId, resource.data.familyId);
     }
 
     // Has the caller handed in their own answers to the same part of the same
@@ -890,15 +905,21 @@ service cloud.firestore {
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
       // A new entry starts unrevealed, and may be handed in only with its
-      // answers. The document id is not bound to the author here: the rules
-      // that matter (callerHandedIn, the reveal) look the canonical id up
-      // themselves, so an entry stored under any other id opens nothing.
+      // answers. Its id must be the canonical one (entryId() in
+      // src/services/ourYear.js) and its chapter a real one of this family and
+      // couple: callerHandedIn trusts the document under that id, so a
+      // hand-in invented under it for a chapter that does not exist would
+      // unlock the partner's answers, and could be deleted again at will (see
+      // the delete rule).
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
                     && request.resource.data.get('authorUid', '') == request.auth.uid
+                    && request.resource.data.kind in ['reflection', 'quiz']
+                    && entryId == request.resource.data.chapterId + '_' + request.resource.data.kind + '_' + request.auth.uid
+                    && belongsToChapter(request.resource.data.chapterId)
                     && request.resource.data.get('revealed', false) != true
                     && handedInOnlyWithAnswers()
                     && entryEncryptedOk();
@@ -971,6 +992,7 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
+                    && belongsToChapter(chapterId)
                     && request.resource.data.get('sealedAt', null) == null
                     && letterSectionsEncryptedOk();
       allow update: if request.auth != null

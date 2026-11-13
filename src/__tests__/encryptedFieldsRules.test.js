@@ -26,6 +26,7 @@ const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'family-1'
 const ADMIN = 'uid-admin'
 const PARTNER = 'uid-partner'
+const CHAPTER = 'chapter-1'
 
 const future = () => new Date(Date.now() + 365 * 24 * 3600 * 1000)
 
@@ -48,8 +49,18 @@ const COLLECTIONS = {
     base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER] }),
     fields: ['title', 'quizQuestions', 'quizReactions', 'keepsakes'],
   },
-  ourYearEntries: { base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER], authorUid: ADMIN }), fields: ['answers'] },
-  ourYearLetters: { base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER] }), fields: ['sections'] },
+  // Entries and letters are created only under the id of a chapter that exists
+  // (see belongsToChapter in firestore.rules), so they name one and its id.
+  ourYearEntries: {
+    base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER], authorUid: ADMIN, chapterId: CHAPTER, kind: 'reflection' }),
+    id: `${CHAPTER}_reflection_${ADMIN}`,
+    fields: ['answers'],
+  },
+  ourYearLetters: {
+    base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER], chapterId: CHAPTER }),
+    id: CHAPTER,
+    fields: ['sections'],
+  },
 }
 
 // Ways a field goes out unencrypted, each of which the rules must refuse.
@@ -91,23 +102,27 @@ describe.skipIf(!EMULATOR)('Encrypted fields in the security rules', () => {
         adminUids: [ADMIN, PARTNER],
         familyName: 'One',
       })
+      await setDoc(doc(context.firestore(), 'ourYearChapters', CHAPTER), {
+        familyId: FAMILY,
+        participantUids: [ADMIN, PARTNER],
+      })
     })
   })
 
   const asAdmin = () => testEnv.authenticatedContext(ADMIN).firestore()
 
-  for (const [collection, { base, fields }] of Object.entries(COLLECTIONS)) {
+  for (const [collection, { base, fields, id }] of Object.entries(COLLECTIONS)) {
     describe(collection, () => {
       it('takes every encrypted field as ciphertext', async () => {
         const data = { ...base() }
         for (const field of fields) data[field] = await encryptText(key, field)
-        await assertSucceeds(setDoc(doc(asAdmin(), collection, 'whole'), data))
+        await assertSucceeds(setDoc(doc(asAdmin(), collection, id ?? 'whole'), data))
       })
 
       for (const field of fields) {
         it(`refuses \`${field}\` in plaintext, on create and on update`, async () => {
           for (const [, value] of Object.entries(PLAINTEXT)) {
-            await assertFails(setDoc(doc(asAdmin(), collection, 'plain'), { ...base(), [field]: value }))
+            await assertFails(setDoc(doc(asAdmin(), collection, id ?? 'plain'), { ...base(), [field]: value }))
           }
           await testEnv.withSecurityRulesDisabled(async (context) => {
             await setDoc(doc(context.firestore(), collection, 'existing'), { ...base(), [field]: ciphertext })
