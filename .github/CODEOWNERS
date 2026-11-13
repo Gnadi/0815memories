@@ -16,9 +16,6 @@
 # Viewer login, admin claims, the public mirror, push
 /functions/                     @Gnadi
 
-# Upload signing
-/api/                           @Gnadi
-
 # Client-side encryption
 /src/utils/encryption.js        @Gnadi
 /src/utils/encryptedUpload.js   @Gnadi
