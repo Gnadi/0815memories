@@ -133,10 +133,23 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options))
 })
 
+function sameOriginUrl(raw) {
+  if (typeof raw !== 'string') return '/'
+  try {
+    const target = new URL(raw, self.location.origin)
+    if (target.origin === self.location.origin) return target.href
+  } catch {
+    // Not a URL at all — fall through to the app root.
+  }
+  return '/'
+}
+
 // When user taps a notification, open the app at the relevant URL.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
+  // The payload comes from the push service, so a crafted one must not be
+  // able to open a foreign site from our notification: same origin only.
+  const url = sameOriginUrl(event.notification.data?.url)
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       // If the app is already open, focus it and navigate
