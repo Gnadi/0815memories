@@ -14,7 +14,10 @@
  * family's limit, and still hit it.
  *
  * A device token grants nothing by itself. It exempts from the family's
- * lockout, not from the password. Only its hash is stored.
+ * lockout, not from the password. Only its hash is stored. It belongs to one
+ * password too: it records the family's session version, and changing the
+ * password deletes the family's devices, so a token an ex-viewer kept buys no
+ * extra guesses against the new one.
  *
  * Nothing here imports firebase-admin or firebase-functions; the Firestore
  * instance and the side effects come in as arguments, so the test suite can
@@ -26,6 +29,15 @@ export const MAX_FAILURES = 5
 export const FAILURE_WINDOW_MS = 15 * 60 * 1000
 export const BASE_BLOCK_MS = 30 * 1000
 export const MAX_BLOCK_MS = 60 * 60 * 1000
+// `expireAt` is for Firestore's TTL policies, which the operator sets up on
+// `rateLimits` and `viewerDevices` (the field is inert until they do). Counters
+// of ids nobody uses would otherwise pile up for good, and so would the devices
+// of people who stopped visiting.
+export const RATE_LIMIT_TTL_MS = 24 * 60 * 60 * 1000
+export const DEVICE_TTL_MS = 180 * 24 * 60 * 60 * 1000
+
+// A page of devices to delete at once; a batch holds at most 500 writes.
+const DEVICE_PAGE = 400
 
 /** Hashes of device tokens, each bound to one family. Admin SDK only. */
 export const DEVICES = 'viewerDevices'
@@ -82,6 +94,7 @@ async function reserveAttempt(db, keys, now) {
         failures,
         blockedUntil: blockMs > 0 ? new Date(now + blockMs) : null,
         updatedAt: new Date(now),
+        expireAt: new Date(now + RATE_LIMIT_TTL_MS),
       })
     })
     return true
@@ -90,20 +103,75 @@ async function reserveAttempt(db, keys, now) {
 
 const clearFailures = (db, key) => db.doc(`rateLimits/${key}`).delete().catch(() => {})
 
-/** The hash of a device token that was minted for this family, or null. */
+/**
+ * The hash of a device token that was minted for this family under its current
+ * password, or null. The deletion at a password change is what normally ends a
+ * device; comparing the version as well means a token still stands for nothing
+ * if that deletion failed. A device from before the field existed is version 0.
+ */
 async function knownDeviceHash(db, familyId, deviceToken) {
   if (typeof deviceToken !== 'string' || !DEVICE_TOKEN.test(deviceToken)) return null
   const hash = sha256(deviceToken)
   const snap = await db.collection(DEVICES).doc(hash).get()
-  return snap.exists && snap.data().familyId === familyId ? hash : null
+  if (!snap.exists || snap.data().familyId !== familyId) return null
+  const familySnap = await db.doc(`families/${familyId}`).get()
+  return (snap.data().sv ?? 0) === (familySnap.data()?.viewerSessionVersion || 0) ? hash : null
+}
+
+/**
+ * The session version to put in the token, read together with the hash that
+ * was compared. A password change writes both in one batch, so this is either
+ * the old password with the old version or the new with the new: a login that
+ * checked the old password cannot come away with the new version. Null when
+ * the stored hash is no longer the one that matched.
+ */
+function sessionOf(db, familyId, hash) {
+  return db.runTransaction(async (tx) => {
+    const [secretSnap, familySnap] = await Promise.all([
+      tx.get(db.doc(`families/${familyId}/secrets/auth`)),
+      tx.get(db.doc(`families/${familyId}`)),
+    ])
+    if (!secretSnap.exists || secretSnap.data().sharedPassword !== hash) return null
+    return { sv: familySnap.data()?.viewerSessionVersion || 0 }
+  })
+}
+
+/**
+ * Replace the shared password. The hash and the version bump are one batch:
+ * written one after the other, a login could slip in between them.
+ *
+ * @param {object} deps
+ * @param {any} deps.db
+ * @param {(n: number) => unknown} deps.increment  FieldValue.increment, passed in to keep this module free of firebase-admin
+ * @param {() => number} [deps.now]
+ */
+export async function replaceSharedPassword({ db, increment, now = Date.now }, familyId, hash) {
+  const batch = db.batch()
+  batch.set(db.doc(`families/${familyId}/secrets/auth`), { sharedPassword: hash, updatedAt: new Date(now()) })
+  batch.update(db.doc(`families/${familyId}`), { viewerSessionVersion: increment(1) })
+  await batch.commit()
+}
+
+/** Forget every remembered device of a family, a batch at a time. @returns {Promise<number>} how many */
+export async function forgetViewerDevices(db, familyId) {
+  let deleted = 0
+  for (;;) {
+    const page = await db.collection(DEVICES).where('familyId', '==', familyId).limit(DEVICE_PAGE).get()
+    if (page.docs.length === 0) return deleted
+    const batch = db.batch()
+    for (const snap of page.docs) batch.delete(snap.ref)
+    await batch.commit()
+    deleted += page.docs.length
+  }
 }
 
 /**
  * @param {object} deps
  * @param {import('firebase-admin/firestore').Firestore} deps.db
  * @param {(password: string, hash: string) => Promise<boolean>} deps.compare
- * @param {(familyId: string) => Promise<string>} deps.mintToken  custom auth token
+ * @param {(familyId: string, sv: number) => Promise<string>} deps.mintToken  custom auth token for the family's viewer identity, with the session version `sv`
  * @param {() => number} [deps.now]
+ * @param {(event: { familyId: string, outcome: 'ok'|'denied'|'blocked', device: 'new'|'known' }) => void} [deps.log]
  * @param {{ familyId?: unknown, password?: unknown, deviceToken?: unknown, ip?: unknown }} input
  * @returns {Promise<
  *   | { outcome: 'ok', token: string, deviceToken?: string }
@@ -112,14 +180,20 @@ async function knownDeviceHash(db, familyId, deviceToken) {
  * >} `deviceToken` only when a new one was minted
  */
 export async function checkViewerLogin(deps, input) {
-  const { db, compare, mintToken, now = Date.now } = deps
+  const { db, compare, mintToken, now = Date.now, log } = deps
   const familyId = String(input.familyId ?? '')
   const password = String(input.password ?? '')
 
+  const report = (result, device) => {
+    log?.({ familyId, outcome: result.outcome, device })
+    return result
+  }
+
   // Nothing to guess against: answer like a wrong password, without work.
-  if (!FAMILY_ID.test(familyId) || !password) return { outcome: 'denied' }
+  if (!FAMILY_ID.test(familyId) || !password) return report({ outcome: 'denied' }, 'new')
 
   const deviceHash = await knownDeviceHash(db, familyId, input.deviceToken)
+  const device = deviceHash ? 'known' : 'new'
   const keys = deviceHash
     ? [`viewerDevice__${deviceHash}`]
     : [safeKey('viewerLogin', familyId), safeKey('viewerLoginIp', input.ip || 'unknown')]
@@ -135,27 +209,40 @@ export async function checkViewerLogin(deps, input) {
     if (err?.code === 10 || err?.code === 'aborted') return false
     throw err
   })
-  if (!reserved) return { outcome: 'blocked' }
+  if (!reserved) return report({ outcome: 'blocked' }, device)
 
   // The only place a hash lives.
   const secretSnap = await db.doc(`families/${familyId}/secrets/auth`).get()
   const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
 
-  if (!hash || !(await compare(password, hash))) return { outcome: 'denied' }
+  if (!hash || !(await compare(password, hash))) return report({ outcome: 'denied' }, device)
+
+  // The comparison takes a while, long enough for the password to change under
+  // it. The attempt then counts as a failure, like any other wrong password.
+  const session = await sessionOf(db, familyId, hash)
+  if (!session) return report({ outcome: 'denied' }, device)
 
   await Promise.all(keys.map((key) => clearFailures(db, key)))
-  const token = await mintToken(familyId)
+  const token = await mintToken(familyId, session.sv)
 
   if (deviceHash) {
-    await db.collection(DEVICES).doc(deviceHash).update({ lastUsedAt: new Date(now()) }).catch(() => {})
-    return { outcome: 'ok', token }
+    const at = now()
+    await db
+      .collection(DEVICES)
+      .doc(deviceHash)
+      .update({ lastUsedAt: new Date(at), expireAt: new Date(at + DEVICE_TTL_MS) })
+      .catch(() => {})
+    return report({ outcome: 'ok', token }, device)
   }
 
   const deviceToken = randomBytes(32).toString('base64url')
+  const at = now()
   await db.collection(DEVICES).doc(sha256(deviceToken)).set({
     familyId,
-    createdAt: new Date(now()),
-    lastUsedAt: new Date(now()),
+    sv: session.sv,
+    createdAt: new Date(at),
+    lastUsedAt: new Date(at),
+    expireAt: new Date(at + DEVICE_TTL_MS),
   })
-  return { outcome: 'ok', token, deviceToken }
+  return report({ outcome: 'ok', token, deviceToken }, device)
 }

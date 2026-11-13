@@ -32,6 +32,9 @@ export class MembershipError extends Error {
   }
 }
 
+// A page of push registrations to delete at once.
+const TOKEN_PAGE = 400
+
 const adminUidsOf = (data) => (Array.isArray(data?.adminUids) ? data.adminUids : [])
 
 const millis = (value) => {
@@ -113,6 +116,26 @@ export async function redeemInvite({ db, now = Date.now }, caller, data) {
 }
 
 /**
+ * Stop sending a family's notifications to one identity's devices. Their push
+ * registrations are the browser's to delete, and a person who lost access never
+ * signs out, so without this they would keep receiving what the family does.
+ *
+ * @param {any} db
+ * @param {string} familyId
+ * @param {string} uid  an admin's uid, or `viewer:<familyId>` for the shared viewer identity
+ * @returns {Promise<number>} how many registrations were deleted
+ */
+export async function deleteFcmTokens(db, familyId, uid) {
+  let deleted = 0
+  for (;;) {
+    const page = await db.collection('fcmTokens').where('familyId', '==', familyId).where('uid', '==', uid).limit(TOKEN_PAGE).get()
+    if (page.docs.length === 0) return deleted
+    await Promise.all(page.docs.map((snap) => snap.ref.delete()))
+    deleted += page.docs.length
+  }
+}
+
+/**
  * Remove an admin from a family. Any admin may remove another, or leave; the
  * owner cannot be removed and cannot leave, so a family always has one.
  *
@@ -134,7 +157,7 @@ export async function removeAdmin({ db }, uid, data) {
   const familyRef = db.doc(`families/${familyId}`)
   const invites = db.collection(`families/${familyId}/invites`)
 
-  return db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const familySnap = await tx.get(familyRef)
     const family = familySnap.exists ? familySnap.data() : null
     const admins = adminUidsOf(family)
@@ -153,4 +176,11 @@ export async function removeAdmin({ db }, uid, data) {
     })
     return { ok: true }
   })
+
+  // After the transaction, and not part of it: the removal stands even if this
+  // fails, and a registration left behind only costs a few notifications.
+  await deleteFcmTokens(db, familyId, target).catch((error) => {
+    console.error(`[membership] family=${familyId} could not delete the push tokens of ${target}`, error)
+  })
+  return result
 }

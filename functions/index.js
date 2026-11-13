@@ -41,9 +41,9 @@ import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { givenUp } from './retries.js'
-import { MembershipError, redeemInvite, removeAdmin } from './membership.js'
+import { MembershipError, deleteFcmTokens, redeemInvite, removeAdmin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
-import { checkViewerLogin } from './viewerLogin.js'
+import { checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -467,10 +467,14 @@ export const reportLegacyMedia = onSchedule(
 // Deleting a family — see functions/familyDeletion.js
 // ---------------------------------------------------------------------------
 
-const deletionCall = (action) =>
+const deletionCall = (action, event) =>
   onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
     try {
-      return await action({ db: getFirestore() }, request.auth?.uid, request.data)
+      const result = await action({ db: getFirestore() }, request.auth?.uid, request.data)
+      // Only a call that was allowed gets here: the family and the owner are
+      // known to be real. No address, no ip.
+      console.log(`[deletion] ${event} family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)}`)
+      return result
     } catch (error) {
       if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
       console.error('[deletion] call failed', error)
@@ -479,10 +483,10 @@ const deletionCall = (action) =>
   })
 
 /** Schedule the caller's family for deletion. Owner only. */
-export const requestFamilyDeletion = deletionCall(requestDeletion)
+export const requestFamilyDeletion = deletionCall(requestDeletion, 'requested')
 
 /** Take a scheduled deletion back, until it has begun. Owner only. */
-export const cancelFamilyDeletion = deletionCall(cancelDeletion)
+export const cancelFamilyDeletion = deletionCall(cancelDeletion, 'cancelled')
 
 /**
  * Once a day: delete the families whose date has come, and carry on with the
@@ -631,8 +635,8 @@ const membershipCall = (action) =>
  * Who is asking, and whether their address is confirmed, is read from the
  * verified ID token, never from what the browser sent.
  */
-export const redeemFamilyInvite = membershipCall((request) =>
-  redeemInvite(
+export const redeemFamilyInvite = membershipCall(async (request) => {
+  const result = await redeemInvite(
     { db: getFirestore() },
     {
       uid: request.auth?.uid,
@@ -641,13 +645,19 @@ export const redeemFamilyInvite = membershipCall((request) =>
       role: request.auth?.token?.role,
     },
     request.data,
-  ),
-)
+  )
+  console.log(`[membership] invite redeemed family=${loggable(request.data?.familyId)} uid=${loggable(request.auth?.uid)}`)
+  return result
+})
 
 /** Remove an admin from a family, with every pending invite. */
-export const removeFamilyAdmin = membershipCall((request) =>
-  removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data),
-)
+export const removeFamilyAdmin = membershipCall(async (request) => {
+  const result = await removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data)
+  console.log(
+    `[membership] admin removed family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)} target=${loggable(request.data?.uid)}`,
+  )
+  return result
+})
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
@@ -675,11 +685,17 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       //
       // `sv` is the family's viewer session version. The rules compare it with
       // the family document, so a token minted before a password change stops
-      // working at once instead of living out its hour.
-      mintToken: async (familyId) => {
-        const snap = await getFirestore().doc(`families/${familyId}`).get()
-        const sv = snap.data()?.viewerSessionVersion || 0
-        return getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv })
+      // working at once instead of living out its hour. It comes from
+      // checkViewerLogin, which read it together with the hash it compared;
+      // reading it here would be a second look, after a password change could
+      // have happened.
+      mintToken: (familyId, sv) =>
+        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv }),
+      // The family id and what happened, never the password, a token or the ip.
+      log: ({ familyId, outcome, device }) => {
+        const line = `[viewerLogin] family=${loggable(familyId)} outcome=${outcome} device=${device}`
+        if (outcome === 'ok') console.log(line)
+        else console.warn(line)
       },
     },
     {
@@ -723,20 +739,28 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
     throw new HttpsError('permission-denied', 'Not an admin of this family')
   }
 
+  const db = getFirestore()
   const hash = await bcrypt.hash(password, 10)
-  await getFirestore().doc(`families/${familyId}/secrets/auth`).set({
-    sharedPassword: hash,
-    updatedAt: new Date(),
-  })
-
+  // Hash and version bump in one write: a login that checked the old password
+  // must not be able to pick up the new version (see viewerLogin.js).
   // Everyone who logged in with the old password loses their session. That is
   // the point of changing it. Revoking refresh tokens stops renewals; the
   // version bump is what ends ID tokens already issued, which the rules compare
   // with the token's `sv` claim.
-  await getFirestore()
-    .doc(`families/${familyId}`)
-    .update({ viewerSessionVersion: FieldValue.increment(1) })
+  await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash)
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
+
+  // Housekeeping, and none of it is what ends the old sessions: the device
+  // tokens are bound to the old version and the push registrations only carry
+  // metadata, so a failure here is logged and does not fail the change.
+  const devices = await forgetViewerDevices(db, familyId).catch((error) => {
+    console.error(`[password] family=${loggable(familyId)} could not forget the viewer devices`, error)
+    return 'failed'
+  })
+  await deleteFcmTokens(db, familyId, `viewer:${familyId}`).catch((error) => {
+    console.error(`[password] family=${loggable(familyId)} could not delete the viewer push tokens`, error)
+  })
+  console.log(`[password] shared password changed family=${loggable(familyId)} by=${loggable(uid)} devices=${devices}`)
 
   return { ok: true }
 })

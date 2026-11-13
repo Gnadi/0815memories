@@ -6,8 +6,8 @@
  * writes itself: an invite works once, not after a removal, and never for a
  * removed admin again; the owner always stays.
  */
-import { describe, it, expect } from 'vitest'
-import { redeemInvite, removeAdmin } from '../../functions/membership.js'
+import { describe, it, expect, vi } from 'vitest'
+import { deleteFcmTokens, redeemInvite, removeAdmin } from '../../functions/membership.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-11-10T10:00:00Z')
@@ -110,6 +110,31 @@ describe('removeAdmin', () => {
     expect(family(db)).toMatchObject({ adminUids: [OWNER, ADMIN], inviteEpoch: 5 })
   })
 
+  it('stops the removed admin\'s push notifications, and nobody else\'s', async () => {
+    const db = seeded()
+    db.docs.set('fcmTokens/mine', { familyId: 'fam-1', uid: ADMIN, token: 'a' })
+    db.docs.set('fcmTokens/mine-too', { familyId: 'fam-1', uid: ADMIN, token: 'b' })
+    db.docs.set('fcmTokens/owner', { familyId: 'fam-1', uid: OWNER, token: 'c' })
+    db.docs.set('fcmTokens/viewer', { familyId: 'fam-1', uid: 'viewer:fam-1', token: 'd' })
+    db.docs.set('fcmTokens/elsewhere', { familyId: 'fam-2', uid: ADMIN, token: 'e' })
+    await remove(db, OWNER, ADMIN)
+    expect(Object.keys(db.collectionData('fcmTokens')).sort()).toEqual(['elsewhere', 'owner', 'viewer'])
+  })
+
+  it('still removes the admin when the push tokens cannot be deleted', async () => {
+    const db = seeded()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const collection = db.collection
+    db.collection = (name) => {
+      if (name === 'fcmTokens') throw new Error('unavailable')
+      return collection(name)
+    }
+    await remove(db, OWNER, ADMIN)
+    expect(family(db).adminUids).toEqual([OWNER])
+    expect(error).toHaveBeenCalled()
+    error.mockRestore()
+  })
+
   it('never removes the owner, whoever asks', async () => {
     const db = seeded()
     await expect(remove(db, ADMIN, OWNER)).rejects.toMatchObject({ code: 'failed-precondition' })
@@ -141,5 +166,17 @@ describe('removeAdmin', () => {
     db.docs.set('families/fam-1/invites/kept', invite({ epoch: 0 }))
     await expect(redeem(db, newbie(), { familyId: 'fam-1', token: 'kept' })).rejects.toMatchObject({ code: 'failed-precondition' })
     expect(family(db).adminUids).toEqual([OWNER])
+  })
+})
+
+describe('deleteFcmTokens', () => {
+  it('deletes one identity\'s registrations in one family, in as many pages as it takes', async () => {
+    const db = fakeAdminFirestore({
+      'fcmTokens/other-family': { familyId: 'fam-2', uid: 'viewer:fam-1' },
+      'fcmTokens/admin': { familyId: 'fam-1', uid: ADMIN },
+    })
+    for (let i = 0; i < 450; i++) db.docs.set(`fcmTokens/v${i}`, { familyId: 'fam-1', uid: 'viewer:fam-1' })
+    expect(await deleteFcmTokens(db, 'fam-1', 'viewer:fam-1')).toBe(450)
+    expect(Object.keys(db.collectionData('fcmTokens')).sort()).toEqual(['admin', 'other-family'])
   })
 })

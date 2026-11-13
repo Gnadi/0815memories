@@ -279,6 +279,27 @@ with:
 An alert on `severity>=ERROR` for the functions catches these and every
 uncaught failure as well, at the price of more noise.
 
+The functions also log what tests or changes a family's access, one line
+each and never with a password, a token, an email address or an IP:
+`[viewerLogin] family=… outcome=ok|denied|blocked device=new|known`,
+`[password] shared password changed`, `[membership] invite redeemed`,
+`[membership] admin removed` and `[deletion] requested` or `cancelled`. A
+log-based metric on `outcome=denied` shows a password being guessed.
+
+### Records that expire
+
+The counters that throttle the viewer login (`rateLimits`) and the remembered
+viewer devices (`viewerDevices`) carry an `expireAt` date, a day and 180 days
+after their last use. Firestore deletes them at that date once a TTL policy
+names the field, which is switched on once per project:
+
+```bash
+gcloud firestore fields ttls update expireAt --collection-group=rateLimits
+gcloud firestore fields ttls update expireAt --collection-group=viewerDevices
+```
+
+Until then the field does nothing and both collections only grow.
+
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions

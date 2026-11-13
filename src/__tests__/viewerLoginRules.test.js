@@ -15,7 +15,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
 import {
   checkViewerLogin,
@@ -23,6 +23,10 @@ import {
   MAX_FAILURES,
   MAX_BLOCK_MS,
   FAILURE_WINDOW_MS,
+  RATE_LIMIT_TTL_MS,
+  DEVICE_TTL_MS,
+  forgetViewerDevices,
+  replaceSharedPassword,
 } from '../../functions/viewerLogin.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
@@ -31,6 +35,8 @@ const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'family-1'
 const OTHER_FAMILY = 'family-2'
 const RIGHT = 'correct horse'
+const NEW_PASSWORD = 'battery staple'
+const reversed = (password) => [...password].reverse().join('')
 
 let testEnv
 let adminApp
@@ -75,6 +81,7 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
       mintToken: vi.fn(async (familyId) => `custom-token-for-${familyId}`),
     }
     for (const familyId of [FAMILY, OTHER_FAMILY]) {
+      await db.doc(`families/${familyId}`).set({ adminUid: 'owner', adminUids: ['owner'], viewerSessionVersion: 0 })
       await db.doc(`families/${familyId}/secrets/auth`).set({
         sharedPassword: [...RIGHT].reverse().join(''),
       })
@@ -205,6 +212,112 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
       expect(await login({ familyId, password: RIGHT })).toEqual({ outcome: 'denied' })
     }
     expect(deps.compare).not.toHaveBeenCalled()
+  })
+
+  // A password change as setSharedPassword makes it.
+  const changePassword = (password, familyId = FAMILY) =>
+    replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, reversed(password))
+
+  it('refuses a login whose password changed while it was being compared', async () => {
+    // The race: the old hash is read, then bcrypt runs, and the admin's change
+    // lands before the token is minted. The token must not get the new version.
+    deps.compare = vi.fn(async (password, hash) => {
+      await changePassword(NEW_PASSWORD)
+      return reversed(password) === hash
+    })
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'denied' })
+    expect(deps.mintToken).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(0)
+  })
+
+  it('mints the token with the version that was current at the comparison', async () => {
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 3 })
+    const { deviceToken } = await login({ password: RIGHT })
+    expect(deps.mintToken).toHaveBeenCalledWith(FAMILY, 3)
+    await login({ password: RIGHT, deviceToken })
+    expect(deps.mintToken).toHaveBeenLastCalledWith(FAMILY, 3)
+  })
+
+  it('writes the hash and the version bump together', async () => {
+    await changePassword(NEW_PASSWORD)
+    expect((await db.doc(`families/${FAMILY}/secrets/auth`).get()).data().sharedPassword).toBe(reversed(NEW_PASSWORD))
+    expect((await db.doc(`families/${FAMILY}`).get()).data().viewerSessionVersion).toBe(1)
+    // The old password is out, the new one in, and the token carries version 1.
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'denied' })
+    expect(await login({ password: NEW_PASSWORD })).toMatchObject({ outcome: 'ok' })
+    expect(deps.mintToken).toHaveBeenCalledWith(FAMILY, 1)
+  })
+
+  it('forgets the devices of a family, and only of that family', async () => {
+    for (let i = 0; i < 3; i++) await login({ password: RIGHT })
+    await login({ familyId: OTHER_FAMILY, password: RIGHT })
+    // More than one page of them.
+    for (let start = 0; start < 450; start += 225) {
+      const batch = db.batch()
+      for (let i = start; i < start + 225; i++) batch.set(db.collection(DEVICES).doc(`bulk-${i}`), { familyId: FAMILY })
+      await batch.commit()
+    }
+    expect(await forgetViewerDevices(db, FAMILY)).toBe(453)
+    const left = await db.collection(DEVICES).get()
+    expect(left.docs.map((d) => d.data().familyId)).toEqual([OTHER_FAMILY])
+  }, 30_000)
+
+  it('gives a device no exemption once the password has changed, even if it was not deleted', async () => {
+    const { deviceToken } = await login({ password: RIGHT })
+    await changePassword(NEW_PASSWORD)
+    deps.compare.mockClear()
+    // Deleting the device is skipped on purpose: the version has to be enough.
+    await lockOutFamily()
+    expect(await login({ password: NEW_PASSWORD, deviceToken })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).toHaveBeenCalledTimes(MAX_FAILURES)
+  })
+
+  it('stamps a device with the family version, and reads one without as version 0', async () => {
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 2 })
+    const { deviceToken } = await login({ password: RIGHT })
+    const [stored] = (await db.collection(DEVICES).get()).docs
+    expect(stored.data().sv).toBe(2)
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+
+    // A device from before the field: known while the family is at version 0 only.
+    await stored.ref.update({ sv: FieldValue.delete() })
+    await lockOutFamily()
+    expect(await login({ password: RIGHT, deviceToken })).toEqual({ outcome: 'blocked' })
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 0 })
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+  })
+
+  it('sets an expiry on counters and devices, and renews the device\'s when it is used', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    await login({ password: 'wrong' })
+    const [counter] = (await db.collection('rateLimits').get()).docs
+    expect(counter.data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
+
+    const { deviceToken } = await login({ password: RIGHT })
+    const [device] = (await db.collection(DEVICES).get()).docs
+    expect(device.data().expireAt.toMillis()).toBe(t + DEVICE_TTL_MS)
+
+    t += 30 * 24 * 60 * 60 * 1000
+    await login({ password: RIGHT, deviceToken })
+    expect((await device.ref.get()).data().expireAt.toMillis()).toBe(t + DEVICE_TTL_MS)
+  })
+
+  it('reports each login with its outcome and kind of device, and nothing secret', async () => {
+    const log = vi.fn()
+    deps.log = log
+    const { deviceToken } = await login({ password: RIGHT })
+    await login({ password: RIGHT, deviceToken })
+    await login({ password: 'wrong', ip: '198.51.100.77' })
+    await lockOutFamily()
+    expect(log.mock.calls.map(([event]) => `${event.outcome}/${event.device}`).slice(0, 3)).toEqual([
+      'ok/new',
+      'ok/known',
+      'denied/new',
+    ])
+    expect(log.mock.calls.at(-1)[0]).toEqual({ familyId: FAMILY, outcome: 'blocked', device: 'new' })
+    const everything = JSON.stringify(log.mock.calls)
+    for (const secret of [RIGHT, 'wrong', deviceToken, '198.51.100.77']) expect(everything).not.toContain(secret)
   })
 
   it('keeps the device registry out of reach of clients', async () => {
