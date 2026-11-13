@@ -62,7 +62,7 @@ describe('the settings page', () => {
   it('gives a viewer language, text size and notifications', () => {
     renderPage()
     expect(screen.getByText('Your settings')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Language' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Language' })).toBeInTheDocument()
     expect(screen.getByRole('slider', { name: 'Text size' })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Notifications' })).toBeInTheDocument()
   })

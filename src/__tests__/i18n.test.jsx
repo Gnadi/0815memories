@@ -120,9 +120,10 @@ describe('LanguageSwitcher', () => {
 
   it('switches the active language and persists the choice', () => {
     render(<LanguageSwitcher variant="sidebar" />)
-    // Both language options are rendered as buttons.
-    const german = screen.getByRole('button', { name: 'Deutsch' })
-    fireEvent.click(german)
+    // The languages are the options of one dropdown, each in its own language.
+    const select = screen.getByRole('combobox', { name: 'Language' })
+    expect([...select.options].map((o) => o.text)).toEqual(['English', 'Deutsch', 'العربية', 'Français'])
+    fireEvent.change(select, { target: { value: 'de' } })
     expect(i18n.language.split('-')[0]).toBe('de')
     expect(localStorage.getItem('kaydo_lang')).toBe('de')
   })
