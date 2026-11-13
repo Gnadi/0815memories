@@ -13,6 +13,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # A release that was published minutes ago, or is pulled later as compromised,
+    # waits a week before it becomes an update pull request.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     commit-message:
       prefix: deps
@@ -25,6 +29,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: deps(functions)
@@ -39,6 +45,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: ci
     groups:

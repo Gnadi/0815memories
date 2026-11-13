@@ -29,6 +29,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -62,6 +64,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # A push compares against the commit main pointed to before it. A run
       # started by hand, or a push whose previous commit is unknown, deploys.
@@ -89,10 +92,16 @@ jobs:
     needs: [validate, changes]
     # workflow_dispatch can start this from any branch; only main may use the production credentials.
     if: needs.changes.outputs.deploy == 'true' && github.ref == 'refs/heads/main'
+    # The environment holds the deploy credentials and is limited to main in the
+    # repository settings (Deployment branches). The if: above alone can be
+    # changed on any branch.
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
