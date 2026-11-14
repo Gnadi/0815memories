@@ -294,8 +294,8 @@ after their last use. Firestore deletes them at that date once a TTL policy
 names the field, which is switched on once per project:
 
 ```bash
-gcloud firestore fields ttls update expireAt --collection-group=rateLimits
-gcloud firestore fields ttls update expireAt --collection-group=viewerDevices
+gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
 ```
 
 Until then the field does nothing and both collections only grow.
