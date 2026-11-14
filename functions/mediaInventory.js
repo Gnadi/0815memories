@@ -15,18 +15,30 @@
  *   families have not run it yet — while any have not, an unclaimed file may
  *   still be theirs.
  *
- * Nothing here deletes anything. Whether unclaimed files go is the operator's
- * call, made in Cloudinary, once every family has been through the backfill.
+ * Nothing of that is deleted here. Whether unclaimed files go is the
+ * operator's call, made in Cloudinary, once every family has been through the
+ * backfill.
+ *
+ * The one thing this does delete is a file signUpload signed that was stored
+ * as another kind than it was signed for. Cloudinary leaves `resource_type`
+ * out of what a signature covers, so the signature for one `raw` file also
+ * lets a tampered browser store an `image` and a `video` under the same public
+ * id. Those two are in no ledger entry's name: they do not count against the
+ * family's storage and the daily clean-up never looks for them. This run
+ * lists every file in the account anyway, so it is where they are found. The
+ * ledger entry is the proof: it says the id is one Kaydo signed, and for
+ * which kind. A file with a signed id and no entry at all is only reported —
+ * a lost ledger must not turn this into deleting every file there is.
  *
  * Nothing here imports firebase-admin or firebase-functions, so the tests can
  * hand in stand-ins.
  */
 import { MEDIA_ASSETS, MEDIA_USAGE } from './mediaSigning.js'
 import { ledgerIdOf } from './mediaRefs.js'
+import { DESTROY_BATCH, RESOURCE_TYPES } from './mediaPurge.js'
 
 export const MEDIA_REPORTS = 'mediaReports'
-const RESOURCE_TYPES = ['raw', 'image', 'video']
-const SIGNED_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}$/
+const SIGNED_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/([0-9a-f]{32})$/
 
 // How many unclaimed public ids the report lists by name. The counts cover
 // all of them.
@@ -75,11 +87,30 @@ async function countOnce(db, ledgerId, bytes) {
 }
 
 /**
+ * What a listed file with a signed id is: the file its ledger entry stands
+ * for, one stored as another kind than was signed ('misfiled'), or one the
+ * ledger does not know ('unknown').
+ */
+async function signedFileStatus(db, resourceType, publicId) {
+  const snap = await db.collection(MEDIA_ASSETS).doc(SIGNED_ID.exec(publicId)[1]).get()
+  const entry = snap.exists ? snap.data() : null
+  if (!entry || entry.publicId !== publicId) return 'unknown'
+  return entry.resourceType === resourceType ? 'known' : 'misfiled'
+}
+
+/**
  * One inventory run.
  *
- * @param {{ db: any, list: ReturnType<typeof cloudinaryLister>, now?: () => number }} deps
+ * @param {object} deps
+ * @param {any} deps.db
+ * @param {ReturnType<typeof cloudinaryLister>} deps.list
+ * @param {((resourceType: string, publicIds: string[]) => Promise<Set<string>>)|null} [deps.destroy]
+ *   cloudinaryDestroyer, for misfiled files; without it they are only reported
+ * @param {boolean} [deps.dryRun]  report misfiled files instead of deleting them
+ * @param {() => number} [deps.now]
  */
-export async function inventoryLegacyMedia({ db, list, now = Date.now }) {
+export async function inventoryLegacyMedia({ db, list, destroy = null, dryRun = true, now = Date.now }) {
+  const misfiled = new Map(RESOURCE_TYPES.map((type) => [type, []]))
   const report = {
     files: 0,
     bytes: 0,
@@ -90,6 +121,13 @@ export async function inventoryLegacyMedia({ db, list, now = Date.now }) {
     unclaimedBytes: 0,
     unclaimedSample: [],
     familiesNotIndexed: 0,
+    // Signed ids stored as another kind than signed, and signed ids the
+    // ledger does not know (the header says why only the first are deleted).
+    misfiled: 0,
+    misfiledBytes: 0,
+    misfiledDeleted: 0,
+    misfiledSample: [],
+    signedUnknown: 0,
   }
 
   for (const resourceType of RESOURCE_TYPES) {
@@ -97,7 +135,18 @@ export async function inventoryLegacyMedia({ db, list, now = Date.now }) {
     do {
       const page = await list(resourceType, cursor)
       cursor = page.next
-      const legacy = page.resources.filter((r) => typeof r.public_id === 'string' && !SIGNED_ID.test(r.public_id))
+      const named = page.resources.filter((r) => typeof r.public_id === 'string')
+      const legacy = named.filter((r) => !SIGNED_ID.test(r.public_id))
+      const signed = named.filter((r) => SIGNED_ID.test(r.public_id))
+      const statuses = await Promise.all(signed.map((r) => signedFileStatus(db, resourceType, r.public_id)))
+      signed.forEach((resource, i) => {
+        if (statuses[i] === 'unknown') report.signedUnknown++
+        if (statuses[i] !== 'misfiled') return
+        report.misfiled++
+        report.misfiledBytes += Number(resource.bytes) || 0
+        misfiled.get(resourceType).push(resource.public_id)
+        if (report.misfiledSample.length < REPORT_SAMPLE) report.misfiledSample.push(`${resourceType}/${resource.public_id}`)
+      })
       const entries = await Promise.all(legacy.map(async (resource) => {
         const ledgerId = ledgerIdOf(`legacy:${resourceType}/${resource.public_id}`)
         const snap = ledgerId ? await db.collection(MEDIA_ASSETS).doc(ledgerId).get() : null
@@ -121,6 +170,20 @@ export async function inventoryLegacyMedia({ db, list, now = Date.now }) {
         }
       }
     } while (cursor)
+  }
+
+  if (destroy && !dryRun) {
+    for (const [resourceType, ids] of misfiled) {
+      for (let i = 0; i < ids.length; i += DESTROY_BATCH) {
+        const batch = ids.slice(i, i + DESTROY_BATCH)
+        // A refused delete is left for next week's run, which finds it again.
+        const gone = await destroy(resourceType, batch).catch((error) => {
+          console.error('[media] could not delete misfiled files', error)
+          return new Set()
+        })
+        report.misfiledDeleted += batch.filter((id) => gone.has(id)).length
+      }
+    }
   }
 
   const families = await db.collection('families').select('mediaIndexedAt').get()

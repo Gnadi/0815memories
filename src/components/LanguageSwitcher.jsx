@@ -1,4 +1,4 @@
-import { Languages } from 'lucide-react'
+import { ChevronDown, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 
@@ -7,7 +7,7 @@ import { SUPPORTED_LANGUAGES } from '../i18n'
 // survives reloads.
 //
 // variant:
-//   "sidebar"  — compact segmented control for the navigation sidebar
+//   "sidebar"  — compact dropdown for the navigation sidebar and page headers
 //   "settings" — labelled block with a leading icon for the settings page
 //
 // language, onSelect — for a page whose address decides its language, like
@@ -24,24 +24,23 @@ export default function LanguageSwitcher({ variant = 'sidebar', language, onSele
     else i18n.changeLanguage(lng)
   }
 
-  const segmented = (
-    <div className="inline-flex rounded-xl bg-cream-dark p-0.5" role="group" aria-label={t('language.label')}>
-      {SUPPORTED_LANGUAGES.map((lng) => {
-        const active = current === lng
-        return (
-          <button
-            key={lng}
-            type="button"
-            onClick={() => handleChange(lng)}
-            aria-pressed={active}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              active ? 'bg-kaydo-dark text-white shadow-sm' : 'text-bark-light hover:text-bark'
-            }`}
-          >
-            {t(`language.${lng}`)}
-          </button>
-        )
-      })}
+  // A dropdown rather than one button per language: there are four now, and
+  // the list keeps growing in a header with little room. Each option is named
+  // in its own language so a visitor can find theirs without reading another.
+  const dropdown = (
+    <div className="relative inline-flex items-center">
+      <Languages className="pointer-events-none absolute start-3 w-4 h-4 text-bark-light" aria-hidden="true" />
+      <select
+        value={current}
+        onChange={(e) => handleChange(e.target.value)}
+        aria-label={t('language.label')}
+        className="appearance-none rounded-xl bg-cream-dark ps-9 pe-8 py-1.5 text-sm font-medium text-bark cursor-pointer hover:bg-cream-dark/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-kaydo/40"
+      >
+        {SUPPORTED_LANGUAGES.map((lng) => (
+          <option key={lng} value={lng}>{t(`language.${lng}`)}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute end-2.5 w-4 h-4 text-bark-light" aria-hidden="true" />
     </div>
   )
 
@@ -57,10 +56,10 @@ export default function LanguageSwitcher({ variant = 'sidebar', language, onSele
         <p className="text-xs text-bark-muted mb-3">
           {t('language.description')}
         </p>
-        {segmented}
+        {dropdown}
       </div>
     )
   }
 
-  return segmented
+  return dropdown
 }

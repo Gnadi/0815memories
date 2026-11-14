@@ -35,15 +35,18 @@ import {
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LANDING_PATHS } from '../i18n'
+import { LANDING_PATHS, isRtl } from '../i18n'
 import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
+import { LightboxProvider, ZoomTarget } from '../components/landing/ImageLightbox'
 import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
 import usePWAInstall from '../hooks/usePWAInstall'
+
+const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR', fr: 'fr_FR' }
 
 function OctocatIcon({ className }) {
   return (
@@ -94,14 +97,16 @@ export default function LandingPage({ lng }) {
   // sent to the admin login, which is no use to someone without an account.
   const openFeature = (path) => navigate(isAdmin ? path : isAuthenticated ? '/home' : `/demo?to=${path}`)
 
+  const lightboxLabels = { close: t('lightbox.close'), previous: t('lightbox.previous'), next: t('lightbox.next') }
+
   return (
-    <div className="min-h-screen bg-cream font-sans">
+    <LightboxProvider labels={lightboxLabels} className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
       <Head>
         {/* Emitted first in <head> so the charset declaration lands within the
             first 1024 bytes of the pre-rendered HTML (Lighthouse best-practice). */}
         <meta charSet="utf-8" />
-        <html lang={lang} />
+        <html lang={lang} dir={isRtl(lang) ? 'rtl' : 'ltr'} />
         <title>{t('seo.title')}</title>
         <meta name="description" content={t('seo.description')} />
         <meta name="robots" content="index,follow" />
@@ -123,7 +128,9 @@ export default function LandingPage({ lng }) {
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
         <meta property="og:locale" content={t('seo.ogLocale')} />
-        <meta property="og:locale:alternate" content={lang === 'de' ? 'en_US' : 'de_DE'} />
+        {Object.entries(OG_LOCALES).filter(([code]) => code !== lang).map(([code, locale]) => (
+          <meta key={code} property="og:locale:alternate" content={locale} />
+        ))}
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -434,13 +441,17 @@ export default function LandingPage({ lng }) {
                     )
                   })}
                 </ul>
-                <button
-                  onClick={() => openFeature('/scrapbook')}
-                  className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
-                >
-                  {t('pillars.scrapbook.button')}
-                </button>
-                <FeatureLink id="photoBook" lang={lang} t={t} className="mt-4" />
+                {/* The link is inline-flex like the button: without a wrapper
+                    the two sat on one line, touching. */}
+                <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
+                  <button
+                    onClick={() => openFeature('/scrapbook')}
+                    className="px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
+                  >
+                    {t('pillars.scrapbook.button')}
+                  </button>
+                  <FeatureLink id="photoBook" lang={lang} t={t} />
+                </div>
               </div>
 
               {/* Right — real scrapbook editor screenshot, with the dialog
@@ -451,13 +462,15 @@ export default function LandingPage({ lng }) {
                   alt={t('screens.scrapbookAlt')}
                 />
                 <figure className="relative -mt-10 ml-auto w-3/4 max-w-xs rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white">
-                  <img
-                    {...shot('printDialog')}
-                    alt={t('screens.printDialogAlt')}
-                    loading="lazy"
-                    decoding="async"
-                    className="block w-full h-auto"
-                  />
+                  <ZoomTarget src={shot('printDialog').src} alt={t('screens.printDialogAlt')} className="block w-full">
+                    <img
+                      {...shot('printDialog')}
+                      alt={t('screens.printDialogAlt')}
+                      loading="lazy"
+                      decoding="async"
+                      className="block w-full h-auto"
+                    />
+                  </ZoomTarget>
                 </figure>
               </div>
             </div>
@@ -979,7 +992,7 @@ export default function LandingPage({ lng }) {
           </p>
         </div>
       </footer>
-    </div>
+    </LightboxProvider>
   )
 }
 
@@ -1081,7 +1094,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
     <div className="max-w-md">
       {/* ── Availability checker ── */}
       <form onSubmit={handleCheck}>
-        <div className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
+        {/* A web address reads left to right in every language. */}
+        <div dir="ltr" className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
           <input
             type="text"
             value={familyName}
@@ -1114,7 +1128,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
         {slug && status === 'idle' && (
           <p className="text-xs text-bark-muted mt-2 pl-1">
             {t('claim.previewLabel')}{' '}
-            <span className="font-medium text-kaydo">{domain}</span>
+            <span dir="ltr" className="font-medium text-kaydo">{domain}</span>
           </p>
         )}
       </form>
@@ -1130,7 +1144,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
         <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl mt-3 flex items-center gap-2">
           <Ban className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>
-            <span className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
+            <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
           </span>
         </p>
       )}
@@ -1140,7 +1154,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
           <p className="text-sm text-green-700 bg-green-50 px-4 py-2.5 rounded-xl flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>
-              <span className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
+              <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
             </span>
           </p>
 

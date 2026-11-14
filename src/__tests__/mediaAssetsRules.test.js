@@ -129,7 +129,9 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
       db,
       dryRun: false,
       now: () => at,
-      destroy: async (_type, ids) => { destroyed.push(...ids); return new Set(ids) },
+      // Each file is also cleared under the other kinds its signature could
+      // have been used for (functions/mediaPurge.js); `raw` is its own.
+      destroy: async (type, ids) => { if (type === 'raw') destroyed.push(...ids); return new Set(ids) },
     })
 
     // The first run only reserves what is due; a write whose trigger has not

@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js src/__tests__/blackboxRules.test.js src/__tests__/authRules.test.js src/__tests__/feedbackRules.test.js src/__tests__/familySlugRules.test.js src/__tests__/viewerLoginRules.test.js src/__tests__/timelineRules.test.js src/__tests__/anniversaryQueryRules.test.js src/__tests__/entryConversionRules.test.js src/__tests__/printFileStorageRules.test.js src/__tests__/bestOfRules.test.js src/__tests__/recipeRules.test.js src/__tests__/journalRules.test.js src/__tests__/mediaAssetsRules.test.js src/__tests__/mediaRefsRules.test.js src/__tests__/encryptedFieldsRules.test.js src/__tests__/adventRules.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-kaydo \"vitest run src/__tests__/ourYearRules.test.js src/__tests__/memoryRules.test.js src/__tests__/collageRules.test.js src/__tests__/blackboxRules.test.js src/__tests__/authRules.test.js src/__tests__/feedbackRules.test.js src/__tests__/familySlugRules.test.js src/__tests__/viewerLoginRules.test.js src/__tests__/timelineRules.test.js src/__tests__/anniversaryQueryRules.test.js src/__tests__/entryConversionRules.test.js src/__tests__/printFileStorageRules.test.js src/__tests__/bestOfRules.test.js src/__tests__/recipeRules.test.js src/__tests__/journalRules.test.js src/__tests__/mediaAssetsRules.test.js src/__tests__/mediaRefsRules.test.js src/__tests__/encryptedFieldsRules.test.js src/__tests__/adventRules.test.js src/__tests__/familyDeletionRules.test.js src/__tests__/membershipRules.test.js\"",
     "test:e2e": "firebase emulators:exec --only auth,firestore,functions --project demo-kaydo \"node scripts/seed-emulator.mjs && playwright test\"",
     "emulators": "firebase emulators:start --only auth,firestore,functions,storage --project demo-kaydo",
     "seed:emulator": "node scripts/seed-emulator.mjs"
@@ -29,7 +29,7 @@
     "astronomy-engine": "^2.1.19",
     "dompurify": "^3.4.11",
     "file-saver": "^2.0.5",
-    "firebase": "^12.11.0",
+    "firebase": "^13.2.0",
     "firebase-admin": "^14.4.0",
     "html2canvas": "^1.4.1",
     "i18next": "^26.7.2",
@@ -68,7 +68,7 @@
     "sharp": "^0.35.4",
     "tailwindcss": "^4.2.2",
     "vite": "^8.3.6",
-    "vite-plugin-pwa": "^1.2.0",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^4.1.4"
   },
   "overrides": {

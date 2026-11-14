@@ -69,5 +69,12 @@
     "notYet": "Noch nicht bestätigt. Öffne den Link in der E-Mail und versuch es dann noch einmal.",
     "tooManyRequests": "Zu viele E-Mails – bitte warte ein paar Minuten und versuch es erneut",
     "failed": "Etwas ist schiefgelaufen. Bitte versuch es erneut."
+  },
+  "familyDeletion": {
+    "title": "Diese Familie wird am {{date}} gelöscht",
+    "bodyOwner": "Du hast das veranlasst. Bis dahin kannst du es in den Einstellungen zurücknehmen.",
+    "bodyAdmin": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist dann endgültig weg. Lade in den Einstellungen ein Backup herunter, wenn du etwas behalten willst.",
+    "bodyViewer": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist nach diesem Tag weg.",
+    "openSettings": "Einstellungen öffnen"
   }
 }

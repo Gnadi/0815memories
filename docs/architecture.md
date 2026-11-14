@@ -34,15 +34,22 @@ anything the client can edit:
   `AuthContext`); the answer never says whether an account exists. The
   password protects the account only: the family key does not depend on it,
   so a reset loses nothing. Because the reset goes to the account's address,
-  an account becomes an admin only once that address is confirmed: the rules
-  refuse founding a family and redeeming an invite without `email_verified`
-  on the token (`hasVerifiedEmail()`). `/signup` and `/invite` lead through
+  an account becomes an admin only once that address is confirmed: founding a
+  family (the rules, `hasVerifiedEmail()`) and redeeming an invite (the
+  `redeemFamilyInvite` function) are refused without `email_verified` on the
+  token. `/signup` and `/invite` lead through
   the confirmation, and `ProtectedRoute` sends an account no family lists
   back to `/signup` to finish. Admins from before that check keep their
   access and are asked on the home page to confirm. The `syncAdminClaims` trigger
   puts `{ familyId, role: 'admin' }` on their token whenever the family's
   `adminUids` change. The rules also accept an admin listed in `adminUids`
   whose claim has not arrived yet (`isAdminByDocument` in `firestore.rules`).
+  Who the admins are changes in two places only, both transactions in
+  `functions/membership.js`: `redeemFamilyInvite` adds the holder of an
+  invite link, and `removeFamilyAdmin` takes an admin out together with every
+  pending invite. The rules refuse a client any change to `adminUids`. The
+  browser used to make these writes itself, and telling a real redemption
+  from a replayed one was the part of the rules that kept needing repairs.
 - **Viewers** have no account. They enter the family's shared password. The
   `viewerLogin` callable function checks it against a bcrypt hash in
   `families/{id}/secrets/auth`, with rate limiting, and returns a custom token
@@ -115,9 +122,10 @@ family.
 
 | Collection | Holds | Written by |
 | --- | --- | --- |
-| `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design | admins |
+| `families/{id}` | name, slug, admins, key (set at signup, never changed), login-page design; `deletion`, the date the family is deleted on, written by the deletion functions only | admins |
 | `families/{id}/secrets/auth` | bcrypt hash of the shared password | `setSharedPassword` function only |
-| `families/{id}/admins`, `/invites` | admin metadata, co-admin invites | admins |
+| `families/{id}/admins` | what the settings show about each admin | the membership functions only |
+| `families/{id}/invites` | co-admin invite links; minted and revoked by admins, redeemed by `redeemFamilyInvite` | admins |
 | `familyPublic/{id}` | the public login-page subset | `mirrorFamilyPublic` function only |
 | `familySlugs/{slug}` | slug → family | functions only |
 | `memories`, `moments`, `albums` | the feed | admins |
@@ -130,6 +138,7 @@ family.
 | `fcmTokens` | devices registered for push; never readable by clients | family members |
 | `notificationsQueue` | retired; closed in the rules | nobody |
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
+| `familyDeletions` | one marker per family whose deletion has begun | functions only |
 | `feedback` | app feedback, deliberately unencrypted, append-only | family members |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
@@ -144,6 +153,8 @@ the top of `functions/index.js`.
 | --- | --- | --- |
 | `viewerLogin` | callable | password check, rate limit, viewer token |
 | `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions |
+| `redeemFamilyInvite` | callable, a confirmed account holding an invite | makes the caller an admin and spends the invite |
+| `removeFamilyAdmin` | callable, admins | removes an admin, their entry and every pending invite; raises the invite epoch |
 | `syncAdminClaims` | `families/{id}` written | admin role claims |
 | `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
@@ -152,11 +163,30 @@ the top of `functions/index.js`.
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
-| `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger; counts claimed ones, reports the rest, deletes nothing |
+| `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
+| `requestFamilyDeletion`, `cancelFamilyDeletion` | callable, the owner | set and clear the date a family is deleted on, 14 days out |
+| `deleteScheduledFamilies` | schedule, 02:45 Europe/Berlin | deletes the families whose date has come: documents, files, print files, the viewer identity, the owner's account, the family document |
+
+Deleting a family reaches into three systems and can stop halfway, so
+`functions/familyDeletion.js` keeps no record of how far it got: every step
+deletes whatever of the family is still there, and a run that stops is started
+again the next day. A collection added to `firestore.rules` goes into
+`FAMILY_COLLECTIONS` or `OTHER_COLLECTIONS` there, or
+`familyDeletionCoverage.test.js` fails: a new collection has to say what
+happens to it when its family is deleted.
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
-The functions are deployed by hand for now (README, *Getting started*).
+They are deployed from CI on merge once that is switched on, and by hand until
+then (README, *Cloud Functions*).
+
+The triggers that keep something in step with the documents —
+`trackMediaReferences`, `syncAdminClaims`, `mirrorFamilyPublic` — retry a run
+that failed, for up to an hour (`functions/retries.js`). They can because each
+decides from the document as it is now, not from the event, so a second run
+lands on the same answer; a trigger added to that list has to work the same
+way. The push triggers do not retry: a second run would be a second
+notification.
 
 ## The front end (`src/`)
 
@@ -202,10 +232,20 @@ and cannot read rich text to see which are in use (`docs/plan-media-lifecycle.md
 A collection that starts holding media is added to `MEDIA_COLLECTIONS` in
 `functions/mediaRefs.js` as well.
 
+An upload signature covers the file's public id but not its kind: Cloudinary
+leaves `resource_type` out of what is signed. So the signature for one `raw`
+file also lets a tampered browser store an `image` and a `video` under the
+same id, and the ledger knows of one. Those extra files are deleted in two
+places: with the file the ledger knows, when the clean-up or a family's
+deletion removes it (`destroyUnderOtherTypes`), and by the weekly
+`reportLegacyMedia` run, which lists the whole account and deletes a signed id
+found under another kind than its ledger entry names. Until that run, such a
+file does not count against the family's storage.
+
 Build and delivery details that affect many changes:
 
 - **Pre-rendering.** `vite-react-ssg` renders the landing page to static
-  HTML at build time, at `/` in English and at `/de` in German
+  HTML at build time, at `/` in English, at `/de` in German, at `/fr` in French and at `/ar` in Arabic (right to left). For French and Arabic only the landing page and sign-in are translated; the rest of the app falls back to English
   (`LANDING_PATHS` in `src/i18n/`): crawlers detect no language, so each
   language needs an address of its own. Anything on the public routes must
   render in Node, without `window`. The signed-in app is client-only and

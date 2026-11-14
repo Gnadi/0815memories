@@ -69,5 +69,12 @@
     "notYet": "Not confirmed yet. Open the link in the email, then try again.",
     "tooManyRequests": "Too many emails — please wait a few minutes and try again",
     "failed": "Something went wrong. Please try again."
+  },
+  "familyDeletion": {
+    "title": "This family will be deleted on {{date}}",
+    "bodyOwner": "You asked for this. Until then you can take it back in the settings.",
+    "bodyAdmin": "The family's owner asked for this. Everything stored here will be gone for good. Download a backup in the settings if you want to keep anything.",
+    "bodyViewer": "The family's owner asked for this. Everything stored here will be gone after that day.",
+    "openSettings": "Open the settings"
   }
 }

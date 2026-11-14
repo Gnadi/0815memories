@@ -13,6 +13,7 @@ import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
 import MediaIndexPanel from './MediaIndexPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
+import DeleteFamilyPanel from './DeleteFamilyPanel'
 
 export default function SettingsPanel() {
   const { familyId, isDemo } = useAuth()
@@ -385,6 +386,9 @@ export default function SettingsPanel() {
       {/* Notes on older posts which stored files they use, so files nobody
           needs can be told apart (docs/plan-media-lifecycle.md, phase 5). */}
       <MediaIndexPanel />
+
+      {/* Last, and below the backup: what it deletes cannot be brought back. */}
+      <DeleteFamilyPanel />
     </div>
   )
 }

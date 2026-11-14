@@ -202,14 +202,23 @@ before phase 4.
   or an entry from before the triggers read the document — the file is kept,
   put back as `attached`, and an error is logged. The dry run takes the same
   look, so its report does not list such a file.
+- Before any file goes, `pending` ones included, the family's documents are
+  read (`holdersOfFamily`: `mediaRefs` of every document in
+  `MEDIA_COLLECTIONS`, once per family and run). A file one of them names is
+  kept and attached. This is for the attach that never arrived — a trigger
+  that failed for good, or functions deployed before they knew the
+  collection — which left a file in daily use looking like an abandoned
+  upload, due after a week, with no `detachedFrom` to look at.
+- `trackMediaReferences` retries a failed run for up to an hour
+  (`functions/retries.js`).
 - Deletion is two steps on the ledger entry. A run that finds a file due
   *reserves* it (`deleting`, `deletingSince`, `deletingFrom`) and destroys
   nothing; a document write and its trigger are asynchronous, so no check
   before a destroy can see a reference whose trigger has not run. The trigger
   attaching the file cancels the reservation (back to `attached`) in a
-  transaction on the same entry. A run at least 12 hours later (`RESERVATION_MS`)
-  looks once more at `detachedFrom`, then moves the entry to `destroying` in a
-  transaction that needs it still `deleting` without references: the point of
+  transaction on the same entry. A run at least 12 hours later
+  (`RESERVATION_MS`) reads `detachedFrom` and the family's documents once
+  more, then moves the entry to `destroying` in a transaction that needs it still `deleting` without references: the point of
   no return. Only then is Cloudinary asked, and the entry stays `destroying`
   and is retried by every run until Cloudinary confirms. A reference that
   arrives while `destroying` is only recorded; the entry is then kept as
@@ -217,10 +226,10 @@ before phase 4.
   A dry run changes nothing and reports earlier reservations as `inFlight`.
   A third composite index on `mediaAssets` (`state`, `deletingSince`) serves
   the query for reservations that have stood long enough.
-- What remains: a document whose trigger never runs within the reservation
-  window is caught only by the look at `detachedFrom` (and a `pending` file has
-  no such document). The trigger logs a document naming a file the ledger no
-  longer knows, so a loss would not go unnoticed.
+- What remains: a document written between that last read and the move to
+  `destroying`, whose trigger has not run by then. Its trigger finds the entry
+  `destroying` and records the reference, so the file ends as `lost` and is
+  reported, not deleted silently.
 - It ships with `MEDIA_PURGE_DRY_RUN=true` and only logs the public ids it
   would delete. It also needs `CLOUDINARY_CLOUD_NAME`; without it, it reports
   only. It is switched on only after a few weeks of logs show nothing that is
