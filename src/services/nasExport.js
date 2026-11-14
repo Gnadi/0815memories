@@ -17,6 +17,7 @@ import { decryptRecipe } from './recipes'
 import { decryptScrapbook } from './scrapbooks'
 import { decryptCollage } from './collages'
 import { decryptHighlight } from './highlights'
+import { decryptBestOf } from './bestOf'
 import { decryptChapter, decryptEntry, decryptLetter, decryptRitual } from './ourYear'
 import { collectRichMediaUrls } from '../utils/richText'
 
@@ -212,6 +213,7 @@ const DECRYPTORS = {
   scrapbooks: decryptScrapbook,
   collages: decryptCollage,
   highlights: decryptHighlight,
+  bestOf: decryptBestOf,
   ourYearRituals: decryptRitual,
   ourYearChapters: decryptChapter,
   ourYearEntries: decryptEntry,
@@ -223,6 +225,28 @@ async function decryptCollectionData(data, collectionName, encryptionKey) {
   const decrypt = DECRYPTORS[collectionName]
   if (!encryptionKey || !decrypt) return data
   return Promise.all(data.map((item) => decrypt(encryptionKey, item)))
+}
+
+/**
+ * The family's admins as the settings list them, for `members.json`.
+ *
+ * Fields are picked, not stripped: the entry also holds `viaInvite`, the token
+ * of the invite that was redeemed, and a token is a credential. Anything the
+ * entry may gain later stays out of the archive until it is listed here. Admins
+ * can read this subcollection (firestore.rules); viewers have no entry in it.
+ */
+async function fetchMembers(familyId, ownerUid) {
+  const snap = await getDocs(collection(db, 'families', familyId, 'admins'))
+  return snap.docs.map((d) => {
+    const { email, addedAt } = serializeTimestamps(d.data())
+    return {
+      uid: d.id,
+      role: 'admin',
+      owner: d.id === ownerUid,
+      email: email ?? null,
+      addedAt: addedAt ?? null,
+    }
+  })
 }
 
 /**
@@ -338,7 +362,7 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
 
   const [
     memories, moments, journals, children, blackbox, recipes,
-    scrapbooks, collages, highlights, familySnap,
+    scrapbooks, collages, highlights, bestOf, familySnap,
   ] = await Promise.all([
     fetchCollection('memories', familyId, 'date', 'desc'),
     fetchCollection('moments', familyId, 'date', 'desc'),
@@ -349,6 +373,8 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
     fetchCollection('scrapbooks', familyId, 'createdAt', 'desc'),
     fetchCollection('collages', familyId, 'createdAt', 'desc'),
     fetchCollection('highlights', familyId, 'createdAt', 'desc'),
+    // All months, unlike the app's list, which stops at two years.
+    fetchCollection('bestOf', familyId, 'month', 'desc'),
     getDoc(doc(db, 'families', familyId)),
   ])
 
@@ -357,7 +383,7 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
   // Decrypt text fields
   const [
     decMemories, decJournals, decChildren, capsuleMetadata, decRecipes,
-    decScrapbooks, decCollages, decHighlights, ourYear,
+    decScrapbooks, decCollages, decHighlights, decBestOf, ourYear,
   ] = await Promise.all([
     decryptCollectionData(memories, 'memories', encryptionKey),
     decryptCollectionData(journals, 'journals', encryptionKey),
@@ -367,6 +393,7 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
     decryptCollectionData(scrapbooks, 'scrapbooks', encryptionKey),
     decryptCollectionData(collages, 'collages', encryptionKey),
     decryptCollectionData(highlights, 'highlights', encryptionKey),
+    decryptCollectionData(bestOf, 'bestOf', encryptionKey),
     fetchOurYear(familyId, uid, encryptionKey),
   ])
   const decMoments = moments // moments have no encrypted text fields
@@ -374,17 +401,25 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
 
   // Sanitize family doc (strip sensitive fields)
   let familyData = {}
+  let ownerUid = null
   if (familySnap.exists()) {
     const raw = serializeTimestamps(familySnap.data())
     // Underscore-prefixed so the lint rule reads these as deliberately discarded
     // rather than forgotten. The family key especially must never leave here.
-    const { sharedPassword: _pw, adminUid: _admin, encryptionKeyJwk: _key, ...safe } = raw
+    const { sharedPassword: _pw, adminUid, encryptionKeyJwk: _key, ...safe } = raw
+    // Kept only to mark the owner in members.json; it is not written as such.
+    ownerUid = adminUid ?? null
     familyData = { id: familyId, ...safe }
   }
+
+  const members = await fetchMembers(familyId, ownerUid)
 
   onProgress({ phase: 'data', current: 1, total: 1, message: 'Family data fetched.' })
 
   // Phase 2: Collect and download media (use original URLs for download, not decrypted text)
+  // A best-of adds none: its slides show photos and clips of the month's
+  // memories and moments, which are downloaded with those. Its data file keeps
+  // the URLs, so they still match the media files by URL.
   const allMedia = [
     ...collectMediaUrls(decMemories, 'memories'),
     ...collectMediaUrls(decMoments, 'moments'),
@@ -455,6 +490,8 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
       scrapbooks: decScrapbooks.length,
       collages: decCollages.length,
       highlights: decHighlights.length,
+      bestOf: decBestOf.length,
+      members: members.length,
       ourYearChapters: ourYear.chapters.length,
       mediaFiles: mediaResults.length,
       failedDownloads: failedDownloads.length,
@@ -482,6 +519,8 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
   dataFolder.file('scrapbooks.json', JSON.stringify(decScrapbooks, null, 2))
   dataFolder.file('collages.json', JSON.stringify(decCollages, null, 2))
   dataFolder.file('highlights.json', JSON.stringify(decHighlights, null, 2))
+  dataFolder.file('bestOf.json', JSON.stringify(decBestOf, null, 2))
+  dataFolder.file('members.json', JSON.stringify(members, null, 2))
   dataFolder.file('family.json', JSON.stringify(familyData, null, 2))
 
   // Our Year belongs to two people rather than the family, so it gets its own
