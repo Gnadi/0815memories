@@ -19,6 +19,7 @@ function renderLanding(path = '/') {
   const router = createMemoryRouter([
     { path: '/', element: <LandingPage /> },
     { path: '/de', element: <LandingPage lng="de" /> },
+    { path: '/fr', element: <LandingPage lng="fr" /> },
     { path: '*', element: null },
   ], { initialEntries: [path] })
   render(<RouterProvider router={router} />)
@@ -65,8 +66,7 @@ describe('LandingPage renders in both languages', () => {
     renderLanding('/de')
     expect(screen.getAllByText('Demo-Familie ansehen').length).toBe(2)
     expect(screen.getByText('Häufige Fragen')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Sprache' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Deutsch' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('combobox', { name: 'Sprache' })).toHaveValue('de')
     // Fixed to the page rather than switched for everyone: the pre-render
     // builds the English page at the same time.
     expect(i18n.language).toBe('en')
@@ -74,10 +74,13 @@ describe('LandingPage renders in both languages', () => {
 
   it('goes to the address of the language a visitor picks', () => {
     const router = renderLanding()
-    fireEvent.click(screen.getByRole('button', { name: 'Deutsch' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'de' } })
     expect(router.state.location.pathname).toBe('/de')
     expect(i18n.language).toBe('de')
-    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sprache' }), { target: { value: 'fr' } })
+    expect(router.state.location.pathname).toBe('/fr')
+    expect(i18n.language).toBe('fr')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Langue' }), { target: { value: 'en' } })
     expect(router.state.location.pathname).toBe('/')
     expect(i18n.language).toBe('en')
   })

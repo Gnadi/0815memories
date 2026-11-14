@@ -35,7 +35,7 @@ import {
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LANDING_PATHS } from '../i18n'
+import { LANDING_PATHS, isRtl } from '../i18n'
 import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
@@ -46,6 +46,8 @@ import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '.
 import { generateSlug } from '../utils/familySlug'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 import usePWAInstall from '../hooks/usePWAInstall'
+
+const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR', fr: 'fr_FR' }
 
 function OctocatIcon({ className }) {
   return (
@@ -105,7 +107,7 @@ export default function LandingPage({ lng }) {
         {/* Emitted first in <head> so the charset declaration lands within the
             first 1024 bytes of the pre-rendered HTML (Lighthouse best-practice). */}
         <meta charSet="utf-8" />
-        <html lang={lang} />
+        <html lang={lang} dir={isRtl(lang) ? 'rtl' : 'ltr'} />
         <title>{t('seo.title')}</title>
         <meta name="description" content={t('seo.description')} />
         <meta name="robots" content="index,follow" />
@@ -127,7 +129,9 @@ export default function LandingPage({ lng }) {
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
         <meta property="og:locale" content={t('seo.ogLocale')} />
-        <meta property="og:locale:alternate" content={lang === 'de' ? 'en_US' : 'de_DE'} />
+        {Object.entries(OG_LOCALES).filter(([code]) => code !== lang).map(([code, locale]) => (
+          <meta key={code} property="og:locale:alternate" content={locale} />
+        ))}
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -1091,7 +1095,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
     <div className="max-w-md">
       {/* ── Availability checker ── */}
       <form onSubmit={handleCheck}>
-        <div className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
+        {/* A web address reads left to right in every language. */}
+        <div dir="ltr" className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
           <input
             type="text"
             value={familyName}
@@ -1124,7 +1129,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
         {slug && status === 'idle' && (
           <p className="text-xs text-bark-muted mt-2 pl-1">
             {t('claim.previewLabel')}{' '}
-            <span className="font-medium text-kaydo">{domain}</span>
+            <span dir="ltr" className="font-medium text-kaydo">{domain}</span>
           </p>
         )}
       </form>
@@ -1140,7 +1145,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
         <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl mt-3 flex items-center gap-2">
           <Ban className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>
-            <span className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
+            <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
           </span>
         </p>
       )}
@@ -1150,7 +1155,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
           <p className="text-sm text-green-700 bg-green-50 px-4 py-2.5 rounded-xl flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>
-              <span className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
+              <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
             </span>
           </p>
 
