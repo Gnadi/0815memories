@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // The upload helpers are the only side-effect we care about; mocking them at
@@ -21,15 +21,21 @@ import { createVideoPoster } from '../utils/imageThumbnail'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
-// jsdom's URL.createObjectURL is absent by default.
+// Stubbed even where the environment has URL.createObjectURL: older jsdom
+// has none, and Vitest 4 wraps jsdom's with a helper that reads jsdom
+// internals jsdom 31 no longer has. The hook only needs some preview URL.
+const realCreateObjectURL = URL.createObjectURL
+const realRevokeObjectURL = URL.revokeObjectURL
 beforeEach(() => {
   encryptAndUpload.mockReset()
   encryptAndUploadWithThumb.mockReset()
   createVideoPoster.mockReset()
-  if (!URL.createObjectURL) {
-    URL.createObjectURL = vi.fn(() => 'blob:fake')
-    URL.revokeObjectURL = vi.fn()
-  }
+  URL.createObjectURL = vi.fn(() => 'blob:fake')
+  URL.revokeObjectURL = vi.fn()
+})
+afterEach(() => {
+  URL.createObjectURL = realCreateObjectURL
+  URL.revokeObjectURL = realRevokeObjectURL
 })
 
 function makeFile(name = 'pic.jpg', type = 'image/jpeg', size) {
