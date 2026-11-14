@@ -1,0 +1,480 @@
+/* The service layer (src/services/), run against the demo's in-memory
+   Firestore with real encryption.
+
+   Two things it is there for. A page that loads one document and the list it
+   came from decrypt it the same way — the pages used to carry their own copy of
+   each area's decryption. And a list shows its newest snapshot only: every
+   list but the moments row could let a slower decrypt of an older snapshot
+   overwrite a newer one. */
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+import { webcrypto } from 'node:crypto'
+
+vi.mock('../config/firebase', () => ({ db: {}, auth: null, functions: {} }))
+
+const callable = vi.hoisted(() => vi.fn(async () => ({ data: { ok: true } })))
+vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (data) => callable(name, data) }))
+
+import { installDemoDatabase } from '../config/firestore'
+import { createDemoDatabase } from '../demo/demoDatabase'
+import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
+import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
+import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
+import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
+import { addMemory, getMemory } from '../services/memories'
+import { addKid, subscribeKids, updateKid } from '../services/kids'
+import { addJournal, subscribeJournals, updateJournal } from '../services/journals'
+import { Timestamp } from '../config/firestore'
+import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
+import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
+import { redeemInvite } from '../services/invites'
+import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOfs } from '../services/bestOf'
+
+// jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
+beforeAll(() => {
+  if (!globalThis.crypto?.subtle) {
+    Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true })
+  }
+})
+
+const FAMILY = 'family-1'
+const OTHER = 'family-2'
+
+let fs
+let key
+
+// Lets the database's listeners and the decrypts they start run to the end.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+function firstDelivery(subscribe) {
+  return new Promise((resolve, reject) => {
+    const stop = subscribe((value) => {
+      stop()
+      resolve(value)
+    }, reject)
+  })
+}
+
+beforeEach(async () => {
+  clearDecryptedTextCache()
+  if (!key) ({ key } = await generateEncryptionKey())
+  fs = createDemoDatabase({
+    documents: [
+      ['notes/a', { familyId: FAMILY, text: 'first' }],
+      ['notes/theirs', { familyId: OTHER, text: 'not ours' }],
+    ],
+    uid: 'uid-admin',
+  })
+  installDemoDatabase(fs)
+})
+
+afterEach(() => {
+  installDemoDatabase(null)
+})
+
+describe('subscribeDecrypted', () => {
+  const notes = () => fs.query(fs.collection(null, 'notes'), fs.where('familyId', '==', FAMILY))
+
+  it('hands over each snapshot, decrypted', async () => {
+    const texts = await firstDelivery((onData, onError) =>
+      subscribeDecrypted(notes(), async (docs) => docs.map((d) => d.text.toUpperCase()), onData, onError))
+    expect(texts).toEqual(['FIRST'])
+  })
+
+  it('delivers the newest snapshot only, when an older one decrypts slower', async () => {
+    const finish = []
+    const decrypt = (docs) => new Promise((resolve) => finish.push(() => resolve(docs.map((d) => d.id))))
+    const seen = []
+    const stop = subscribeDecrypted(notes(), decrypt, (ids) => seen.push(ids))
+
+    await settle()
+    await fs.setDoc(fs.doc(null, 'notes', 'b'), { familyId: FAMILY, text: 'second' })
+    await settle()
+    expect(finish).toHaveLength(2)
+
+    finish[1]()
+    await settle()
+    finish[0]()
+    await settle()
+
+    expect(seen).toEqual([['a', 'b']])
+    stop()
+  })
+
+  it('delivers nothing once unsubscribed', async () => {
+    const finish = []
+    const onData = vi.fn()
+    const stop = subscribeDecrypted(notes(), (docs) => new Promise((resolve) => finish.push(() => resolve(docs))), onData)
+    await settle()
+    stop()
+    finish[0]()
+    await settle()
+    expect(onData).not.toHaveBeenCalled()
+  })
+
+  it('reports a decrypt that fails', async () => {
+    const error = await new Promise((resolve) => {
+      subscribeDecrypted(notes(), async () => { throw new Error('bad ciphertext') }, () => {}, resolve)
+    })
+    expect(error.message).toBe('bad ciphertext')
+  })
+})
+
+describe('subscribeDecryptedDocument', () => {
+  const note = (id) => fs.doc(null, 'notes', id)
+
+  it('hands over the document, decrypted, and null while there is none', async () => {
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('c'), async (d) => d.text.toUpperCase(), (v) => seen.push(v))
+    await settle()
+    await fs.setDoc(note('c'), { familyId: FAMILY, text: 'third' })
+    await settle()
+    stop()
+    expect(seen).toEqual([null, 'THIRD'])
+  })
+
+  it('delivers the newest snapshot only, when an older one decrypts slower', async () => {
+    const finish = []
+    const decrypt = (d) => new Promise((resolve) => finish.push(() => resolve(d.text)))
+    const seen = []
+    const stop = subscribeDecryptedDocument(note('a'), decrypt, (v) => seen.push(v))
+
+    await settle()
+    await fs.updateDoc(note('a'), { text: 'edited' })
+    await settle()
+    expect(finish).toHaveLength(2)
+
+    // The newer snapshot finishes first; the older one must not follow it.
+    finish[1]()
+    await settle()
+    finish[0]()
+    await settle()
+    stop()
+    expect(seen).toEqual(['edited'])
+  })
+})
+
+describe('getFamilyDocument', () => {
+  const asIs = async (data) => data
+
+  it('returns the family\'s own document', async () => {
+    await expect(getFamilyDocument('notes', 'a', FAMILY, asIs)).resolves.toEqual({ id: 'a', familyId: FAMILY, text: 'first' })
+  })
+
+  it('returns null for a document that is gone, or another family\'s', async () => {
+    await expect(getFamilyDocument('notes', 'missing', FAMILY, asIs)).resolves.toBeNull()
+    await expect(getFamilyDocument('notes', 'theirs', FAMILY, asIs)).resolves.toBeNull()
+  })
+})
+
+describe('one decryption for the list and the page', () => {
+  it('recipes: every encrypted field, ingredients included', async () => {
+    const recipe = {
+      title: 'Grandma\'s strudel',
+      description: 'Sunday afternoons',
+      instructions: 'Stretch the dough thin.',
+      chefNote: 'Use cold butter',
+      forkReason: '',
+      author: 'Grandma',
+      ingredients: [{ name: 'Apples', amount: '1 kg' }],
+      year: 1962,
+    }
+    const { id } = await addRecipe(FAMILY, key, recipe)
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(stored.title).not.toBe(recipe.title)
+    expect(typeof stored.ingredients).toBe('string')
+
+    const loaded = await getRecipe(FAMILY, key, id)
+    expect(loaded).toMatchObject(recipe)
+
+    const [listed] = await firstDelivery((onData, onError) => subscribeRecipes(FAMILY, key, onData, onError))
+    expect(listed).toMatchObject({ ...recipe, id, forkCount: 0 })
+  })
+
+  it('recipes: the rich instructions are stored encrypted and come back as a document', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Knead it' }] }] }
+    const { id } = await addRecipe(FAMILY, key, {
+      title: 'Bread', author: 'Grandpa', instructionsFormat: 'rich', instructions: 'Knead it', instructionsRich: rich,
+    })
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(typeof stored.instructionsRich).toBe('string')
+    expect(stored.instructionsRich).not.toContain('Knead')
+    expect(stored.instructionsFormat).toBe('rich')
+
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({ instructionsRich: rich, instructions: 'Knead it' })
+  })
+
+  it('recipes: an edit re-encrypts what it changes and keeps the version where it is', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Knead' }] }] }
+    const { id } = await addRecipe(FAMILY, key, {
+      title: 'Bread', author: 'Grandpa', parentId: 'root', rootId: 'root', viewerVisible: true,
+      instructionsFormat: 'rich', instructions: 'Knead', instructionsRich: rich,
+    })
+
+    await updateRecipe(key, id, {
+      title: 'Rye bread', instructionsFormat: 'markdown', instructions: '1. **Knead**', instructionsRich: null,
+      ingredients: [{ name: 'Rye', status: 'active' }],
+    })
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(stored.title).not.toContain('Rye')
+    expect(typeof stored.ingredients).toBe('string')
+    expect(stored).not.toHaveProperty('instructionsRich')
+    expect(stored).toMatchObject({ parentId: 'root', rootId: 'root', viewerVisible: true, familyId: FAMILY })
+
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({
+      title: 'Rye bread', author: 'Grandpa', instructionsFormat: 'markdown', instructions: '1. **Knead**',
+      ingredients: [{ name: 'Rye', status: 'active' }],
+    })
+  })
+
+  it('scrapbooks: the list leaves the pages encrypted, the editor gets them', async () => {
+    const pages = [{ id: 'p1', elements: [] }, { id: 'p2', elements: [] }]
+    const id = await addScrapbook(FAMILY, key, { title: 'Summer 2025', pages })
+
+    const [listed] = await firstDelivery((onData, onError) =>
+      subscribeScrapbooks(FAMILY, key, {}, onData, onError))
+    expect(listed).toMatchObject({ id, title: 'Summer 2025', pageCount: 2 })
+    expect(typeof listed.pages).toBe('string')
+
+    await expect(getScrapbook(FAMILY, key, id)).resolves.toMatchObject({ title: 'Summer 2025', pages, pageCount: 2 })
+  })
+
+  it('memories: the page gets the rich description back as a document', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'At the lake' }] }] }
+    await addMemory(FAMILY, key, { title: 'Lake day', content: 'At the lake', contentRich: JSON.stringify(rich) })
+    const [{ id }] = (await fs.getDocs(fs.collection(null, 'memories'))).docs
+
+    await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
+    await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+})
+
+/* Sharing a recipe with the viewers. firestore.rules holds each fork to its
+   root's flag but cannot see a root that is unshared without its forks; that
+   is setRecipeViewerVisible's to get right, and this is where it is held to it. */
+describe('recipes shared with the viewers', () => {
+  const strudel = { title: 'Strudel', author: 'Grandma', year: 1962, ingredients: [] }
+
+  async function lineage() {
+    const { id: root } = await addRecipe(FAMILY, key, { ...strudel, parentId: null, rootId: null, viewerVisible: false })
+    const { id: fork } = await addRecipe(FAMILY, key, { ...strudel, year: 1990, parentId: root, rootId: root, viewerVisible: false })
+    const { id: forkOfFork } = await addRecipe(FAMILY, key, { ...strudel, year: 2020, parentId: fork, rootId: root, viewerVisible: false })
+    const { id: other } = await addRecipe(FAMILY, key, { ...strudel, title: 'Pancakes', parentId: null, rootId: null, viewerVisible: false })
+    return { root, versions: [root, fork, forkOfFork], other }
+  }
+
+  const flags = async (ids) =>
+    Promise.all(ids.map(async (id) => (await fs.getDoc(fs.doc(null, 'recipes', id))).data().viewerVisible))
+
+  it('shares and unshares the root and every version grown from it, and nothing else', async () => {
+    const { root, versions, other } = await lineage()
+
+    await setRecipeViewerVisible(FAMILY, root, true)
+    expect(await flags(versions)).toEqual([true, true, true])
+    expect(await flags([other])).toEqual([false])
+
+    await setRecipeViewerVisible(FAMILY, root, false)
+    expect(await flags(versions)).toEqual([false, false, false])
+  })
+
+  it('lists a viewer the shared recipes only, with all of their forks counted', async () => {
+    const { root } = await lineage()
+    await setRecipeViewerVisible(FAMILY, root, true)
+
+    const listed = await firstDelivery((onData, onError) =>
+      subscribeRecipes(FAMILY, key, onData, onError, { viewer: true }))
+    expect(listed.map((r) => [r.id, r.forkCount])).toEqual([[root, 2]])
+
+    const versions = await getRecipeLineage(FAMILY, key, root, { viewer: true })
+    expect(versions.map((v) => v.year)).toEqual([1962, 1990, 2020])
+  })
+
+  it('lists a viewer nothing while no recipe is shared', async () => {
+    await lineage()
+    const listed = await firstDelivery((onData, onError) =>
+      subscribeRecipes(FAMILY, key, onData, onError, { viewer: true }))
+    expect(listed).toEqual([])
+  })
+})
+
+describe('kids and journals', () => {
+  const stored = async (collectionName) =>
+    (await fs.getDocs(fs.collection(null, collectionName))).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+  it('kids: the birth place goes in as an object, encrypted, and comes back as one', async () => {
+    const birthPlace = { name: 'Linz', country: 'AT', lat: 48.31, lon: 14.29, tz: 'Europe/Vienna' }
+    await addKid(FAMILY, key, { name: 'Emma', birthTime: '04:17', birthPlace })
+
+    const [raw] = await stored('children')
+    for (const field of ['name', 'birthTime', 'birthPlace']) expect(typeof raw[field]).toBe('string')
+    expect(raw.name).not.toBe('Emma')
+    expect(raw.birthPlace).not.toContain('Linz')
+
+    const [kid] = await firstDelivery((onData, onError) => subscribeKids(FAMILY, key, onData, onError))
+    expect(kid).toMatchObject({ id: raw.id, name: 'Emma', birthTime: '04:17', birthPlace })
+  })
+
+  it('kids: null clears a birth time or place', async () => {
+    await addKid(FAMILY, key, { name: 'Leo', birthTime: '09:30', birthPlace: { name: 'Graz' } })
+    const [{ id }] = await stored('children')
+
+    await updateKid(key, id, { birthTime: null, birthPlace: null, skyStyle: 'kaydo' })
+
+    const [raw] = await stored('children')
+    expect(raw).not.toHaveProperty('birthTime')
+    expect(raw).not.toHaveProperty('birthPlace')
+    expect(raw.skyStyle).toBe('kaydo')
+  })
+
+  it("journals: one child's entries, their content encrypted", async () => {
+    const date = (iso) => Timestamp.fromDate(new Date(iso))
+    await addJournal(FAMILY, 'kid-a', key, { title: 'First tooth', content: 'At dinner', date: date('2024-10-18') })
+    await addJournal(FAMILY, 'kid-b', key, { title: 'First bike', content: 'No wheels', date: date('2024-07-12') })
+
+    const raw = await stored('journals')
+    expect(raw.map((d) => d.content)).not.toContain('At dinner')
+
+    const entries = await firstDelivery((onData, onError) =>
+      subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
+    expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+
+  it('journals: the rich text is stored encrypted, and a switch to Markdown deletes it', async () => {
+    const rich = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Dear Emma' }] }] }
+    const date = Timestamp.fromDate(new Date('2024-10-18'))
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Dear Emma', contentFormat: 'rich', contentRich: rich, date })
+
+    const [raw] = await stored('journals')
+    expect(typeof raw.contentRich).toBe('string')
+    expect(raw.contentRich).not.toContain('Dear')
+    expect(raw.contentFormat).toBe('rich')
+
+    const [entry] = await firstDelivery((onData, onError) =>
+      subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
+    expect(entry).toMatchObject({ content: 'Dear Emma', contentRich: rich })
+
+    await updateJournal(key, raw.id, { content: '**Dear** Emma', contentFormat: 'markdown', contentRich: null })
+    const [updated] = await stored('journals')
+    expect(updated).not.toHaveProperty('contentRich')
+    expect(updated.content).not.toContain('Emma')
+    expect(updated).toMatchObject({ contentFormat: 'markdown', familyId: FAMILY, childId: 'kid-a' })
+  })
+
+  it('journals: an entry without a document is stored without one', async () => {
+    await addJournal(FAMILY, 'kid-a', key, { content: '', contentFormat: 'rich', contentRich: null })
+    const [raw] = await stored('journals')
+    expect(raw).not.toHaveProperty('contentRich')
+  })
+})
+
+describe('best-of', () => {
+  const bestOf = (month) => ({
+    version: 1,
+    month,
+    cover: { url: 'cover.enc' },
+    slides: [{ kind: 'award', award: 'place', place: 'Zell am See', media: { url: 'lake.enc' } }],
+  })
+
+  it('stores the story encrypted, one document per month, and gives it back', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+    // Made again — two admins' devices at once, say — it replaces, not adds.
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+
+    const raw = (await fs.getDocs(fs.collection(null, 'bestOf'))).docs.map((d) => ({ id: d.id, ...d.data() }))
+    expect(raw).toHaveLength(1)
+    expect(raw[0]).toMatchObject({ id: `${FAMILY}_2026-09`, familyId: FAMILY, month: '2026-09', version: 1 })
+    expect(typeof raw[0].doc).toBe('string')
+    expect(raw[0].doc).not.toContain('Zell am See')
+
+    await expect(getBestOf(FAMILY, key, '2026-09')).resolves.toMatchObject({ doc: bestOf('2026-09') })
+    await expect(getBestOf(FAMILY, key, '2026-08')).resolves.toBeNull()
+    await expect(getBestOf(OTHER, key, '2026-09')).resolves.toBeNull()
+  })
+
+  it('lists the newest month first', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-08'))
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+    await saveBestOf(OTHER, key, bestOf('2026-10'))
+
+    const list = await firstDelivery((onData, onError) => subscribeBestOfs(FAMILY, key, onData, onError))
+    expect(list.map((b) => b.month)).toEqual(['2026-09', '2026-08'])
+    expect(list[0].doc.slides[0].place).toBe('Zell am See')
+  })
+
+  it("reads one month's memories and moments, decrypted, and nothing around it", async () => {
+    const at = (iso) => Timestamp.fromDate(new Date(iso))
+    await addMemory(FAMILY, key, { title: 'Lake day', images: ['a.enc'], date: at('2026-09-03T12:00:00') })
+    await addMemory(FAMILY, key, { title: 'Too early', images: ['b.enc'], date: at('2026-08-31T23:00:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm1'), { familyId: FAMILY, caption: 'Slide', date: at('2026-09-30T23:30:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm2'), { familyId: FAMILY, caption: 'Too late', date: at('2026-10-01T00:00:00') })
+    await fs.setDoc(fs.doc(null, 'moments', 'm3'), { familyId: OTHER, caption: 'Not ours', date: at('2026-09-10T12:00:00') })
+
+    const { memories, moments } = await getMonthEntries(FAMILY, key, '2026-09')
+    expect(memories.map((m) => m.title)).toEqual(['Lake day'])
+    expect(moments.map((m) => m.caption)).toEqual(['Slide'])
+  })
+})
+
+describe('the family', () => {
+  beforeEach(async () => {
+    await fs.setDoc(fs.doc(null, 'families', 'fam-new'), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+    await fs.setDoc(fs.doc(null, 'familyPublic', 'fam-new'), { familySlug: 'the-millers', familyName: 'The Millers' })
+  })
+
+  it('finds the families someone is an admin of', async () => {
+    await expect(findAdminFamilies('uid-b')).resolves.toEqual([
+      { id: 'fam-new', data: { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] } },
+    ])
+    await expect(findAdminFamilies('uid-nobody')).resolves.toEqual([])
+  })
+
+  it('looks an address up in the public copy, and keeps it free for its own family only', async () => {
+    await expect(resolveFamilyBySlug('the-millers')).resolves.toMatchObject({ id: 'fam-new', familyName: 'The Millers' })
+    await expect(resolveFamilyBySlug('nobody')).resolves.toBeNull()
+    await expect(isSlugAvailable('the-millers')).resolves.toBe(false)
+    await expect(isSlugAvailable('the-millers', 'fam-new')).resolves.toBe(true)
+    await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
+  })
+})
+
+describe('admins and invites', () => {
+  const family = () => fs.doc(null, 'families', 'fam')
+  const invite = (token) => fs.doc(null, 'families', 'fam', 'invites', token)
+
+  beforeEach(async () => {
+    await fs.setDoc(family(), { adminUid: 'uid-a', adminUids: ['uid-a', 'uid-b'] })
+  })
+
+  it('offers only the invites still open, the newest first', async () => {
+    const used = await createInvite('fam', 'uid-a')
+    const expired = await createInvite('fam', 'uid-a')
+    const open = await createInvite('fam', 'uid-a')
+    await fs.updateDoc(invite(used), { used: true })
+    await fs.updateDoc(invite(expired), { expiresAt: Timestamp.fromMillis(Date.now() - 1000) })
+
+    const invites = await firstDelivery((onData, onError) => subscribeOpenInvites('fam', onData, onError))
+    expect(invites.map((i) => i.id)).toEqual([open])
+  })
+
+  it('stamps an invite with the family\'s invite epoch', async () => {
+    const before = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(before))).data().epoch).toBe(0)
+    await fs.updateDoc(family(), { inviteEpoch: 3 })
+    const after = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(after))).data().epoch).toBe(3)
+  })
+
+  // Who is an admin changes on the server (functions/membership.js, tested in
+  // membership.test.js); the services only ask.
+  it('asks the server to remove an admin', async () => {
+    await removeAdmin('fam', 'uid-b')
+    expect(callable).toHaveBeenCalledWith('removeFamilyAdmin', { familyId: 'fam', uid: 'uid-b' })
+  })
+
+  it('asks the server to redeem an invite, without saying who is asking', async () => {
+    await redeemInvite('fam', 'token-1')
+    expect(callable).toHaveBeenCalledWith('redeemFamilyInvite', { familyId: 'fam', token: 'token-1' })
+  })
+})

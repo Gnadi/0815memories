@@ -13,6 +13,8 @@ import {
   FEEDBACK_RATING_MAX,
 } from '../constants/feedback'
 import { devError } from '../utils/devLog'
+import DictationField from './DictationField'
+import { appendDictation } from '../hooks/useDictation'
 
 /**
  * "How is the app treating you?" — a note to whoever runs Kaydo, not to the
@@ -168,15 +170,17 @@ export default function FeedbackModal({ onClose }) {
                 <label htmlFor="feedback-message" className="block text-sm font-medium text-bark mb-1">
                   {t('message.label')}
                 </label>
-                <textarea
-                  id="feedback-message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={4}
-                  maxLength={FEEDBACK_MESSAGE_MAX}
-                  placeholder={t('message.placeholder')}
-                  className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-y"
-                />
+                <DictationField onText={(s) => setMessage((m) => appendDictation(m, s, FEEDBACK_MESSAGE_MAX))}>
+                  <textarea
+                    id="feedback-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={4}
+                    maxLength={FEEDBACK_MESSAGE_MAX}
+                    placeholder={t('message.placeholder')}
+                    className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-y pr-12"
+                  />
+                </DictationField>
                 <p className="text-xs text-bark-muted mt-1.5 text-right">
                   {t('message.counter', { count: message.length, max: FEEDBACK_MESSAGE_MAX })}
                 </p>

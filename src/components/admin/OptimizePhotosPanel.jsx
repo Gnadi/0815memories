@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { scanThumbnailStatus, migrateThumbnails } from '../../utils/thumbnailMigration'
+import { scanThumbnailStatus, migrateThumbnails } from '../../services/thumbnailMigration'
 import { devError } from '../../utils/devLog'
 
 /**

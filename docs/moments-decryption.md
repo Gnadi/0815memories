@@ -34,7 +34,7 @@ The wait is bytes and placement, not AES. Below, in the order they cost.
 `tinyPreview` is the blur-up placeholder: a ~20px WebP that travels inside the
 Firestore document as base64 ciphertext, so it costs no request. It is written
 by the shared upload path (`utils/encryptedUpload.js:99-105`) and by the shared
-backfill (`utils/thumbnailMigration.js:125-135`) — both of which run for moments
+backfill (`services/thumbnailMigration.js:125-135`) — both of which run for moments
 exactly as they do for memories, and both of which **encrypt it**.
 
 Only memories decrypted it again. `decryptMemory` does
@@ -47,7 +47,7 @@ if (Array.isArray(result.thumbsTiny)) {
 ```
 
 `useMoments` and `useAllMoments` handed the snapshot straight to the view with
-no decrypt step at all — they did not even take the key. `utils/nasExport.js:376`
+no decrypt step at all — they did not even take the key. `services/nasExport.js:376`
 still records the assumption in one line: *"moments have no encrypted text
 fields."* They have one, and nobody had told the read path.
 

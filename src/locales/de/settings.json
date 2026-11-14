@@ -2,6 +2,31 @@
   "page": {
     "title": "Einstellungen"
   },
+  "personal": {
+    "title": "Deine Einstellungen",
+    "description": "Sie gelten nur für dieses Gerät."
+  },
+  "notifications": {
+    "label": "Benachrichtigungen",
+    "description": "Werde benachrichtigt, wenn eine neue Erinnerung oder ein Moment geteilt wird.",
+    "unsupported": "Dieser Browser kann keine Benachrichtigungen anzeigen. Auf iPhone oder iPad füge Kaydo zuerst zum Home-Bildschirm hinzu.",
+    "blocked": "Benachrichtigungen sind für Kaydo in diesem Browser blockiert. Erlaube sie in den Browser-Einstellungen, um sie hier einzuschalten.",
+    "failed": "Das hat nicht geklappt. Bitte versuche es erneut."
+  },
+  "install": {
+    "label": "App installieren",
+    "description": "Leg Kaydo auf deinen Home-Bildschirm. Es öffnet sich dann wie eine App, ohne den Browser drumherum.",
+    "button": "Kaydo installieren",
+    "installed": "Kaydo ist auf diesem Gerät installiert.",
+    "ios": "Tippe in Safari auf das Teilen-Symbol und wähle „Zum Home-Bildschirm“. Auf iPhone und iPad ist das auch die Voraussetzung für Benachrichtigungen.",
+    "manual": "Öffne das Menü deines Browsers und wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“."
+  },
+  "session": {
+    "label": "Angemeldet bleiben",
+    "on": "Du bleibst auf diesem Gerät angemeldet, auch wenn du den Browser schließt.",
+    "off": "Du wirst abgemeldet, sobald du den Browser schließt. Gut für ein Gerät, das auch andere benutzen.",
+    "failed": "Das hat nicht geklappt. Bitte versuche es erneut."
+  },
   "panel": {
     "title": "Admin-Einstellungen"
   },
@@ -160,15 +185,17 @@
     "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
     "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
   },
-  "secureCapsules": {
-    "label": "Zeitkapseln absichern",
-    "description": "Eine frühere Version speicherte Black-Box-Kapseln unverschlüsselt und legte ihren Inhalt im selben Datensatz wie die Beschriftung ab — eine versiegelte Kapsel war so schon vor ihrem Datum lesbar. Hier werden sie verschlüsselt und jeder Brief hinter sein Siegel verschoben. Die Kapseln selbst bleiben unverändert.",
-    "scanning": "Kapseln werden geprüft …",
-    "allDone": "Eure Kapseln sind verschlüsselt.",
-    "remaining": "{{pending}} Kapsel(n) noch unverschlüsselt gespeichert.",
-    "start": "Jetzt verschlüsseln",
+  "mediaIndex": {
+    "label": "Fotos und Videos erfassen",
+    "description": "Kaydo merkt sich jetzt, welche gespeicherten Dateien noch verwendet werden, damit Dateien, die niemand mehr braucht, aufgeräumt werden können. Beiträge, die davor gespeichert wurden, sagen das noch nicht. Hier werden sie einmal durchgegangen und es wird vermerkt — dabei wird nichts heruntergeladen, verändert oder gelöscht.",
+    "never": "Noch nicht erledigt.",
+    "lastRun": "Zuletzt erledigt am {{date}}.",
+    "start": "Jetzt erfassen",
     "stop": "Abbrechen",
     "progress": "{{done}} von {{total}}",
+    "done": "Fertig: {{updated}} Beitrag/Beiträge vermerkt.",
+    "stopped": "Abgebrochen nach {{done}} von {{total}}. Du kannst jederzeit weitermachen.",
+    "partial": "{{failed}} Beitrag/Beiträge konnten nicht erfasst werden. Du kannst es gefahrlos erneut versuchen.",
     "resumeHint": "Du kannst jederzeit abbrechen und später weitermachen — es geht nichts verloren.",
     "error": "Da ist etwas schiefgelaufen. Du kannst es gefahrlos erneut versuchen."
   },
@@ -203,5 +230,19 @@
     "previewAlt": "Vorschau",
     "clickToUpload": "Zum Hochladen eines Fotos klicken",
     "uploadFailed": "Upload fehlgeschlagen"
+  },
+  "deleteFamily": {
+    "label": "Familie löschen",
+    "description": "Löscht alles, was diese Familie gespeichert hat: jede Erinnerung, jedes Foto und Video, die Tagebücher, den Tresor, die Rezepte und alle Einstellungen. Dein Konto wird mitgelöscht, außer du bist Admin einer weiteren Familie. Andere Admins behalten ihr Konto und verlieren den Zugang zu dieser Familie. {{days}} Tage lang wird nichts gelöscht, und so lange kannst du es zurücknehmen. Danach lässt es sich nicht rückgängig machen. Lade deshalb vorher oben ein Backup herunter, wenn du etwas behalten willst.",
+    "confirmLabel": "Gib zur Bestätigung den Namen der Familie ein: {{name}}",
+    "submit": "In {{days}} Tagen löschen",
+    "scheduledTitle": "Diese Familie wird am {{date}} gelöscht",
+    "scheduledOwner": "Alles, was sie gespeichert hat, ist dann endgültig weg. Bis dahin kannst du das zurücknehmen.",
+    "scheduledAdmin": "Der Besitzer der Familie hat das veranlasst. Alles, was die Familie gespeichert hat, ist dann endgültig weg. Lade oben ein Backup herunter, wenn du etwas behalten willst. Zurücknehmen kann es nur der Besitzer.",
+    "cancel": "Familie behalten",
+    "cancelled": "Die Familie bleibt. Es wurde nichts gelöscht.",
+    "failed": "Das hat nicht geklappt. Bitte versuch es noch einmal.",
+    "notOwner": "Das kann nur der Besitzer der Familie.",
+    "alreadyBegun": "Das Löschen hat bereits begonnen und lässt sich nicht mehr aufhalten."
   }
 }

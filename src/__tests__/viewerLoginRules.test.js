@@ -17,7 +17,13 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
-import { checkViewerLogin, DEVICES, MAX_FAILURES } from '../../functions/viewerLogin.js'
+import {
+  checkViewerLogin,
+  DEVICES,
+  MAX_FAILURES,
+  MAX_BLOCK_MS,
+  FAILURE_WINDOW_MS,
+} from '../../functions/viewerLogin.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -125,6 +131,59 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     // …which is nobody else's problem.
     expect(await login({ password: RIGHT, deviceToken: otherDevice })).toMatchObject({ outcome: 'ok' })
     expect(await login({ password: RIGHT, ip: '192.0.2.99' })).toMatchObject({ outcome: 'ok' })
+  })
+
+  it('lets only MAX_FAILURES concurrent guesses from a new device reach the comparison', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_, i) => login({ password: `guess-${i}`, ip: '198.51.100.1' })),
+    )
+    expect(deps.compare).toHaveBeenCalledTimes(MAX_FAILURES)
+    expect(results.filter((r) => r.outcome === 'denied')).toHaveLength(MAX_FAILURES)
+    expect(results.filter((r) => r.outcome === 'blocked')).toHaveLength(20 - MAX_FAILURES)
+  }, 30_000)
+
+  it('keeps escalating the block across the failure window', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    const blockLengths = []
+    for (let i = 0; i < 20 && !blockLengths.includes(MAX_BLOCK_MS); i++) {
+      // Waiting out the block exactly is the fastest a guesser can go.
+      expect(await login({ password: `guess-${i}`, ip: '198.51.100.1' })).toEqual({ outcome: 'denied' })
+      const record = await db.doc(`rateLimits/${(await db.collection('rateLimits').get()).docs[0].id}`).get()
+      const until = record.data().blockedUntil
+      if (until) {
+        blockLengths.push(until.toMillis() - t)
+        t = until.toMillis()
+      }
+    }
+    // Block lengths double with every further failure, past the old 15 minute
+    // window, until they reach the cap.
+    expect(blockLengths.length).toBeGreaterThan(2)
+    for (let i = 1; i < blockLengths.length; i++) {
+      expect(blockLengths[i]).toBeGreaterThan(blockLengths[i - 1])
+    }
+    expect(blockLengths.at(-1)).toBe(MAX_BLOCK_MS)
+    expect(blockLengths.reduce((a, b) => a + b, 0)).toBeGreaterThan(FAILURE_WINDOW_MS)
+  })
+
+  it('starts counting again after a quiet period', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    for (let i = 0; i < MAX_FAILURES - 1; i++) await login({ password: `guess-${i}` })
+    t += FAILURE_WINDOW_MS
+    for (let i = 0; i < MAX_FAILURES - 1; i++) {
+      expect(await login({ password: `again-${i}` })).toEqual({ outcome: 'denied' })
+    }
+  })
+
+  it('accepts the right password after failures, and clears the record', async () => {
+    for (let i = 0; i < MAX_FAILURES - 1; i++) await login({ password: `guess-${i}` })
+    expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
+    expect((await db.collection('rateLimits').get()).size).toBe(0)
+    // A full allowance is available again.
+    for (let i = 0; i < MAX_FAILURES; i++) {
+      expect(await login({ password: `guess-${i}` })).toEqual({ outcome: 'denied' })
+    }
   })
 
   it('does not let a token from one family exempt a device in another', async () => {

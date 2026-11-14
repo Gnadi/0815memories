@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../config/firebase'
 import { ArrowLeft, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import MemoryHero from '../components/memory/MemoryHero'
 import MemoryBody from '../components/memory/MemoryBody'
 import PostEntryModal from '../components/admin/PostEntryModal'
 import { useAuth } from '../context/AuthContext'
-import { useMemoryWriter, decryptMemoryDoc } from '../hooks/useMemories'
+import { useMemoryWriter } from '../hooks/useMemories'
+import { getMemory } from '../services/memories'
 import { parseRichDoc } from '../utils/richText'
+import { devError } from '../utils/devLog'
 
 export default function MemoryDetailPage() {
   const { id } = useParams()
@@ -25,20 +25,20 @@ export default function MemoryDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const menuRef = useRef(null)
 
+  // A memory opens at its top. The window keeps the scroll position of the
+  // feed it was opened from, which is further down than this page is long, so
+  // without this the memory opened at its end.
   useEffect(() => {
-    async function fetchMemory() {
-      const docSnap = await getDoc(doc(db, 'memories', id))
-      if (docSnap.exists()) {
-        const data = docSnap.data()
-        // Only show memory if it belongs to the current family
-        if (data.familyId === familyId) {
-          const decrypted = await decryptMemoryDoc(encryptionKey, data)
-          setMemory({ id: docSnap.id, ...decrypted })
-        }
-      }
-      setLoading(false)
-    }
-    fetchMemory()
+    window.scrollTo(0, 0)
+  }, [id])
+
+  useEffect(() => {
+    // Null for a memory of another family as for one that is gone; a read that
+    // fails shows the same, instead of a spinner that never stops.
+    getMemory(familyId, encryptionKey, id)
+      .then((found) => { if (found) setMemory(found) })
+      .catch((err) => devError('Failed to load memory', err))
+      .finally(() => setLoading(false))
   }, [id, familyId, encryptionKey])
 
   useEffect(() => {

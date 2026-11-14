@@ -1,8 +1,38 @@
 {
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.kaydo.app" }],
+      "destination": "https://kaydo.app/:path",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "lang", "value": "de" }],
+      "destination": "/de",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/static-loader-data(.*)", "destination": "/static-loader-data$1" },
+    { "source": "/.well-known/(.*)", "destination": "/.well-known/$1" },
+    { "source": "/de", "destination": "/de.html" },
+    { "source": "/ar", "destination": "/ar.html" },
+    { "source": "/fr", "destination": "/fr.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/safety", "destination": "/safety.html" },
+    { "source": "/private-family-photo-sharing", "destination": "/private-family-photo-sharing.html" },
+    { "source": "/family-time-capsule", "destination": "/family-time-capsule.html" },
+    { "source": "/family-recipe-book", "destination": "/family-recipe-book.html" },
+    { "source": "/family-scrapbook-photo-book", "destination": "/family-scrapbook-photo-book.html" },
+    { "source": "/de/familienfotos-privat-teilen", "destination": "/de/familienfotos-privat-teilen.html" },
+    { "source": "/de/zeitkapsel-fuer-kinder", "destination": "/de/zeitkapsel-fuer-kinder.html" },
+    { "source": "/de/familien-rezeptbuch", "destination": "/de/familien-rezeptbuch.html" },
+    { "source": "/de/familien-fotobuch", "destination": "/de/familien-fotobuch.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -16,6 +46,18 @@
       "source": "/icons/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/screenshots/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=31536000" }
       ]
     },
     {
@@ -58,6 +100,14 @@
         { "key": "Content-Security-Policy", "value": "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(self), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": ".+\\.kaydo\\.app" }],
+      "missing": [{ "type": "host", "value": "www.kaydo.app" }],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
     }
   ]

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Check, Loader2, Lock, Mail, MailOpen } from 'lucide-react'
 import { useOurYearLetter } from '../../hooks/useOurYear'
 import { formatDay, letterState, suggestLetterOpenDate } from '../../utils/ourYear'
+import DictationField from '../../components/DictationField'
+import { appendDictation } from '../../hooks/useDictation'
 
 const LETTER_SECTIONS = ['now', 'wishes', 'remember']
 
@@ -199,14 +201,16 @@ export default function LetterSection({ chapter, ritual, encryptionKey, readOnly
             >
               {t(`letter.questions.${id}`)}
             </label>
-            <textarea
-              id={`letter-${id}`}
-              rows={3}
-              value={sections[id] ?? ''}
-              onChange={(e) => editSection(id, e.target.value)}
-              placeholder={t('letter.placeholder')}
-              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-            />
+            <DictationField onText={(s) => editSection(id, appendDictation(sections[id], s))}>
+              <textarea
+                id={`letter-${id}`}
+                rows={3}
+                value={sections[id] ?? ''}
+                onChange={(e) => editSection(id, e.target.value)}
+                placeholder={t('letter.placeholder')}
+                className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+              />
+            </DictationField>
           </div>
         ))}
       </div>

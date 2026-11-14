@@ -1,0 +1,200 @@
+{
+  "nav": {
+    "home": "Kaydo",
+    "backHome": "Back to the home page",
+    "features": "Features",
+    "login": "Login"
+  },
+  "cta": {
+    "title": "See it with your own eyes",
+    "text": "The demo family lives entirely in your browser: no account, nothing to install. When you are ready, claim your family's address. Kaydo is free, and no credit card is required.",
+    "demo": "Explore the demo family",
+    "getStarted": "Get Started"
+  },
+  "related": "More of what Kaydo does",
+  "footer": {
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "contact": "Contact",
+    "copyright": "© {{year}} Kaydo"
+  },
+  "pages": {
+    "photoSharing": {
+      "name": "Private family photo sharing",
+      "seoTitle": "Private Family Photo Sharing – Kaydo, free",
+      "seoDescription": "Share photos, videos and voice memos with your family in a private, encrypted feed. One family password, no accounts for grandparents. Free with Kaydo.",
+      "h1": "Share family photos and videos privately",
+      "intro": "The pictures of your children's first steps, a holiday at the lake, Sunday lunch at Grandma's: they belong with the people who love them, and with nobody else. Kaydo gives your family a private feed for photos, videos and voice memos, at your family's own address, encrypted on your device before anything is uploaded.",
+      "imageAlt": "The Kaydo family feed on a phone, with the day's moments at the top and a family memory below",
+      "sections": [
+        {
+          "heading": "One feed for the whole family",
+          "paragraphs": [
+            "Every candid snapshot, milestone video and voice memo goes into one warm, private feed. Each memory keeps the story behind it, so in a few years you will still know why that photo mattered.",
+            "Daily Moments sit above the feed as story circles, for the quick everyday snapshot that does not need a caption. A smart timeline sorts everything by season and shows what happened on this day in earlier years.",
+            "In a group chat, photos get buried between messages, and after a few weeks nobody scrolls back far enough to find them. In Kaydo they stay where you can find them: in the feed, in the timeline by season and on this day, each with the story that goes with it."
+          ]
+        },
+        {
+          "heading": "Grandparents get in without an account",
+          "paragraphs": [
+            "Your inner circle enters with one shared family password and views the feed right in the browser. Nobody has to create an account, remember another login or install an app.",
+            "Family admins post; the inner circle looks. Admins decide what gets shared, and you can invite a co-admin with a secure link, so two parents can post side by side."
+          ]
+        },
+        {
+          "heading": "Your family's own address",
+          "paragraphs": [
+            "Every family claims its own address, like yourname.kaydo.app. You can design the login page your family sees at that address, so it feels like your front door rather than a stranger's website.",
+            "There are no public profiles, no followers and nothing to discover beyond your own family. Only the people you let in see its memories."
+          ]
+        },
+        {
+          "heading": "Encrypted before it leaves your device",
+          "paragraphs": [
+            "Photos, videos and voice memos are encrypted with AES-256 in your browser before they are uploaded. What reaches our servers is ciphertext.",
+            "Kaydo has no ads and no ad trackers, and your photos are never used to train AI. Kaydo is open source, so anyone can read the code and check what it does."
+          ]
+        },
+        {
+          "heading": "Works like an app, and stays yours",
+          "paragraphs": [
+            "Install Kaydo on any phone or desktop. It loads quickly even on a shaky connection, and it can notify the family when a new memory arrives.",
+            "You can download a full archive of every photo and video at any time, as plain, readable files. No lock-in."
+          ]
+        }
+      ]
+    },
+    "timeCapsule": {
+      "name": "Family time capsule",
+      "seoTitle": "Family Time Capsule & Letters for Kids – Kaydo",
+      "seoDescription": "Seal letters, photos and voice notes for your children until an 18th birthday or a wedding. Encrypted in your browser with AES-256. Free with Kaydo.",
+      "h1": "A time capsule for your children",
+      "intro": "Some things are written for later: a letter your daughter should read on her 18th birthday, a voice note for your son's wedding, the photos of a year you want them to open one day. Kaydo keeps them sealed until the day you choose, and encrypted in your browser before they are uploaded.",
+      "imageAlt": "The Kaydo Vault, a list of time-locked capsules for the children of the family",
+      "sections": [
+        {
+          "heading": "Seal a capsule until the day you pick",
+          "paragraphs": [
+            "In the Vault you seal letters, voice notes, photos and videos into a time capsule. It stays closed until the day you pick: an 18th birthday, a graduation, a wedding you might not attend.",
+            "A capsule can open on a date you choose or at a life milestone. As a legacy, it can also open a year after you last checked in.",
+            "Address a capsule to one of your children or to the whole family. Until it opens, it is a promise you made to them; on the day itself, it is a message in your own words and your own voice."
+          ]
+        },
+        {
+          "heading": "What to put inside",
+          "paragraphs": [
+            "Anything you would like them to have one day: a letter about the day they were born, a recording of your voice reading their favourite bedtime story, photos of the house they grew up in, a few words for the moment they leave home. The capsule keeps it all together, sealed, until it is time."
+          ]
+        },
+        {
+          "heading": "Letters and journals as they grow up",
+          "paragraphs": [
+            "Next to the Vault, every child has a journal. Write letters they will read when they are grown: the small joys, the big milestones, a voice note in your own words.",
+            "Each child's journal also holds the sky of their birth: the stars, planets and moon above their birthplace at the moment they were born, as a poster to print."
+          ]
+        },
+        {
+          "heading": "Encrypted, and for the admins only",
+          "paragraphs": [
+            "Vault capsules, your children's journals and letters are encrypted with AES-256-GCM in your browser before they are uploaded. What reaches our servers is ciphertext.",
+            "Only the family's admins can open them. The inner circle, who view the family feed with the shared password, never see the Vault or the journals."
+          ]
+        },
+        {
+          "heading": "Still yours in twenty years",
+          "paragraphs": [
+            "A time capsule only works if it is still there when it opens. You can download a full archive of every journal entry, photo and video at any time, and Kaydo is open source: you could even run it for your family yourself."
+          ]
+        }
+      ]
+    },
+    "recipeBook": {
+      "name": "Family recipe book",
+      "seoTitle": "Family Recipe Book with Version History – Kaydo",
+      "seoDescription": "Keep your family's recipes in one place and see how they changed over generations, with notes, variations and photos. Private and free with Kaydo.",
+      "h1": "A family recipe book that grows with you",
+      "intro": "Grandma's pasta was never quite the same twice. Your mother made it lighter, your brother made it vegetarian, and your children will change it again. Kaydo keeps your family's recipes as a recipe tree, so every version stays, with the story of why it changed. Your family's recipes then live next to its photos, letters and scrapbooks, at your family's own address.",
+      "imageAlt": "A Kaydo recipe tree tracing one family recipe and its versions across generations",
+      "sections": [
+        {
+          "heading": "Why a tree, and not a folder of recipe cards",
+          "paragraphs": [
+            "A folder of recipe cards keeps one version of each dish, usually the last one somebody wrote down. The rest is lost: the original with Grandma's handwriting, the change that made it work at altitude, the reason the family stopped adding raisins.",
+            "A recipe tree keeps all of them. The recipe that started it sits at the root, and every change after it grows from there, with the name of who made it and the story of why."
+          ]
+        },
+        {
+          "heading": "Every version of a recipe, kept",
+          "paragraphs": [
+            "Recipes are not static. In the Recipe Tree you can watch how Grandma's pasta evolved through three generations, with notes and variations along the way.",
+            "Each recipe has a version history, so a change never erases what came before it. The original stays exactly as it was written down.",
+            "A recipe is also the table it was eaten at. Add photo logs of every holiday meal to a recipe, and the tree turns into a record of the family dinners it fed."
+          ]
+        },
+        {
+          "heading": "Forks for the family's own variations",
+          "paragraphs": [
+            "When someone in the family cooks a recipe their own way, they fork it. The new version branches off the old one and keeps its place in the tree, so you can see who changed what, and why."
+          ]
+        },
+        {
+          "heading": "Shared with the family when you want",
+          "paragraphs": [
+            "Admins write and change the recipes. Once you share a recipe, the inner circle can read it with all of its versions, with nothing more than the family password.",
+            "Like everything in Kaydo, recipes are encrypted on your device before they are uploaded, there are no ads, and you can export everything at any time."
+          ]
+        },
+        {
+          "heading": "Start with the recipe you would miss most",
+          "paragraphs": [
+            "Most families have one dish that is a holiday all by itself. Write that one down first, as it is cooked today, and add the older versions as you find them in notebooks and on the backs of envelopes. Then ask the family how they make it, and let the tree grow."
+          ]
+        }
+      ]
+    },
+    "photoBook": {
+      "name": "Family scrapbook and photo book",
+      "seoTitle": "Family Scrapbook & Printed Photo Book – Kaydo",
+      "seoDescription": "Turn family photos into a digital scrapbook with stickers and notes, export it as a PDF or order it as a printed book. Kaydo itself is free.",
+      "h1": "Turn family photos into a scrapbook or a printed book",
+      "intro": "Photos on a phone get scrolled past. On a page, with a note in your handwriting and a sticker your child picked, they turn into a story. Kaydo's digital scrapbook lets you lay out your family memories freely, then keep them as a PDF or hold them as a printed book.",
+      "imageAlt": "The Kaydo scrapbook editor with polaroid photos, stickers and handwritten notes on a page",
+      "sections": [
+        {
+          "heading": "A freeform canvas for your memories",
+          "paragraphs": [
+            "Drag and drop photos, playful stickers and personal notes onto a freeform canvas. Photos sit in polaroid-style frames that you can rotate and resize until the page looks the way you want."
+          ]
+        },
+        {
+          "heading": "Ideas for a first scrapbook",
+          "paragraphs": [
+            "A summer holiday, the first year of a new baby, a grandparent's birthday with the whole family around the table: a scrapbook works best with a story that has a beginning and an end. Pick the photos that tell it, add a note to each page about what happened, and let the children choose the stickers."
+          ]
+        },
+        {
+          "heading": "Keep it as a PDF or a printed book",
+          "paragraphs": [
+            "Export your finished scrapbook as a PDF to keep, to send to a relative or to print yourself.",
+            "You can also order the scrapbook as a printed book through the print shop Peecho. You pay Peecho directly; this is the only thing in Kaydo that costs money.",
+            "A print shop can only print what it can read, so the print file is the one file Kaydo does not encrypt. Kaydo tells you before it makes the file, keeps it to your family's admins and deletes it after 30 days."
+          ]
+        },
+        {
+          "heading": "Collages and short films",
+          "paragraphs": [
+            "Not every set of photos needs a whole book. Collages offer fourteen ready-made layouts, from a single hero shot to a six-photo grid. Zoom and move each photo in its slot, set the frame's colour, thickness and corners, then download the collage as an image or post it to the family feed.",
+            "Highlight videos turn a pile of photos into a short film. Kaydo suggests ready-made reels from what your family already posted, such as your summers or the year that just ended, or you pick every shot yourself. Share the film to the feed or download it."
+          ]
+        },
+        {
+          "heading": "Made from your own, private photos",
+          "paragraphs": [
+            "Your photos are encrypted with AES-256 in your browser before they are uploaded, and they never train an AI. Kaydo itself is free, with no ads and no credit card required."
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -7,6 +7,7 @@ import {
   formatBytes,
 } from '../constants/media'
 import { devError } from '../utils/devLog'
+import { createVideoPoster } from '../utils/imageThumbnail'
 
 // Turns whatever the upload pipeline threw into something a person can act on.
 // Anything else would leave the user staring at a spinner that ends in nothing,
@@ -17,6 +18,9 @@ export function uploadErrorMessage(err, t) {
       size: formatBytes(err.size),
       limit: formatBytes(err.limit ?? MAX_PLAINTEXT_BYTES),
     })
+  }
+  if (err?.code === 'upload/quota') {
+    return t(err.reason === 'storage' ? 'upload.storageFull' : 'upload.rateLimited')
   }
   return t('upload.failed')
 }
@@ -40,6 +44,31 @@ export function getVideoDuration(file) {
   })
 }
 
+// Moves the item with `id` to the slot `overId` holds. Works on ids rather
+// than indexes so a reorder that lands while an upload is still swapping in its
+// URL cannot move the wrong item.
+export function moveById(items, id, overId) {
+  const from = items.findIndex((item) => item.id === id)
+  const to = items.findIndex((item) => item.id === overId)
+  if (from < 0 || to < 0 || from === to) return items
+  const next = [...items]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
+}
+
+// The clip is what matters, so a poster that cannot be made or uploaded leaves
+// the clip without one rather than failing it. Readers show an icon instead.
+async function uploadPoster(file, encryptionKey) {
+  try {
+    const frame = await createVideoPoster(file)
+    return frame ? await encryptAndUpload(frame, encryptionKey) : null
+  } catch (err) {
+    devError('Video poster failed:', err)
+    return null
+  }
+}
+
 let nextId = 1
 const generateId = () => `upl-${Date.now()}-${nextId++}`
 
@@ -50,6 +79,9 @@ export function useMediaUploader(encryptionKey, {
   initialImages = [],
   initialVideos = [],
   maxVideoDurationSec = MAX_VIDEO_DURATION_SECONDS,
+  // A poster is one frame of the clip, uploaded encrypted beside it. Only the
+  // forms that show one ask for it; elsewhere it would be a file nobody sees.
+  videoPosters = false,
 } = {}) {
   const { t } = useTranslation('common')
   const [images, setImages] = useState(initialImages)
@@ -131,25 +163,39 @@ export function useMediaUploader(encryptionKey, {
     ])
 
     try {
-      const { url, publicId } = await encryptAndUpload(file, encryptionKey)
+      const [{ url, publicId }, poster] = await Promise.all([
+        encryptAndUpload(file, encryptionKey),
+        videoPosters ? uploadPoster(file, encryptionKey) : null,
+      ])
+      const posterFields = poster ? { posterUrl: poster.url, posterPublicId: poster.publicId } : {}
       setVideos((prev) =>
-        prev.map((v) => (v.id === tempId ? { ...v, url, publicId, uploading: false } : v))
+        prev.map((v) =>
+          v.id === tempId ? { ...v, url, publicId, ...posterFields, uploading: false } : v
+        )
       )
-      return { id: tempId, url, publicId }
+      return { id: tempId, url, publicId, ...posterFields }
     } catch (err) {
       devError('Video upload failed:', err)
       setVideos((prev) => prev.filter((v) => v.id !== tempId))
       setVideoError(uploadErrorMessage(err, t))
       return null
     }
-  }, [encryptionKey, maxVideoDurationSec, t])
+  }, [encryptionKey, maxVideoDurationSec, videoPosters, t])
 
   const removeImage = useCallback((id) => {
     setImages((prev) => prev.filter((img) => img.id !== id))
   }, [])
 
+  const moveImage = useCallback((id, overId) => {
+    setImages((prev) => moveById(prev, id, overId))
+  }, [])
+
   const removeVideo = useCallback((id) => {
     setVideos((prev) => prev.filter((v) => v.id !== id))
+  }, [])
+
+  const moveVideo = useCallback((id, overId) => {
+    setVideos((prev) => moveById(prev, id, overId))
   }, [])
 
   const hasUploading = useMemo(
@@ -165,7 +211,9 @@ export function useMediaUploader(encryptionKey, {
     addImage,
     addVideo,
     removeImage,
+    moveImage,
     removeVideo,
+    moveVideo,
     videoError,
     setVideoError,
     imageError,

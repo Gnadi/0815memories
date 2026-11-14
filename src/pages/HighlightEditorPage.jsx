@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { X, Loader2, Download, Trash2, Share2, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
-import { doc as firestoreDoc, getDoc, Timestamp } from 'firebase/firestore'
+import { Timestamp } from '../config/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { useHighlightWriter, decryptHighlight } from '../hooks/useHighlights'
+import { useAutosave } from '../hooks/useAutosave'
+import { useHighlightWriter } from '../hooks/useHighlights'
 import { useMemoryWriter } from '../hooks/useMemories'
 import { useMemoryPhotos } from '../hooks/useMemoryPhotos'
 import { useScrapbookPhotoUpload } from '../hooks/useScrapbookPhotoUpload'
+import { getHighlight } from '../services/highlights'
 import ReelPlayer from '../components/highlight/ReelPlayer'
 import PhotoBar from '../components/scrapbook/PhotoBar'
 import EncryptedImage from '../components/media/EncryptedImage'
@@ -42,8 +44,9 @@ export default function HighlightEditorPage() {
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
-  const [isDirty, setIsDirty] = useState(false)
-  const [saveStatus, setSaveStatus] = useState('idle')
+  // The doc and title last written (or loaded). Unsaved is anything else, so
+  // a write that finishes after a newer edit cannot mark that edit as saved.
+  const [saved, setSaved] = useState(null)
   const [images, setImages] = useState(() => new Map())
   const [busy, setBusy] = useState(null) // 'render' | 'share'
   const [renderProgress, setRenderProgress] = useState(0)
@@ -54,7 +57,6 @@ export default function HighlightEditorPage() {
   const { photos: memoryPhotos } = useMemoryPhotos(familyId, encryptionKey)
   const { upload, uploading, session: sessionPhotos } = useScrapbookPhotoUpload()
   const canvasRef = useRef(null)
-  const saveTimerRef = useRef(null)
 
   const recordingSupported = useMemo(() => canRecordReel(), [])
   const timeline = useMemo(
@@ -66,18 +68,19 @@ export default function HighlightEditorPage() {
   useEffect(() => {
     if (!id || !db) { setLoading(false); return }
     let cancelled = false
-    getDoc(firestoreDoc(db, 'highlights', id))
-      .then(async (snap) => {
+    getHighlight(familyId, encryptionKey, id)
+      .then((data) => {
         if (cancelled) return
-        if (!snap.exists() || snap.data().familyId !== familyId) {
+        if (!data) {
           setLoadError(t('errors.notFound'))
           setLoading(false)
           return
         }
-        const data = await decryptHighlight(encryptionKey, { id: snap.id, ...snap.data() })
-        if (cancelled) return
-        setDoc(data.doc || makeHighlightDoc())
-        setTitle(data.title || '')
+        const loadedDoc = data.doc || makeHighlightDoc()
+        const loadedTitle = data.title || ''
+        setDoc(loadedDoc)
+        setTitle(loadedTitle)
+        setSaved({ doc: loadedDoc, title: loadedTitle })
         setLoading(false)
       })
       .catch((err) => {
@@ -101,53 +104,37 @@ export default function HighlightEditorPage() {
   }, [shotKey, encryptionKey])
 
   // ── Debounced autosave ──────────────────────────────────────────────────
-  const save = useCallback(async (nextDoc, nextTitle) => {
-    if (!id) return
-    setSaveStatus('saving')
-    try {
-      await updateHighlight(id, { doc: nextDoc, title: nextTitle })
-      setIsDirty(false)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch (err) {
-      devError('Highlight save failed', err)
-      setSaveStatus('idle')
-      setError(t('errors.saveFailed'))
-    }
-  }, [id, updateHighlight, t])
-
-  useEffect(() => {
-    if (!isDirty) return
-    clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => save(doc, title), 2000)
-    return () => clearTimeout(saveTimerRef.current)
-  }, [isDirty, doc, title, save])
-
-  // Autosave is debounced, so a shot added in the last two seconds only exists
-  // in memory. Leaving has to write it out rather than drop it.
-  const latestRef = useRef({ doc, title, isDirty, save })
-  latestRef.current = { doc, title, isDirty, save }
-
-  const flushSave = useCallback(async () => {
-    clearTimeout(saveTimerRef.current)
-    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
-    if (dirty) await saveNow(pendingDoc, pendingTitle)
+  // A shot added in the last two seconds only exists in memory, so leaving
+  // writes it out first — see useAutosave.
+  const isDirty = saved != null && (saved.doc !== doc || saved.title !== title)
+  const writeHighlight = useCallback(
+    (nextDoc, nextTitle) => updateHighlight(id, { doc: nextDoc, title: nextTitle }),
+    [id, updateHighlight],
+  )
+  const markSaved = useCallback((savedDoc, savedTitle) => {
+    setSaved({ doc: savedDoc, title: savedTitle })
   }, [])
-
-  useEffect(() => () => {
-    clearTimeout(saveTimerRef.current)
-    const { doc: pendingDoc, title: pendingTitle, isDirty: dirty, save: saveNow } = latestRef.current
-    if (dirty) saveNow(pendingDoc, pendingTitle)
-  }, [])
+  const showSaveError = useCallback((err) => {
+    devError('Highlight save failed', err)
+    setError(t('errors.saveFailed'))
+  }, [t])
+  const { saveStatus, flush: flushSave } = useAutosave({
+    doc,
+    title,
+    isDirty: isDirty && !!id,
+    write: writeHighlight,
+    onSaved: markSaved,
+    onError: showSaveError,
+  })
 
   const handleClose = async () => {
-    await flushSave()
+    const ok = await flushSave()
+    if (!ok && !window.confirm(t('editor.leaveUnsaved'))) return
     navigate('/highlights')
   }
 
   const patchDoc = (updates) => {
     setDoc((prev) => ({ ...prev, ...updates }))
-    setIsDirty(true)
   }
 
   const patchShot = (index, updates) => {
@@ -155,7 +142,6 @@ export default function HighlightEditorPage() {
       ...prev,
       shots: prev.shots.map((shot, i) => (i === index ? { ...shot, ...updates } : shot)),
     }))
-    setIsDirty(true)
   }
 
   const addShot = (url) => {
@@ -164,13 +150,11 @@ export default function HighlightEditorPage() {
       ...prev,
       shots: [...prev.shots, { url, thumbUrl: photo?.thumbUrl || null, memoryId: photo?.memoryId || null, durationMs: DEFAULT_SHOT_MS }],
     }))
-    setIsDirty(true)
   }
 
   const removeShot = (index) => {
     setDoc((prev) => ({ ...prev, shots: prev.shots.filter((_, i) => i !== index) }))
     setSelectedShot((current) => Math.max(0, current > index ? current - 1 : current))
-    setIsDirty(true)
   }
 
   const moveShot = (index, delta) => {
@@ -183,7 +167,6 @@ export default function HighlightEditorPage() {
       return { ...prev, shots }
     })
     setSelectedShot(target)
-    setIsDirty(true)
   }
 
   const handleUpload = async (file) => {
@@ -307,7 +290,7 @@ export default function HighlightEditorPage() {
 
         <input
           value={title}
-          onChange={(e) => { setTitle(e.target.value); setIsDirty(true) }}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder={t('reel.defaultTitle')}
           aria-label={t('editor.titleLabel')}
           className="flex-1 min-w-0 bg-transparent text-bark text-sm font-semibold placeholder:text-bark-muted/60 outline-none px-2"
@@ -327,7 +310,7 @@ export default function HighlightEditorPage() {
         </button>
 
         <button
-          onClick={() => save(doc, title)}
+          onClick={() => flushSave()}
           disabled={busy != null}
           className="px-5 h-10 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-shadow"
           style={{

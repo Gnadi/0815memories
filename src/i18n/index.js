@@ -20,6 +20,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import { LANDING_PAGE_PATHS, pathLanguage } from '../seoRoutes'
 
 import enCommon from '../locales/en/common.json'
 import enLanding from '../locales/en/landing.json'
@@ -29,6 +30,14 @@ import deCommon from '../locales/de/common.json'
 import deLanding from '../locales/de/landing.json'
 import deAuth from '../locales/de/auth.json'
 
+import arCommon from '../locales/ar/common.json'
+import arLanding from '../locales/ar/landing.json'
+import arAuth from '../locales/ar/auth.json'
+
+import frCommon from '../locales/fr/common.json'
+import frLanding from '../locales/fr/landing.json'
+import frAuth from '../locales/fr/auth.json'
+
 // Loaded before first paint: the public pages and the globally mounted chrome
 // (bottom nav, install/notification prompts, error screen) use only these.
 export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
@@ -37,15 +46,46 @@ export const EAGER_NAMESPACES = ['common', 'landing', 'auth']
 export const LAZY_NAMESPACES = [
   'home', 'memory', 'journal', 'blackbox', 'recipes', 'scrapbook',
   'collage', 'timeline', 'ourYear', 'settings', 'emotions', 'legal',
-  'feedback', 'sky',
+  'feedback', 'sky', 'demo', 'bestOf', 'advent',
 ]
 
-export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES]
-export const SUPPORTED_LANGUAGES = ['en', 'de']
+// Loaded by the one page that uses them, in its own chunk (src/pages/FeaturePage.jsx).
+export const PAGE_NAMESPACES = ['features']
+
+export const NAMESPACES = [...EAGER_NAMESPACES, ...LAZY_NAMESPACES, ...PAGE_NAMESPACES]
+export const SUPPORTED_LANGUAGES = ['en', 'de', 'ar', 'fr']
+
+// Languages written right to left. Only the public shell (landing page and
+// sign-in) is translated into Arabic and French so far; the signed-in app and the feature
+// pages fall back to English until their namespaces exist (fallbackLng below).
+export const RTL_LANGUAGES = ['ar']
+export const isRtl = (lng) => RTL_LANGUAGES.includes((lng || '').split('-')[0])
+
+// The landing page's address in each language. Crawlers detect no language,
+// and most of them run no JavaScript, so a language reaches them only at an
+// address of its own, pre-rendered in it (src/prerenderedRoutes.js). "/" is
+// English to them and the visitor's language to everyone else; "/de" is German
+// to all. index.html's inline script names these paths too.
+export const LANDING_PATHS = LANDING_PAGE_PATHS
+
+// A visit that starts on "/de", or on a feature page (src/seoRoutes.js), is in
+// that page's language whatever the visitor's settings say. "/" names no
+// language of its own.
+const landingPath = {
+  name: 'landingPath',
+  lookup() {
+    if (typeof window === 'undefined') return undefined
+    return pathLanguage(window.location.pathname)
+  },
+}
+const languageDetector = new LanguageDetector()
+languageDetector.addDetector(landingPath)
 
 export const resources = {
   en: { common: enCommon, landing: enLanding, auth: enAuth },
   de: { common: deCommon, landing: deLanding, auth: deAuth },
+  ar: { common: arCommon, landing: arLanding, auth: arAuth },
+  fr: { common: frCommon, landing: frLanding, auth: frAuth },
 }
 
 let appTranslationsPromise = null
@@ -60,6 +100,8 @@ export function ensureAppTranslations() {
       .then(({ default: bundles }) => {
         for (const lng of SUPPORTED_LANGUAGES) {
           for (const ns of LAZY_NAMESPACES) {
+            // A language may cover only part of the app; the rest comes from English.
+            if (!bundles[lng]?.[ns]) continue
             i18n.addResourceBundle(lng, ns, bundles[lng][ns], true, true)
           }
         }
@@ -75,7 +117,7 @@ export function ensureAppTranslations() {
 }
 
 i18n
-  .use(LanguageDetector)
+  .use(languageDetector)
   .use(initReactI18next)
   .init({
     resources,
@@ -90,10 +132,11 @@ i18n
     interpolation: { escapeValue: false }, // React already escapes
     react: { useSuspense: false }, // CRITICAL: keeps SSG pre-render synchronous
     detection: {
-      // "?lang=de" first: the hreflang alternate URLs (LandingPage <Head> and
-      // public/sitemap.xml) point crawlers and shared links at explicit
-      // language variants, which must win over a previously cached choice.
-      order: ['querystring', 'localStorage', 'navigator'],
+      // An address that names a language wins over a choice cached earlier:
+      // first the landing page's own path, then "?lang=", which was the German
+      // landing page's address before it had a path (vercel.json sends it on
+      // to /de) and still works on every page.
+      order: ['landingPath', 'querystring', 'localStorage', 'navigator'],
       lookupQuerystring: 'lang',
       lookupLocalStorage: 'kaydo_lang',
       caches: ['localStorage'],

@@ -29,15 +29,24 @@ import {
   Zap,
   Bell,
   CalendarHeart,
+  Languages,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LANDING_PATHS, isRtl } from '../i18n'
+import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
+import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
-import { generateSlug, isSlugAvailable } from '../utils/familySlug'
+import { LightboxProvider, ZoomTarget } from '../components/landing/ImageLightbox'
+import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '../components/landing/screenshots'
+import { generateSlug } from '../utils/familySlug'
 import usePWAInstall from '../hooks/usePWAInstall'
+
+const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR', fr: 'fr_FR' }
 
 function OctocatIcon({ className }) {
   return (
@@ -53,38 +62,60 @@ function OctocatIcon({ className }) {
   )
 }
 
-export default function LandingPage() {
+// lng: the language the page's address fixes, "de" on /de. Without it, as on
+// "/", the page is in the visitor's language. The translations are fixed to it
+// rather than switched globally: the pre-render builds several pages at once,
+// so a global switch would leak into the page being built next to this one.
+export default function LandingPage({ lng }) {
   const navigate = useNavigate()
-  const { isAuthenticated, signup, firebaseReady } = useAuth()
-  const { t } = useTranslation('landing')
+  const { isAuthenticated, isAdmin, firebaseReady } = useAuth()
+  const { t, i18n } = useTranslation('landing', { lng })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { canInstall, promptInstall } = usePWAInstall()
 
 
-  // Language-dependent URLs: the language is selected client-side (localStorage /
-  // navigator / ?lang=), so the German version lives at "/?lang=de" while "/" is
-  // the English default. Canonical and hreflang must agree on that mapping.
+  // Each language has its own address (LANDING_PATHS), so crawlers see both.
+  // The canonical is the page's own address even when a visitor's settings
+  // show "/" in German: then hydration never changes it, and Google advises
+  // against a canonical that JavaScript moves.
   const lang = t('seo.ogLocale').slice(0, 2)
-  const canonicalUrl = lang === 'de' ? 'https://kaydo.app/?lang=de' : 'https://kaydo.app/'
+  const ownPath = LANDING_PATHS[lng ?? 'en']
+  const canonicalUrl = absoluteUrl(ownPath)
   const ogImageUrl = lang === 'de' ? 'https://kaydo.app/og-image-de.png' : 'https://kaydo.app/og-image.png'
+  // Picking a language goes to its address; changeLanguage carries the choice
+  // on into the app and remembers it.
+  const showLanguage = (next) => {
+    i18n.changeLanguage(next)
+    if (LANDING_PATHS[next] !== ownPath) navigate(LANDING_PATHS[next])
+  }
+  // The screenshots show the app in the page's language.
+  const shot = (key) => ({ src: screenshotPath(SCREENSHOTS[key], lang), ...screenshotSize(SCREENSHOTS[key], lang) })
+
+  // Where a feature's button leads: into the feature for an admin, to the feed
+  // for a viewer, whom the creative tools and the journals are closed to, and
+  // to the same place in the demo family for a visitor. A visitor used to be
+  // sent to the admin login, which is no use to someone without an account.
+  const openFeature = (path) => navigate(isAdmin ? path : isAuthenticated ? '/home' : `/demo?to=${path}`)
+
+  const lightboxLabels = { close: t('lightbox.close'), previous: t('lightbox.previous'), next: t('lightbox.next') }
 
   return (
-    <div className="min-h-screen bg-cream font-sans">
+    <LightboxProvider labels={lightboxLabels} className="min-h-screen bg-cream font-sans">
       {/* ── Per-route SEO (pre-rendered into the static HTML of "/") ── */}
       <Head>
         {/* Emitted first in <head> so the charset declaration lands within the
             first 1024 bytes of the pre-rendered HTML (Lighthouse best-practice). */}
         <meta charSet="utf-8" />
-        <html lang={lang} />
+        <html lang={lang} dir={isRtl(lang) ? 'rtl' : 'ltr'} />
         <title>{t('seo.title')}</title>
         <meta name="description" content={t('seo.description')} />
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href={canonicalUrl} />
 
-        {/* hreflang alternates — mirror the entries in public/sitemap.xml */}
-        <link rel="alternate" hrefLang="en" href="https://kaydo.app/" />
-        <link rel="alternate" hrefLang="de" href="https://kaydo.app/?lang=de" />
-        <link rel="alternate" hrefLang="x-default" href="https://kaydo.app/" />
+        {/* hreflang alternates, the same the sitemap lists (src/seoRoutes.js) */}
+        {alternatesFor(ownPath).map(([hrefLang, href]) => (
+          <link key={hrefLang} rel="alternate" hrefLang={hrefLang} href={href} />
+        ))}
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
@@ -97,7 +128,9 @@ export default function LandingPage() {
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={t('seo.ogImageAlt')} />
         <meta property="og:locale" content={t('seo.ogLocale')} />
-        <meta property="og:locale:alternate" content={lang === 'de' ? 'en_US' : 'de_DE'} />
+        {Object.entries(OG_LOCALES).filter(([code]) => code !== lang).map(([code, locale]) => (
+          <meta key={code} property="og:locale:alternate" content={locale} />
+        ))}
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -106,42 +139,15 @@ export default function LandingPage() {
         <meta name="twitter:image" content={ogImageUrl} />
         <meta name="twitter:image:alt" content={t('seo.twitterImageAlt')} />
 
-        {/* Structured data */}
+        {/* Structured data: what "Kaydo" is (src/utils/structuredData.js) */}
         <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'SoftwareApplication',
-            name: 'Kaydo',
+          {JSON.stringify(landingStructuredData({
+            lang,
             description: t('seo.ldDescription'),
-            url: 'https://kaydo.app',
-            applicationCategory: 'LifestyleApplication',
-            operatingSystem: 'Web',
-            inLanguage: ['en', 'de'],
-            offers: [
-              { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-              { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-            ],
-            screenshot: [
-              'https://kaydo.app/screenshots/home-desktop.webp',
-              'https://kaydo.app/screenshots/scrapbook-desktop.webp',
-              'https://kaydo.app/screenshots/recipe-tree-desktop.webp',
-              'https://kaydo.app/screenshots/highlights-desktop.webp',
-              'https://kaydo.app/screenshots/collages-desktop.webp',
-            ],
-            featureList: t('seo.ldFeatures', { returnObjects: true }),
-            publisher: { '@type': 'Organization', name: 'Kaydo', url: 'https://kaydo.app' },
-          })}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: t('faq.items', { returnObjects: true }).map(({ q, a }) => ({
-              '@type': 'Question',
-              name: q,
-              acceptedAnswer: { '@type': 'Answer', text: a },
-            })),
-          })}
+            features: t('seo.ldFeatures', { returnObjects: true }),
+            screenshots: ['homeDesktop', 'scrapbook', 'recipeTree', 'highlights', 'collages', 'bestOf']
+              .map((key) => absoluteUrl(shot(key).src)),
+          }))}
         </script>
       </Head>
 
@@ -164,7 +170,7 @@ export default function LandingPage() {
           {/* CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <div className="hidden md:inline-flex">
-              <LanguageSwitcher variant="sidebar" />
+              <LanguageSwitcher variant="sidebar" language={lang} onSelect={showLanguage} />
             </div>
             <button
               onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
@@ -190,7 +196,7 @@ export default function LandingPage() {
             <a href="#privacy" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.privacy')}</a>
             <a href="#security" onClick={() => setMobileMenuOpen(false)} className="hover:text-bark">{t('nav.security')}</a>
             <div className="pt-1">
-              <LanguageSwitcher variant="sidebar" />
+              <LanguageSwitcher variant="sidebar" language={lang} onSelect={showLanguage} />
             </div>
           </div>
         )}
@@ -209,6 +215,11 @@ export default function LandingPage() {
             <em className="not-italic font-serif text-kaydo italic">{t('hero.titleEmphasis')}</em>{' '}
             {t('hero.titleSuffix')}
           </h1>
+          {/* The heading is a promise; this says in plain words what Kaydo is,
+              the words people search for before they know the name. */}
+          <p className="text-bark text-lg leading-relaxed mb-4 max-w-md">
+            {t('hero.summary')}
+          </p>
           <p className="text-bark-light text-lg leading-relaxed mb-8 max-w-md">
             {t('hero.subtitlePrefix')}{' '}
             <span className="font-semibold text-bark">{t('hero.subtitleExample')}</span>{' '}
@@ -218,29 +229,29 @@ export default function LandingPage() {
           <ClaimFamilyName
             navigate={navigate}
             isAuthenticated={isAuthenticated}
-            signup={signup}
             firebaseReady={firebaseReady}
+            lng={lng}
           />
 
-          {/* Secondary CTA — see a real family space before claiming one */}
-          <a
-            href="https://the-bennetts.kaydo.app"
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Secondary CTA — look around a family space before claiming one:
+              the demo family, which lives entirely in the browser (src/demo/). */}
+          <Link
+            to="/demo"
             className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border-2 border-bark-muted text-bark text-sm font-semibold hover:border-bark transition-colors"
           >
             {t('hero.demoCta')}
             <span aria-hidden="true">&rarr;</span>
-          </a>
+          </Link>
         </div>
 
         {/* Right — real app screenshot */}
         <div className="relative flex items-center justify-center">
           <BrowserFrame
-            src="/screenshots/home-desktop.webp"
+            {...shot('homeDesktop')}
+            srcSet={screenshotSrcSet(SCREENSHOTS.homeDesktop, lang)}
+            // The frame is at most max-w-xl wide, and the page's width below that.
+            sizes="(min-width: 640px) 576px, 100vw"
             alt={t('screens.homeAlt')}
-            width={1200}
-            height={750}
             priority
             className="w-full max-w-xl lg:rotate-1"
           />
@@ -277,6 +288,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
+                <FeatureLink id="photoSharing" lang={lang} t={t} className="mt-6" />
               </div>
 
               {/* Right — media type badges + real mobile screenshot */}
@@ -297,10 +309,8 @@ export default function LandingPage() {
 
                 {/* Real mobile app screenshot */}
                 <PhoneFrame
-                  src="/screenshots/home-mobile.webp"
+                  {...shot('homeMobile')}
                   alt={t('screens.homeMobileAlt')}
-                  width={440}
-                  height={952}
                 />
               </div>
             </div>
@@ -324,17 +334,16 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <FeatureLink id="timeCapsule" lang={lang} t={t} />
               {/* Real Black Box vault screenshot */}
               <BrowserFrame
-                src="/screenshots/blackbox-desktop.webp"
+                {...shot('blackbox')}
                 alt={t('screens.blackboxAlt')}
-                width={1200}
-                height={750}
                 className="mt-2"
               />
             </div>
 
-            {/* Card 3 — Write: The Letters */}
+            {/* Card 3 — Write: Letters & Journals */}
             <div className="bg-kaydo-dark rounded-3xl p-8 flex flex-col gap-5">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Mail className="w-5 h-5 text-white" />
@@ -347,7 +356,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
+                  onClick={() => openFeature('/journal')}
                   className="px-5 py-2.5 rounded-full border-2 border-white/60 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
                 >
                   {t('pillars.letters.button')}
@@ -355,10 +364,8 @@ export default function LandingPage() {
               </div>
               {/* Real journal / letters screenshot */}
               <BrowserFrame
-                src="/screenshots/journal-desktop.webp"
+                {...shot('journal')}
                 alt={t('screens.journalAlt')}
-                width={1200}
-                height={750}
                 className="mt-2"
               />
             </div>
@@ -373,13 +380,41 @@ export default function LandingPage() {
                 <p className="text-bark-light text-sm leading-relaxed">
                   {t('pillars.recipe.desc')}
                 </p>
+                <FeatureLink id="recipeBook" lang={lang} t={t} className="mt-4" />
               </div>
               {/* Real recipe evolution tree screenshot */}
               <BrowserFrame
-                src="/screenshots/recipe-tree-desktop.webp"
+                {...shot('recipeTree')}
+                fill
                 alt={t('screens.recipeAlt')}
-                width={1200}
-                height={750}
+                className="mt-auto"
+              />
+            </div>
+
+            {/* Card 4b — Look back: the monthly best-of, beside the recipe tree */}
+            <div className="bg-[#E3E7F4] rounded-3xl p-8 flex flex-col gap-5">
+              <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-indigo-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-bark mb-2">{t('pillars.bestOf.title')}</h3>
+                <p className="text-bark-light text-sm leading-relaxed">
+                  {t('pillars.bestOf.desc')}
+                </p>
+              </div>
+              <ul className="space-y-2">
+                {t('pillars.bestOf.bullets', { returnObjects: true }).map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-bark">
+                    <Check className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {/* Real best-of of the demo family, on its title slide */}
+              <PhoneFrame
+                {...shot('bestOf')}
+                statusBar="#070B13"
+                alt={t('screens.bestOfMobileAlt')}
                 className="mt-auto"
               />
             </div>
@@ -396,33 +431,47 @@ export default function LandingPage() {
                   {t('pillars.scrapbook.desc')}
                 </p>
                 <ul className="space-y-2">
-                  {[
-                    { icon: <Layers className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[0] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[1] },
-                    { icon: <Check className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />, text: t('pillars.scrapbook.bullets', { returnObjects: true })[2] },
-                  ].map(({ icon, text }) => (
-                    <li key={text} className="flex items-start gap-2 text-sm text-bark">
-                      {icon}
-                      {text}
-                    </li>
-                  ))}
+                  {t('pillars.scrapbook.bullets', { returnObjects: true }).map((text, i) => {
+                    const Icon = i === 0 ? Layers : Check
+                    return (
+                      <li key={text} className="flex items-start gap-2 text-sm text-bark">
+                        <Icon className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                        {text}
+                      </li>
+                    )
+                  })}
                 </ul>
-                <button
-                  onClick={() => navigate(isAuthenticated ? '/home' : '/login?admin=1')}
-                  className="mt-6 px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
-                >
-                  {t('pillars.scrapbook.button')}
-                </button>
+                {/* The link is inline-flex like the button: without a wrapper
+                    the two sat on one line, touching. */}
+                <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
+                  <button
+                    onClick={() => openFeature('/scrapbook')}
+                    className="px-5 py-2.5 rounded-full border-2 border-violet-400/60 text-violet-800 text-sm font-semibold hover:bg-violet-100 transition-colors"
+                  >
+                    {t('pillars.scrapbook.button')}
+                  </button>
+                  <FeatureLink id="photoBook" lang={lang} t={t} />
+                </div>
               </div>
 
-              {/* Right — real scrapbook editor screenshot */}
+              {/* Right — real scrapbook editor screenshot, with the dialog
+                  for ordering it printed laid over its corner. */}
               <div className="lg:w-96 w-full flex-shrink-0">
                 <BrowserFrame
-                  src="/screenshots/scrapbook-desktop.webp"
+                  {...shot('scrapbook')}
                   alt={t('screens.scrapbookAlt')}
-                  width={1200}
-                  height={750}
                 />
+                <figure className="relative -mt-10 ml-auto w-3/4 max-w-xs rounded-2xl overflow-hidden shadow-2xl border border-cream-dark bg-white">
+                  <ZoomTarget src={shot('printDialog').src} alt={t('screens.printDialogAlt')} className="block w-full">
+                    <img
+                      {...shot('printDialog')}
+                      alt={t('screens.printDialogAlt')}
+                      loading="lazy"
+                      decoding="async"
+                      className="block w-full h-auto"
+                    />
+                  </ZoomTarget>
+                </figure>
               </div>
             </div>
 
@@ -447,7 +496,7 @@ export default function LandingPage() {
               </ul>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/highlights' : '/login?admin=1')}
+                  onClick={() => openFeature('/highlights')}
                   className="px-5 py-2.5 rounded-full border-2 border-kaydo/40 text-kaydo-dark text-sm font-semibold hover:bg-kaydo/10 transition-colors"
                 >
                   {t('pillars.highlights.button')}
@@ -456,10 +505,8 @@ export default function LandingPage() {
               {/* Real "Highlight video" page: the suggestions built from the
                   family's photos, and the reels they kept. */}
               <BrowserFrame
-                src="/screenshots/highlights-desktop.webp"
+                {...shot('highlights')}
                 alt={t('screens.highlightsAlt')}
-                width={1200}
-                height={938}
                 className="mt-2"
               />
             </div>
@@ -485,7 +532,7 @@ export default function LandingPage() {
               </ul>
               <div className="mt-auto">
                 <button
-                  onClick={() => navigate(isAuthenticated ? '/collages' : '/login?admin=1')}
+                  onClick={() => openFeature('/collages')}
                   className="px-5 py-2.5 rounded-full border-2 border-rose-400/60 text-rose-800 text-sm font-semibold hover:bg-rose-100 transition-colors"
                 >
                   {t('pillars.collages.button')}
@@ -494,10 +541,8 @@ export default function LandingPage() {
               {/* Real collage gallery — every template previewed with the
                   family's own photos, which is what the page actually does. */}
               <BrowserFrame
-                src="/screenshots/collages-desktop.webp"
+                {...shot('collages')}
                 alt={t('screens.collagesAlt')}
-                width={1200}
-                height={851}
                 className="mt-2"
               />
             </div>
@@ -530,10 +575,8 @@ export default function LandingPage() {
                   couple actually sits down with this. */}
               <div className="lg:w-96 w-full flex-shrink-0">
                 <PhoneFrame
-                  src="/screenshots/our-year-mobile.webp"
+                  {...shot('ourYearMobile')}
                   alt={t('screens.ourYearMobileAlt')}
-                  width={440}
-                  height={1128}
                 />
               </div>
             </div>
@@ -654,6 +697,10 @@ export default function LandingPage() {
               <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
                 <Bell className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
                 {t('app.items.notify')}
+              </span>
+              <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bark">
+                <Languages className="w-5 h-5 flex-shrink-0 text-kaydo" aria-hidden="true" />
+                {t('app.items.languages')}
               </span>
             </div>
           </div>
@@ -786,7 +833,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FAQ (mirrored as FAQPage JSON-LD in <Head>) ── */}
+      {/* ── FAQ ── */}
       <section className="bg-warm-white py-20">
         <div className="max-w-2xl mx-auto px-5">
           <h2 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-10">
@@ -859,14 +906,12 @@ export default function LandingPage() {
             >
               {t('cta.getStarted')}
             </button>
-            <a
-              href="https://the-bennetts.kaydo.app"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/demo"
               className="flex items-center gap-2 px-8 py-3 rounded-full border-2 border-bark-muted text-bark font-semibold hover:border-bark transition-colors text-base"
             >
               {t('hero.demoCta')}
-            </a>
+            </Link>
             <a
               href="https://github.com/Gnadi/0815memories"
               target="_blank"
@@ -878,6 +923,19 @@ export default function LandingPage() {
             </a>
           </div>
           <p className="text-xs text-bark-muted">{t('cta.noCreditCard')}</p>
+          {/* The blog post is in German, which the English page says. */}
+          <p className="mt-10 text-sm text-bark-light">
+            {t('story.question')}{' '}
+            <a
+              href={t('story.url')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-kaydo-dark underline underline-offset-4 hover:text-kaydo transition-colors"
+            >
+              {t('story.link')}
+            </a>
+            {t('story.note') && <span className="text-bark-muted"> {t('story.note')}</span>}
+          </p>
         </div>
       </section>
       </main>
@@ -891,6 +949,20 @@ export default function LandingPage() {
             <span>Kaydo</span>
           </div>
 
+          {/* Feature pages (src/seoRoutes.js) */}
+          <nav aria-label={t('featurePages.title')} className="text-center">
+            <p className="text-xs font-bold text-bark-muted tracking-widest uppercase mb-3">{t('featurePages.title')}</p>
+            <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-bark-light">
+              {FEATURE_PAGES.map((page) => (
+                <li key={page.id}>
+                  <Link to={page.paths[lang] ?? page.paths.en} className="hover:text-bark transition-colors">
+                    {t(`featurePages.${page.id}`)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-xs font-semibold text-bark-muted tracking-wider uppercase">
             {t('footer.links', { returnObjects: true }).map((link) => (
@@ -898,6 +970,9 @@ export default function LandingPage() {
                 {link.label}
               </Link>
             ))}
+            <a href={t('story.url')} target="_blank" rel="noopener noreferrer" className="hover:text-bark transition-colors">
+              {t('footer.story')}
+            </a>
             {canInstall && (
               <button type="button" onClick={promptInstall} className="hover:text-bark transition-colors">
                 {t('footer.install')}
@@ -917,7 +992,24 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
-    </div>
+    </LightboxProvider>
+  )
+}
+
+/**
+ * A link from a feature card to the page that tells more about it, in the
+ * page's language, named after it so the words say where it leads.
+ */
+function FeatureLink({ id, lang, t, className = '' }) {
+  const page = FEATURE_PAGES.find((p) => p.id === id)
+  return (
+    <Link
+      to={page.paths[lang] ?? page.paths.en}
+      className={`inline-flex items-center gap-1.5 text-sm font-semibold text-kaydo-dark underline underline-offset-4 hover:text-kaydo transition-colors ${className}`}
+    >
+      {t(`featurePages.${id}`)}
+      <span aria-hidden="true">&rarr;</span>
+    </Link>
   )
 }
 
@@ -926,8 +1018,8 @@ export default function LandingPage() {
  * `<slug>.kaydo.app` is available, and — if it is — create the account inline
  * without leaving the landing page.
  */
-function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
-  const { t } = useTranslation('landing')
+function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
+  const { t, i18n } = useTranslation('landing', { lng })
   const [familyName, setFamilyName] = useState('')
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [status, setStatus] = useState('idle')
@@ -958,6 +1050,9 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
     }
     setStatus('checking')
     try {
+      // Loaded now rather than with the page: Firestore is most of what a
+      // visitor who only reads the landing page would otherwise download.
+      const { isSlugAvailable } = await import('../services/family')
       const available = await isSlugAvailable(slug)
       setStatus(available ? 'available' : 'taken')
     } catch {
@@ -977,8 +1072,10 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
 
     setSubmitting(true)
     try {
-      await signup(email, password, displayName, familyName)
-      navigate('/home')
+      const { signupAccount } = await import('../context/signupAccount')
+      await signupAccount(email, password, displayName, familyName, lng || i18n.resolvedLanguage)
+      // The family is founded once the address is confirmed, on /signup.
+      navigate('/signup', { state: { familyName } })
     } catch (err) {
       const messages = {
         'auth/email-already-in-use': t('claim.errors.emailInUse'),
@@ -997,7 +1094,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
     <div className="max-w-md">
       {/* ── Availability checker ── */}
       <form onSubmit={handleCheck}>
-        <div className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
+        {/* A web address reads left to right in every language. */}
+        <div dir="ltr" className="flex items-stretch bg-white rounded-2xl shadow-lg border border-cream-dark overflow-hidden focus-within:ring-2 focus-within:ring-kaydo/30">
           <input
             type="text"
             value={familyName}
@@ -1030,7 +1128,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
         {slug && status === 'idle' && (
           <p className="text-xs text-bark-muted mt-2 pl-1">
             {t('claim.previewLabel')}{' '}
-            <span className="font-medium text-kaydo">{domain}</span>
+            <span dir="ltr" className="font-medium text-kaydo">{domain}</span>
           </p>
         )}
       </form>
@@ -1046,7 +1144,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
         <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl mt-3 flex items-center gap-2">
           <Ban className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>
-            <span className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
+            <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.takenSuffix')}
           </span>
         </p>
       )}
@@ -1056,7 +1154,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
           <p className="text-sm text-green-700 bg-green-50 px-4 py-2.5 rounded-xl flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>
-              <span className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
+              <span dir="ltr" className="font-semibold">{domain}</span> {t('claim.availableSuffix')}
             </span>
           </p>
 
@@ -1109,7 +1207,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, signup, firebaseReady }) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
                 aria-label={showPassword ? t('claim.hidePassword') : t('claim.showPassword')}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

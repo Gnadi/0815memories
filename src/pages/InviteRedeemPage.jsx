@@ -1,25 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'
-import {
-  doc,
-  getDoc,
-  writeBatch,
-  serverTimestamp,
-  arrayUnion,
-} from 'firebase/firestore'
-import { auth, db } from '../config/firebase'
+import { signOut } from 'firebase/auth'
+import { auth } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
+import { getFamilyPublic } from '../services/family'
+import { getInvite, redeemInvite } from '../services/invites'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
+import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 
 export default function InviteRedeemPage() {
-  const { t } = useTranslation('auth')
+  const { t, i18n } = useTranslation('auth')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user, firebaseReady, setActiveFamilyId } = useAuth()
+  const {
+    user, familyId: sessionFamilyId, isViewer, emailVerified, firebaseReady,
+    signup, checkEmailVerified, setActiveFamilyId,
+  } = useAuth()
 
   const familyId = searchParams.get('family')
   const token = searchParams.get('token')
@@ -53,21 +52,20 @@ export default function InviteRedeemPage() {
       try {
         // familyPublic, not families: the invitee has no account yet, so this
         // read happens without a token.
-        const familySnap = await getDoc(doc(db, 'familyPublic', familyId))
+        const family = await getFamilyPublic(familyId)
         if (cancelled) return
-        if (!familySnap.exists()) {
+        if (!family) {
           setValidationError(t('invite.errors.familyNotFound'))
           return
         }
-        setFamilyName(familySnap.data().familyName || t('invite.fallbackFamilyName'))
+        setFamilyName(family.familyName || t('invite.fallbackFamilyName'))
 
-        const inviteSnap = await getDoc(doc(db, 'families', familyId, 'invites', token))
+        const data = await getInvite(familyId, token)
         if (cancelled) return
-        if (!inviteSnap.exists()) {
+        if (!data) {
           setValidationError(t('invite.errors.invalidOrRevoked'))
           return
         }
-        const data = inviteSnap.data()
         if (data.used) {
           setValidationError(t('invite.errors.alreadyUsed'))
           return
@@ -89,6 +87,20 @@ export default function InviteRedeemPage() {
     return () => { cancelled = true }
   }, [familyId, token, firebaseReady, t])
 
+  // Joining is three steps: the account, the confirmation of its email
+  // address, then the redemption. firestore.rules refuses the redemption to an
+  // account whose address is not confirmed — a password reset goes to that
+  // address, so an unconfirmed one would hand this family to whoever reads its
+  // mail. An account that belongs to no family yet (one that stopped after the
+  // first step, here or on /signup) carries on where it stopped; an account
+  // that already belongs to a family is asked to sign out, so each admin
+  // account stays bound to one family.
+  const unfinished = !!user && !sessionFamilyId && !isViewer
+  const step = !user ? 'account' : !unfinished ? 'signedIn' : emailVerified ? 'join' : 'verify'
+
+  // Stable, so VerifyEmailStep's polling is not restarted on every render.
+  const onVerified = useCallback(() => setError(''), [])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -106,70 +118,78 @@ export default function InviteRedeemPage() {
     }
 
     setLoading(true)
-    // The account created below, until the redemption that needs it has gone
-    // through. See the catch.
-    let createdUser = null
     try {
-      // 1. Create the Firebase Auth user. Email uniqueness is enforced by
-      //    Firebase, which is also our "one UID per family" guard.
-      const credential = await createUserWithEmailAndPassword(auth, email, password)
-      createdUser = credential.user
-      const newUid = credential.user.uid
-      if (displayName) {
-        try { await updateProfile(credential.user, { displayName }) } catch { /* non-fatal */ }
-      }
-
-      // 2. One batch: consume the invite, self-create admins/{newUid} with the
-      //    invite as proof, and join the family's adminUids. The rules accept
-      //    each of these only together with the other two. As three separate
-      //    writes, the spent invite stayed behind as proof that a removed admin
-      //    could replay to let themselves back in.
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'families', familyId, 'invites', token), {
-        used: true,
-        redeemedBy: newUid,
-        redeemedAt: serverTimestamp(),
-      })
-      batch.set(doc(db, 'families', familyId, 'admins', newUid), {
-        email: email.trim().toLowerCase(),
-        viaInvite: token,
-        addedAt: serverTimestamp(),
-      })
-      batch.update(doc(db, 'families', familyId), {
-        adminUids: arrayUnion(newUid),
-      })
-      await batch.commit()
-      createdUser = null
-
-      // Bind the session to this family explicitly. The onAuthStateChanged
-      // handler that fired on account creation ran before adminUids included us,
-      // so its resolveFamilyId() lookup found nothing and left familyId null —
-      // which would land us on an empty /home until a manual re-login.
-      setActiveFamilyId(familyId)
-
-      navigate('/home', { replace: true })
+      // Creates the account and sends the confirmation mail. Email uniqueness
+      // is enforced by Firebase, which is also our "one UID per family" guard.
+      await signup(email, password, displayName, undefined, i18n.resolvedLanguage)
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Invite redemption failed', err)
-      // The account exists but the redemption did not go through. Left alone,
-      // that is a dead end: this page refuses anyone signed in, and the email
-      // is taken, so the person could neither retry here nor sign in to a
-      // family. Deleting the account (which also signs it out) puts them back
-      // where they started. Signing out is the fallback if even that fails.
-      if (createdUser) {
-        await createdUser.delete().catch(() => signOut(auth).catch(() => {}))
-      }
+      if (import.meta.env.DEV) console.error('Invite account creation failed', err)
       const messages = {
         'auth/email-already-in-use': 'invite.errors.emailInUse',
         'auth/invalid-email': 'invite.errors.invalidEmail',
         'auth/weak-password': 'invite.errors.weakPassword',
-        // The rules refused the redemption batch: the invite was used, revoked
-        // or expired after this page checked it.
-        'permission-denied': 'invite.errors.invalidOrRevoked',
       }
       setError(t(messages[err.code] || 'invite.errors.generic'))
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleJoin = async () => {
+    if (loading || !user) return
+    setError('')
+    setLoading(true)
+    try {
+      // Also fetches the fresh ID token the rules read `email_verified` from.
+      if (!(await checkEmailVerified())) {
+        setError(t('invite.errors.notVerified'))
+        return
+      }
+      // One transaction on the server — see services/invites.js.
+      await redeemInvite(familyId, token)
+
+      // Bind the session to this family explicitly. The onAuthStateChanged
+      // handler ran before adminUids included us, so its resolveFamilyId()
+      // lookup found nothing and left familyId null — which would land us on
+      // /signup until a manual re-login.
+      setActiveFamilyId(familyId)
+
+      navigate('/home', { replace: true })
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Invite redemption failed', err)
+      // The account stays: it belongs to no family, so it can still found one
+      // on /signup or join with a fresh invite.
+      const messages = {
+        // The invite was used, revoked or expired after this page checked it,
+        // or an admin was removed since, which retires every pending link.
+        'functions/failed-precondition': 'invite.errors.invalidOrRevoked',
+      }
+      setError(t(messages[err.code] || 'invite.errors.generic'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const stepContent = () => {
+    if (step === 'verify') return <VerifyEmailStep onVerified={onVerified} />
+    if (step === 'join') {
+      return <JoinStep familyName={familyName} error={error} loading={loading} onJoin={handleJoin} />
+    }
+    return (
+      <>
+        {step === 'signedIn' && !loading && <AlreadySignedInBanner />}
+        <RedeemForm
+          displayName={displayName} setDisplayName={setDisplayName}
+          email={email} setEmail={setEmail}
+          password={password} setPassword={setPassword}
+          confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
+          showPassword={showPassword} setShowPassword={setShowPassword}
+          showConfirm={showConfirm} setShowConfirm={setShowConfirm}
+          error={error} loading={loading} handleSubmit={handleSubmit}
+          disabled={!!user}
+        />
+      </>
+    )
   }
 
   if (validating) {
@@ -221,17 +241,7 @@ export default function InviteRedeemPage() {
           <p className="text-bark-light text-center mb-6">
             {t('invite.subtitle')}
           </p>
-          {user && !loading && <AlreadySignedInBanner />}
-          <RedeemForm
-            displayName={displayName} setDisplayName={setDisplayName}
-            email={email} setEmail={setEmail}
-            password={password} setPassword={setPassword}
-            confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
-            showPassword={showPassword} setShowPassword={setShowPassword}
-            showConfirm={showConfirm} setShowConfirm={setShowConfirm}
-            error={error} loading={loading} handleSubmit={handleSubmit}
-            disabled={!!user}
-          />
+          {stepContent()}
         </div>
 
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
@@ -257,17 +267,7 @@ export default function InviteRedeemPage() {
             <p className="text-bark-light text-center mb-8">
               Create your account to become an admin of this family.
             </p>
-            {user && !loading && <AlreadySignedInBanner />}
-            <RedeemForm
-              displayName={displayName} setDisplayName={setDisplayName}
-              email={email} setEmail={setEmail}
-              password={password} setPassword={setPassword}
-              confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
-              showPassword={showPassword} setShowPassword={setShowPassword}
-              showConfirm={showConfirm} setShowConfirm={setShowConfirm}
-              error={error} loading={loading} handleSubmit={handleSubmit}
-              disabled={!!user}
-            />
+            {stepContent()}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
               <Shield className="w-4 h-4" />
               Your account is bound to this family only.
@@ -352,7 +352,7 @@ function RedeemForm({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -376,7 +376,7 @@ function RedeemForm({
           <button
             type="button"
             onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-bark-muted hover:text-bark"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
             {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -402,5 +402,31 @@ function RedeemForm({
         )}
       </button>
     </form>
+  )
+}
+
+// The last step: the address is confirmed, and joining is one tap.
+function JoinStep({ familyName, error, loading, onJoin }) {
+  const { t } = useTranslation('auth')
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-bark">{t('invite.join.title')}</h2>
+        <p className="text-sm text-bark-light mt-2">{t('invite.join.body', { name: familyName })}</p>
+      </div>
+      {error && (
+        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+      )}
+      <button
+        type="button"
+        onClick={onJoin}
+        disabled={loading}
+        className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
+      >
+        {loading
+          ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          : t('invite.join.submit', { name: familyName })}
+      </button>
+    </div>
   )
 }

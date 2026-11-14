@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/layout/Sidebar'
@@ -9,9 +9,14 @@ import FeaturedJourney from '../components/home/FeaturedJourney'
 import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
+import AdventHomeCard from '../components/advent/AdventHomeCard'
 import PostEntryModal from '../components/admin/PostEntryModal'
+import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
+import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
+import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
 import { useAuth } from '../context/AuthContext'
+import { takeFeedMemory } from '../utils/feedPosition'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -24,6 +29,7 @@ export default function HomePage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const { memories, featuredMemory, loading, addMemory, updateMemory, deleteMemory } = useMemories(familyId, encryptionKey)
   const { moments, addMoment, updateMoment, deleteMoment } = useMoments(familyId, encryptionKey)
+  const bestOf = useCurrentBestOf({ familyId, encryptionKey, isAdmin })
 
   const nonFeaturedMemories = memories.filter((m) => !m.featured)
 
@@ -57,6 +63,17 @@ export default function HomePage() {
     setEditingMoment(null)
   }
 
+  // Coming back from a memory, jump to its card instead of the top. Taken once
+  // the feed has rendered; a card that is gone (deleted, past the page size)
+  // just leaves the page at the top.
+  useEffect(() => {
+    if (loading) return
+    const id = takeFeedMemory()
+    if (!id) return
+    const card = document.querySelector(`[data-memory-id="${CSS.escape(id)}"]`)
+    card?.scrollIntoView({ block: 'center' })
+  }, [loading])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -72,49 +89,63 @@ export default function HomePage() {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-20 lg:pb-0">
         <MobileHeader />
 
-        <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl mx-auto w-full">
+        {/* The page widens on large screens only so the memory feed can spread
+            into two columns; the other sections keep their single-column width. */}
+        <main className="flex-1 px-4 lg:px-8 py-6 max-w-3xl min-[88rem]:max-w-[92rem] mx-auto w-full">
+          <div className="mx-auto w-full max-w-[44rem]">
+            <FamilyDeletionBanner />
+            <VerifyEmailBanner />
+          </div>
           <DailyMoments
             moments={moments}
+            bestOf={bestOf}
+            bestOfSeen={!!bestOf && hasSeenBestOf(familyId, bestOf.month)}
+            onOpenBestOf={() => navigate(`/best-of/${bestOf.month}`)}
             onAddMoment={() => setShowMomentModal(true)}
             onMomentClick={(index) => setViewingMomentIndex(index)}
             onViewAll={() => navigate('/moments')}
           />
-          <FeaturedJourney memory={featuredMemory} />
+          <div className="mx-auto w-full max-w-[44rem]">
+            <AdventHomeCard />
+            <FeaturedJourney memory={featuredMemory} memories={memories} />
+          </div>
           <MemoryFeed
             memories={nonFeaturedMemories}
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-          <AlbumGlimpse memories={memories} />
+          <div className="mx-auto w-full max-w-[44rem]">
+            <AlbumGlimpse memories={memories} />
 
-          {/* Smart Timeline CTA */}
-          <Link
-            to="/timeline"
-            className="block mt-6 rounded-2xl overflow-hidden group"
-            style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
-          >
-            <div className="px-6 py-7 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">{t('timelineCta.eyebrow')}</p>
-                <h3 className="font-serif text-xl font-bold text-white leading-snug">
-                  {t('timelineCta.title')}
-                </h3>
-                <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
-                  {t('timelineCta.body')}
-                </p>
-              </div>
-              <div className="flex-shrink-0 ml-4">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
+            {/* Smart Timeline CTA */}
+            <Link
+              to="/timeline"
+              className="block mt-6 rounded-2xl overflow-hidden group"
+              style={{ background: 'linear-gradient(135deg, #A04420 0%, #C25A2E 60%, #D4784A 100%)' }}
+            >
+              <div className="px-6 py-7 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold tracking-widest text-white/70 uppercase mb-1">{t('timelineCta.eyebrow')}</p>
+                  <h3 className="font-serif text-xl font-bold text-white leading-snug">
+                    {t('timelineCta.title')}
+                  </h3>
+                  <p className="text-sm text-white/80 mt-1 leading-relaxed max-w-[220px]">
+                    {t('timelineCta.body')}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 ml-4">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
 
-          {/* "Our Year" — renders only for the two partners of a ritual */}
-          <OurYearHomeCard />
+            {/* "Our Year" — renders only for the two partners of a ritual */}
+            <OurYearHomeCard />
+          </div>
         </main>
       </div>
 

@@ -32,7 +32,15 @@
     "label": "Sprache",
     "description": "Wähle die Sprache für die App-Oberfläche.",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "ar": "العربية",
+    "fr": "Français"
+  },
+  "textSize": {
+    "label": "Schriftgröße",
+    "description": "Macht die Schrift größer oder kleiner. Gilt nur für dieses Gerät.",
+    "adjust": "Schriftgröße anpassen",
+    "percent": "{{value}} %"
   },
   "errorScreen": {
     "updating": "Aktualisierung auf die neueste Version…",
@@ -40,11 +48,25 @@
     "message": "Ein unerwarteter Fehler ist aufgetreten. Ein Neuladen der Seite behebt das meistens — deine Erinnerungen sind sicher.",
     "reload": "Seite neu laden"
   },
+  "familyKey": {
+    "title": "Deine Familie kann nicht geöffnet werden",
+    "missing": "Diese Familie hat keinen Schlüssel, und Kaydo öffnet nur verschlüsselte Familien.",
+    "unreadable": "Dieser Browser kann den Schlüssel deiner Familie nicht laden. Versuche es bitte mit einem aktuellen Browser.",
+    "unavailable": "Deine Familie konnte nicht geladen werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "retry": "Erneut versuchen",
+    "signOut": "Abmelden"
+  },
   "actions": {
     "dismiss": "Schließen",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
     "familyIllustrationAlt": "Illustration einer Familienzusammenkunft"
+  },
+  "unreadable": {
+    "notice_one": "Ein Eintrag konnte mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Er wird ohne den betroffenen Text angezeigt.",
+    "notice_other": "{{count}} Einträge konnten mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Sie werden ohne den betroffenen Text angezeigt.",
+    "content": "Dieser Inhalt konnte nicht entschlüsselt werden.",
+    "title": "Unlesbarer Eintrag"
   },
   "mobileNav": {
     "home": "Start",
@@ -88,6 +110,17 @@
   "upload": {
     "failed": "Upload fehlgeschlagen. Bitte versuche es erneut.",
     "tooLarge": "Diese Datei ist {{size}} groß — erlaubt sind {{limit}} pro Datei. Bitte nimm einen kürzeren oder stärker komprimierten Clip.",
-    "videoTooLong": "Das Video darf höchstens {{seconds}} Sekunden lang sein."
+    "videoTooLong": "Das Video darf höchstens {{seconds}} Sekunden lang sein.",
+    "rateLimited": "Du hast in der letzten Stunde sehr viel hochgeladen. Bitte warte eine Weile und versuch es dann noch einmal.",
+    "storageFull": "Der Speicherplatz deiner Familie ist aufgebraucht, deshalb kann gerade nichts mehr hochgeladen werden."
+  },
+  "dictation": {
+    "start": "Diktieren",
+    "stop": "Diktat beenden",
+    "notice": "Ich höre zu … Dein Browser sendet das Audio für die Spracherkennung möglicherweise an seinen Hersteller.",
+    "error": {
+      "denied": "Der Mikrofonzugriff wurde verweigert. Erlaube ihn in den Browser-Einstellungen, um zu diktieren.",
+      "unavailable": "Diktieren ist gerade nicht verfügbar."
+    }
   }
 }

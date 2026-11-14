@@ -2,7 +2,7 @@
    demo CTA / two-zone / trust sections, and stays free of retired claims
    (invite-only, military-grade, zero-knowledge, breach stats). */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import i18n from '../i18n'
 
@@ -15,9 +15,15 @@ vi.mock('../context/AuthContext', () => ({
 
 import LandingPage from '../pages/LandingPage'
 
-function renderLanding() {
-  const router = createMemoryRouter([{ path: '/', element: <LandingPage /> }])
-  return render(<RouterProvider router={router} />)
+function renderLanding(path = '/') {
+  const router = createMemoryRouter([
+    { path: '/', element: <LandingPage /> },
+    { path: '/de', element: <LandingPage lng="de" /> },
+    { path: '/fr', element: <LandingPage lng="fr" /> },
+    { path: '*', element: null },
+  ], { initialEntries: [path] })
+  render(<RouterProvider router={router} />)
+  return router
 }
 
 describe('LandingPage renders in both languages', () => {
@@ -36,6 +42,7 @@ describe('LandingPage renders in both languages', () => {
     expect(screen.getByText('Works like an app')).toBeInTheDocument()
     expect(screen.getByText('Frequently asked questions')).toBeInTheDocument()
     expect(screen.getByText('Do grandparents need an account?')).toBeInTheDocument()
+    expect(screen.getByText('Why not just use a WhatsApp group?')).toBeInTheDocument()
     expect(screen.getByText('GDPR-compliant')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/invite-only|military-grade|zero-knowledge|data breaches/i)
@@ -49,8 +56,62 @@ describe('LandingPage renders in both languages', () => {
     expect(screen.getByText('Funktioniert wie eine App')).toBeInTheDocument()
     expect(screen.getByText('Häufige Fragen')).toBeInTheDocument()
     expect(screen.getByText('Brauchen Oma und Opa ein Konto?')).toBeInTheDocument()
+    expect(screen.getByText('Warum nicht einfach eine WhatsApp-Gruppe?')).toBeInTheDocument()
     expect(screen.getByText('DSGVO-konform')).toBeInTheDocument()
     expect(screen.getAllByText(/AES-256/).length).toBeGreaterThan(0)
     expect(document.body.textContent).not.toMatch(/nur auf Einladung|Zero-Knowledge|Datenlecks/i)
+  })
+
+  it('renders German at /de, whatever the visitor\'s language', () => {
+    renderLanding('/de')
+    expect(screen.getAllByText('Demo-Familie ansehen').length).toBe(2)
+    expect(screen.getByText('Häufige Fragen')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Sprache' })).toHaveValue('de')
+    // Fixed to the page rather than switched for everyone: the pre-render
+    // builds the English page at the same time.
+    expect(i18n.language).toBe('en')
+  })
+
+  it('goes to the address of the language a visitor picks', () => {
+    const router = renderLanding()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'de' } })
+    expect(router.state.location.pathname).toBe('/de')
+    expect(i18n.language).toBe('de')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sprache' }), { target: { value: 'fr' } })
+    expect(router.state.location.pathname).toBe('/fr')
+    expect(i18n.language).toBe('fr')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Langue' }), { target: { value: 'en' } })
+    expect(router.state.location.pathname).toBe('/')
+    expect(i18n.language).toBe('en')
+  })
+
+  it('sends a visitor from a feature to the same place in the demo family', () => {
+    const router = renderLanding()
+    fireEvent.click(screen.getByText('Open Scrapbooks'))
+    expect(router.state.location.pathname).toBe('/demo')
+    expect(router.state.location.search).toBe('?to=/scrapbook')
+  })
+
+  it('shows the screenshots in the page\'s language', async () => {
+    renderLanding()
+    expect(screen.getByAltText(/scrapbook editor/).getAttribute('src')).toBe('/screenshots/scrapbook-desktop.webp')
+    cleanup()
+    await i18n.changeLanguage('de')
+    renderLanding()
+    expect(screen.getByAltText(/Scrapbook-Editor/).getAttribute('src')).toBe('/screenshots/de/scrapbook-desktop.webp')
+  })
+
+  it('links the story behind Kaydo, and says in English that it is German', async () => {
+    renderLanding()
+    const link = screen.getByText('Read the story behind Kaydo').closest('a')
+    expect(link.getAttribute('href')).toBe('https://blog.gnadlinger.me/blog/kaydo/')
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(screen.getByText('(in German)')).toBeInTheDocument()
+    cleanup()
+    await i18n.changeLanguage('de')
+    renderLanding()
+    expect(screen.getByText('Lies die Geschichte hinter Kaydo')).toBeInTheDocument()
+    expect(screen.getByText('Die Geschichte hinter Kaydo').closest('a').getAttribute('href'))
+      .toBe('https://blog.gnadlinger.me/blog/kaydo/')
   })
 })

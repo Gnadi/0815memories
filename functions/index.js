@@ -1,7 +1,9 @@
 /**
  * Firebase Cloud Functions — Kaydo
  *
- * Push notifications (this file's first half) and access control (the second).
+ * Push notifications (this file's first half) and access control (the second),
+ * with the daily clean-up of printed-book files and the signing of media
+ * uploads between them.
  * Everything runs in europe-west3, set once at the top: setGlobalOptions only
  * reaches v2 functions, and only those defined after the call.
  *
@@ -20,13 +22,27 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { setGlobalOptions } from 'firebase-functions/v2'
+import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
 import { initializeApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { getStorage } from 'firebase-admin/storage'
+import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
+import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
+import { purgeExpiredPrintFiles } from './printFiles.js'
+import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
+import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
+import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
+import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
+import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
+import { givenUp } from './retries.js'
+import { MembershipError, redeemInvite, removeAdmin } from './membership.js'
+import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
 import { checkViewerLogin } from './viewerLogin.js'
 import {
   COPY,
@@ -57,14 +73,6 @@ const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true'
 
 // Mirrored by SettingsPanel, which says so before the round trip.
 const MIN_SHARED_PASSWORD_LENGTH = 8
-
-/** The admins of a family document, across both the legacy and current shape. */
-function adminUidsOf(data) {
-  if (!data) return []
-  const list = Array.isArray(data.adminUids) ? data.adminUids : []
-  if (list.length > 0) return list
-  return data.adminUid ? [data.adminUid] : []
-}
 
 // ---------------------------------------------------------------------------
 // Push notifications
@@ -179,6 +187,350 @@ export const dailyAnniversaryCheck = onSchedule(
   },
 )
 
+// ── "Best of September" ─────────────────────────────────────────────────────
+
+/**
+ * On the 1st, tell every family that posted enough last month that its best-of
+ * is ready — see functions/bestOf.js. The best-of is put together by the app,
+ * from photos only the family can decrypt; this only counts them. In the
+ * evening, so an admin who opened the app during the day has usually made it
+ * already, and the notification opens straight onto the story.
+ */
+export const monthlyBestOfCheck = onSchedule(
+  { schedule: '0 18 1 * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
+  async () => {
+    const window = previousMonthWindow(new Date(), ANNIVERSARY_TIMEZONE)
+    const families = familiesWithBestOf(await countMonthMedia(getFirestore(), window))
+
+    for (const familyId of families) {
+      await sendToFamily(familyId, (lang) => ({ ...bestOfCopy(lang, window), url: bestOfUrl(window.key) }))
+    }
+
+    console.log(`[bestOf] month=${window.key} notified=${families.length}`)
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Printed books — see functions/printFiles.js
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete print files once Peecho has had ample time to fetch them. They are
+ * the one unencrypted copy of a family's photos Kaydo keeps, so they do not
+ * stay a day longer than the order dialog promised.
+ */
+export const purgePrintFiles = onSchedule(
+  { schedule: '30 3 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 300 },
+  async () => {
+    const { checked, deleted, failed } = await purgeExpiredPrintFiles(getStorage().bucket())
+    console.log(`[print] checked=${checked} deleted=${deleted} failed=${failed}`)
+  },
+)
+
+// The merchant API key from Peecho's dashboard (Settings > API), held in
+// Secret Manager: `firebase functions:secrets:set PEECHO_API_KEY`.
+const PEECHO_API_KEY = defineSecret('PEECHO_API_KEY')
+// https://test.www.peecho.com while trying it out — test orders are free and
+// never shipped — then https://www.peecho.com. Asked for on the first deploy.
+const PEECHO_API_BASE = defineString('PEECHO_API_BASE', {
+  default: PEECHO_PROD,
+  description: 'Peecho environment: https://test.www.peecho.com or https://www.peecho.com',
+})
+
+/**
+ * A Peecho checkout link for a print file an admin has just uploaded — see
+ * functions/peechoCheckout.js. Admin only; the key never leaves the server.
+ */
+export const createPrintCheckout = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [PEECHO_API_KEY] },
+  async (request) => {
+    try {
+      return await createCheckout(
+        {
+          db: getFirestore(),
+          bucket: getStorage().bucket(),
+          downloadUrl: (file) => firebaseDownloadUrl(file, process.env.FIREBASE_STORAGE_EMULATOR_HOST),
+          fetch,
+          apiKey: PEECHO_API_KEY.value(),
+          apiBase: PEECHO_API_BASE.value().replace(/\/+$/, ''),
+        },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof CheckoutError) throw new HttpsError(error.code, error.message)
+      console.error('[print] checkout failed', error)
+      throw new HttpsError('internal', 'Could not create the checkout')
+    }
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Media uploads — see functions/mediaSigning.js and docs/plan-media-lifecycle.md
+// ---------------------------------------------------------------------------
+
+// From Cloudinary's console (Settings > API Keys), both in Secret Manager:
+// `firebase functions:secrets:set CLOUDINARY_API_SECRET`, and the same for
+// CLOUDINARY_API_KEY. The key is not secret — it goes to the browser with every
+// signature — but a string parameter without a default stops the emulator from
+// loading any function, viewer login included, and a default would let a
+// deploy go out without one.
+const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
+const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
+
+// Generous on purpose: a family importing a holiday should never meet them.
+// Each photo is two uploads, the original and its thumbnail. The storage limit
+// depends on the Cloudinary plan, which every family shares.
+const MEDIA_UPLOADS_PER_HOUR = defineInt('MEDIA_UPLOADS_PER_HOUR', {
+  default: 600,
+  description: 'Uploads one admin may be signed per hour',
+})
+const MEDIA_FAMILY_STORAGE_MB = defineInt('MEDIA_FAMILY_STORAGE_MB', {
+  default: 10240,
+  description: 'Cloudinary storage one family may use, in MB',
+})
+// The largest file Cloudinary accepts on the plan (10 MB for raw files on the
+// free one, which every encrypted upload is). A file whose size is not looked
+// up yet counts against the family's storage at this size; see checkQuota in
+// functions/mediaSigning.js.
+const MEDIA_MAX_FILE_MB = defineInt('MEDIA_MAX_FILE_MB', {
+  default: 10,
+  description: "Cloudinary's largest file on the plan, in MB",
+})
+
+// Public ids and document paths reach the log from Cloudinary's answers and
+// from documents clients wrote. Only the characters a public id has are kept,
+// so none can forge a log line, and they go as arguments, never inside the
+// message, which is a format string.
+const loggable = (value) => String(value).replace(/[^A-Za-z0-9_./~:-]/g, '').slice(0, 300)
+
+// For the triggers that retry — see functions/retries.js. True once an event
+// has failed for long enough to stop, which it says in the log.
+function abandoned(name, event) {
+  if (!givenUp(event)) return false
+  console.error(`[${name}] gave up on an event after retrying:`, loggable(event.document ?? ''))
+  return true
+}
+
+/**
+ * Sign one Cloudinary upload for an admin, and record the file in the
+ * `mediaAssets` ledger before it exists.
+ */
+export const signUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK, secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY] },
+  async (request) => {
+    try {
+      return await signMediaUpload(
+        {
+          db: getFirestore(),
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+          limits: {
+            uploadsPerHour: MEDIA_UPLOADS_PER_HOUR.value(),
+            familyBytes: MEDIA_FAMILY_STORAGE_MB.value() * 1024 * 1024,
+            maxFileBytes: MEDIA_MAX_FILE_MB.value() * 1024 * 1024,
+          },
+        },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof SigningError) throw new HttpsError(error.code, error.message, error.details)
+      console.error('[media] signing failed', error)
+      throw new HttpsError('internal', 'Could not sign the upload')
+    }
+  },
+)
+
+/**
+ * Attach files to the documents that use them, and let go of the ones a
+ * document stopped using — see functions/mediaRefs.js.
+ *
+ * One trigger for every top-level collection rather than one per media
+ * collection: a collection that starts carrying media is one line in
+ * MEDIA_COLLECTIONS, not a new function to deploy. Writes elsewhere return
+ * before reading anything.
+ */
+export const trackMediaReferences = onDocumentWritten({ document: '{collection}/{docId}', retry: true }, async (event) => {
+  const { collection, docId } = event.params
+  if (!MEDIA_COLLECTIONS.includes(collection)) return
+  if (abandoned('media', event)) return
+  const before = event.data?.before?.exists ? event.data.before.data() : null
+  const after = event.data?.after?.exists ? event.data.after.data() : null
+  if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
+
+  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  if (stats.attached || stats.detached || stats.ignored) {
+    console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
+  }
+})
+
+// The clean-up deletes for real only once this is set to false, after its
+// logs have shown for a while that it would delete nothing still in use.
+const MEDIA_PURGE_DRY_RUN = defineBoolean('MEDIA_PURGE_DRY_RUN', {
+  default: true,
+  description: 'Only report the Cloudinary files the daily clean-up would delete',
+})
+// The account's cloud name, as in the browser's VITE_CLOUDINARY_CLOUD_NAME.
+// Without it no size is looked up, the clean-up can only report, and the
+// inventory does not run.
+const CLOUDINARY_CLOUD_NAME = defineString('CLOUDINARY_CLOUD_NAME', {
+  default: '',
+  description: 'Cloudinary cloud name, for deleting unused files',
+})
+
+/**
+ * Once a day: look up the sizes of new files (functions/mediaSizes.js), then
+ * delete the files nothing uses any more (functions/mediaPurge.js). The
+ * deleting is a dry run until MEDIA_PURGE_DRY_RUN is false.
+ */
+export const purgeUnusedMedia = onSchedule(
+  {
+    schedule: '15 4 * * *',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    const dryRun = MEDIA_PURGE_DRY_RUN.value() || !cloudName
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no sizes looked up, nothing deleted')
+    } else {
+      // Before the clean-up, so a file it deletes gives back its real size
+      // rather than its estimate.
+      const sizes = await syncMediaSizes({
+        db: getFirestore(),
+        lookup: cloudinarySizer({
+          fetch,
+          cloudName,
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+        }),
+      })
+      console.log(`[media] sizes ${JSON.stringify(sizes)}`)
+    }
+    const stats = await purgeMedia({
+      db: getFirestore(),
+      destroy: cloudinaryDestroyer({
+        fetch,
+        cloudName,
+        apiKey: CLOUDINARY_API_KEY.value(),
+        secret: CLOUDINARY_API_SECRET.value(),
+      }),
+      dryRun,
+    })
+    const { wouldDelete, ...counts } = stats
+    console.log(`[media] purge ${JSON.stringify(counts)}`)
+    // Public ids name a family and a random file, nothing of what is in it.
+    if (wouldDelete?.length) console.log('[media] would delete:', wouldDelete.map(loggable).join(' '))
+  },
+)
+
+/**
+ * Weekly inventory of the files from before the ledger — see
+ * functions/mediaInventory.js. Counts the claimed ones into their families'
+ * usage and reports the unclaimed ones in `mediaReports/<date>` and the log.
+ * Deletes nothing.
+ */
+export const reportLegacyMedia = onSchedule(
+  {
+    schedule: '15 5 * * 1',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    if (!cloudName) {
+      console.warn('[media] CLOUDINARY_CLOUD_NAME is not set; no inventory')
+      return
+    }
+    const cloudinary = { fetch, cloudName, apiKey: CLOUDINARY_API_KEY.value(), secret: CLOUDINARY_API_SECRET.value() }
+    const { unclaimedSample, misfiledSample, ...counts } = await inventoryLegacyMedia({
+      db: getFirestore(),
+      list: cloudinaryLister(cloudinary),
+      // Files stored as another kind than their signature was for; deleted
+      // under the same switch as the daily clean-up.
+      destroy: cloudinaryDestroyer(cloudinary),
+      dryRun: MEDIA_PURGE_DRY_RUN.value(),
+    })
+    console.log(`[media] legacy inventory ${JSON.stringify(counts)}`)
+    if (misfiledSample.length) {
+      console.error('[media] files stored as another kind than signed, for example:', misfiledSample.map(loggable).join(' '))
+    }
+    if (unclaimedSample.length) console.log('[media] unclaimed, for example:', unclaimedSample.map(loggable).join(' '))
+  },
+)
+
+// ---------------------------------------------------------------------------
+// Deleting a family — see functions/familyDeletion.js
+// ---------------------------------------------------------------------------
+
+const deletionCall = (action) =>
+  onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+    try {
+      return await action({ db: getFirestore() }, request.auth?.uid, request.data)
+    } catch (error) {
+      if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
+      console.error('[deletion] call failed', error)
+      throw new HttpsError('internal', 'Could not change the deletion')
+    }
+  })
+
+/** Schedule the caller's family for deletion. Owner only. */
+export const requestFamilyDeletion = deletionCall(requestDeletion)
+
+/** Take a scheduled deletion back, until it has begun. Owner only. */
+export const cancelFamilyDeletion = deletionCall(cancelDeletion)
+
+/**
+ * Once a day: delete the families whose date has come, and carry on with the
+ * ones an earlier run could not finish. One family failing does not stop the
+ * others; it is tried again tomorrow.
+ */
+export const deleteScheduledFamilies = onSchedule(
+  {
+    schedule: '45 2 * * *',
+    timeZone: ANNIVERSARY_TIMEZONE,
+    timeoutSeconds: 540,
+    secrets: [CLOUDINARY_API_SECRET, CLOUDINARY_API_KEY],
+  },
+  async () => {
+    const started = Date.now()
+    const db = getFirestore()
+    const cloudName = CLOUDINARY_CLOUD_NAME.value()
+    const destroy = cloudName
+      ? cloudinaryDestroyer({
+          fetch,
+          cloudName,
+          apiKey: CLOUDINARY_API_KEY.value(),
+          secret: CLOUDINARY_API_SECRET.value(),
+        })
+      : null
+
+    for (const familyId of await familiesToDelete(db, started)) {
+      try {
+        const stats = await deleteFamily(
+          // A minute short of the timeout, so the run ends between two steps
+          // rather than in the middle of one.
+          { db, bucket: getStorage().bucket(), auth: getAuth(), destroy, deadline: started + 480 * 1000 },
+          familyId,
+        )
+        const line = `[deletion] family=${loggable(familyId)} ${JSON.stringify(stats)}`
+        if (stats.outcome === 'incomplete') {
+          console.error(`${line} did not finish; the next run carries on`)
+          if (!destroy) console.error('[deletion] CLOUDINARY_CLOUD_NAME is not set, so no file can be deleted')
+        } else {
+          console.log(line)
+        }
+      } catch (error) {
+        console.error(`[deletion] family=${loggable(familyId)} failed; the next run carries on`, error)
+      }
+    }
+  },
+)
+
 // ---------------------------------------------------------------------------
 // Access control — see docs/plan-a-zugriffskontrolle.md
 //
@@ -207,7 +559,8 @@ const PUBLIC_FAMILY_FIELDS = [
 
 // ── 1. Public mirror ────────────────────────────────────────────────────────
 
-export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async (event) => {
+export const mirrorFamilyPublic = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
+  if (abandoned('mirror', event)) return
   const { familyId } = event.params
   const db = getFirestore()
   const before = event.data?.before?.exists ? event.data.before.data() : null
@@ -248,33 +601,53 @@ export const mirrorFamilyPublic = onDocumentWritten('families/{familyId}', async
  * place where admin status is decided. A future flow that adds an admin gets
  * the claim without knowing this function exists.
  */
-export const syncAdminClaims = onDocumentWritten('families/{familyId}', async (event) => {
-  const { familyId } = event.params
-  const before = adminUidsOf(event.data?.before?.exists ? event.data.before.data() : null)
-  const after = adminUidsOf(event.data?.after?.exists ? event.data.after.data() : null)
-
-  const added = after.filter((uid) => !before.includes(uid))
-  const removed = before.filter((uid) => !after.includes(uid))
-  const auth = getAuth()
-
-  await Promise.allSettled(
-    added.map((uid) => auth.setCustomUserClaims(uid, { familyId, role: 'admin' })),
-  )
-
-  // Removal has to revoke as well as clear: a cleared claim still sits in the
-  // ID token the removed admin is holding, which stays valid for up to an hour.
-  await Promise.allSettled(
-    removed.map(async (uid) => {
-      const user = await auth.getUser(uid).catch(() => null)
-      if (!user) return
-      // Only clear a claim that points at *this* family, so an admin who moved
-      // families does not lose the claim they were just given.
-      if (user.customClaims?.familyId && user.customClaims.familyId !== familyId) return
-      await auth.setCustomUserClaims(uid, null)
-      await auth.revokeRefreshTokens(uid)
-    }),
+export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
+  if (abandoned('claims', event)) return
+  await syncClaimsForFamily(
+    { db: getFirestore(), auth: getAuth() },
+    {
+      familyId: event.params.familyId,
+      before: event.data?.before?.exists ? event.data.before.data() : null,
+      after: event.data?.after?.exists ? event.data.after.data() : null,
+    },
   )
 })
+
+// ── 2b. Joining and leaving ─────────────────────────────────────────────────
+
+const membershipCall = (action) =>
+  onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+    try {
+      return await action(request)
+    } catch (error) {
+      if (error instanceof MembershipError) throw new HttpsError(error.code, error.message)
+      console.error('[membership] call failed', error)
+      throw new HttpsError('internal', 'Could not change the admins')
+    }
+  })
+
+/**
+ * Join a family as an admin with an invite link — see functions/membership.js.
+ * Who is asking, and whether their address is confirmed, is read from the
+ * verified ID token, never from what the browser sent.
+ */
+export const redeemFamilyInvite = membershipCall((request) =>
+  redeemInvite(
+    { db: getFirestore() },
+    {
+      uid: request.auth?.uid,
+      email: request.auth?.token?.email,
+      emailVerified: request.auth?.token?.email_verified,
+      role: request.auth?.token?.role,
+    },
+    request.data,
+  ),
+)
+
+/** Remove an admin from a family, with every pending invite. */
+export const removeFamilyAdmin = membershipCall((request) =>
+  removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data),
+)
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
@@ -299,8 +672,15 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       // too. The payoff is revocation: changing the password revokes every
       // viewer in a single call. The cost is that a single device cannot be
       // locked out alone.
-      mintToken: (familyId) =>
-        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer' }),
+      //
+      // `sv` is the family's viewer session version. The rules compare it with
+      // the family document, so a token minted before a password change stops
+      // working at once instead of living out its hour.
+      mintToken: async (familyId) => {
+        const snap = await getFirestore().doc(`families/${familyId}`).get()
+        const sv = snap.data()?.viewerSessionVersion || 0
+        return getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv })
+      },
     },
     {
       familyId: request.data?.familyId,
@@ -350,7 +730,12 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   })
 
   // Everyone who logged in with the old password loses their session. That is
-  // the point of changing it.
+  // the point of changing it. Revoking refresh tokens stops renewals; the
+  // version bump is what ends ID tokens already issued, which the rules compare
+  // with the token's `sv` claim.
+  await getFirestore()
+    .doc(`families/${familyId}`)
+    .update({ viewerSessionVersion: FieldValue.increment(1) })
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
 
   return { ok: true }

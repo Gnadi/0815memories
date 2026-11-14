@@ -124,6 +124,7 @@
         "paragraphs": [
           "Your content is private to your family space by default. It is only visible to the people you invite.",
           "We use carefully selected service providers to host and operate the Service (for example, cloud hosting and media storage). These providers act as our processors, handle data only on our instructions, and are bound by appropriate data-protection agreements.",
+          "Dictation: When you fill in a text field by voice, your browser's speech recognition turns it into text. Depending on the browser (for example Chrome or Safari), the audio is sent to the browser's maker for this; Kaydo itself neither receives nor stores that recording. The resulting text is stored encrypted like any other content. You can leave the feature out at any time and type instead.",
           "We do not share your personal data with advertisers, and we do not use your content to train advertising profiles."
         ]
       },

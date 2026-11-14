@@ -1,0 +1,352 @@
+{
+  "seo": {
+    "title": "Kaydo – L'application gratuite, privée et chiffrée pour les souvenirs de famille",
+    "description": "Kaydo est une application gratuite, privée et chiffrée pour les photos, lettres, recettes et journaux de votre famille. Sans publicité, sans entraînement d'IA, sans carte bancaire.",
+    "ogTitle": "Kaydo — Votre maison numérique privée",
+    "ogDescription": "Un refuge privé et chiffré pour les souvenirs de votre famille. Sans publicité, sans entraînement d'IA — seulement vos histoires, conservées pour toujours.",
+    "ogImageAlt": "Kaydo — Votre maison numérique privée",
+    "twitterTitle": "Kaydo — Votre maison numérique privée",
+    "twitterDescription": "Un refuge privé et chiffré pour les souvenirs de votre famille. Sans publicité, sans entraînement d'IA — seulement vos histoires.",
+    "twitterImageAlt": "Kaydo — Votre maison numérique privée",
+    "ogLocale": "fr_FR",
+    "ldDescription": "Un refuge privé et chiffré pour les souvenirs de votre famille. Sans publicité, sans entraînement d'IA, sans revente de données.",
+    "ldFeatures": [
+      "Souvenirs chiffrés sur votre appareil avec AES-256",
+      "Partage privé de photos et de vidéos de famille",
+      "Le meilleur du mois de la famille, chaque mois",
+      "Lettres et journaux pour vos enfants, avec le ciel de la nuit de leur naissance",
+      "Capsules temporelles verrouillées qui s'ouvrent à un anniversaire, un mariage ou une date de votre choix",
+      "Arbre des recettes de famille avec historique des versions et variantes",
+      "Scrapbook numérique avec export PDF et livres imprimés",
+      "Vidéos souvenirs créées à partir de vos photos de famille",
+      "Collages photo avec 14 mises en page prêtes à l'emploi",
+      "Bilan annuel partagé pour les couples, avec une lettre scellée vers le futur"
+    ]
+  },
+  "nav": {
+    "features": "Fonctionnalités",
+    "privacy": "Confidentialité",
+    "security": "Sécurité",
+    "login": "Connexion"
+  },
+  "hero": {
+    "badge": "Votre maison numérique privée",
+    "titlePrefix": "Offrez à votre famille une",
+    "titleEmphasis": "maison",
+    "titleSuffix": "sur le web.",
+    "summary": "Kaydo est une application gratuite et privée pour votre famille : partagez photos et vidéos, écrivez des lettres et des journaux chiffrés pour vos enfants, conservez les recettes de famille et créez des scrapbooks.",
+    "subtitlePrefix": "Chaque famille a sa propre adresse privée. Vérifiez si",
+    "subtitleExample": "votrenom.kaydo.app",
+    "subtitleSuffix": "est encore disponible et faites-en la vôtre en quelques secondes.",
+    "demoCta": "Découvrir la famille de démonstration"
+  },
+  "screens": {
+    "homeAlt": "Le fil d'accueil de Kaydo avec les moments du jour et un souvenir de famille mis en avant",
+    "homeMobileAlt": "L'application mobile Kaydo affichant le fil des souvenirs de famille",
+    "scrapbookAlt": "L'éditeur de scrapbook de Kaydo avec photos, textes et autocollants à glisser-déposer",
+    "recipeAlt": "L'arbre d'évolution d'une recette dans Kaydo, retraçant une recette de famille à travers les générations",
+    "journalAlt": "Le journal privé d'un enfant dans Kaydo, avec des lettres datées",
+    "blackboxAlt": "La Boîte noire de Kaydo — un coffre de messages verrouillés dans le temps",
+    "highlightsAlt": "La page des vidéos souvenirs de Kaydo, avec des idées de films prêtes à l'emploi créées à partir des photos de la famille et les films déjà conservés",
+    "collagesAlt": "La galerie de collages de Kaydo, chaque mise en page présentée avec les propres photos de la famille",
+    "ourYearMobileAlt": "La chronologie « Notre année » de Kaydo sur un téléphone, avec un chapitre terminé et une lettre scellée",
+    "bestOfMobileAlt": "Le meilleur du mois dans Kaydo sur un téléphone : la diapositive de titre de septembre, avec les photos du mois qui défilent derrière",
+    "printDialogAlt": "La fenêtre de Kaydo pour commander un scrapbook sous forme de livre imprimé, avec l'avertissement que l'exemplaire imprimé n'est pas chiffré"
+  },
+  "pillars": {
+    "sectionTitle": "Les piliers de la maison",
+    "sectionSubtitle": "Des espaces soigneusement conçus pour cultiver l'héritage familial et tisser des liens profonds entre les générations.",
+    "share": {
+      "title": "Partager : moments et souvenirs",
+      "desc": "Chaque instantané spontané, chaque vidéo d'un grand moment et chaque note vocale — réunis dans un fil chaleureux et privé. Vos proches y accèdent immédiatement avec un simple mot de passe familial partagé. Pas de compte, pas de complications, pas d'inconnus.",
+      "bullets": [
+        "Accès du cercle proche — un seul mot de passe partagé, aucune inscription",
+        "Les administrateurs publient, le cercle proche regarde — les journaux et le Coffre restent aux administrateurs, les recettes les rejoignent quand vous les partagez",
+        "Moments du jour — des cercles d'histoires pour les instantanés du quotidien",
+        "Une chronologie intelligente classe les souvenirs par saison et « il y a un an »",
+        "En Avent, une porte s'ouvre chaque jour sur un souvenir des archives de votre famille"
+      ],
+      "pills": {
+        "photos": "Photos",
+        "videos": "Vidéos",
+        "voiceMemos": "Notes vocales"
+      }
+    },
+    "vault": {
+      "title": "Préserver : le Coffre",
+      "desc": "Scellez lettres, notes vocales, photos et vidéos dans une capsule temporelle. Elle reste fermée jusqu'au jour que vous choisissez — un 18e anniversaire, une remise de diplôme, un mariage auquel vous ne serez peut-être pas — et tout ce qu'elle contient est chiffré avec AES-256 dans votre navigateur avant l'envoi.",
+      "bullets": [
+        "AES-256, chiffré sur votre appareil avant l'envoi",
+        "S'ouvre à une date de votre choix, à une étape de la vie ou — en héritage — un an après votre dernière connexion",
+        "Adressée à l'un de vos enfants ou à toute la famille"
+      ]
+    },
+    "letters": {
+      "title": "Écrire : lettres et journaux",
+      "desc": "Écrivez à vos enfants des lettres qu'ils liront une fois grands — les petites joies, les grandes étapes, une note vocale avec vos propres mots. Le journal de chaque enfant conserve aussi le ciel de sa naissance : les étoiles, les planètes et la lune au-dessus de son lieu de naissance à l'instant où il est né, sous forme d'affiche à imprimer.",
+      "button": "Écrire un héritage"
+    },
+    "recipe": {
+      "title": "Faire évoluer : l'arbre des recettes",
+      "desc": "Les recettes ne sont pas figées. Voyez comment les pâtes de Mamie ont évolué sur trois générations, avec notes, variantes et photos de chaque repas de fête."
+    },
+    "bestOf": {
+      "title": "Se souvenir : le meilleur du mois",
+      "desc": "Le 1er du mois, le mois dernier revient sous forme d'histoire dans la rangée des moments : ses photos en mouvement, ses albums en collages animés, ses clips, des récompenses comme le lieu du mois ou la plus longue série, et un regard sur le même mois un an plus tôt. Chaque mois a son propre style et sa propre musique, si bien qu'aucun ne ressemble à un autre. Chaque membre de la famille reçoit une notification pour l'en informer.",
+      "bullets": [
+        "Composé à partir de ce que votre famille a écrit — souvenirs mis en avant, lieux, jours",
+        "Aucune photo n'est analysée, nulle part",
+        "Chiffré comme tout le reste ; la musique est créée sur votre appareil"
+      ]
+    },
+    "scrapbook": {
+      "title": "Créer : le scrapbook numérique",
+      "desc": "Transformez vos souvenirs de famille en pages numériques réalisées à la main. Glissez-déposez des photos façon polaroïd, des autocollants amusants et des notes personnelles sur un canevas libre — puis exportez votre livre terminé en PDF ou commandez-le en livre imprimé.",
+      "bullets": [
+        "Canevas en glisser-déposer avec photos, autocollants et texte",
+        "Cadres photo façon polaroïd, avec rotation et redimensionnement",
+        "Export des scrapbooks terminés en PDF",
+        "Commandez un livre imprimé via Peecho — le seul fichier que nous ne chiffrons pas, et nous vous prévenons avant"
+      ],
+      "button": "Ouvrir les scrapbooks"
+    },
+    "highlights": {
+      "title": "Revivre : vidéos souvenirs",
+      "desc": "Transformez un tas de photos en court film. Kaydo propose des films prêts à l'emploi à partir de ce que votre famille a déjà publié — « Nos étés », ou l'année qui vient de s'achever — ou vous choisissez chaque plan vous-même. Ajoutez un carton-titre, réglez le rythme, puis partagez-le dans le fil ou téléchargez la vidéo.",
+      "bullets": [
+        "Des idées prêtes à l'emploi créées à partir de vos photos — une saison, une année, les dernières semaines",
+        "Carton-titre, ordre des plans et durée sous votre contrôle",
+        "Quatre ambiances de couleur, au format story, portrait ou carré",
+        "Partagez dans le fil familial ou téléchargez la vidéo terminée"
+      ],
+      "button": "Créer une vidéo souvenirs"
+    },
+    "collages": {
+      "title": "Composer : les collages",
+      "desc": "Quatorze mises en page réalisées à la main — paires de polaroïds, pellicules, grandes photos pleine page — qui n'attendent que vos images. Déposez les photos dans les emplacements, zoomez et repositionnez chacune, puis réglez la couleur, l'épaisseur et les coins du cadre jusqu'à ce que ce soit à votre image.",
+      "bullets": [
+        "14 mises en page, d'une seule grande photo à une grille de six",
+        "Zoomez, déplacez, échangez ou retournez n'importe quelle photo dans son emplacement",
+        "Couleur du cadre, épaisseur, coins et fond sont à vous de régler",
+        "Téléchargez en image ou publiez directement dans le fil"
+      ],
+      "button": "Ouvrir les collages"
+    },
+    "ourYear": {
+      "title": "Rien que vous deux : Notre année",
+      "desc": "Un rituel récurrent pour les deux personnes qui portent cette famille. Vous regardez ensemble une période de votre choix, comparez vos souvenirs et conservez l'essentiel sous forme de chapitre — le jour et au rythme qui vous conviennent.",
+      "bullets": [
+        "Vous répondez chacun, séparément, aux cinq mêmes questions — visibles seulement quand vous avez tous les deux terminé",
+        "Un quiz de couple dont vous réécrivez les questions à chaque chapitre — pas de points, pas de gagnant",
+        "Une lettre à vos futurs vous, scellée jusqu'au jour de votre choix",
+        "Quatre souvenirs par chapitre : une image, une chanson, une phrase, un moment"
+      ],
+      "note": "Ne suppose ni mariage, ni enfants, ni cycle de douze mois. Visible uniquement pour vous deux — aucun autre compte de la famille n'y a accès."
+    },
+    "export": {
+      "title": "Posséder : vos données, à votre façon",
+      "desc": "Vos souvenirs vous appartiennent — pour toujours. Téléchargez à tout moment une archive complète de chaque photo, vidéo et entrée de journal. Sans enfermement, sans bureaucratie, sans poser de questions.",
+      "bullets": [
+        "Export ZIP complet de toutes les photos et vidéos",
+        "Souvenirs et entrées de journal sous forme de données structurées",
+        "Téléchargement en un clic — sans poser de questions"
+      ]
+    },
+    "openSource": {
+      "title": "Open source",
+      "desc": "Kaydo se construit au grand jour. Examinez le code, proposez des fonctionnalités ou hébergez-le vous-même pour votre famille. Pas de boîtes noires — sauf celles que vous créez.",
+      "star": "Mettez-nous une étoile",
+      "fork": "Forker et auto-héberger",
+      "viewOnGithub": "Voir sur GitHub"
+    }
+  },
+  "app": {
+    "title": "Fonctionne comme une application",
+    "items": {
+      "install": "S'installe sur n'importe quel téléphone ou ordinateur",
+      "offline": "Se charge instantanément — même avec une connexion instable",
+      "notify": "Notifications pour les nouveaux souvenirs, les anniversaires et le meilleur du mois",
+      "languages": "En anglais et en allemand"
+    }
+  },
+  "zones": {
+    "sectionTitle": "Deux zones, une seule maison",
+    "sectionSubtitle": "Le partage du quotidien doit être sans effort. Vos biens les plus précieux méritent davantage. Kaydo sépare les deux — volontairement.",
+    "everyday": {
+      "badge": "Simplicité au quotidien",
+      "title": "Le fil de la famille",
+      "desc": "Photos, vidéos et notes vocales pour votre cercle proche. Un seul mot de passe familial partagé fait entrer les grands-parents sans créer de compte — une commodité voulue.",
+      "bullets": [
+        "Un seul mot de passe partagé pour le cercle proche",
+        "Aucun compte ni application à installer pour les spectateurs",
+        "Les administrateurs de la famille décident de ce qui est partagé",
+        "Invitez des co-administrateurs avec un lien sécurisé",
+        "Votre propre porte d'entrée — personnalisez la page de connexion de l'adresse de votre famille",
+        "Chiffré aussi sur votre appareil — la commodité sans compromis"
+      ]
+    },
+    "vaultZone": {
+      "badge": "Confidentialité de niveau coffre-fort",
+      "title": "Coffre et lettres",
+      "desc": "Les capsules du Coffre, les journaux et les lettres de vos enfants sont chiffrés avec AES-256 dans votre navigateur avant l'envoi, et seuls les administrateurs de la famille peuvent les ouvrir. Ce qui parvient à nos serveurs est du texte chiffré.",
+      "bullets": [
+        "AES-256-GCM, chiffré sur votre appareil",
+        "Lisible uniquement par les administrateurs de la famille — les spectateurs voient le fil",
+        "Export complet à tout moment — cela reste à vous"
+      ]
+    }
+  },
+  "privacy": {
+    "badge": "Notre manifeste de confidentialité",
+    "titlePrefix": "Vos données sont un",
+    "titleEmphasis": "précieux héritage",
+    "titleSuffix": ", pas un jeu d'entraînement.",
+    "items": [
+      {
+        "title": "Pas d'entraînement d'IA",
+        "desc": "Nous interdisons strictement l'utilisation de vos photos ou textes privés pour entraîner des LLM ou des modèles d'IA générative. Jamais."
+      },
+      {
+        "title": "Chiffré sur votre appareil",
+        "desc": "Vos photos, vidéos, lettres et originaux du Coffre sont chiffrés avec AES-256 dans votre navigateur avant l'envoi — nos serveurs stockent du texte chiffré, pas vos images."
+      },
+      {
+        "title": "Sans publicité, pour toujours",
+        "desc": "Nous sommes financés par des familles, pour des familles. Nous ne vendrons jamais votre attention aux annonceurs."
+      }
+    ],
+    "stats": {
+      "ownership": "Propriété privée",
+      "encryption": "Chiffrement du Coffre",
+      "openSource": "Open source et vérifiable",
+      "adTrackers": "Traceurs publicitaires"
+    }
+  },
+  "faq": {
+    "sectionTitle": "Questions fréquentes",
+    "items": [
+      {
+        "q": "Kaydo est-il gratuit ?",
+        "a": "Oui. Kaydo est gratuit et aucune carte bancaire n'est requise. La seule chose payante est un scrapbook commandé en livre imprimé, que vous réglez directement à l'imprimeur, Peecho."
+      },
+      {
+        "q": "Pourquoi ne pas simplement utiliser un groupe WhatsApp ?",
+        "a": "Gardez-le — pour discuter. Dans une conversation, les photos se noient entre les messages ; dans Kaydo, elles restent là où vous les retrouvez : dans un fil et une chronologie par saison et « il y a un an », avec les histoires qui les accompagnent. Et à côté, il y a de la place pour ce qu'une famille garde en plus des photos : lettres et journaux pour vos enfants, capsules temporelles, recettes et scrapbooks."
+      },
+      {
+        "q": "Les grands-parents ont-ils besoin d'un compte ?",
+        "a": "Non. Votre cercle proche entre avec un seul mot de passe familial partagé et consulte le fil de la famille directement dans le navigateur — sans compte, sans application à installer."
+      },
+      {
+        "q": "En quoi Kaydo diffère-t-il d'un album partagé Google Photos ou iCloud ?",
+        "a": "Un album partagé rassemble des photos et des vidéos. Kaydo est une maison pour tous les souvenirs d'une famille : photos, vidéos et notes vocales avec les histoires qui les accompagnent, et à côté lettres et journaux pour vos enfants, capsules temporelles qui s'ouvrent à un anniversaire ou un mariage, recettes de famille avec toutes leurs versions, et scrapbooks que vous pouvez faire imprimer — à l'adresse propre de votre famille."
+      },
+      {
+        "q": "En quoi Kaydo diffère-t-il de FamilyAlbum ?",
+        "a": "FamilyAlbum est conçu pour partager avec votre famille les photos et vidéos de vos enfants. Kaydo le fait aussi, et autour des photos il y a de la place pour davantage : lettres et journaux pour vos enfants, capsules temporelles qui s'ouvrent à un anniversaire ou un mariage, recettes de famille avec toutes leurs versions, et un regard récurrent sur le passé pour vous deux. Kaydo est aussi open source : chacun peut lire son code, et vous pouvez le faire tourner vous-même pour votre famille."
+      },
+      {
+        "q": "Mes photos sont-elles chiffrées ?",
+        "a": "Oui. Photos, vidéos, lettres et capsules du Coffre sont chiffrées avec AES-256 dans votre navigateur avant l'envoi — nos serveurs stockent du texte chiffré. La seule exception est un livre commandé en impression : un imprimeur ne peut imprimer que ce qu'il peut lire, donc Kaydo vous prévient avant de créer le fichier d'impression, le réserve aux administrateurs de votre famille et le supprime au bout de 30 jours."
+      },
+      {
+        "q": "Kaydo est-il un réseau social comme Facebook ?",
+        "a": "Non. Pas de profils publics, pas d'abonnés, rien à découvrir en dehors de votre propre famille. Chaque famille a son propre espace à sa propre adresse, et seules les personnes que vous laissez entrer voient ses souvenirs."
+      },
+      {
+        "q": "Puis-je emporter mes données ?",
+        "a": "À tout moment. Téléchargez une archive complète de chaque photo, vidéo et entrée de journal sous forme de fichiers simples et lisibles — sans enfermement."
+      },
+      {
+        "q": "Puis-je héberger Kaydo moi-même ?",
+        "a": "Oui. Kaydo est 100 % open source sous licence MIT — forkez-le sur GitHub et faites-le tourner pour votre propre famille."
+      }
+    ]
+  },
+  "trust": {
+    "title": "Une confidentialité vérifiable",
+    "badges": {
+      "gdpr": "Conforme au RGPD",
+      "openSource": "100 % open source (MIT)",
+      "audit": "Vérifiable sur GitHub",
+      "noTracking": "Aucun suivi publicitaire"
+    }
+  },
+  "cta": {
+    "title": "Prêt à ramener votre famille à la maison ?",
+    "subtitle": "Rejoignez les familles qui préservent leurs histoires avec dignité et style. Le coin privé de votre famille sur Internet — sans profils publics, sans inconnus.",
+    "getStarted": "Commencer",
+    "openSource": "Open source",
+    "noCreditCard": "Aucune carte bancaire requise, c'est gratuit."
+  },
+  "footer": {
+    "links": [
+      {
+        "label": "Conditions d'utilisation",
+        "to": "/terms"
+      },
+      {
+        "label": "Politique de confidentialité",
+        "to": "/privacy-policy"
+      },
+      {
+        "label": "Contact",
+        "to": "/contact"
+      }
+    ],
+    "safety": "Consignes de sécurité",
+    "safetyTo": "/safety",
+    "install": "Installer l'application",
+    "copyright": "© {{year}} Kaydo. Tous droits réservés.",
+    "crafted": "Conçu pour les souvenirs.",
+    "story": "L'histoire de Kaydo"
+  },
+  "featurePages": {
+    "title": "Fonctionnalités",
+    "photoSharing": "Partage privé de photos de famille",
+    "timeCapsule": "Capsule temporelle familiale",
+    "recipeBook": "Livre de recettes de famille",
+    "photoBook": "Scrapbook et livre photo de famille"
+  },
+  "claim": {
+    "namePlaceholder": "Alaoui",
+    "nameAriaLabel": "Le nom de votre famille",
+    "check": "Vérifier",
+    "previewLabel": "L'adresse de votre famille :",
+    "invalid": "Veuillez utiliser des lettres ou des chiffres pour le nom de votre famille.",
+    "takenSuffix": "est déjà pris — essayez un autre nom.",
+    "availableSuffix": "est disponible !",
+    "setupRequiredTitle": "Configuration requise :",
+    "setupRequiredBody": "Les variables d'environnement Firebase ne sont pas configurées, les comptes ne peuvent donc pas encore être créés.",
+    "displayNamePlaceholder": "Votre nom (p. ex. Sarah Alaoui)",
+    "displayNameAriaLabel": "Votre nom",
+    "emailPlaceholder": "E-mail",
+    "emailAriaLabel": "E-mail",
+    "passwordPlaceholder": "Mot de passe (au moins 6 caractères)",
+    "passwordAriaLabel": "Mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "submit": "Réserver {{domain}}",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "login": "Connexion",
+    "errors": {
+      "couldNotCheck": "Impossible de vérifier la disponibilité — veuillez réessayer.",
+      "passwordTooShort": "Le mot de passe doit comporter au moins 6 caractères",
+      "emailInUse": "Un compte avec cet e-mail existe déjà",
+      "invalidEmail": "Veuillez saisir une adresse e-mail valide",
+      "weakPassword": "Le mot de passe doit comporter au moins 6 caractères",
+      "generic": "Impossible de créer le compte"
+    }
+  },
+  "story": {
+    "question": "Pourquoi Kaydo existe-t-il ?",
+    "link": "Lire l'histoire de Kaydo",
+    "note": "(en allemand)",
+    "url": "https://blog.gnadlinger.me/blog/kaydo/"
+  },
+  "lightbox": {
+    "close": "Fermer",
+    "previous": "Image précédente",
+    "next": "Image suivante"
+  }
+}

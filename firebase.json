@@ -3,6 +3,9 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "functions": [
     {
       "source": "functions",
@@ -26,6 +29,9 @@
     "singleProjectMode": true,
     "functions": {
       "port": 5001
+    },
+    "storage": {
+      "port": 9199
     }
   }
 }

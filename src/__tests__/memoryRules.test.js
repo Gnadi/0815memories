@@ -15,6 +15,7 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -22,10 +23,6 @@ const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'family-1'
 const ADMIN = 'uid-admin'
 const MEMORY = 'memory-1'
-
-// Stands in for the output of encryptText(): base64, so it can never begin
-// with '{' or '['.
-const CIPHERTEXT = 'kJ8xQ2hZbGxvV29ybGRUaGlzSXNCYXNlNjQ='
 
 const RICH_DOC = { type: 'doc', content: [{ type: 'paragraph' }] }
 
@@ -108,7 +105,7 @@ describe.skipIf(!EMULATOR)('Memory contentRich security rules', () => {
 
     it('rejects a contentRich beyond the size cap', async () => {
       await assertFails(
-        setDoc(doc(asAdmin(), 'memories', MEMORY), memory({ contentRich: 'a'.repeat(700001) }))
+        setDoc(doc(asAdmin(), 'memories', MEMORY), memory({ contentRich: 'A'.repeat(700004) }))
       )
     })
   })

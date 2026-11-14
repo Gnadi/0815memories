@@ -16,6 +16,8 @@ import { devError } from '../../utils/devLog'
 import { EMPTY_RICH_DOC, isRichDoc } from '../../utils/richText'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
 import RichTextToolbar from './richTextEditor/RichTextToolbar'
+import { DictationStatus } from '../DictationField'
+import useDictation from '../../hooks/useDictation'
 import { mediaExtensions } from './richTextEditor/mediaNodes'
 import { newUploadId, patchByUploadId, removeByUploadId } from './richTextEditor/nodeUtils'
 import { setPreview, clearPreview, clearAllPreviews } from './richTextEditor/previewStore'
@@ -31,8 +33,20 @@ import { setPreview, clearPreview, clearAllPreviews } from './richTextEditor/pre
  * node plus a local preview, and its attributes are filled in when the
  * encrypted upload resolves. `onPendingChange` reports how many uploads are in
  * flight so the surrounding form can block saving until they land.
+ *
+ * `media={false}` leaves the media out, for text that has its photo elsewhere
+ * (a recipe's instructions); `label` and `placeholder` then say what is being
+ * written, where the defaults speak of a memory's story.
  */
-export default function RichTextEditor({ value, onChange, onPendingChange, disabled = false }) {
+export default function RichTextEditor({
+  value,
+  onChange,
+  onPendingChange,
+  disabled = false,
+  media = true,
+  label,
+  placeholder,
+}) {
   const { t } = useTranslation('memory')
   // Upload failures are worded once, in `common`, so the inline editor and the
   // Moment/Memory forms explain the same failure the same way.
@@ -43,6 +57,17 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   const [error, setError] = useState('')
   const [pending, setPending] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
+
+  const editorRef = useRef(null)
+  const dictation = useDictation((spoken) => {
+    const e = editorRef.current
+    if (!e || e.isDestroyed) return
+    // A leading space keeps the phrase apart from the word before the cursor.
+    const { from } = e.state.selection
+    const before = from > 1 ? e.state.doc.textBetween(from - 1, from) : ''
+    const prefix = before && !/\s/.test(before) ? ' ' : ''
+    e.chain().focus().insertContent(prefix + spoken.trim()).run()
+  })
 
   const imageInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -59,8 +84,8 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
         heading: { levels: [2, 3] },
         link: { openOnClick: false, autolink: true },
       }),
-      Placeholder.configure({ placeholder: t('richEditor.placeholder') }),
-      ...mediaExtensions,
+      Placeholder.configure({ placeholder: placeholder ?? t('richEditor.placeholder') }),
+      ...(media ? mediaExtensions : []),
     ],
     content: isRichDoc(value) ? value : EMPTY_RICH_DOC,
     editorProps: {
@@ -74,6 +99,10 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
   useEffect(() => {
     onPendingChange?.(pending)
   }, [pending, onPendingChange])
+
+  useEffect(() => {
+    editorRef.current = editor
+  }, [editor])
 
   useEffect(() => {
     editor?.setEditable(!disabled)
@@ -218,7 +247,7 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
     >
       {fullscreen && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-cream-dark flex-shrink-0">
-          <span className="text-sm font-medium text-bark">{t('postMemory.storyLabel')}</span>
+          <span className="text-sm font-medium text-bark">{label ?? t('postMemory.storyLabel')}</span>
           {/* The save button lives in the form below, out of reach from here —
               so this has to read as "back to the form", not as "discard". */}
           <button
@@ -235,10 +264,12 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
       <RichTextToolbar
         editor={editor}
         disabled={disabled}
+        media={media}
         onPickImage={() => imageInputRef.current?.click()}
         onTakePhoto={() => cameraInputRef.current?.click()}
         onPickVideo={() => videoInputRef.current?.click()}
         onAddAudio={() => setShowRecorder((v) => !v)}
+        dictation={dictation}
         fullscreen={fullscreen}
         onToggleFullscreen={toggleFullscreen}
       />
@@ -260,6 +291,10 @@ export default function RichTextEditor({ value, onChange, onPendingChange, disab
           <VoiceMemoRecorder onMemoAdded={handleMemoAdded} />
         </div>
       )}
+
+      <div className="px-4">
+        <DictationStatus listening={dictation.listening} error={dictation.error} />
+      </div>
 
       {error && (
         <p className="flex items-center gap-1.5 px-4 py-2 text-xs text-red-600 border-t border-cream-dark flex-shrink-0">

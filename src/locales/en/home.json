@@ -19,7 +19,10 @@
     "badge": "New Journey",
     "awaiting": "Awaiting memories...",
     "placeholderTitle": "Sunday at the Vineyard",
-    "placeholderBody": "The whole gang finally made it! Share your first memory to get started."
+    "placeholderBody": "The whole gang finally made it! Share your first memory to get started.",
+    "goToSlide": "Slide {{n}} of {{total}}",
+    "previous": "Previous slide",
+    "next": "Next slide"
   },
   "timelineCta": {
     "eyebrow": "Explore",
@@ -39,6 +42,9 @@
     "deleteConfirm": "Delete this moment?",
     "noMedia": "No media",
     "author": "Family",
+    "paused": "Paused",
+    "soundOn": "Turn sound on",
+    "soundOff": "Turn sound off",
     "aria": {
       "moreOptions": "More options",
       "close": "Close",
@@ -52,5 +58,23 @@
     "back": "Back",
     "empty": "No moments yet"
   },
-  "deleteMemoryConfirm": "Are you sure you want to delete this memory?"
+  "deleteMemoryConfirm": "Are you sure you want to delete this memory?",
+  "verifyEmail": {
+    "title": "Please confirm your email address",
+    "body": "A password reset for your account goes to {{email}}. Confirm that this address is yours, so only you can reset your password.",
+    "send": "Send confirmation email",
+    "resend": "Send again",
+    "confirmed": "I've confirmed it",
+    "sent": "Sent to {{email}}. Open the link in the email, then tap “I've confirmed it”.",
+    "notYet": "Not confirmed yet. Open the link in the email, then try again.",
+    "tooManyRequests": "Too many emails — please wait a few minutes and try again",
+    "failed": "Something went wrong. Please try again."
+  },
+  "familyDeletion": {
+    "title": "This family will be deleted on {{date}}",
+    "bodyOwner": "You asked for this. Until then you can take it back in the settings.",
+    "bodyAdmin": "The family's owner asked for this. Everything stored here will be gone for good. Download a backup in the settings if you want to keep anything.",
+    "bodyViewer": "The family's owner asked for this. Everything stored here will be gone after that day.",
+    "openSettings": "Open the settings"
+  }
 }

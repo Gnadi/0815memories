@@ -1,5 +1,5 @@
 /**
- * The Smart Timeline's queries — hooks/useTimeline.js — against the emulator,
+ * The Smart Timeline's queries — services/timeline.js — against the emulator,
  * run as a viewer so the rules apply exactly as they do in the app.
  *
  * The timeline used to filter the home feed's newest 50 memories in the
@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
 import { doc, getDocs, setDoc, Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
-import { fetchTimelineYears, fetchOnThisDay, yearQuery } from '../hooks/useTimeline'
+import { fetchTimelineYears, fetchOnThisDay, yearQuery } from '../services/timeline'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST

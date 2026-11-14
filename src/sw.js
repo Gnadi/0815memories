@@ -127,7 +127,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: d.body || '',
     icon: '/icons/pwa-192x192.png',
-    badge: '/icons/pwa-192x192.png',
+    badge: '/icons/notification-badge.png',
     data: { url: d.url || '/' },
   }
   event.waitUntil(self.registration.showNotification(title, options))

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 940" width="800" height="940" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title id="t">Kaydo's architecture</title>
+  <desc id="d">The browser encrypts everything with the family key. It reads and writes Firestore directly, where firestore.rules decide; it calls Cloud Functions; and it uploads encrypted files to Cloudinary. Cloud Functions come in three kinds: commands the app calls, which write to Firestore; reactions, which follow a document write; and reconcilers, which run on a schedule and tidy up. The functions also reach Firebase for sign-in and push, the print service, and Cloudinary.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f3747"/></marker>
+  </defs>
+
+  <rect width="800" height="940" rx="14" fill="#f6f7fa"/>
+
+  <!-- Browser -->
+  <rect x="40" y="30" width="720" height="120" rx="10" fill="#ffffff" stroke="#2f3747" stroke-width="2"/>
+  <text x="400" y="82" text-anchor="middle" font-size="30" font-weight="700" fill="#1b2230">Browser</text>
+  <text x="400" y="118" text-anchor="middle" font-size="21" fill="#414b5e">encrypts everything with the family key</text>
+
+  <!-- Cloud Functions -->
+  <rect x="40" y="235" width="320" height="440" rx="10" fill="#e9edf9" stroke="#2f3747" stroke-width="2"/>
+  <text x="200" y="272" text-anchor="middle" font-size="21" font-weight="700" fill="#1b2230">Cloud Functions</text>
+  <g fill="#ffffff" stroke="#2f3747" stroke-width="2">
+    <rect x="58" y="292" width="284" height="108" rx="8"/>
+    <rect x="58" y="418" width="284" height="108" rx="8"/>
+    <rect x="58" y="544" width="284" height="108" rx="8"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="200" y="340" font-size="25" font-weight="700" fill="#1b2230">Commands</text>
+    <text x="200" y="372" font-size="19" fill="#414b5e">called by the app</text>
+    <text x="200" y="466" font-size="25" font-weight="700" fill="#1b2230">Reactions</text>
+    <text x="200" y="498" font-size="19" fill="#414b5e">follow a document write</text>
+    <text x="200" y="592" font-size="25" font-weight="700" fill="#1b2230">Reconcilers</text>
+    <text x="200" y="624" font-size="19" fill="#414b5e">scheduled, tidy up</text>
+  </g>
+
+  <!-- Firestore -->
+  <rect x="440" y="235" width="250" height="440" rx="10" fill="#ffffff" stroke="#2f3747" stroke-width="2"/>
+  <path d="M440 245 a10 10 0 0 1 10 -10 h230 a10 10 0 0 1 10 10 v52 h-250 z" fill="#fbe9c6" stroke="#2f3747" stroke-width="2"/>
+  <g text-anchor="middle">
+    <text x="565" y="274" font-size="21" font-weight="700" fill="#1b2230">firestore.rules</text>
+    <text x="565" y="420" font-size="30" font-weight="700" fill="#1b2230">Firestore</text>
+    <text x="565" y="462" font-size="19" fill="#414b5e">family content,</text>
+    <text x="565" y="488" font-size="19" fill="#414b5e">as ciphertext</text>
+    <text x="565" y="530" font-size="19" fill="#414b5e">who belongs</text>
+    <text x="565" y="556" font-size="19" fill="#414b5e">to a family</text>
+  </g>
+
+  <!-- Outside services -->
+  <g fill="#ffffff" stroke="#2f3747" stroke-width="2">
+    <rect x="40" y="800" width="220" height="110" rx="10"/>
+    <rect x="290" y="800" width="220" height="110" rx="10"/>
+    <rect x="540" y="800" width="220" height="110" rx="10"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="150" y="848" font-size="25" font-weight="700" fill="#1b2230">Firebase</text>
+    <text x="150" y="880" font-size="19" fill="#414b5e">sign-in, push</text>
+    <text x="400" y="848" font-size="25" font-weight="700" fill="#1b2230">Print shop</text>
+    <text x="400" y="880" font-size="19" fill="#414b5e">Peecho, Storage</text>
+    <text x="650" y="848" font-size="25" font-weight="700" fill="#1b2230">Cloudinary</text>
+    <text x="650" y="880" font-size="19" fill="#414b5e">encrypted files</text>
+  </g>
+
+  <!-- Arrows -->
+  <g fill="none" stroke="#2f3747" stroke-width="2.2">
+    <line x1="200" y1="150" x2="200" y2="232" marker-end="url(#a)"/>
+    <line x1="520" y1="150" x2="520" y2="232" marker-end="url(#a)"/>
+    <line x1="735" y1="150" x2="735" y2="797" marker-end="url(#a)"/>
+
+    <line x1="342" y1="346" x2="437" y2="346" marker-end="url(#a)"/>
+    <line x1="440" y1="472" x2="345" y2="472" marker-end="url(#a)"/>
+    <line x1="345" y1="598" x2="437" y2="598" marker-end="url(#a)" marker-start="url(#a)"/>
+
+    <path d="M200 675 V752 M150 752 H610 M150 752 V797 M400 752 V797 M610 752 V797"/>
+    <line x1="150" y1="785" x2="150" y2="797" marker-end="url(#a)"/>
+    <line x1="400" y1="785" x2="400" y2="797" marker-end="url(#a)"/>
+    <line x1="610" y1="785" x2="610" y2="797" marker-end="url(#a)"/>
+  </g>
+
+  <!-- Arrow labels, each beside its arrow and clear of every box -->
+  <g font-size="20" fill="#1b2230">
+    <text x="214" y="198">calls</text>
+    <text x="534" y="198">reads, writes</text>
+    <text x="214" y="724">tokens, push, clean-up</text>
+    <text x="721" y="724" text-anchor="end">uploads</text>
+  </g>
+</svg>

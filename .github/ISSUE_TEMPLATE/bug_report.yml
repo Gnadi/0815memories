@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in Kaydo does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. **Security problems do not belong here** — please report them privately, see [SECURITY.md](https://github.com/Gnadi/0815memories/blob/main/SECURITY.md).
+
+        Please leave out anything private: no family names, photos, passwords or links to a family's address.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: And what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as an admin
+        2. Open …
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did you see it?
+      options:
+        - The hosted service (kaydo.app)
+        - My own instance
+        - Local development (npm run dev:local)
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Signed in as
+      options:
+        - Admin
+        - Viewer (shared family password)
+        - Not signed in
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. iPhone 15, Safari 19, installed as an app
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors, anything else

@@ -89,3 +89,25 @@ export function buildTinyPreviews(images) {
   const tiny = images.map((img) => img?.tinyPreview || '')
   return tiny.some(Boolean) ? tiny : null
 }
+
+/**
+ * The `thumbsTiny` part of a write, as an object to spread into it.
+ *
+ * An edit form holds its existing previews decrypted and cannot write them back
+ * (see utils/entryConversion.js), so when no image carries a fresh one the field
+ * is normally left off and the stored array stays. That is only safe while the
+ * photos are the same ones in the same order: after a reorder the stored array
+ * still lines up by length and would put each blur-up under the wrong photo. In
+ * that case it is replaced with an empty array, which readers ignore and the
+ * backfill rebuilds. `previousUrls` is the stored `images`, or null for a new
+ * document.
+ */
+export function tinyPreviewsUpdate(images, previousUrls) {
+  const tiny = buildTinyPreviews(images)
+  if (tiny) return { thumbsTiny: tiny }
+  if (!Array.isArray(previousUrls)) return {}
+  const urls = images.map((img) => img?.url)
+  const unchanged = urls.length === previousUrls.length &&
+    urls.every((url, i) => url === previousUrls[i])
+  return unchanged ? {} : { thumbsTiny: [] }
+}

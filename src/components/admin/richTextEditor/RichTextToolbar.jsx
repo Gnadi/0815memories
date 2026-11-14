@@ -12,6 +12,8 @@ import {
   Image as ImageIcon,
   Video,
   Mic,
+  Square,
+  AudioLines,
   Camera,
   Maximize2,
   Minimize2,
@@ -42,14 +44,17 @@ function Divider() {
 export default function RichTextToolbar({
   editor,
   disabled,
+  media = true,
   onPickImage,
   onTakePhoto,
   onPickVideo,
   onAddAudio,
+  dictation,
   fullscreen,
   onToggleFullscreen,
 }) {
   const { t } = useTranslation('memory')
+  const { t: tCommon } = useTranslation('common')
 
   // A selector rather than editor.isActive() in render: this re-runs on
   // selection change without re-rendering the toolbar on every keystroke.
@@ -159,21 +164,37 @@ export default function RichTextToolbar({
 
       <Divider />
 
-      <ToolButton onClick={onPickImage} label={t('richEditor.insertPhoto')} disabled={disabled}>
-        <ImageIcon className="w-4 h-4 text-kaydo" />
-      </ToolButton>
-      {/* Camera capture only makes sense on a phone. */}
-      <span className="lg:hidden flex">
-        <ToolButton onClick={onTakePhoto} label={t('richEditor.takePhoto')} disabled={disabled}>
-          <Camera className="w-4 h-4 text-kaydo" />
+      {media && (
+        <>
+          <ToolButton onClick={onPickImage} label={t('richEditor.insertPhoto')} disabled={disabled}>
+            <ImageIcon className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+          {/* Camera capture only makes sense on a phone. */}
+          <span className="lg:hidden flex">
+            <ToolButton onClick={onTakePhoto} label={t('richEditor.takePhoto')} disabled={disabled}>
+              <Camera className="w-4 h-4 text-kaydo" />
+            </ToolButton>
+          </span>
+          <ToolButton onClick={onPickVideo} label={t('richEditor.insertVideo')} disabled={disabled}>
+            <Video className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+          <ToolButton onClick={onAddAudio} label={t('richEditor.insertAudio')} disabled={disabled}>
+            <Mic className="w-4 h-4 text-kaydo" />
+          </ToolButton>
+        </>
+      )}
+      {/* Speech to text at the cursor, as opposed to the voice memo above,
+          which attaches the recording itself. */}
+      {dictation?.supported && (
+        <ToolButton
+          onClick={dictation.toggle}
+          active={dictation.listening}
+          label={dictation.listening ? tCommon('dictation.stop') : tCommon('dictation.start')}
+          disabled={disabled}
+        >
+          {dictation.listening ? <Square className="w-4 h-4" /> : <AudioLines className="w-4 h-4 text-kaydo" />}
         </ToolButton>
-      </span>
-      <ToolButton onClick={onPickVideo} label={t('richEditor.insertVideo')} disabled={disabled}>
-        <Video className="w-4 h-4 text-kaydo" />
-      </ToolButton>
-      <ToolButton onClick={onAddAudio} label={t('richEditor.insertAudio')} disabled={disabled}>
-        <Mic className="w-4 h-4 text-kaydo" />
-      </ToolButton>
+      )}
 
       {/* Pinned right: a long, media-heavy story is hard to write in the modal's
           narrow column, and this is the way out of it. `ml-auto` keeps it in the

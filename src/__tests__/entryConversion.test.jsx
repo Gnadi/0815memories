@@ -75,6 +75,18 @@ describe('memory / moment drafts', () => {
     })
   })
 
+  it('keeps a clip’s poster when the entry changes type', () => {
+    const draft = memoryFormToMomentDraft({
+      form: { title: 'Clip day' },
+      storyText: '',
+      images: [],
+      videos: [{ url: 'v.enc', publicId: 'v1', posterUrl: 'p.enc', posterPublicId: 'p1' }],
+    })
+    expect(draft.videos).toEqual([
+      { url: 'v.enc', publicId: 'v1', title: '', posterUrl: 'p.enc', posterPublicId: 'p1' },
+    ])
+  })
+
   it('splits a moment caption into a memory title and story, keeping its date', () => {
     const date = { seconds: 1700000000 }
     const draft = momentFormToMemoryDraft({

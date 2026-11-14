@@ -4,7 +4,10 @@ import { Check, ExternalLink, Image as ImageIcon, Loader2, Music, Quote, Sparkle
 import EncryptedImage from '../media/EncryptedImage'
 import { encryptAndUpload } from '../../utils/encryptedUpload'
 import { devError } from '../../utils/devLog'
+import { safeHref } from '../../utils/safeHref'
 import { emptyKeepsakes, keepsakesFilledCount } from '../../utils/ourYear'
+import DictationField from '../../components/DictationField'
+import { appendDictation } from '../../hooks/useDictation'
 
 /**
  * Four things per chapter, no more: one photo, one song, one sentence, one
@@ -100,25 +103,29 @@ export default function KeepsakesSection({ chapter, encryptionKey, readOnly, onU
         </Slot>
 
         <Slot icon={<Quote className="w-4 h-4 text-bark-muted flex-shrink-0" />} label={t('keepsakes.quote.label')} hint={t('keepsakes.quote.hint')}>
-          <textarea
-            id="keepsake-quote"
-            rows={2}
-            value={keepsakes.quote ?? ''}
-            onChange={(e) => patch({ quote: e.target.value })}
-            placeholder={t('keepsakes.quote.placeholder')}
-            className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-          />
+          <DictationField onText={(s) => patch({ quote: appendDictation(keepsakes.quote, s) })}>
+            <textarea
+              id="keepsake-quote"
+              rows={2}
+              value={keepsakes.quote ?? ''}
+              onChange={(e) => patch({ quote: e.target.value })}
+              placeholder={t('keepsakes.quote.placeholder')}
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+            />
+          </DictationField>
         </Slot>
 
         <Slot icon={<Sparkles className="w-4 h-4 text-bark-muted flex-shrink-0" />} label={t('keepsakes.moment.label')} hint={t('keepsakes.moment.hint')}>
-          <textarea
-            id="keepsake-moment"
-            rows={4}
-            value={keepsakes.moment ?? ''}
-            onChange={(e) => patch({ moment: e.target.value })}
-            placeholder={t('keepsakes.moment.placeholder')}
-            className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none"
-          />
+          <DictationField onText={(s) => patch({ moment: appendDictation(keepsakes.moment, s) })}>
+            <textarea
+              id="keepsake-moment"
+              rows={4}
+              value={keepsakes.moment ?? ''}
+              onChange={(e) => patch({ moment: e.target.value })}
+              placeholder={t('keepsakes.moment.placeholder')}
+              className="w-full px-4 py-2.5 bg-cream-dark rounded-xl text-bark placeholder-bark-muted outline-none focus:ring-2 focus:ring-kaydo/30 resize-none pr-12"
+            />
+          </DictationField>
         </Slot>
       </div>
 
@@ -231,9 +238,9 @@ function ReadOnlyKeepsakes({ keepsakes }) {
               {keepsakes.song.title}
               {keepsakes.song.artist ? ` · ${keepsakes.song.artist}` : ''}
             </p>
-            {keepsakes.song.link && (
+            {safeHref(keepsakes.song.link) && (
               <a
-                href={keepsakes.song.link}
+                href={safeHref(keepsakes.song.link)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-kaydo font-medium hover:underline mt-0.5"

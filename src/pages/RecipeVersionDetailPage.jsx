@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ChefHat, GitFork } from 'lucide-react'
-import { getDoc, doc } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { ArrowLeft, ChefHat, GitFork, Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { getRecipe } from '../services/recipes'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
+import RecipeInstructions from '../components/recipes/RecipeInstructions'
 
 const STATUS_STYLES = {
   removed: 'text-bark-muted line-through',
@@ -30,22 +30,11 @@ export default function RecipeVersionDetailPage() {
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    if (!isAdmin) navigate('/home')
-  }, [isAdmin, navigate])
-
-  useEffect(() => {
     if (!versionId) return
     const load = async () => {
       try {
-        const snap = await getDoc(doc(db, 'recipes', versionId))
-        if (snap.exists()) {
-          let data = { id: snap.id, ...snap.data() }
-          if (data.familyId !== familyId) { setLoadError(t('version.notFound')); setLoading(false); return }
-          if (encryptionKey) {
-            const { decryptFields, decryptJSON } = await import('../utils/encryption')
-            data = await decryptFields(encryptionKey, data, ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author'])
-            if (typeof data.ingredients === 'string') data.ingredients = await decryptJSON(encryptionKey, data.ingredients)
-          }
+        const data = await getRecipe(familyId, encryptionKey, versionId)
+        if (data) {
           setRecipe(data)
         } else {
           setLoadError(t('version.notFound'))
@@ -58,8 +47,6 @@ export default function RecipeVersionDetailPage() {
     }
     load()
   }, [versionId])
-
-  if (!isAdmin) return null
 
   const isOriginal = recipe && !recipe.parentId
 
@@ -159,7 +146,7 @@ export default function RecipeVersionDetailPage() {
               {recipe.instructions && (
                 <div className="bg-warm-white rounded-2xl p-4 shadow-sm">
                   <h2 className="text-sm font-bold text-bark mb-3">{t('version.instructions')}</h2>
-                  <p className="text-sm text-bark leading-relaxed whitespace-pre-wrap">{recipe.instructions}</p>
+                  <RecipeInstructions recipe={recipe} />
                 </div>
               )}
 
@@ -182,13 +169,24 @@ export default function RecipeVersionDetailPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-3 pt-2 pb-6">
-                <button
-                  onClick={() => navigate(`/recipes/${versionId}/fork`)}
-                  className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
-                >
-                  <GitFork className="w-4 h-4" />
-                  {t('version.forkVersion')}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/recipes/${versionId}/fork`)}
+                    className="btn-kaydo flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+                  >
+                    <GitFork className="w-4 h-4" />
+                    {t('version.forkVersion')}
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/recipes/${versionId}/edit`)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-warm-white text-sm font-semibold text-bark shadow-sm hover:bg-cream-dark transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    {t('version.edit')}
+                  </button>
+                )}
                 <button
                   onClick={() => navigate(`/recipes/${rootId}`)}
                   className="text-sm text-bark-muted hover:text-bark transition-colors"

@@ -1,9 +1,8 @@
 /**
  * The rich description is the first memory field that is not natively a string.
  *
- * encryptFields() skips non-strings silently, and memory documents are
- * world-readable (`allow read: if true`), so a document object reaching
- * Firestore unencrypted would leak the whole story without anything appearing
+ * encryptFields() skips non-strings silently, so a document object would reach
+ * Firestore unencrypted and leak the whole story without anything appearing
  * broken. These tests pin the contract that keeps that from happening:
  * `contentRich` is a string on the way out, and only the single-document read
  * path turns it back into a document.
@@ -14,8 +13,10 @@ import {
   MEMORY_TEXT_FIELDS,
   MEMORY_WRITE_FIELDS,
   encryptMemoryData,
+  decryptMemory,
   decryptMemoryDoc,
-} from '../hooks/useMemories'
+  decryptMemoryRich,
+} from '../services/memories'
 
 const DOC = {
   type: 'doc',
@@ -81,12 +82,16 @@ describe('decryptMemoryDoc', () => {
     expect(decrypted.content).toBe('Der Sommer bei Oma\n\nAm See')
   })
 
-  it('is idempotent, because the edit modal re-decrypts defensively', async () => {
+  it('lets the edit form finish a feed memory without decrypting its text twice', async () => {
     const encrypted = await encryptMemoryData(key, memory())
-    const once = await decryptMemoryDoc(key, encrypted)
-    const twice = await decryptMemoryDoc(key, once)
-    expect(twice.contentRich).toEqual(DOC)
-    expect(twice.title).toBe('Sommer')
+    const fromFeed = await decryptMemory(key, encrypted)
+    const forForm = await decryptMemoryRich(key, fromFeed)
+    expect(forForm.contentRich).toEqual(DOC)
+    expect(forForm.title).toBe('Sommer')
+    expect(forForm.unreadableFields).toBeUndefined()
+    // And a memory read in full passes through as it is.
+    const full = await decryptMemoryDoc(key, encrypted)
+    expect(await decryptMemoryRich(key, full)).toBe(full)
   })
 
   it('leaves a legacy memory with no contentRich untouched', async () => {

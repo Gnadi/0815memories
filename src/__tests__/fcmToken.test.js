@@ -54,6 +54,9 @@ const TOKEN_ID = '60554ee626032111dd661ff9c2c6b5d6cb8ba8a36c99dbe317a33af475187c
 let requestAndSaveFCMToken
 let removeFCMToken
 let isPushSupported
+let enablePush
+let disablePush
+let isPushOptedOut
 
 beforeEach(async () => {
   vi.clearAllMocks()
@@ -78,7 +81,9 @@ beforeEach(async () => {
   mockSetDoc.mockResolvedValue(undefined)
   mockDeleteDoc.mockResolvedValue(undefined)
   localStorage.clear()
-  ;({ requestAndSaveFCMToken, removeFCMToken, isPushSupported } = await import('../utils/notifications.js'))
+  ;({
+    requestAndSaveFCMToken, removeFCMToken, isPushSupported, enablePush, disablePush, isPushOptedOut,
+  } = await import('../utils/notifications.js'))
 })
 
 afterEach(() => {
@@ -137,6 +142,31 @@ describe('removeFCMToken', () => {
   it('is a no-op on a device that never registered', async () => {
     await removeFCMToken()
     expect(mockDeleteDoc).not.toHaveBeenCalled()
+  })
+})
+
+// The settings switch. The browser's permission outlives "off", so the opt-out
+// is what keeps the next app load from registering the device again.
+describe('the settings switch', () => {
+  it('turned off, drops the token and remembers the choice', async () => {
+    await requestAndSaveFCMToken('family-1')
+    await disablePush()
+
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ collection: 'fcmTokens', id: TOKEN_ID })
+    expect(isPushOptedOut()).toBe(true)
+  })
+
+  it('turned on again, clears the opt-out and registers the device', async () => {
+    await disablePush()
+    mockSetDoc.mockClear()
+
+    expect(await enablePush('family-1')).toBe(TOKEN)
+    expect(isPushOptedOut()).toBe(false)
+    expect(mockSetDoc).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts out not opted out', () => {
+    expect(isPushOptedOut()).toBe(false)
   })
 })
 

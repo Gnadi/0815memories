@@ -4,27 +4,24 @@
    fast-refresh "components-only export" rule does not apply here. */
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
-import i18n, { ensureAppTranslations } from './i18n'
+import i18n, { ensureAppTranslations, isRtl, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
-import AdminMobileBottomNav from './components/layout/AdminMobileBottomNav'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
-import NotificationPrompt from './components/NotificationPrompt'
-import { listenForegroundMessages, requestAndSaveFCMToken } from './utils/notifications'
-import { devError } from './utils/devLog'
 
 import { getSubdomainSlug } from './utils/familySlug'
+import { FEATURE_PAGES } from './seoRoutes'
 import { hasStoredSession } from './utils/authStorage'
+import { uncoverPage } from './utils/prehydrationCover'
+import { demoTarget, enterDemo, exitDemo } from './demo/demoMode'
 
-// Eagerly loaded — public pages served on first visit
+// Eagerly loaded — the pre-rendered landing page, served on first visit
 import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
-import InviteRedeemPage from './pages/InviteRedeemPage'
 
 // Every page below needs translation namespaces that are not in the startup
 // bundle. Waiting for them here — inside the boundary React already suspends
@@ -36,11 +33,26 @@ const lazyPage = (loader) =>
     return module
   })
 
+// Signing in, signing up and redeeming an invite all talk to Firebase, which
+// the landing page does not load (context/AuthContext.jsx). They need only the
+// translations that are in the startup bundle, so these are plain lazy pages.
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SignupPage = lazy(() => import('./pages/SignupPage'))
+// Brings its own translations (the `features` namespace), so it does not wait
+// for the signed-in app's.
+const FeaturePage = lazy(() => import('./pages/FeaturePage'))
+const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
+const AppNotifications = lazy(() => import('./components/AppNotifications'))
+// The bar is for admins only, and brings the scrapbook layout presets with it.
+const AdminMobileBottomNav = lazy(() => import('./components/layout/AdminMobileBottomNav'))
+
 // Lazy loaded — protected pages, only needed after authentication
 const LegalPage = lazyPage(() => import('./pages/LegalPage'))
 const HomePage = lazyPage(() => import('./pages/HomePage'))
 const MemoryDetailPage = lazyPage(() => import('./pages/MemoryDetailPage'))
 const MomentsAllPage = lazyPage(() => import('./pages/MomentsAllPage'))
+const BestOfPage = lazyPage(() => import('./pages/BestOfPage'))
+const AdventPage = lazyPage(() => import('./pages/AdventPage'))
 const SettingsPage = lazyPage(() => import('./pages/SettingsPage'))
 const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
@@ -64,8 +76,11 @@ const HighlightEditorPage = lazyPage(() => import('./pages/HighlightEditorPage')
 const OurYearPage = lazyPage(() => import('./pages/OurYearPage'))
 const OurYearSetupPage = lazyPage(() => import('./pages/OurYearSetupPage'))
 const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
+// Part of the demo, so loaded only in a demo tab.
+const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 
-// What "/" resolves to, in priority order:
+// What "/" resolves to — and "/de", the landing page in German (lng) — in
+// priority order:
 //
 //   1. A signed-in visitor goes straight to /home. "/" is where every return
 //      visit starts — a bookmark, a tapped app icon, the PWA's start_url — and
@@ -80,9 +95,9 @@ const OurYearChapterPage = lazyPage(() => import('./pages/OurYearChapterPage'))
 // HTML *is* the landing page, so it would still paint for the moment before
 // hydration; index.html covers it with a cream shell for exactly that window
 // (the .kaydo-restoring class, cleared below once this route has decided).
-export function RootRoute() {
+export function RootRoute({ lng }) {
   const navigate = useNavigate()
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, isDemo } = useAuth()
   // 'unknown'   — pre-hydration, storage not read yet (renders the landing page,
   //               matching the pre-rendered HTML byte for byte)
   // 'restoring' — a session is stored; hold a blank shell until auth confirms it
@@ -97,13 +112,16 @@ export function RootRoute() {
   const [status, setStatus] = useState('unknown')
 
   useEffect(() => {
-    const session = hasStoredSession()
+    // A demo tab counts as signed in: it holds back the landing page, whose
+    // signup form has no business with the demo's made-up family, and goes on
+    // to the demo's home.
+    const session = hasStoredSession() || isDemo
     // Reading client-only storage after hydration is what this effect is for.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus(session ? 'restoring' : 'public')
     // Nothing to wait for — send subdomain visitors on immediately, as before.
     if (!session && getSubdomainSlug()) navigate('/login', { replace: true })
-  }, [navigate])
+  }, [navigate, isDemo])
 
   useEffect(() => {
     if (status === 'unknown') return
@@ -136,95 +154,85 @@ export function RootRoute() {
   // commit that rendered the shell or the landing page, so the markup being
   // revealed is already the right one.
   useEffect(() => {
-    if (status === 'unknown' || typeof document === 'undefined') return
-    document.documentElement.classList.remove('kaydo-restoring')
+    if (status === 'unknown') return
+    uncoverPage()
   }, [status])
 
   if (status === 'restoring') return <PageLoader />
-  return <LandingPage />
+  return <LandingPage lng={lng} />
 }
 
 function PageLoader() {
   return <div className="min-h-screen bg-cream" aria-hidden="true" />
 }
 
-// Vercel's analytics script is only served on Vercel deployments; on localhost,
-// the preview server, or any other host it 404s and logs a console error. Gate
-// it to real hosts so it stays silent locally (and in Lighthouse runs) while
-// still reporting from production.
+// /demo — opens the demo family in this tab (src/demo/). A hard navigation, so
+// the app starts over on the demo's own database instead of switching under
+// whatever was running.
+function DemoEntry() {
+  const { search } = useLocation()
+  useEffect(() => {
+    enterDemo(demoTarget(search))
+  }, [search])
+  return <PageLoader />
+}
+
+// Signing in, signing up and redeeming an invite are for a real family, so a
+// demo tab leaves the demo first — the same address again, loaded without it.
+function OutsideDemo({ children }) {
+  const { isDemo } = useAuth()
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    if (isDemo) exitDemo(pathname + search)
+  }, [isDemo, pathname, search])
+  return isDemo ? <PageLoader /> : children
+}
+
+function DemoBannerSlot() {
+  const { isDemo } = useAuth()
+  if (!isDemo) return null
+  return (
+    <Suspense fallback={null}>
+      <DemoBanner />
+    </Suspense>
+  )
+}
+
+// Lifts index.html's pre-hydration cover on every path but the landing page's
+// ("/", "/de"), which RootRoute handles because it has its own decision to make
+// first. It renders inside the same <Suspense> as the page, so its effect runs
+// only once the page itself has committed: while a lazy page is still loading,
+// React keeps the pre-rendered landing markup in place of the boundary during
+// hydration, and uncovering before then is exactly the flash the cover exists
+// to hide.
+function RevealPage() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    if (!Object.values(LANDING_PATHS).includes(pathname)) uncoverPage()
+  }, [pathname])
+  return null
+}
+
+// Vercel's analytics and speed insights scripts are only served on Vercel
+// deployments; on localhost, the preview server, or any other host they 404
+// and log console errors. Gate them to real hosts so they stay silent locally
+// (and in Lighthouse runs) while still reporting from production.
 function SiteAnalytics() {
   // Decided once at first render. On the server (pre-render) there is no window,
-  // so it stays off; <Analytics /> emits no DOM either way, so there is no
-  // hydration mismatch. Reads the host lazily to keep it out of an effect.
+  // so it stays off; <Analytics /> and <SpeedInsights /> emit no DOM either way,
+  // so there is no hydration mismatch. Reads the host lazily to keep it out of
+  // an effect.
   const [enabled] = useState(() => {
     if (typeof window === 'undefined') return false
     const host = window.location.hostname
     return !(host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local'))
   })
-  return enabled ? <Analytics /> : null
-}
-
-// Handles push notification prompt + in-app foreground toast.
-// Must be inside AuthProvider to access familyId.
-function AppNotifications() {
-  const { familyId, isAuthenticated } = useAuth()
-  const { t } = useTranslation('common')
-  const [toast, setToast] = useState(null)
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    // The messaging SDK is code-split, so subscribing resolves a tick later.
-    // Unsubscribing before then still has to work.
-    let unsub = null
-    let cancelled = false
-    listenForegroundMessages(({ title, body }) => {
-      setToast({ title, body })
-      setTimeout(() => setToast(null), 5000)
-    }).then((fn) => {
-      if (cancelled) fn()
-      else unsub = fn
-    })
-    return () => {
-      cancelled = true
-      unsub?.()
-    }
-  }, [isAuthenticated])
-
-  // Silently refresh the FCM token on each app load when the user already
-  // granted notification permission (covers return visits where the prompt
-  // won't show again because permission is no longer 'default'). It also keeps
-  // the token document's `lang` and `uid` current — the server reads both when
-  // it composes a notification.
-  useEffect(() => {
-    if (!isAuthenticated || !familyId) return
-    if (typeof window === 'undefined' || !('Notification' in window)) return
-    if (Notification.permission === 'granted') {
-      requestAndSaveFCMToken(familyId).catch((err) => devError('FCM token refresh failed:', err))
-    }
-  }, [isAuthenticated, familyId])
-
-  return (
+  return enabled ? (
     <>
-      {isAuthenticated && <NotificationPrompt familyId={familyId} />}
-
-      {/* In-app toast for foreground push messages */}
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm bg-bark text-warm-white rounded-2xl shadow-xl px-4 py-3 flex items-start gap-3 animate-fade-in">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-snug">{toast.title}</p>
-            {toast.body && <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.body}</p>}
-          </div>
-          <button
-            onClick={() => setToast(null)}
-            className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity mt-0.5"
-            aria-label={t('actions.dismiss')}
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <Analytics />
+      <SpeedInsights />
     </>
-  )
+  ) : null
 }
 
 // Keeps the <html lang> attribute in sync with the active language. The static
@@ -236,12 +244,36 @@ function HtmlLangSync() {
     if (typeof document === 'undefined') return
     const apply = (lng) => {
       document.documentElement.lang = (lng || 'en').split('-')[0]
+      document.documentElement.dir = isRtl(lng) ? 'rtl' : 'ltr'
     }
     apply(i18nInstance.language)
     i18nInstance.on('languageChanged', apply)
     return () => i18nInstance.off('languageChanged', apply)
   }, [i18nInstance])
   return null
+}
+
+// Rendered for admins only: nobody else sees the bar, so nobody else downloads it.
+function AdminNavSlot() {
+  const { isAdmin } = useAuth()
+  if (!isAdmin) return null
+  return (
+    <Suspense fallback={null}>
+      <AdminMobileBottomNav />
+    </Suspense>
+  )
+}
+
+// Push notifications are for signed-in members; a signed-out visit never loads
+// them (or the Firestore code they bring).
+function SignedInChrome() {
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) return null
+  return (
+    <Suspense fallback={null}>
+      <AppNotifications />
+    </Suspense>
+  )
 }
 
 // Root layout: providers + global UI shared by every route. The active route's
@@ -252,12 +284,14 @@ function Layout() {
     <I18nextProvider i18n={i18n}>
       <AuthProvider>
         <HtmlLangSync />
+        <DemoBannerSlot />
         <Suspense fallback={<PageLoader />}>
           <Outlet />
+          <RevealPage />
         </Suspense>
-        <AdminMobileBottomNav />
+        <AdminNavSlot />
         <PWAInstallPrompt />
-        <AppNotifications />
+        <SignedInChrome />
         <SiteAnalytics />
       </AuthProvider>
     </I18nextProvider>
@@ -271,9 +305,9 @@ const protect = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 // and be left looking at nothing.
 const protectAdmin = (element) => <ProtectedRoute adminOnly>{element}</ProtectedRoute>
 
-// Route table consumed by ViteReactSSG (src/main.jsx). Only the index route ("/")
-// is pre-rendered to static HTML; all other routes stay client-side (see the
-// includedRoutes filter in main.jsx).
+// Route table consumed by ViteReactSSG (src/main.jsx). Only the public pages in
+// src/prerenderedRoutes.js are pre-rendered to static HTML; all other routes
+// stay client-side (see the includedRoutes filter in main.jsx).
 export const routes = [
   {
     path: '/',
@@ -283,21 +317,39 @@ export const routes = [
     errorElement: <RouteErrorScreen />,
     children: [
       { index: true, element: <RootRoute /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'family/:slug', element: <LoginPage /> },
-      { path: 'signup', element: <SignupPage /> },
-      { path: 'invite', element: <InviteRedeemPage /> },
+      // The landing page in German, at an address of its own (LANDING_PATHS).
+      { path: 'de', element: <RootRoute lng="de" /> },
+      { path: 'ar', element: <RootRoute lng="ar" /> },
+      { path: 'fr', element: <RootRoute lng="fr" /> },
+      { path: 'login', element: <OutsideDemo><LoginPage /></OutsideDemo> },
+      { path: 'family/:slug', element: <OutsideDemo><LoginPage /></OutsideDemo> },
+      { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },
+      { path: 'invite', element: <OutsideDemo><InviteRedeemPage /></OutsideDemo> },
+      { path: 'demo', element: <DemoEntry /> },
 
       // Public legal / informational pages (linked from the footer).
       { path: 'terms', element: <LegalPage docKey="terms" /> },
       { path: 'privacy-policy', element: <LegalPage docKey="privacy-policy" /> },
       { path: 'contact', element: <LegalPage docKey="contact" /> },
       { path: 'safety', element: <LegalPage docKey="safety" /> },
+      // Feature pages, one address per language (src/seoRoutes.js).
+      ...FEATURE_PAGES.flatMap(({ id, paths }) =>
+        Object.entries(paths).map(([lng, path]) => ({
+          path: path.slice(1),
+          element: <FeaturePage id={id} lng={lng} />,
+        })),
+      ),
       { path: 'home', element: protect(<HomePage />) },
       { path: 'memory/:id', element: protect(<MemoryDetailPage />) },
       { path: 'moments', element: protect(<MomentsAllPage />) },
+      // The monthly best-of — where its push on the 1st leads. The whole
+      // family's, like the moments it is made of.
+      { path: 'best-of/:month', element: protect(<BestOfPage />) },
+      { path: 'advent', element: protect(<AdventPage />) },
       { path: 'timeline', element: protect(<SmartTimelinePage />) },
-      { path: 'settings', element: protectAdmin(<SettingsPage />) },
+      // Everyone's: a viewer sets language, text size and notifications here,
+      // and only admins are shown the family's settings below them.
+      { path: 'settings', element: protect(<SettingsPage />) },
       { path: 'settings/login-designer', element: protectAdmin(<LoginDesignerPage />) },
       { path: 'journal', element: protectAdmin(<KidsJournalPage />) },
       { path: 'journal/:childId', element: protectAdmin(<JournalArchivePage />) },
@@ -307,11 +359,14 @@ export const routes = [
       { path: 'journal/:childId/view/:entryId', element: protectAdmin(<JournalDetailPage />) },
       { path: 'blackbox', element: protectAdmin(<BlackBoxPage />) },
       { path: 'blackbox/new', element: protectAdmin(<CreateBlackBoxPage />) },
-      { path: 'recipes', element: protectAdmin(<RecipesPage />) },
+      // Recipes are read by viewers too, the ones an admin has shared; writing
+      // one stays with the admins.
+      { path: 'recipes', element: protect(<RecipesPage />) },
       { path: 'recipes/new', element: protectAdmin(<CreateRecipePage />) },
-      { path: 'recipes/:id', element: protectAdmin(<RecipeJourneyPage />) },
+      { path: 'recipes/:id', element: protect(<RecipeJourneyPage />) },
       { path: 'recipes/:id/fork', element: protectAdmin(<CreateRecipePage />) },
-      { path: 'recipes/:rootId/version/:versionId', element: protectAdmin(<RecipeVersionDetailPage />) },
+      { path: 'recipes/:id/edit', element: protectAdmin(<CreateRecipePage mode="edit" />) },
+      { path: 'recipes/:rootId/version/:versionId', element: protect(<RecipeVersionDetailPage />) },
       { path: 'scrapbook', element: protectAdmin(<ScrapbooksPage />) },
       { path: 'scrapbook/:id', element: protectAdmin(<ScrapbookEditorPage />) },
       // Collages and highlight videos — a gallery and an editor each.

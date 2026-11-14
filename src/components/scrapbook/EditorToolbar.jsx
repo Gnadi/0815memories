@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Undo2, FileDown, Share2, Loader2, Check, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Undo2, FileDown, Printer, Share2, Loader2, Check, AlertCircle, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 
 export default function EditorToolbar({
+  onBack,
   title,
   onTitleChange,
   saveStatus,
@@ -16,9 +16,9 @@ export default function EditorToolbar({
   onSwitchPage,
   onExportPDF,
   exporting,
+  onPrint,
 }) {
   const { t } = useTranslation('scrapbook')
-  const navigate = useNavigate()
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(title)
 
@@ -32,7 +32,7 @@ export default function EditorToolbar({
     <div className="flex items-center gap-2 px-3 py-2 bg-warm-white border-b border-cream-dark z-20 flex-shrink-0">
       {/* Back */}
       <button
-        onClick={() => navigate('/scrapbook')}
+        onClick={onBack}
         className="p-1.5 rounded-lg hover:bg-cream text-bark-muted hover:text-bark transition-colors flex-shrink-0"
         title={t('editor.backToScrapbooks')}
       >
@@ -100,14 +100,22 @@ export default function EditorToolbar({
         )}
       </div>
 
-      {/* Save status */}
-      <div className="flex-shrink-0 hidden sm:flex items-center gap-1 text-xs text-bark-muted">
-        {saveStatus === 'saving' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-        {saveStatus === 'saved' && <Check className="w-3.5 h-3.5 text-green-500" />}
-        <span className="hidden md:inline">
-          {saveStatus === 'saving' ? t('editor.saving') : saveStatus === 'saved' ? t('editor.saved') : ''}
-        </span>
-      </div>
+      {/* Save status — a failed save shows on every screen size, as it is
+          the one state that asks for something to be done. */}
+      {saveStatus === 'error' ? (
+        <div className="flex-shrink-0 flex items-center gap-1 text-xs text-red-600" role="status" title={t('editor.saveFailed')}>
+          <AlertCircle className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">{t('editor.saveFailed')}</span>
+        </div>
+      ) : (
+        <div className="flex-shrink-0 hidden sm:flex items-center gap-1 text-xs text-bark-muted">
+          {saveStatus === 'saving' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {saveStatus === 'saved' && <Check className="w-3.5 h-3.5 text-green-500" />}
+          <span className="hidden md:inline">
+            {saveStatus === 'saving' ? t('editor.saving') : saveStatus === 'saved' ? t('editor.saved') : ''}
+          </span>
+        </div>
+      )}
 
       {/* Undo */}
       <button
@@ -129,6 +137,19 @@ export default function EditorToolbar({
         {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
         <span className="hidden sm:inline">{t('editor.pdf')}</span>
       </button>
+
+      {/* Order a printed copy — only when this deployment is set up for it */}
+      {onPrint && (
+        <button
+          onClick={onPrint}
+          disabled={exporting}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-kaydo/10 hover:bg-kaydo/20 text-kaydo text-xs font-medium transition-colors flex-shrink-0"
+          title={t('print.openTooltip')}
+        >
+          <Printer className="w-4 h-4" />
+          <span className="hidden sm:inline">{t('print.open')}</span>
+        </button>
+      )}
 
       {/* Share */}
       <button

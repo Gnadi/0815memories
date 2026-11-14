@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Shield, X } from 'lucide-react'
@@ -12,7 +11,8 @@ import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
 import { themeToStyles, themeDecorationEmojis, themeText } from '../utils/loginTheme'
 import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
-import { resolveFamilyBySlug, getSubdomainSlug } from '../utils/familySlug'
+import { getSubdomainSlug } from '../utils/familySlug'
+import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
 
 function toResolvedFamily(data) {
   if (!data) return null
@@ -64,6 +64,8 @@ export default function LoginPage() {
   // was remembered forever regardless of what the box said.
   const [stayLoggedIn, setStayLoggedIn] = useState(true)
   const [showAdminLogin, setShowAdminLogin] = useState(false)
+  // "Forgot password", shown in place of the admin form.
+  const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   // Custom pages with a minimized login box open the form as an overlay.
@@ -135,10 +137,10 @@ export default function LoginPage() {
       setResolving(false)
       return
     }
-    getDoc(doc(db, 'familyPublic', urlFamilyId))
-      .then((snap) => {
-        if (snap.exists()) {
-          const resolved = toResolvedFamily(snap.data())
+    getFamilyPublic(urlFamilyId)
+      .then((data) => {
+        if (data) {
+          const resolved = toResolvedFamily(data)
           setResolvedFamily(resolved)
           writeCachedFamily(urlFamilyId, resolved)
         }
@@ -204,7 +206,12 @@ export default function LoginPage() {
   const formProps = {
     showAdminLogin, email, setEmail, password, setPassword,
     showPassword, setShowPassword, stayLoggedIn, setStayLoggedIn,
-    error, loading, handleSubmit,
+    error, loading, handleSubmit, resetOpen, setResetOpen,
+  }
+
+  const toggleAdminLogin = () => {
+    setShowAdminLogin(!showAdminLogin)
+    setResetOpen(false)
   }
 
   const resolvedFamilyName = resolvedFamily?.name || null
@@ -216,7 +223,7 @@ export default function LoginPage() {
     const cardProps = {
       t, navigate, formProps, firebaseReady,
       familyName: resolvedFamilyName,
-      showAdminLogin, setShowAdminLogin,
+      showAdminLogin, toggleAdminLogin,
       styleKey: style,
     }
     return (
@@ -345,7 +352,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => setShowAdminLogin(!showAdminLogin)}
+              onClick={toggleAdminLogin}
               className="text-sm text-bark-muted hover:text-kaydo transition-colors"
               style={textStyle}
             >
@@ -372,11 +379,14 @@ export default function LoginPage() {
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
             : <FamilyIllustration />}
+          {/* The photo or illustration can be light, so the white text sits on a
+              dark gradient to stay readable whatever the family uploaded. */}
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
           <div className="absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               {t('login.asideTitle')}
             </h2>
-            <p className="text-base opacity-90 drop-shadow">
+            <p className="text-base drop-shadow">
               {t('login.asideBody')}
             </p>
           </div>
@@ -408,7 +418,7 @@ export default function LoginPage() {
             <div className="mt-4 text-center">
               <button
                 type="button"
-                onClick={() => setShowAdminLogin(!showAdminLogin)}
+                onClick={toggleAdminLogin}
                 className="text-sm text-bark-muted hover:text-kaydo transition-colors"
               >
                 {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
@@ -455,7 +465,7 @@ export default function LoginPage() {
 // admin-picked preset (CARD_STYLES); the form itself is always native UI.
 function CustomLoginCard({
   t, navigate, formProps, firebaseReady, familyName,
-  showAdminLogin, setShowAdminLogin, styleKey, onClose, autoFocusPassword = false,
+  showAdminLogin, toggleAdminLogin, styleKey, onClose, autoFocusPassword = false,
 }) {
   const preset = CARD_STYLES[styleKey] || CARD_STYLES.light
   const dark = preset.tone === 'dark'
@@ -492,7 +502,7 @@ function CustomLoginCard({
       <div className="mt-4 text-center">
         <button
           type="button"
-          onClick={() => setShowAdminLogin(!showAdminLogin)}
+          onClick={toggleAdminLogin}
           className={`text-sm transition-colors ${dark ? 'text-cream/70 hover:text-cream' : 'text-bark-muted hover:text-kaydo'}`}
         >
           {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}

@@ -26,9 +26,12 @@ import {
   updateDoc,
   deleteDoc,
   where,
+  writeBatch,
+  serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -48,7 +51,7 @@ const entry = (uid, overrides = {}) => ({
   participantUids: PARTICIPANTS,
   authorUid: uid,
   kind: 'reflection',
-  answers: 'ciphertext',
+  answers: CIPHERTEXT,
   submitted: true,
   revealed: false,
   ...overrides,
@@ -92,7 +95,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         familyId: FAMILY,
         ritualId: 'ritual-1',
         participantUids: PARTICIPANTS,
-        title: 'ciphertext',
+        title: CIPHERTEXT,
         status: 'open',
         letterStatus: 'none',
       })
@@ -119,6 +122,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(A), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', A),
             where('ritualId', '==', 'ritual-1'),
             orderBy('periodStart', 'desc'),
@@ -134,7 +138,11 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       // why useOurYearChapters always filters on participantUids.
       await assertFails(
         getDocs(
-          query(collection(as(A), 'ourYearChapters'), where('ritualId', '==', 'ritual-1')),
+          query(
+            collection(as(A), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
+            where('ritualId', '==', 'ritual-1'),
+          ),
         ),
       )
     })
@@ -144,6 +152,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(OUTSIDER), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', A),
             where('ritualId', '==', 'ritual-1'),
           ),
@@ -158,6 +167,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
         getDocs(
           query(
             collection(as(OUTSIDER), 'ourYearChapters'),
+            where('familyId', '==', FAMILY),
             where('participantUids', 'array-contains', OUTSIDER),
           ),
         ),
@@ -168,10 +178,20 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('lets a partner find their ritual by membership', async () => {
       const snap = await assertSucceeds(
         getDocs(
-          query(collection(as(B), 'ourYearRituals'), where('participantUids', 'array-contains', B)),
+          query(
+            collection(as(B), 'ourYearRituals'),
+            where('familyId', '==', FAMILY),
+            where('participantUids', 'array-contains', B),
+          ),
         ),
       )
       expect(snap.size).toBe(1)
+    })
+
+    it('refuses a ritual query that does not name the family', async () => {
+      await assertFails(
+        getDocs(query(collection(as(B), 'ourYearRituals'), where('participantUids', 'array-contains', B))),
+      )
     })
   })
 
@@ -184,6 +204,60 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       await assertFails(getDoc(doc(db, 'ourYearRituals/ritual-1')))
       await assertFails(getDoc(doc(db, 'ourYearChapters', CHAPTER)))
       await assertFails(getDoc(doc(db, entryPath(A))))
+    })
+  })
+
+  describe('a partner who is no longer a family admin', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'families', FAMILY), { adminUids: [A, OUTSIDER] })
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B, { submitted: false }))
+      })
+    })
+
+    it('keeps no access to the ritual, chapter or their own answers', async () => {
+      const db = as(B)
+      await assertFails(getDoc(doc(db, 'ourYearRituals/ritual-1')))
+      await assertFails(getDoc(doc(db, 'ourYearChapters', CHAPTER)))
+      await assertFails(getDoc(doc(db, entryPath(B))))
+      await assertFails(updateDoc(doc(db, 'ourYearRituals/ritual-1'), { occasionKey: 'newYear' }))
+      await assertFails(updateDoc(doc(db, 'ourYearChapters', CHAPTER), { title: sealed('x') }))
+      await assertFails(updateDoc(doc(db, entryPath(B)), { answers: sealed('x') }))
+      await assertFails(deleteDoc(doc(db, entryPath(B))))
+      await assertFails(deleteDoc(doc(db, 'ourYearChapters', CHAPTER)))
+      await assertFails(deleteDoc(doc(db, 'ourYearRituals/ritual-1')))
+    })
+
+    it('cannot list the ritual or the chapters either, with the family named', async () => {
+      const db = as(B)
+      await assertFails(getDocs(query(
+        collection(db, 'ourYearRituals'),
+        where('familyId', '==', FAMILY),
+        where('participantUids', 'array-contains', B),
+      )))
+      await assertFails(getDocs(query(
+        collection(db, 'ourYearChapters'),
+        where('familyId', '==', FAMILY),
+        where('participantUids', 'array-contains', B),
+        where('ritualId', '==', 'ritual-1'),
+        orderBy('periodStart', 'desc'),
+      )))
+      await assertFails(getDocs(query(
+        collection(db, 'ourYearEntries'),
+        where('familyId', '==', FAMILY),
+        where('participantUids', 'array-contains', B),
+        where('authorUid', '==', B),
+      )))
+    })
+
+    it('while the partner who still is an admin carries on', async () => {
+      await assertSucceeds(getDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await assertSucceeds(updateDoc(doc(as(A), 'ourYearRituals/ritual-1'), { occasionKey: 'newYear' }))
+      await assertSucceeds(getDocs(query(
+        collection(as(A), 'ourYearRituals'),
+        where('familyId', '==', FAMILY),
+        where('participantUids', 'array-contains', A),
+      )))
     })
   })
 
@@ -203,7 +277,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
 
     it('does not let the partner edit them', async () => {
-      await assertFails(updateDoc(doc(as(B), entryPath(A)), { answers: 'tampered' }))
+      await assertFails(updateDoc(doc(as(B), entryPath(A)), { answers: sealed('tampered') }))
     })
 
     it('cannot be revealed by a partner who has not handed in', async () => {
@@ -222,7 +296,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('lets the partner set nothing but `revealed`, once both have handed in', async () => {
       await setDoc(doc(as(B), entryPath(B)), entry(B))
       await assertFails(
-        updateDoc(doc(as(B), entryPath(A)), { revealed: true, answers: 'tampered' }),
+        updateDoc(doc(as(B), entryPath(A)), { revealed: true, answers: sealed('tampered') }),
       )
       await assertSucceeds(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
     })
@@ -235,6 +309,24 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       await assertFails(updateDoc(doc(as(B), entryPath(A)), { revealed: true }))
     })
 
+    it('accepts the reveal as one batch: the chapter and both entries', async () => {
+      // revealAnswers in src/services/ourYear.js. It was two writes once, and
+      // the second was lost; one batch must still pass every rule involved.
+      await setDoc(doc(as(B), entryPath(B)), entry(B))
+      await updateDoc(doc(as(B), `ourYearChapters/${CHAPTER}`), { reflectionSubmittedBy: [A, B] })
+      const db = as(B)
+      const batch = writeBatch(db)
+      batch.update(doc(db, `ourYearChapters/${CHAPTER}`), {
+        reflectionsRevealedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.update(doc(db, entryPath(A)), { revealed: true })
+      batch.update(doc(db, entryPath(B)), { revealed: true })
+      await assertSucceeds(batch.commit())
+      await assertSucceeds(getDoc(doc(as(B), entryPath(A))))
+      await assertSucceeds(getDoc(doc(as(A), entryPath(B))))
+    })
+
     it('opens the answers to both once revealed', async () => {
       await setDoc(doc(as(B), entryPath(B)), entry(B))
       await updateDoc(doc(as(B), entryPath(A)), { revealed: true })
@@ -245,7 +337,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('fixes an answer once it is handed in', async () => {
       // Otherwise the look at the partner's answers would come with a chance
       // to rewrite one's own.
-      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'rewritten' }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('rewritten') }))
       await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: false }))
     })
 
@@ -275,6 +367,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       const snap = await assertSucceeds(
         getDocs(query(
           collection(as(A), 'ourYearEntries'),
+          where('familyId', '==', FAMILY),
           where('participantUids', 'array-contains', A),
           where('authorUid', '==', A),
         )),
@@ -284,8 +377,53 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
 
     it('is refused a list by author alone — the query the export used to send', async () => {
       await assertFails(
-        getDocs(query(collection(as(A), 'ourYearEntries'), where('authorUid', '==', A))),
+        getDocs(query(
+          collection(as(A), 'ourYearEntries'),
+          where('familyId', '==', FAMILY),
+          where('authorUid', '==', A),
+        )),
       )
+    })
+  })
+
+  describe('handing in', () => {
+    it('cannot create an entry that is handed in but empty', async () => {
+      const { answers: _omit, ...noAnswers } = entry(A)
+      await assertFails(setDoc(doc(as(A), entryPath(A)), noAnswers))
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { answers: null })))
+    })
+
+    it('can create an entry that is handed in with its answers', async () => {
+      await assertSucceeds(setDoc(doc(as(A), entryPath(A)), entry(A)))
+    })
+
+    it('cannot create an entry already revealed', async () => {
+      await assertFails(setDoc(doc(as(A), entryPath(A)), entry(A, { revealed: true })))
+    })
+
+    it('cannot flip a draft without answers to handed in', async () => {
+      const { answers: _omit, ...noAnswers } = entry(A, { submitted: false })
+      await setDoc(doc(as(A), entryPath(A)), noAnswers)
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: true }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { submitted: true, answers: sealed('done') }))
+    })
+
+    it('does not let an empty hand-in unlock the partner’s answers', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B))
+      })
+      const { answers: _omit, ...noAnswers } = entry(A, { submitted: false })
+      await setDoc(doc(as(A), entryPath(A)), noAnswers)
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { submitted: true }))
+      await assertFails(updateDoc(doc(as(A), entryPath(B)), { revealed: true }))
+    })
+
+    it('lets the second partner reveal once both really handed in', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), entryPath(B)), entry(B))
+      })
+      await setDoc(doc(as(A), entryPath(A)), entry(A))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(B)), { revealed: true }))
     })
   })
 
@@ -295,9 +433,9 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
 
     it('stays editable by its author until it is handed in', async () => {
-      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'second thoughts' }))
-      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: 'final', submitted: true }))
-      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: 'third thoughts' }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('second thoughts') }))
+      await assertSucceeds(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('final'), submitted: true }))
+      await assertFails(updateDoc(doc(as(A), entryPath(A)), { answers: sealed('third thoughts') }))
     })
 
     it('cannot be re-homed or revealed by its author', async () => {
@@ -328,7 +466,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
           familyId: FAMILY,
           chapterId: CHAPTER,
           participantUids: PARTICIPANTS,
-          sections: 'ciphertext',
+          sections: CIPHERTEXT,
           sealedAt: sealed ? Timestamp.fromDate(new Date(2026, 0, 1)) : null,
           openAt: openAt ? Timestamp.fromDate(openAt) : null,
           openedAt: null,
@@ -338,7 +476,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     it('is readable and editable while it is still a draft', async () => {
       await seedLetter(null, false)
       await assertSucceeds(getDoc(doc(as(A), letterPath)))
-      await assertSucceeds(updateDoc(doc(as(A), letterPath), { sections: 'more' }))
+      await assertSucceeds(updateDoc(doc(as(A), letterPath), { sections: sealed('more') }))
     })
 
     it('cannot be read by either partner before the chosen day', async () => {
@@ -355,6 +493,31 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
       )
     })
 
+    it('cannot be deleted before the chosen day', async () => {
+      await seedLetter(new Date(Date.now() + 30 * 24 * 3600 * 1000))
+      await assertFails(deleteDoc(doc(as(A), letterPath)))
+      await assertFails(deleteDoc(doc(as(B), letterPath)))
+    })
+
+    it('can be deleted as a draft, and once the day has arrived', async () => {
+      await seedLetter(null, false)
+      await assertSucceeds(deleteDoc(doc(as(A), letterPath)))
+      await seedLetter(new Date(Date.now() - 1000))
+      await assertSucceeds(deleteDoc(doc(as(B), letterPath)))
+    })
+
+    it('keeps its chapter from being discarded until the day has arrived', async () => {
+      await seedLetter(new Date(Date.now() + 30 * 24 * 3600 * 1000))
+      await assertFails(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await seedLetter(new Date(Date.now() - 1000))
+      await assertSucceeds(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+    })
+
+    it('does not stop a chapter with a draft letter being discarded', async () => {
+      await seedLetter(null, false)
+      await assertSucceeds(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+    })
+
     it('opens to both partners once the day has arrived', async () => {
       await seedLetter(new Date(Date.now() - 1000))
       await assertSucceeds(getDoc(doc(as(A), letterPath)))
@@ -369,7 +532,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
           familyId: FAMILY,
           chapterId: CHAPTER,
           participantUids: PARTICIPANTS,
-          sections: 'ciphertext',
+          sections: CIPHERTEXT,
           sealedAt: Timestamp.now(),
           openAt: Timestamp.fromDate(new Date(2030, 0, 1)),
         }),
@@ -389,7 +552,7 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
 
     it('cannot be edited any more', async () => {
       await assertFails(
-        updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { title: 'rewritten' }),
+        updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { title: sealed('rewritten') }),
       )
       await assertFails(
         updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { status: 'open' }),

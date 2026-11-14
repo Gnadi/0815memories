@@ -32,7 +32,15 @@
     "label": "Language",
     "description": "Choose the language for the app interface.",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "ar": "العربية",
+    "fr": "Français"
+  },
+  "textSize": {
+    "label": "Text size",
+    "description": "Make text larger or smaller. This only changes this device.",
+    "adjust": "Adjust text size",
+    "percent": "{{value}}%"
   },
   "errorScreen": {
     "updating": "Updating to the latest version…",
@@ -40,11 +48,25 @@
     "message": "An unexpected error occurred. Reloading the page usually fixes it — your memories are safe.",
     "reload": "Reload page"
   },
+  "familyKey": {
+    "title": "Your family can't be opened",
+    "missing": "This family has no encryption key, and Kaydo only opens encrypted families.",
+    "unreadable": "This browser can't load your family's encryption key. Please try an up-to-date browser.",
+    "unavailable": "Your family couldn't be loaded. Check your connection and try again.",
+    "retry": "Try again",
+    "signOut": "Sign out"
+  },
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "familyIllustrationAlt": "Family gathering illustration"
+  },
+  "unreadable": {
+    "notice_one": "One entry could not be decrypted with your family's key. It is shown without the affected text.",
+    "notice_other": "{{count}} entries could not be decrypted with your family's key. They are shown without the affected text.",
+    "content": "This content could not be decrypted.",
+    "title": "Unreadable entry"
   },
   "mobileNav": {
     "home": "Home",
@@ -88,6 +110,17 @@
   "upload": {
     "failed": "Upload failed. Please try again.",
     "tooLarge": "This file is {{size}} — the limit is {{limit}} per file. Please use a shorter or more compressed clip.",
-    "videoTooLong": "Video must be {{seconds}} seconds or shorter."
+    "videoTooLong": "Video must be {{seconds}} seconds or shorter.",
+    "rateLimited": "You've uploaded a lot in the last hour. Please wait a while and try again.",
+    "storageFull": "Your family's storage space is used up, so nothing more can be uploaded right now."
+  },
+  "dictation": {
+    "start": "Dictate",
+    "stop": "Stop dictation",
+    "notice": "Listening… Your browser may send the audio to its maker for speech recognition.",
+    "error": {
+      "denied": "Microphone access was denied. Allow it in your browser settings to dictate.",
+      "unavailable": "Dictation is not available right now."
+    }
   }
 }

@@ -1,0 +1,9 @@
+{
+  "banner": {
+    "text": "You are exploring a demo family. Everything stays in this tab and starts afresh when you reload.",
+    "cta": "Create your own family",
+    "exit": "Leave the demo"
+  },
+  "unavailable": "Not in the demo: this needs Kaydo's server, and the demo runs entirely in your browser.",
+  "printUnavailable": "The demo does not order anything. In your own family, this is where the book goes to the print shop."
+}

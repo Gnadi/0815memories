@@ -8,6 +8,10 @@
       "body": "Add Grandma's first recipe and start building your family's culinary tree.",
       "cta": "Add Your First Recipe"
     },
+    "emptyViewer": {
+      "heading": "No recipes shared yet",
+      "body": "Once an admin shares a family recipe, you will find it here — with all of its versions."
+    },
     "deleteConfirm": "Delete this recipe and all its forks permanently? This cannot be undone."
   },
   "card": {
@@ -28,7 +32,12 @@
     "forkAttribution": "— {{author}}, {{year}}",
     "legacy_one": "A Living Family Legacy · {{count}} Generation of Shared History",
     "legacy_other": "A Living Family Legacy · {{count}} Generations of Shared History",
-    "forkRecipe": "Fork This Recipe"
+    "forkRecipe": "Fork This Recipe",
+    "share": {
+      "label": "Visible to viewers",
+      "hint": "Viewers see this recipe with all of its versions, and cannot change anything. New forks are visible too.",
+      "error": "The sharing setting could not be saved. Please try again."
+    }
   },
   "version": {
     "notFound": "Recipe version not found.",
@@ -43,6 +52,7 @@
     "forkReasonLabel": "Reason for the Fork",
     "forkAttribution": "— {{author}}, {{year}}",
     "forkVersion": "Fork This Version",
+    "edit": "Edit",
     "status": {
       "removed": "Removed",
       "modified": "Modified"
@@ -55,6 +65,7 @@
     "original": "Original",
     "authorFork": "{{author}}'s Fork",
     "fork": "Fork",
+    "forkedFrom": "Forked from {{name}}",
     "rowTitle": "{{year}}: {{label}}",
     "viewDetails": "View details →"
   },
@@ -101,7 +112,6 @@
     "newRecipe": "New Recipe",
     "forkOf": "Fork of \"{{title}}\"",
     "forkTitle": "Fork: \"{{title}}\"",
-    "forkLoadError": "Recipe not found.",
     "forkOriginalNotFound": "Original recipe not found.",
     "forkLoadFailed": "Failed to load recipe. Please go back and try again.",
     "forkingFrom": "Forking from:",
@@ -117,6 +127,20 @@
     "descriptionPlaceholder": "A brief description of the dish and its story...",
     "instructionsLabel": "Instructions",
     "instructionsPlaceholder": "Step-by-step instructions...",
+    "instructionsFormat": {
+      "label": "How to write the instructions",
+      "rich": "Editor",
+      "richHint": "Format with buttons: bold, headings, lists",
+      "markdown": "Markdown",
+      "markdownHint": "For pros: format with Markdown syntax"
+    },
+    "markdown": {
+      "write": "Write",
+      "preview": "Preview",
+      "previewEmpty": "Nothing to preview yet.",
+      "placeholder": "## Dough\n1. Mix the flour and salt\n2. Knead for **10 minutes**\n\n## Filling\n- Peel the apples\n- _optional:_ add raisins",
+      "help": "Markdown: ## heading, **bold**, _italic_, - list, 1. step, > note, [link](https://…)"
+    },
     "chefTipLabel": "Chef's Secret Tip",
     "optional": "(optional)",
     "chefTipPlaceholder": "e.g. The trick is to mash only half the lentils...",
@@ -128,6 +152,15 @@
     "ingredientsEmpty": "No ingredients yet — add your first one below.",
     "ingredientPlaceholder": "e.g. 2 cups ground lentils",
     "addIngredient": "Add Ingredient",
+    "paste": {
+      "open": "Paste a list",
+      "label": "Paste a list or table",
+      "placeholder": "200 g flour\n2 eggs\n1 pinch of salt",
+      "help": "One ingredient per line. Lists and tables copied from a website, a spreadsheet or a note work too; bullets, headings and header rows are left out.",
+      "previewLabel": "Ingredients to add",
+      "add_one": "Add {{count}} ingredient",
+      "add_other": "Add {{count}} ingredients"
+    },
     "status": {
       "active": "Active",
       "removed": "Removed",
@@ -149,6 +182,8 @@
     },
     "saving": "Saving…",
     "saveFork": "Save Fork",
-    "addToVault": "Add to Vault"
+    "addToVault": "Add to Vault",
+    "editTitle": "Edit {{title}}",
+    "saveChanges": "Save changes"
   }
 }

@@ -6,8 +6,11 @@ import {
   Heart,
   MapPin,
   MoreHorizontal,
+  Pause,
   Pencil,
   Trash2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { timeAgo } from '../../utils/helpers'
@@ -16,13 +19,23 @@ import CrossfadeImage, { FADE_MS } from '../media/CrossfadeImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { focusStyleAt } from '../../utils/mediaFocus'
 import useMediaQuery from '../../hooks/useMediaQuery'
+import useCloseOnBack from '../../hooks/useCloseOnBack'
+
+// How long a photo stays up before the story moves on.
+const PHOTO_MS = 5000
+// A press longer than this is holding the story, not tapping through it, and
+// only then does the bar say so. Every tap pauses for a moment, and a pill
+// flashing up on each one would be noise. The same as the monthly review's.
+const HOLD_MS = 220
 
 // Build a unified media list from a moment's images and videos.
 //
 // Images carry their derivatives with them: `thumbUrl` is the 1024px copy the
 // story circle already decrypted, `tinyPreview` the ~20px blur-up that rides on
-// the document. Videos have neither — there is one asset and it is the clip.
+// the document. A video has at most a poster: one frame of it, taken in the
+// browser when it was uploaded (older clips have none).
 function buildMediaItems(moment) {
   const images = moment?.images ?? []
   const videos = moment?.videos ?? []
@@ -32,8 +45,9 @@ function buildMediaItems(moment) {
       url,
       thumbUrl: thumbAt(moment, i),
       tinyPreview: tinyPreviewAt(moment, i),
+      focus: focusStyleAt(moment, i),
     })),
-    ...videos.map((v) => ({ type: 'video', url: v.url })),
+    ...videos.map((v) => ({ type: 'video', url: v.url, poster: v.posterUrl || '' })),
   ]
 }
 
@@ -63,10 +77,22 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const { encryptionKey } = useAuth()
   const [currentMomentIndex, setCurrentMomentIndex] = useState(initialIndex ?? 0)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
-  const [progress, setProgress] = useState(0)   // 0–100, fill % for current media item
+  const [clipShare, setClipShare] = useState(0) // 0–1, how much of the current clip has played
   const [paused, setPaused] = useState(false)
   const [infoVisible, setInfoVisible] = useState(true)
   const [showMenu, setShowMenu] = useState(false)
+  // Clips play with their sound. The switch is for this viewing only, so the
+  // next story starts with sound again. `soundBlocked` is the browser's say:
+  // without a recent tap it may refuse to start a clip with sound, and then the
+  // clip plays muted rather than not at all, until the switch is tapped or the
+  // next slide tries again.
+  const [soundOn, setSoundOn] = useState(true)
+  const [soundBlocked, setSoundBlocked] = useState(false)
+  const clipMuted = !soundOn || soundBlocked
+
+  // Every way out of the viewer goes through close, so the back gesture on a
+  // phone closes it too, rather than leaving the app.
+  const close = useCloseOnBack(onClose)
 
   const videoRef = useRef(null)
   const pointerStart = useRef(null)
@@ -87,6 +113,9 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   // a new object identity must not look like a new slide.
   const currentUrl = currentItem?.url ?? ''
   const currentThumb = currentItem?.type === 'image' ? currentItem.thumbUrl : ''
+  // A clip's poster stands in for it on the stage until the clip has a frame
+  // of its own. Without one, the stage holds the previous picture instead.
+  const currentPoster = isVideo ? currentItem.poster : ''
   const currentTiny = currentItem?.type === 'image' ? currentItem.tinyPreview : ''
 
   // The clock starts when there is something to look at: the photo (not its
@@ -119,10 +148,13 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     // the one being left makes it the current clip again.
     if (renderedClip && videoReady) setLeavingClip({ key: renderedSlide, url: renderedClip })
     else if (leavingClip?.key === slideKey) setLeavingClip(null)
-    setProgress(0)
+    setClipShare(0)
     setPaused(false)
     // Every slide gets a new clip element (keyed on the slide), with no frame yet.
     setVideoReady(false)
+    // And asks for its sound again: the tap that got here may be all the
+    // browser was waiting for.
+    setSoundBlocked(false)
   }
   if (!currentItem && leavingClip) setLeavingClip(null)
   if (renderedMoment !== currentMomentIndex) {
@@ -138,12 +170,12 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const isAtStart = isFirstMoment && isFirstMedia
   const isAtEnd = isLastMoment && isLastMedia
 
-  // Stable refs let the keyboard listener + progress effect call the latest
-  // goNext/goPrev/onClose without re-subscribing on every render.
+  // Stable refs let the keyboard listener call the latest
+  // goNext/goPrev/close without re-subscribing on every render.
   const goNextRef = useRef(null)
   const goPrevRef = useRef(null)
   const isAtEndRef = useRef(isAtEnd)
-  const onCloseRef = useRef(onClose)
+  const onCloseRef = useRef(close)
 
   const goNext = () => {
     if (!isLastMedia) {
@@ -154,7 +186,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       setCurrentMomentIndex((i) => i + 1)
       setCurrentMediaIndex(0)
     } else {
-      onClose()
+      close()
     }
   }
 
@@ -176,7 +208,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       setCurrentMomentIndex((i) => i + 1)
       setCurrentMediaIndex(0)
     } else {
-      onClose()
+      close()
     }
   }
 
@@ -222,7 +254,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
     goNextRef.current = goNext
     goPrevRef.current = goPrev
     isAtEndRef.current = isAtEnd
-    onCloseRef.current = onClose
+    onCloseRef.current = close
   })
 
   // Body scroll lock
@@ -268,47 +300,80 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   // The clip being played gets videoRef. One taken back from being left already
   // has its frame, and no loadeddata is coming for it.
+  //
+  // Clips are started from here rather than with autoplay: an autoplay the
+  // browser refuses for its sound fails silently, and the story would sit on a
+  // clip that never starts. A refused play() can be retried muted.
+  const pausedRef = useRef(paused)
+  useEffect(() => {
+    pausedRef.current = paused
+  }, [paused])
+  const playClip = useCallback((el) => {
+    if (!el || pausedRef.current) return
+    el.play()?.catch?.((err) => {
+      if (err?.name !== 'NotAllowedError' || el.muted) return
+      el.muted = true
+      setSoundBlocked(true)
+      el.play()?.catch?.(() => {})
+    })
+  }, [])
   const attachClip = useCallback((el) => {
     videoRef.current = el
-    if (el && el.readyState >= 2) setVideoReady(true)
-  }, [])
+    if (el && el.readyState >= 2) {
+      setVideoReady(true)
+      playClip(el)
+    }
+  }, [playClip])
   const pauseClip = useCallback((el) => {
     el?.pause()
   }, [])
 
-  // Auto-play video when current item is a video
+  const [held, setHeld] = useState(false)
+  useEffect(() => {
+    if (!paused) return
+    const timer = setTimeout(() => setHeld(true), HOLD_MS)
+    return () => {
+      clearTimeout(timer)
+      setHeld(false)
+    }
+  }, [paused])
+  const showPaused = paused && held
+
+  // Holding the story pauses the clip, letting go resumes it.
   useEffect(() => {
     if (!isVideo) return
     const vid = videoRef.current
     if (!vid) return
-    if (paused) {
-      vid.pause()
-    } else {
-      vid.play().catch(() => {})
-    }
-  }, [isVideo, paused])
+    if (paused) vid.pause()
+    // A clip without a frame yet is started by its loadeddata instead.
+    else if (vid.readyState >= 2) playClip(vid)
+  }, [isVideo, paused, playClip])
 
-  // Auto-advance timer for images: 2% per 100ms = 5 000ms total
-  useEffect(() => {
-    if (paused || isVideo || !imageSettled) return
-    const id = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + 2
-        return next >= 100 ? 100 : next
-      })
-    }, 100)
-    return () => clearInterval(id)
-  }, [paused, isVideo, imageSettled, currentMediaIndex, currentMomentIndex])
+  // In the tap's own handler, where the browser lets sound begin, and on the
+  // element as well as in state: the muted property must change before the
+  // clip is played again.
+  const toggleSound = () => {
+    const next = clipMuted
+    setSoundOn(next)
+    setSoundBlocked(false)
+    const vid = videoRef.current
+    if (!vid) return
+    vid.muted = !next
+    if (vid.paused) playClip(vid)
+  }
 
-  // When image progress reaches 100, advance
-  useEffect(() => {
-    if (isVideo || progress < 100) return
-    if (isAtEndRef.current) {
-      onCloseRef.current()
-    } else {
-      goNextRef.current()
-    }
-  }, [progress, isVideo])
+  const renderSoundButton = (className, iconClassName) => isVideo && (
+    <button
+      onClick={(e) => { e.stopPropagation(); toggleSound() }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={className}
+      aria-label={clipMuted ? t('moment.soundOn') : t('moment.soundOff')}
+      aria-pressed={!clipMuted}
+      data-testid="moment-sound"
+    >
+      {clipMuted ? <VolumeX className={iconClassName} /> : <Volume2 className={iconClassName} />}
+    </button>
+  )
 
   // Keyboard navigation (registered once; delegates through refs to stay fresh)
   useEffect(() => {
@@ -324,24 +389,24 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   const handleEdit = () => {
     setShowMenu(false)
     onEdit?.(moment)
-    onClose()
+    close()
   }
 
   const handleDelete = () => {
     setShowMenu(false)
     if (window.confirm(t('moment.deleteConfirm'))) {
       onDelete?.(moment.id)
-      onClose()
+      close()
     }
   }
 
   // Video event handlers
   const handleVideoTimeUpdate = (e) => {
     const { currentTime, duration } = e.target
-    if (duration > 0) setProgress((currentTime / duration) * 100)
+    if (duration > 0) setClipShare(currentTime / duration)
   }
 
-  const handleVideoEnded = () => {
+  const handleSlideEnded = () => {
     if (isAtEndRef.current) {
       onCloseRef.current()
     } else {
@@ -357,48 +422,67 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
   if (!moment) return null
 
-  // Progress bar segments — one per media item in the current moment.
+  // Progress bar segments — one per media item in the current moment, drawn
+  // like the monthly review's (bestOf.css). A photo's fill is a CSS animation
+  // and the photo's clock as well: the story moves on when it ends, and holding
+  // the story pauses it. The 100ms interval it replaces stepped the bar along
+  // in visible jumps and re-rendered the whole viewer ten times a second.
   //
-  // Elements, not components: a component defined in here is a new type on
-  // every render, so React remounted both bars on every progress tick and the
-  // width transition never had a previous width to animate from.
-  const progressBarMobile = (
-    <div className="flex gap-1 w-full">
-      {mediaItems.map((_, i) => (
-        <div key={i} className="h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden">
+  // An element, not a component: a component defined in here is a new type on
+  // every render, and React would remount the bar — and restart the clock —
+  // every time the viewer re-rendered.
+  //
+  // While the story is held, the current segment folds away for a "Paused"
+  // pill, as in the monthly review. It folds rather than unmounting: its fill
+  // is the photo's clock, and a remount would start it over. The row keeps the
+  // bar's height and lets the pill hang over it, so nothing below moves.
+  const clockRunning = !paused && imageSettled
+  const renderProgressBar = (track, fill, pill) => (
+    <div className="flex items-center gap-[3px] h-[3px] w-full" aria-hidden="true">
+      {mediaItems.map((_, i) => {
+        const current = i === currentMediaIndex
+        return [
           <div
-            data-testid="progress-fill"
-            className="h-full rounded-full bg-white"
-            style={{
-              width:
-                i < currentMediaIndex ? '100%'
-                : i === currentMediaIndex ? `${progress}%`
-                : '0%',
-              transition: paused ? 'none' : undefined,
-            }}
-          />
-        </div>
-      ))}
-    </div>
-  )
-
-  const progressBarDesktop = (
-    <div className="flex gap-1 w-full">
-      {mediaItems.map((_, i) => (
-        <div key={i} className="h-1 flex-1 rounded-full bg-cream-dark overflow-hidden">
-          <div
-            data-testid="progress-fill"
-            className="h-full rounded-full bg-kaydo"
-            style={{
-              width:
-                i < currentMediaIndex ? '100%'
-                : i === currentMediaIndex ? `${progress}%`
-                : '0%',
-              transition: paused ? 'none' : undefined,
-            }}
-          />
-        </div>
-      ))}
+            key={i}
+            className={`h-[3px] rounded-full overflow-hidden ${track} ${current && showPaused ? 'w-0 flex-none opacity-0' : 'flex-1'}`}
+          >
+            {i < currentMediaIndex && (
+              <div data-testid="progress-fill" data-fill="full" className={`h-full w-full ${fill}`} />
+            )}
+            {current && (isVideo ? (
+              <div
+                data-testid="progress-fill"
+                data-fill="clip"
+                className={`h-full w-full origin-left ${fill}`}
+                style={{ transform: `scaleX(${clipShare})` }}
+              />
+            ) : (
+              // Keyed on the slide, so every slide starts its clock from nothing.
+              <div
+                key={slideKey}
+                data-testid="progress-fill"
+                data-fill="clock"
+                className={`h-full w-full origin-left ${fill}`}
+                style={{
+                  animation: `kaydo-story-fill ${PHOTO_MS}ms linear forwards`,
+                  animationPlayState: clockRunning ? 'running' : 'paused',
+                }}
+                onAnimationEnd={handleSlideEnded}
+              />
+            ))}
+          </div>,
+          current && showPaused && (
+            <span
+              key="paused"
+              data-testid="story-paused"
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow ${pill}`}
+            >
+              <Pause className="w-3 h-3 fill-current" />
+              {t('moment.paused')}
+            </span>
+          ),
+        ]
+      })}
     </div>
   )
 
@@ -428,23 +512,26 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
           key={slideKey}
           ref={attachClip}
           src={currentItem.url}
-          autoPlay
-          muted
+          muted={clipMuted}
           playsInline
           className={`${clipClassName} z-10 transition-opacity duration-200 ease-out motion-reduce:transition-none`}
           style={{ opacity: videoShown ? 1 : 0 }}
-          onLoadedData={() => setVideoReady(true)}
+          onLoadedData={(e) => {
+            setVideoReady(true)
+            playClip(e.currentTarget)
+          }}
           onTimeUpdate={handleVideoTimeUpdate}
-          onEnded={handleVideoEnded}
+          onEnded={handleSlideEnded}
         />,
       )
     }
     return (
       <CrossfadeImage
-        src={isVideo ? '' : currentUrl}
+        src={isVideo ? currentPoster : currentUrl}
         thumbSrc={isVideo ? '' : currentThumb}
         tinyPreview={isVideo ? '' : currentTiny}
-        hold={isVideo && !videoShown}
+        focus={isVideo ? undefined : currentItem?.focus}
+        hold={isVideo && !videoShown && !currentPoster}
         alt={moment.caption}
         className={className}
         onSettled={setSettledUrl}
@@ -472,7 +559,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 px-4 pt-10 pb-2 z-20">
-          {progressBarMobile}
+          {renderProgressBar('bg-white/35', 'bg-white', 'bg-warm-white text-bark')}
 
           {/* User row */}
           <div className="flex items-center justify-between mt-3">
@@ -490,6 +577,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {renderSoundButton('text-white/80 hover:text-white', 'w-6 h-6')}
               {isAdmin && (
                 <div className="relative">
                   <button
@@ -522,7 +610,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
                 </div>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); onClose() }}
+                onClick={(e) => { e.stopPropagation(); close() }}
                 onPointerDown={(e) => e.stopPropagation()}
                 className="text-white/80 hover:text-white"
                 aria-label="Close"
@@ -596,7 +684,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
   return (
     <div className="flex fixed inset-0 z-50 items-center justify-center">
       {/* Dark backdrop */}
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70" onClick={close} />
 
       {/* Left arrow */}
       <button
@@ -612,7 +700,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
       <div className="relative z-10 w-[420px] bg-warm-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Progress bar */}
         <div className="px-4 pt-4">
-          {progressBarDesktop}
+          {renderProgressBar('bg-bark/20', 'bg-bark', 'bg-bark text-warm-white')}
         </div>
 
         {/* User info row */}
@@ -627,6 +715,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {renderSoundButton('text-bark-muted hover:text-bark p-1', 'w-5 h-5')}
             {isAdmin && (
               <div className="relative">
                 <button
@@ -655,7 +744,7 @@ export default function MomentViewer({ moments, initialIndex, onClose, isAdmin, 
               </div>
             )}
             <button
-              onClick={onClose}
+              onClick={close}
               className="text-bark-muted hover:text-bark p-1"
               aria-label="Close"
             >

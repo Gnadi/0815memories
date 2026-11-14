@@ -4,8 +4,13 @@ import VoiceMemoPlayer from './VoiceMemoPlayer'
 import MemoryVideoPlayer from './MemoryVideoPlayer'
 import RichContent from './RichContent'
 import { isRichDoc } from '../../utils/richText'
+import { hasUnreadableFields } from '../../utils/encryption'
+import UnreadableText from '../UnreadableText'
 
 export default function MemoryBody({ memory }) {
+  // The plain-text mirror is the fallback for the rich document, so the body is
+  // only lost when the mirror is too.
+  const bodyUnreadable = !isRichDoc(memory.contentRich) && hasUnreadableFields(memory, ['content'])
   return (
     <article className="max-w-2xl mx-auto px-4 pt-10 pb-16">
       {/* Badges */}
@@ -28,6 +33,7 @@ export default function MemoryBody({ memory }) {
       <h1 className="text-4xl lg:text-5xl font-bold text-bark font-serif leading-tight mb-6">
         {memory.title}
       </h1>
+      {hasUnreadableFields(memory, ['title']) && <UnreadableText className="-mt-4 mb-6" />}
 
       {/* Quote */}
       {memory.quote && (
@@ -42,6 +48,8 @@ export default function MemoryBody({ memory }) {
           have no such field at all. Both fall back to the plain-text mirror. */}
       {isRichDoc(memory.contentRich) ? (
         <RichContent doc={memory.contentRich} />
+      ) : bodyUnreadable ? (
+        <UnreadableText className="text-lg" />
       ) : (
         memory.content && (
           <div className="text-bark-light text-lg leading-relaxed space-y-4">

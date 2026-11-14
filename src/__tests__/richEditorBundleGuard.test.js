@@ -24,10 +24,15 @@ const READ_PATH = [
   'src/components/memory/RichContent.jsx',
   'src/components/memory/VoiceMemoPlayer.jsx',
   'src/utils/richText.js',
-  'src/utils/nasExport.js',
+  'src/services/nasExport.js',
   'src/hooks/useMemories.js',
   'src/pages/MemoryDetailPage.jsx',
   'src/pages/HomePage.jsx',
+  'src/utils/markdown.js',
+  'src/components/recipes/RecipeInstructions.jsx',
+  'src/components/recipes/RecipeInstructionsField.jsx',
+  'src/pages/RecipeVersionDetailPage.jsx',
+  'src/pages/CreateRecipePage.jsx',
 ]
 
 describe('rich editor bundle boundary', () => {

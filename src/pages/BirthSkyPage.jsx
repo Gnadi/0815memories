@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, FileDown, Send, Loader2, Check, Lock } from 'lucide-react'
-import { Timestamp, deleteField } from 'firebase/firestore'
+import { Timestamp } from '../config/firestore'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useMemoryWriter } from '../hooks/useMemories'
@@ -88,14 +88,21 @@ export default function BirthSkyPage() {
     }
   }, [kid, form])
 
-  const dateStr = birthDateString(kid?.birthdate)
+  // A string, as the React Compiler can see: from an unknown function it would
+  // take the result for an object a later call might change, and give up the
+  // memoization of the sky and poster below.
+  const birthDay = birthDateString(kid?.birthdate)
+  const dateStr = birthDay ? String(birthDay) : null
 
+  // Only place and time move the stars; the sky is not recomputed while the
+  // title or dedication is typed.
+  const place = form?.birthPlace
+  const birthTime = form?.birthTime
   const sky = useMemo(() => {
-    if (!catalog || !dateStr || !form?.birthPlace) return null
-    const place = form.birthPlace
-    const date = zonedTimeToUtc(dateStr, form.birthTime || DEFAULT_NIGHT_TIME, place.tz)
+    if (!catalog || !dateStr || !place) return null
+    const date = zonedTimeToUtc(dateStr, birthTime || DEFAULT_NIGHT_TIME, place.tz)
     return computeSky({ date, lat: place.lat, lon: place.lon, ...catalog })
-  }, [catalog, dateStr, form?.birthPlace, form?.birthTime])
+  }, [catalog, dateStr, place, birthTime])
 
   const posterOptions = useMemo(() => {
     if (!form || !dateStr) return null
@@ -142,8 +149,9 @@ export default function BirthSkyPage() {
     setSaveState('saving')
     try {
       await updateKid(kid.id, {
-        birthTime: form.birthTime || deleteField(),
-        birthPlace: form.birthPlace || deleteField(),
+        // null clears what is no longer known (services/kids.js).
+        birthTime: form.birthTime || null,
+        birthPlace: form.birthPlace || null,
         skyStyle: form.skyStyle,
       })
       setSaveState('saved')

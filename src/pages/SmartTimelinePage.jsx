@@ -249,7 +249,7 @@ export default function SmartTimelinePage() {
 
         {/* Season Selector */}
         <div className={`flex flex-col gap-2 pb-3 mb-5 transition-opacity ${showOnThisDay ? 'opacity-30 pointer-events-none' : ''}`}>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedSeason(null)}
               className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all"
@@ -280,7 +280,7 @@ export default function SmartTimelinePage() {
               )
             })}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {SEASONS.slice(2).map(({ name, icon: Icon }) => {
               const active = selectedSeason === name
               return (

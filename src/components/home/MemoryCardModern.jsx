@@ -6,6 +6,7 @@ import { formatDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedPhotoFrame from '../media/EncryptedPhotoFrame'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { rememberFeedMemory } from '../../utils/feedPosition'
 
 export default function MemoryCardModern({ memory, onEdit, onDelete }) {
   const { t } = useTranslation('home')
@@ -54,7 +55,11 @@ export default function MemoryCardModern({ memory, onEdit, onDelete }) {
   return (
     <div
       className="bg-warm-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => navigate(`/memory/${memory.id}`)}
+      data-memory-id={memory.id}
+      onClick={() => {
+        rememberFeedMemory(memory.id)
+        navigate(`/memory/${memory.id}`)
+      }}
     >
       {/* Image slider */}
       {allImages.length > 0 ? (

@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
-import { generateSlug, isSlugAvailable } from '../../utils/familySlug'
+import { generateSlug } from '../../utils/familySlug'
+import { getFamily, isSlugAvailable, updateFamily } from '../../services/family'
 import UploadWidget from './UploadWidget'
 import NasExportButton from './NasExportButton'
 import OptimizePhotosPanel from './OptimizePhotosPanel'
-import SecureCapsulesPanel from './SecureCapsulesPanel'
+import MediaIndexPanel from './MediaIndexPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
-import LanguageSwitcher from '../LanguageSwitcher'
+import DeleteFamilyPanel from './DeleteFamilyPanel'
 
 export default function SettingsPanel() {
-  const { familyId } = useAuth()
+  const { familyId, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const navigate = useNavigate()
   const [newPassword, setNewPassword] = useState('')
@@ -38,9 +38,8 @@ export default function SettingsPanel() {
   useEffect(() => {
     if (!familyId || !db) return
     async function loadFamily() {
-      const familyDoc = await getDoc(doc(db, 'families', familyId))
-      if (familyDoc.exists()) {
-        const data = familyDoc.data()
+      const data = await getFamily(familyId)
+      if (data) {
         setFamilyName(data.familyName || '')
         setFamilySlug(data.familySlug || '')
         setLoginHeaderImage(data.loginHeaderImage || '')
@@ -62,6 +61,12 @@ export default function SettingsPanel() {
     }
     if (!familyId) {
       setMessage(t('password.noFamily'))
+      return
+    }
+    // The hash is the setSharedPassword function's to write, and there are no
+    // viewers to let in.
+    if (isDemo) {
+      setMessage(t('demo:unavailable'))
       return
     }
 
@@ -111,11 +116,7 @@ export default function SettingsPanel() {
         return
       }
 
-      await setDoc(
-        doc(db, 'families', familyId),
-        { familyName, familySlug: newSlug },
-        { merge: true }
-      )
+      await updateFamily(familyId, { familyName, familySlug: newSlug })
       setFamilySlug(newSlug)
       setMessage(t('familyName.updated'))
       setTimeout(() => setMessage(''), 3000)
@@ -152,11 +153,7 @@ export default function SettingsPanel() {
     const previous = memoryCardStyle
     setMemoryCardStyle(style)
     try {
-      await setDoc(
-        doc(db, 'families', familyId),
-        { memoryCardStyle: style },
-        { merge: true }
-      )
+      await updateFamily(familyId, { memoryCardStyle: style })
       const messages = {
         classic: t('cardStyle.switchedClassic'),
         polaroid: t('cardStyle.switchedPolaroid'),
@@ -175,11 +172,7 @@ export default function SettingsPanel() {
   const handleLoginImageUpload = async (url, publicId) => {
     if (!familyId) return
     try {
-      await setDoc(
-        doc(db, 'families', familyId),
-        { loginHeaderImage: url, loginHeaderImagePublicId: publicId },
-        { merge: true }
-      )
+      await updateFamily(familyId, { loginHeaderImage: url, loginHeaderImagePublicId: publicId })
       setLoginHeaderImage(url)
       setMessage(url ? t('loginImage.updated') : t('loginImage.removed'))
       setTimeout(() => setMessage(''), 3000)
@@ -200,11 +193,6 @@ export default function SettingsPanel() {
           {message}
         </p>
       )}
-
-      {/* Language */}
-      <div className="mb-6">
-        <LanguageSwitcher variant="settings" />
-      </div>
 
       {/* Login page header image */}
       <div className="mb-6">
@@ -395,10 +383,12 @@ export default function SettingsPanel() {
       {/* One-off thumbnail migration for photos predating thumbnails */}
       <OptimizePhotosPanel />
 
-      {/* One-off encryption repair for capsules sealed while the Black Box's
-          field list named a field the create page never wrote. Renders nothing
-          for families with no affected capsules. */}
-      <SecureCapsulesPanel />
+      {/* Notes on older posts which stored files they use, so files nobody
+          needs can be told apart (docs/plan-media-lifecycle.md, phase 5). */}
+      <MediaIndexPanel />
+
+      {/* Last, and below the backup: what it deletes cannot be brought back. */}
+      <DeleteFamilyPanel />
     </div>
   )
 }

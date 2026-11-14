@@ -8,6 +8,10 @@
       "body": "Füge Omas erstes Rezept hinzu und beginne, den kulinarischen Stammbaum deiner Familie aufzubauen.",
       "cta": "Füge dein erstes Rezept hinzu"
     },
+    "emptyViewer": {
+      "heading": "Noch keine Rezepte freigegeben",
+      "body": "Sobald ein Admin ein Familienrezept freigibt, findest du es hier — mit allen seinen Versionen."
+    },
     "deleteConfirm": "Dieses Rezept und alle seine Forks dauerhaft löschen? Das kann nicht rückgängig gemacht werden."
   },
   "card": {
@@ -28,7 +32,12 @@
     "forkAttribution": "— {{author}}, {{year}}",
     "legacy_one": "Ein lebendiges Familienerbe · {{count}} Generation gemeinsamer Geschichte",
     "legacy_other": "Ein lebendiges Familienerbe · {{count}} Generationen gemeinsamer Geschichte",
-    "forkRecipe": "Dieses Rezept forken"
+    "forkRecipe": "Dieses Rezept forken",
+    "share": {
+      "label": "Für Viewer sichtbar",
+      "hint": "Viewer sehen dieses Rezept mit allen Versionen, ändern können sie nichts. Neue Forks sind ebenfalls sichtbar.",
+      "error": "Die Freigabe konnte nicht gespeichert werden. Bitte versuche es erneut."
+    }
   },
   "version": {
     "notFound": "Rezeptversion nicht gefunden.",
@@ -43,6 +52,7 @@
     "forkReasonLabel": "Grund für den Fork",
     "forkAttribution": "— {{author}}, {{year}}",
     "forkVersion": "Diese Version forken",
+    "edit": "Bearbeiten",
     "status": {
       "removed": "Entfernt",
       "modified": "Geändert"
@@ -55,6 +65,7 @@
     "original": "Original",
     "authorFork": "{{author}}s Fork",
     "fork": "Fork",
+    "forkedFrom": "Abgeleitet von {{name}}",
     "rowTitle": "{{year}}: {{label}}",
     "viewDetails": "Details ansehen →"
   },
@@ -101,7 +112,6 @@
     "newRecipe": "Neues Rezept",
     "forkOf": "Fork von \"{{title}}\"",
     "forkTitle": "Fork: \"{{title}}\"",
-    "forkLoadError": "Rezept nicht gefunden.",
     "forkOriginalNotFound": "Originalrezept nicht gefunden.",
     "forkLoadFailed": "Rezept konnte nicht geladen werden. Bitte geh zurück und versuche es erneut.",
     "forkingFrom": "Fork von:",
@@ -117,6 +127,20 @@
     "descriptionPlaceholder": "Eine kurze Beschreibung des Gerichts und seiner Geschichte ...",
     "instructionsLabel": "Zubereitung",
     "instructionsPlaceholder": "Schritt-für-Schritt-Anleitung ...",
+    "instructionsFormat": {
+      "label": "Wie die Zubereitung geschrieben wird",
+      "rich": "Editor",
+      "richHint": "Mit Knöpfen formatieren: fett, Überschriften, Listen",
+      "markdown": "Markdown",
+      "markdownHint": "Für Profis: mit Markdown-Syntax formatieren"
+    },
+    "markdown": {
+      "write": "Schreiben",
+      "preview": "Vorschau",
+      "previewEmpty": "Noch nichts zum Anzeigen.",
+      "placeholder": "## Teig\n1. Mehl und Salz mischen\n2. **10 Minuten** kneten\n\n## Füllung\n- Äpfel schälen\n- _optional:_ Rosinen dazu",
+      "help": "Markdown: ## Überschrift, **fett**, _kursiv_, - Liste, 1. Schritt, > Hinweis, [Link](https://…)"
+    },
     "chefTipLabel": "Geheimtipp des Küchenchefs",
     "optional": "(optional)",
     "chefTipPlaceholder": "z. B. Der Trick ist, nur die Hälfte der Linsen zu zerdrücken ...",
@@ -128,6 +152,15 @@
     "ingredientsEmpty": "Noch keine Zutaten — füge unten deine erste hinzu.",
     "ingredientPlaceholder": "z. B. 2 Tassen gemahlene Linsen",
     "addIngredient": "Zutat hinzufügen",
+    "paste": {
+      "open": "Liste einfügen",
+      "label": "Liste oder Tabelle einfügen",
+      "placeholder": "200 g Mehl\n2 Eier\n1 Prise Salz",
+      "help": "Eine Zutat pro Zeile. Listen und Tabellen aus einer Website, einer Tabellenkalkulation oder einer Notiz gehen auch; Aufzählungszeichen, Überschriften und Kopfzeilen fallen weg.",
+      "previewLabel": "Zutaten, die hinzugefügt werden",
+      "add_one": "{{count}} Zutat hinzufügen",
+      "add_other": "{{count}} Zutaten hinzufügen"
+    },
     "status": {
       "active": "Aktiv",
       "removed": "Entfernt",
@@ -149,6 +182,8 @@
     },
     "saving": "Speichert …",
     "saveFork": "Fork speichern",
-    "addToVault": "Zur Schatzkammer hinzufügen"
+    "addToVault": "Zur Schatzkammer hinzufügen",
+    "editTitle": "{{title}} bearbeiten",
+    "saveChanges": "Änderungen speichern"
   }
 }

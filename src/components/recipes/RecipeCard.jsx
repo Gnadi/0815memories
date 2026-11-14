@@ -33,7 +33,8 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
           <span className="text-xs font-semibold bg-kaydo/10 text-kaydo rounded-full px-2.5 py-0.5">
             {recipe.year}
           </span>
-          <div className="relative">
+          {/* Its only item is delete, so a card without onDelete has no menu. */}
+          {onDelete && <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -58,7 +59,7 @@ export default function RecipeCard({ recipe, onClick, onDelete }) {
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Title */}

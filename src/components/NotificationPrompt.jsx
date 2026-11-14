@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bell, X } from 'lucide-react'
-import { requestAndSaveFCMToken, isPushSupported } from '../utils/notifications'
+import { requestAndSaveFCMToken, isPushSupported, isPushOptedOut } from '../utils/notifications'
 import { devError } from '../utils/devLog'
 
 const DISMISSED_KEY = 'kaydo_notif_dismissed'
@@ -22,13 +22,14 @@ export default function NotificationPrompt({ familyId }) {
   useEffect(() => {
     // Show only if: this browser can actually deliver push (on iOS that means
     // an installed PWA, see isPushSupported), permission not yet decided, and
-    // not dismissed.
+    // neither dismissed nor switched off in the settings.
     if (
       !familyId ||
       !isPushSupported() ||
       !import.meta.env.VITE_FIREBASE_VAPID_KEY ||
       Notification.permission !== 'default' ||
-      isDismissed()
+      isDismissed() ||
+      isPushOptedOut()
     ) return
 
     // Small delay so it doesn't pop up immediately on page load

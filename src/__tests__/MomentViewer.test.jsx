@@ -9,7 +9,7 @@
    CrossfadeImage), and one frame of the previous slide's progress bar and info
    card before they reset, because the reset ran in an effect after paint. */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, cleanup, act, fireEvent } from '@testing-library/react'
+import { render, cleanup, act, fireEvent, waitFor } from '@testing-library/react'
 
 const h = vi.hoisted(() => ({ stage: null, commits: [] }))
 
@@ -28,7 +28,7 @@ vi.mock('../components/media/CrossfadeImage', async () => {
       useLayoutEffect(() => {
         h.commits.push({
           src: props.src,
-          fills: Array.from(document.querySelectorAll('[data-testid="progress-fill"]')).map((el) => el.style.width),
+          fills: Array.from(document.querySelectorAll('[data-testid="progress-fill"]')),
           infoCard: !!document.querySelector('[aria-label="Hide info"]'),
         })
       }, [props.src])
@@ -47,11 +47,12 @@ vi.mock('../components/media/CrossfadeImage', async () => {
   }
 })
 vi.mock('../components/media/EncryptedVideo', () => ({
-  default: ({ src, onLoadedData, style, ref, className }) => (
+  default: ({ src, onLoadedData, style, ref, className, muted }) => (
     <video
       ref={ref}
       data-kind="video"
       data-src={src}
+      muted={muted}
       className={className}
       onLoadedData={onLoadedData}
       style={style}
@@ -79,6 +80,7 @@ function moment(id, count = 1, { thumbs = true, tiny = true } = {}) {
 
 const stages = () => Array.from(document.querySelectorAll('[data-kind="stage"]'))
 const onScreen = () => h.stage.src
+const fills = () => Array.from(document.querySelectorAll('[data-testid="progress-fill"]'))
 const settle = () => act(() => h.stage.onSettled(h.stage.src))
 const next = () => act(() => { fireEvent.keyDown(window, { key: 'ArrowRight' }) })
 const noop = () => {}
@@ -202,6 +204,72 @@ describe('pausing a clip', () => {
   })
 })
 
+// Clips used to play muted, always, with no way to hear them.
+describe('the sound of a clip', () => {
+  const withVideo = () => ({ ...moment('a'), videos: [{ url: 'https://cdn/a-clip.enc' }] })
+  const clip = () => document.querySelector('[data-kind="video"]')
+  const soundButton = () => document.querySelector('[data-testid="moment-sound"]')
+
+  it('plays a clip with its sound once it has a frame', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    fireEvent.loadedData(clip())
+
+    expect(clip().muted).toBe(false)
+    expect(HTMLMediaElement.prototype.play.mock.contexts).toContain(clip())
+    expect(soundButton().getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('shows the switch on clips only', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    expect(soundButton()).toBeNull()
+    next()
+    expect(soundButton()).not.toBeNull()
+  })
+
+  it('plays muted rather than not at all when the browser refuses the sound', async () => {
+    const refusal = Object.assign(new Error('no gesture'), { name: 'NotAllowedError' })
+    HTMLMediaElement.prototype.play = vi.fn(function play() {
+      return this.muted ? Promise.resolve() : Promise.reject(refusal)
+    })
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    await act(async () => { fireEvent.loadedData(clip()) })
+
+    expect(clip().muted).toBe(true)
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+    expect(soundButton().getAttribute('aria-pressed')).toBe('false')
+
+    // The tap on the switch is the gesture the browser waited for.
+    HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve())
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(false)
+    expect(soundButton().getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('mutes and unmutes the clip from the switch', () => {
+    render(<MomentViewer moments={[withVideo()]} initialIndex={0} onClose={noop} />)
+    next()
+    fireEvent.loadedData(clip())
+
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(true)
+    act(() => { fireEvent.click(soundButton()) })
+    expect(clip().muted).toBe(false)
+  })
+
+  it('opens a clip on its poster while the clip is decrypted', () => {
+    const withPoster = {
+      ...moment('a'),
+      videos: [{ url: 'https://cdn/a-clip.enc', posterUrl: 'https://cdn/a-poster.enc' }],
+    }
+    render(<MomentViewer moments={[withPoster]} initialIndex={0} onClose={noop} />)
+    next()
+    expect(stages()[0].getAttribute('data-src')).toBe('https://cdn/a-poster.enc')
+    expect(stages()[0].getAttribute('data-hold')).toBe('false')
+  })
+})
+
 describe('leaving a clip', () => {
   const withVideo = () => ({ ...moment('a'), videos: [{ url: 'https://cdn/a-clip.enc' }] })
   const clips = () => Array.from(document.querySelectorAll('[data-kind="video"]'))
@@ -250,14 +318,15 @@ describe('leaving a clip', () => {
 
 describe('moving between slides', () => {
   it('shows the new slide with its progress bar already reset — no frame of the old one', () => {
-    vi.useFakeTimers()
     render(<MomentViewer moments={[moment('a', 2), moment('b')]} initialIndex={0} onClose={noop} />)
     settle()
-    act(() => vi.advanceTimersByTime(2000))
+    const [firstClock] = fills()
 
     next()
-    const commit = h.commits.find((c) => c.src === 'https://cdn/a-1.enc')
-    expect(commit.fills).toEqual(['100%', '0%'])
+    const { fills: shown } = h.commits.find((c) => c.src === 'https://cdn/a-1.enc')
+    expect(shown.map((el) => el.dataset.fill)).toEqual(['full', 'clock'])
+    // A new element, so its animation starts from nothing.
+    expect(shown[1]).not.toBe(firstClock)
   })
 
   it('brings a hidden info card back in the same commit as the new moment', () => {
@@ -271,18 +340,49 @@ describe('moving between slides', () => {
   })
 
   it('starts the clock when the photo is on screen, not when the slide opens', () => {
-    vi.useFakeTimers()
     render(<MomentViewer moments={[moment('a', 2)]} initialIndex={0} onClose={noop} />)
 
     // A slow download: the story must not move on without ever showing it.
-    act(() => vi.advanceTimersByTime(6000))
-    expect(onScreen()).toBe('https://cdn/a-0.enc')
+    expect(fills()[0].style.animationPlayState).toBe('paused')
 
     settle()
-    act(() => vi.advanceTimersByTime(4900))
-    expect(onScreen()).toBe('https://cdn/a-0.enc')
-    act(() => vi.advanceTimersByTime(200))
+    expect(fills()[0].style.animation).toContain('5000ms')
+    expect(fills()[0].style.animationPlayState).toBe('running')
+    // jsdom has no AnimationEvent, so React listens for the prefixed name there.
+    act(() => {
+      fills()[0].dispatchEvent(new Event('webkitAnimationEnd', { bubbles: true }))
+    })
     expect(onScreen()).toBe('https://cdn/a-1.enc')
+  })
+
+  it('holds the clock while the story is held', () => {
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={noop} />)
+    settle()
+    fireEvent.pointerDown(stages()[0])
+    expect(fills()[0].style.animationPlayState).toBe('paused')
+    fireEvent.pointerUp(stages()[0])
+    expect(fills()[0].style.animationPlayState).toBe('running')
+  })
+
+  it('says so once the press is a hold, not on every tap', () => {
+    vi.useFakeTimers()
+    render(<MomentViewer moments={[moment('a', 2)]} initialIndex={0} onClose={noop} />)
+    settle()
+    const paused = () => document.querySelector('[data-testid="story-paused"]')
+
+    fireEvent.pointerDown(stages()[0])
+    act(() => vi.advanceTimersByTime(100))
+    expect(paused()).toBeNull()
+    act(() => vi.advanceTimersByTime(200))
+    expect(paused().textContent).toBe('Paused')
+    // The clock folds away beside the pill but is the same element, paused.
+    const clock = fills()[0]
+    expect(clock.style.animationPlayState).toBe('paused')
+
+    fireEvent.pointerUp(stages()[0])
+    expect(paused()).toBeNull()
+    expect(fills()[0]).toBe(clock)
+    expect(clock.style.animationPlayState).toBe('running')
   })
 })
 
@@ -337,5 +437,50 @@ describe('what the story viewer warms next', () => {
       auth.encryptionKey,
       'video/*',
     )
+  })
+})
+
+// On a phone the back gesture is how a story is put away. The viewer is state,
+// not a route, so back used to skip it and leave the app for whatever was open
+// before — the viewer has an entry in the history of its own now.
+describe('going back', () => {
+  beforeEach(() => {
+    window.history.replaceState({ usr: null, key: 'home', idx: 0 }, '')
+  })
+
+  it('closes the viewer instead of leaving the page', async () => {
+    const onClose = vi.fn()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+    // The router's own state stays as it was, so it sees no navigation.
+    expect(window.history.state).toMatchObject({ key: 'home', idx: 0, kaydoOverlay: true })
+
+    act(() => { window.history.back() })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
+  })
+
+  it('takes its entry back out when closed from inside, so the next back leaves nothing behind', async () => {
+    const onClose = vi.fn()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+    expect(window.history.state.kaydoOverlay).toBe(true)
+
+    act(() => { fireEvent.keyDown(window, { key: 'Escape' }) })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
+  })
+
+  it('opens with one entry when mounted twice, as StrictMode does', async () => {
+    const onClose = vi.fn()
+    const { unmount } = render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={noop} />)
+    unmount()
+    render(<MomentViewer moments={[moment('a')]} initialIndex={0} onClose={onClose} />)
+
+    // One back is enough to close it and land on the page again.
+    act(() => { window.history.back() })
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(window.history.state).toEqual({ usr: null, key: 'home', idx: 0 })
   })
 })

@@ -1,0 +1,33 @@
+# Code owners review changes to the parts of Kaydo where a mistake leaks
+# families' data or hands out access. With the "Require review from Code
+# Owners" rule on main, a pull request touching these paths needs one of them
+# to approve it.
+#
+# Everything else has no owner on purpose: any maintainer can review it.
+#
+# One owner for now. Add the team here (e.g. @kaydo/security) once there is
+# one — and note that a lone owner cannot approve their own pull requests, so
+# that rule only makes sense with a second person in each line.
+
+# Who may read and write what
+/firestore.rules                @Gnadi
+/firestore.indexes.json         @Gnadi
+
+# Viewer login, admin claims, the public mirror, push
+/functions/                     @Gnadi
+
+# Upload signing
+/api/                           @Gnadi
+
+# Client-side encryption
+/src/utils/encryption.js        @Gnadi
+/src/utils/encryptedUpload.js   @Gnadi
+/src/context/AuthContext.jsx    @Gnadi
+
+# CI, deploys, and who owns what
+/.github/                       @Gnadi
+/firebase.json                  @Gnadi
+/vercel.json                    @Gnadi
+
+# Security policy
+/SECURITY.md                    @Gnadi

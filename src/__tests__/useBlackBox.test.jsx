@@ -23,6 +23,7 @@ vi.mock('firebase/firestore', () => ({
   // A collection ref with no id argument stands in for the auto-id ref addBox
   // takes to name both halves of the capsule.
   collection: vi.fn((_db, name) => ({ name })),
+  deleteField: vi.fn(() => ({ kind: 'deleteField' })),
   doc: vi.fn((_dbOrRef, name, id) =>
     typeof name === 'string' ? { name, id } : { name: _dbOrRef?.name, id: 'generated' },
   ),
@@ -181,23 +182,17 @@ describe('useBlackBox fetchContent', () => {
     expect(content.message).toBe('Hello Emma')
   })
 
-  it('falls back to the inline fields of a capsule that predates the split', async () => {
+  it('returns null for a capsule with no letter, whatever its metadata carries', async () => {
     const { key } = await generateEncryptionKey()
     const { result } = renderHook(() => useBlackBox('fam1', key))
     getDoc.mockResolvedValue({ exists: () => false })
 
     let content
     await act(async () => {
-      // Already decrypted by the listener, as the real hook would hand it over.
-      content = await result.current.fetchContent({
-        id: 'old',
-        message: 'written before the split',
-        photos: ['u1'],
-      })
+      content = await result.current.fetchContent({ id: 'gone', message: 'not a letter' })
     })
 
-    expect(content.message).toBe('written before the split')
-    expect(content.photos).toEqual(['u1'])
+    expect(content).toBeNull()
   })
 
   it('returns null when the rules withhold a sealed letter', async () => {

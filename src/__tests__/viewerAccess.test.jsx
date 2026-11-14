@@ -2,14 +2,15 @@
    Black Box — that firestore.rules gates on isFamilyAdmin. Clicking any of them
    mounted a listener the rules deny; /scrapbook did not even redirect, so it just
    sat there empty. Settings was the same defect one page further along: it
-   bounced viewers itself, while the sidebar kept advertising it.
+   bounced viewers itself, while the sidebar kept advertising it. It is now
+   open to viewers for their own device's settings.
 
    The `adminOnly` mechanism already existed and was already applied to three
    items. These tests pin it to what the rules actually say, so the two cannot
    drift apart again. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
 
 const auth = { isAdmin: true, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1' }
@@ -27,7 +28,7 @@ function renderSidebar() {
 beforeEach(() => {
   cleanup()
   Object.assign(auth, {
-    isAdmin: true, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1',
+    isAdmin: true, isViewer: false, isAuthenticated: true, loading: false, keyLoading: false, familyId: 'fam1',
   })
 })
 
@@ -37,10 +38,12 @@ describe('the sidebar a viewer is shown', () => {
   const label = (key) => key.split('.').reduce((o, k) => o[k], en)
 
   const ADMIN_ONLY = [
-    'nav.scrapbooks', 'nav.collages', 'nav.highlights', 'nav.recipes',
-    'nav.kidJournals', 'nav.blackBox', 'nav.ourYear', 'nav.settings',
+    'nav.scrapbooks', 'nav.collages', 'nav.highlights',
+    'nav.kidJournals', 'nav.blackBox', 'nav.ourYear',
   ]
-  const EVERYONE = ['nav.home', 'nav.timeline']
+  // Recipes: a viewer reads the ones an admin has shared (firestore.rules).
+  // Settings: a viewer's own language, text size and notifications.
+  const EVERYONE = ['nav.home', 'nav.timeline', 'nav.recipes', 'nav.settings']
 
   it('offers an admin everything', () => {
     auth.isAdmin = true
@@ -61,7 +64,7 @@ describe('the sidebar a viewer is shown', () => {
   it('still offers a viewer the pages backed by readable collections', () => {
     auth.isAdmin = false
     renderSidebar()
-    // memories and moments are world-readable, so these two genuinely work.
+    // memories and moments are world-readable, so these genuinely work.
     for (const key of EVERYONE) {
       expect(screen.getByText(label(key))).toBeInTheDocument()
     }
@@ -137,7 +140,6 @@ describe('the route table agrees with the rules', () => {
   // prefixes backed by it.
   const ADMIN_COLLECTIONS = {
     scrapbooks: ['scrapbook'],
-    recipes: ['recipes'],
     journals: ['journal'],
     blackbox: ['blackbox'],
     collages: ['collages', 'collage/:id'],
@@ -158,9 +160,52 @@ describe('the route table agrees with the rules', () => {
     }
   })
 
-  it('leaves the pages a viewer can genuinely use ungated', () => {
-    for (const path of ['home', 'timeline', 'moments']) {
+  // A viewer reads the recipes an admin has shared and writes none, so the
+  // pages that read are open to them and the two that write are not.
+  it('opens the recipe pages to viewers exactly as far as the rules do', () => {
+    const block = rules.slice(rules.indexOf('match /recipes/'))
+    const readRule = block.slice(0, block.indexOf('allow create'))
+    expect(readRule).toMatch(/isFamilyViewer\(resource\.data\.familyId\) && resource\.data\.viewerVisible == true/)
+    const writeRules = block.slice(block.indexOf('allow create'), block.indexOf('\n    }\n'))
+    expect(writeRules).not.toContain('isFamilyViewer')
+
+    for (const path of ['recipes', 'recipes/:id', 'recipes/:rootId/version/:versionId']) {
       expect(app).toContain(`path: '${path}', element: protect(`)
     }
+    for (const path of ['recipes/new', 'recipes/:id/fork', 'recipes/:id/edit']) {
+      expect(app).toContain(`path: '${path}', element: protectAdmin(`)
+    }
+  })
+
+  it('leaves the pages a viewer can genuinely use ungated', () => {
+    for (const path of ['home', 'timeline', 'moments', 'settings']) {
+      expect(app).toContain(`path: '${path}', element: protect(`)
+    }
+  })
+})
+
+// An admin account that no family lists — a signup that stopped before the
+// email address was confirmed, or an admin another admin removed — finishes on
+// /signup instead of opening an app with no family behind it.
+describe('ProtectedRoute for an account without a family', () => {
+  const renderAt = () => render(
+    <MemoryRouter initialEntries={['/home']}>
+      <Routes>
+        <Route path="/home" element={<ProtectedRoute><div>the app</div></ProtectedRoute>} />
+        <Route path="/signup" element={<div>finish signing up</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  it('sends it to /signup', () => {
+    auth.familyId = null
+    renderAt()
+    expect(screen.getByText('finish signing up')).toBeInTheDocument()
+    expect(screen.queryByText('the app')).not.toBeInTheDocument()
+  })
+
+  it('lets a member of a family in', () => {
+    renderAt()
+    expect(screen.getByText('the app')).toBeInTheDocument()
   })
 })

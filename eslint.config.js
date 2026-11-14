@@ -42,6 +42,57 @@ export default defineConfig([
     },
   },
   {
+    // Firestore is reached through src/config/firestore.js, the one module the
+    // demo switches to its in-browser database. A direct import of the SDK
+    // would go around it, and the demo would break on that feature.
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/config/firestore.js', 'src/config/firebase.js', 'src/demo/**', 'src/__tests__/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'firebase/firestore',
+          message: 'Import from src/config/firestore.js, which demo mode switches to its in-browser database.',
+        }],
+      }],
+    },
+  },
+  {
+    // src/services/ reads and writes Firestore; hooks, pages and components
+    // ask it. Timestamp is a value that dates are converted with, not a query,
+    // so it stays importable everywhere.
+    //
+    // A service also says which fields of what it stores are encrypted, so the
+    // field helpers of utils/encryption.js stay there too. A field encrypted
+    // anywhere else can be written differently from how it is read, or not
+    // encrypted at all: the Black Box went out in plaintext that way, and the
+    // NAS export decrypted from its own, outdated list.
+    //
+    // This block replaces the one above for the files it covers, so it repeats
+    // its rule.
+    files: ['src/**/*.{js,jsx}'],
+    ignores: ['src/config/**', 'src/services/**', 'src/demo/**', 'src/__tests__/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'firebase/firestore',
+          message: 'Import from src/config/firestore.js, which demo mode switches to its in-browser database.',
+        }],
+        patterns: [{
+          regex: '(^|/)config/firestore(\\.js)?$',
+          allowImportNames: ['Timestamp'],
+          message: 'Read and write Firestore through src/services/ — see docs/architecture.md.',
+        }, {
+          regex: '(^|/)encryption(\\.js)?$',
+          importNames: [
+            'encryptFields', 'decryptFields', 'encryptJSON', 'decryptJSON', 'decryptJSONFields',
+            'encryptText', 'decryptText', 'decryptStringArray',
+          ],
+          message: "Encrypt and decrypt a document's fields in its service in src/services/, which says which of them are encrypted.",
+        }],
+      }],
+    },
+  },
+  {
     // The service worker runs in the ServiceWorkerGlobalScope, not the window —
     // so `self`, `clients`, `registration`, etc. are service-worker globals.
     files: ['src/sw.js'],

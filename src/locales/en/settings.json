@@ -2,6 +2,31 @@
   "page": {
     "title": "Settings"
   },
+  "personal": {
+    "title": "Your settings",
+    "description": "These apply to this device only."
+  },
+  "notifications": {
+    "label": "Notifications",
+    "description": "Get a notification when a new memory or moment is shared.",
+    "unsupported": "This browser can't show notifications. On an iPhone or iPad, add Kaydo to your home screen first.",
+    "blocked": "Notifications are blocked for Kaydo in this browser. Allow them in the browser's settings to turn them on here.",
+    "failed": "That didn't work. Please try again."
+  },
+  "install": {
+    "label": "Install the app",
+    "description": "Put Kaydo on your home screen. It opens like an app, without the browser around it.",
+    "button": "Install Kaydo",
+    "installed": "Kaydo is installed on this device.",
+    "ios": "In Safari, tap the share button and choose “Add to Home Screen”. On iPhone and iPad this is also what makes notifications possible.",
+    "manual": "Open your browser's menu and choose “Install app” or “Add to Home screen”."
+  },
+  "session": {
+    "label": "Stay logged in",
+    "on": "You stay logged in on this device, even after closing the browser.",
+    "off": "You will be logged out when you close the browser. Good for a device other people use too.",
+    "failed": "That didn't work. Please try again."
+  },
   "panel": {
     "title": "Admin Settings"
   },
@@ -160,15 +185,17 @@
     "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
     "error": "Something went wrong. You can safely try again."
   },
-  "secureCapsules": {
-    "label": "Secure your time capsules",
-    "description": "An earlier version stored Black Box capsules without encryption, and kept their contents on the same record as the label — so a sealed capsule could be read before its date. This encrypts them and moves each letter behind its seal. The capsules themselves are unchanged.",
-    "scanning": "Checking your capsules…",
-    "allDone": "Your capsules are encrypted.",
-    "remaining": "{{pending}} capsule(s) still saved without encryption.",
-    "start": "Encrypt them now",
+  "mediaIndex": {
+    "label": "Index your photos and videos",
+    "description": "Kaydo now keeps track of which stored files are still in use, so files nobody needs any more can be cleared away. Posts saved before that don't say which files they use yet. This goes through them once and notes it — nothing is downloaded, changed or deleted.",
+    "never": "Not done yet.",
+    "lastRun": "Last done on {{date}}.",
+    "start": "Index now",
     "stop": "Stop",
     "progress": "{{done}} of {{total}}",
+    "done": "Done: {{updated}} post(s) noted.",
+    "stopped": "Stopped after {{done}} of {{total}}. You can carry on any time.",
+    "partial": "{{failed}} post(s) could not be indexed. You can safely try again.",
     "resumeHint": "You can stop any time and pick up where you left off — nothing is lost.",
     "error": "Something went wrong. You can safely try again."
   },
@@ -203,5 +230,19 @@
     "previewAlt": "Preview",
     "clickToUpload": "Click to upload a photo",
     "uploadFailed": "Upload failed"
+  },
+  "deleteFamily": {
+    "label": "Delete family",
+    "description": "Deletes everything this family has stored: every memory, photo and video, the journals, the Vault, the recipes and all settings. Your account is deleted with it, unless you are an admin of another family. Other admins keep their accounts and lose access to this family. Nothing is deleted for {{days}} days, and until then you can take it back. After that it cannot be undone, so download a backup above first if you want to keep anything.",
+    "confirmLabel": "Type the family's name to confirm: {{name}}",
+    "submit": "Delete in {{days}} days",
+    "scheduledTitle": "This family will be deleted on {{date}}",
+    "scheduledOwner": "Everything it has stored will be gone for good. Until then you can take this back.",
+    "scheduledAdmin": "The family's owner asked for this. Everything the family has stored will be gone for good, so download a backup above if you want to keep anything. Only the owner can take it back.",
+    "cancel": "Keep the family",
+    "cancelled": "The family stays. Nothing was deleted.",
+    "failed": "That did not work. Please try again.",
+    "notOwner": "Only the family's owner can do this.",
+    "alreadyBegun": "The deletion has already begun and can no longer be stopped."
   }
 }

@@ -51,7 +51,8 @@
     "selectPhoto": "Dieses Foto auswählen",
     "pickHint": "Tippe ein Foto an, um es einzusetzen",
     "backToCollages": "Zurück zu Collagen",
-    "backToHighlights": "Zurück zu Highlight-Videos"
+    "backToHighlights": "Zurück zu Highlight-Videos",
+    "leaveUnsaved": "Deine letzten Änderungen konnten nicht gespeichert werden. Trotzdem verlassen und sie verwerfen?"
   },
   "borders": {
     "heading": "Rahmen",

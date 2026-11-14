@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { thumbsFor, thumbAt, needsThumbs, buildThumbs } from '../utils/mediaThumbs'
+import { thumbsFor, thumbAt, needsThumbs, buildThumbs, tinyPreviewsUpdate } from '../utils/mediaThumbs'
 
 describe('mediaThumbs', () => {
   it('returns the thumbs when they line up with images', () => {
@@ -55,5 +55,23 @@ describe('mediaThumbs', () => {
     const stored = { images: uploaded.map((i) => i.url), thumbs: buildThumbs(uploaded) }
     expect(thumbAt(stored, 0)).toBe('a-t.enc')
     expect(thumbAt(stored, 1)).toBe('')
+  })
+
+  it('writes fresh tiny previews when any image has one', () => {
+    const images = [{ url: 'a.enc' }, { url: 'b.enc', tinyPreview: 'tiny-b' }]
+    expect(tinyPreviewsUpdate(images, ['a.enc'])).toEqual({ thumbsTiny: ['', 'tiny-b'] })
+    expect(tinyPreviewsUpdate(images, null)).toEqual({ thumbsTiny: ['', 'tiny-b'] })
+  })
+
+  it('leaves stored tiny previews alone when an edit keeps the photos in order', () => {
+    const images = [{ url: 'a.enc' }, { url: 'b.enc' }]
+    expect(tinyPreviewsUpdate(images, ['a.enc', 'b.enc'])).toEqual({})
+    expect(tinyPreviewsUpdate(images, null)).toEqual({})
+  })
+
+  it('invalidates stored tiny previews when an edit reorders the photos', () => {
+    // Same length, so the stale array would still pass tinyPreviewsFor.
+    const images = [{ url: 'b.enc' }, { url: 'a.enc' }]
+    expect(tinyPreviewsUpdate(images, ['a.enc', 'b.enc'])).toEqual({ thumbsTiny: [] })
   })
 })

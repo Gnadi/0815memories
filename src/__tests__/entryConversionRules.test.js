@@ -9,13 +9,13 @@ import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
 import { doc, setDoc, collection, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
+import { CIPHERTEXT } from './fakeCiphertext'
 
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 
 const FAMILY = 'family-1'
 const ADMIN = 'uid-admin'
 const VIEWER = 'uid-viewer'
-const CIPHERTEXT = 'kJ8xQ2hZbGxvV29ybGRUaGlzSXNCYXNlNjQ='
 
 let testEnv
 
@@ -60,10 +60,10 @@ describe.skipIf(!EMULATOR)('Memory / moment conversion rules', () => {
       title: CIPHERTEXT,
       content: CIPHERTEXT,
       contentRich: CIPHERTEXT,
-      quote: '',
-      category: '',
-      location: '',
-      authorName: '',
+      quote: CIPHERTEXT,
+      category: CIPHERTEXT,
+      location: CIPHERTEXT,
+      authorName: CIPHERTEXT,
       featured: false,
       polaroidBorder: { style: 'classic' },
       images: ['a.enc'],

@@ -19,7 +19,10 @@
     "badge": "Neue Reise",
     "awaiting": "Warte auf Erinnerungen...",
     "placeholderTitle": "Sonntag im Weinberg",
-    "placeholderBody": "Endlich war die ganze Bande da! Teile deine erste Erinnerung, um loszulegen."
+    "placeholderBody": "Endlich war die ganze Bande da! Teile deine erste Erinnerung, um loszulegen.",
+    "goToSlide": "Seite {{n}} von {{total}}",
+    "previous": "Vorherige Seite",
+    "next": "Nächste Seite"
   },
   "timelineCta": {
     "eyebrow": "Entdecken",
@@ -39,6 +42,9 @@
     "deleteConfirm": "Diesen Moment löschen?",
     "noMedia": "Keine Medien",
     "author": "Familie",
+    "paused": "Pausiert",
+    "soundOn": "Ton einschalten",
+    "soundOff": "Ton ausschalten",
     "aria": {
       "moreOptions": "Weitere Optionen",
       "close": "Schließen",
@@ -52,5 +58,23 @@
     "back": "Zurück",
     "empty": "Noch keine Momente"
   },
-  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?"
+  "deleteMemoryConfirm": "Möchtest du diese Erinnerung wirklich löschen?",
+  "verifyEmail": {
+    "title": "Bitte bestätige deine E-Mail-Adresse",
+    "body": "Ein Passwort-Reset für dein Konto geht an {{email}}. Bestätige, dass diese Adresse dir gehört, damit nur du dein Passwort zurücksetzen kannst.",
+    "send": "Bestätigungsmail senden",
+    "resend": "Erneut senden",
+    "confirmed": "Ich habe bestätigt",
+    "sent": "An {{email}} gesendet. Öffne den Link in der E-Mail und tippe dann auf „Ich habe bestätigt“.",
+    "notYet": "Noch nicht bestätigt. Öffne den Link in der E-Mail und versuch es dann noch einmal.",
+    "tooManyRequests": "Zu viele E-Mails – bitte warte ein paar Minuten und versuch es erneut",
+    "failed": "Etwas ist schiefgelaufen. Bitte versuch es erneut."
+  },
+  "familyDeletion": {
+    "title": "Diese Familie wird am {{date}} gelöscht",
+    "bodyOwner": "Du hast das veranlasst. Bis dahin kannst du es in den Einstellungen zurücknehmen.",
+    "bodyAdmin": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist dann endgültig weg. Lade in den Einstellungen ein Backup herunter, wenn du etwas behalten willst.",
+    "bodyViewer": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist nach diesem Tag weg.",
+    "openSettings": "Einstellungen öffnen"
+  }
 }

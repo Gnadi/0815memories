@@ -1,0 +1,330 @@
+/**
+ * Deleting the files nothing uses — phase 4 of docs/plan-media-lifecycle.md.
+ *
+ * The ledger knows two kinds of file nobody needs: `pending` ones, signed but
+ * never held by a document (an editor closed without saving, a thumbnail whose
+ * write was discarded), and `detached` ones, whose last document let them go.
+ * Once they have been so for long enough, they are destroyed on Cloudinary and
+ * leave the ledger, and their size leaves the family's usage.
+ *
+ * Deleting a family's photo cannot be undone, so the rules here lean the other
+ * way at every step:
+ *
+ * - Only files signed into the ledger are touched. A file from before it is
+ *   never deleted here, whether or not a document names it.
+ * - Each file is checked again, in a transaction, right before it goes. One a
+ *   document picked up again since the query is kept.
+ * - The ledger is not believed on its own. Before a family's file goes, the
+ *   family's documents are read, and a file one of them names is kept
+ *   (holdersOfFamily).
+ * - The grace periods are long: a week for a pending file, because an editor
+ *   can stay open over a weekend before it saves; thirty days for a detached
+ *   one, time to notice a mistake.
+ * - It starts as a dry run that only reports what it would delete.
+ *
+ * Nothing here imports firebase-admin or firebase-functions: Firestore, the
+ * Cloudinary call and the clock come in as arguments, so the tests can stub
+ * them.
+ */
+import { MEDIA_ASSETS, MEDIA_USAGE } from './mediaSigning.js'
+import { MEDIA_COLLECTIONS, isOverCap, reconcileRef, refOfEntry, refsOf } from './mediaRefs.js'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export const PENDING_GRACE_DAYS = 7
+export const DETACHED_GRACE_DAYS = 30
+
+// Cloudinary's Admin API deletes at most 100 public ids per call.
+export const DESTROY_BATCH = 100
+
+// The kinds of file Cloudinary keeps apart. A public id can exist once under
+// each of them.
+export const RESOURCE_TYPES = ['raw', 'image', 'video']
+
+/**
+ * Destroy the same public ids under the other resource types as well.
+ *
+ * Cloudinary leaves `resource_type` out of what an upload signature covers
+ * (it is part of the address, not a parameter), so the signature for one
+ * `raw` file also lets a browser that was tampered with store an `image` and
+ * a `video` under the same id. The ledger knows of one file. When that one
+ * goes, its entry goes with it, and afterwards nothing would say whose the
+ * other two are — so they go now.
+ *
+ * Best effort: the file the ledger knows is gone by the time this runs, and a
+ * refusal here must not make that look undone. The weekly inventory
+ * (functions/mediaInventory.js) deletes such files too, while their entry is
+ * still there to prove them.
+ */
+export async function destroyUnderOtherTypes(destroy, resourceType, publicIds) {
+  if (publicIds.length === 0) return
+  for (const other of RESOURCE_TYPES) {
+    if (other === resourceType) continue
+    await destroy(other, publicIds).catch((error) => {
+      console.error('[media] could not clear the other resource types of deleted files', error)
+    })
+  }
+}
+
+// Per state and run. What is left over waits for the next day.
+export const PURGE_PAGE = 500
+
+const millis = (value) => {
+  if (value == null) return NaN
+  if (typeof value.toMillis === 'function') return value.toMillis()
+  if (value instanceof Date) return value.getTime()
+  return Number(value)
+}
+
+/**
+ * Is this ledger entry due for deletion at `now`? The one test, used for the
+ * query's results and again inside the transaction before each delete.
+ */
+export function isDue(entry, now) {
+  // A file from before the ledger is never the clean-up's to delete
+  // (functions/mediaRefs.js says why).
+  if (!entry || entry.legacy || (Array.isArray(entry.refs) && entry.refs.length > 0)) return false
+  if (entry.state === 'pending') return millis(entry.createdAt) <= now - PENDING_GRACE_DAYS * DAY_MS
+  if (entry.state === 'detached') return millis(entry.detachedAt) <= now - DETACHED_GRACE_DAYS * DAY_MS
+  return false
+}
+
+/**
+ * Destroying files on Cloudinary, through its Admin API: one call per resource
+ * type and hundred files. A file Cloudinary no longer has counts as gone.
+ *
+ * @param {{ fetch: typeof fetch, cloudName: string, apiKey: string, secret: string }} config
+ * @returns {(resourceType: string, publicIds: string[]) => Promise<Set<string>>} the ids that are gone
+ */
+export function cloudinaryDestroyer({ fetch, cloudName, apiKey, secret }) {
+  const auth = Buffer.from(`${apiKey}:${secret}`).toString('base64')
+  return async (resourceType, publicIds) => {
+    const query = new URLSearchParams()
+    for (const id of publicIds) query.append('public_ids[]', id)
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/resources/${encodeURIComponent(resourceType)}/upload?${query}`,
+      { method: 'DELETE', headers: { Authorization: `Basic ${auth}` } },
+    )
+    if (!response.ok) throw new Error(`Cloudinary refused the delete (${response.status})`)
+    const body = await response.json()
+    const gone = new Set()
+    for (const [id, result] of Object.entries(body?.deleted ?? {})) {
+      if (result === 'deleted' || result === 'not_found') gone.add(id)
+    }
+    return gone
+  }
+}
+
+async function dueEntries(db, now) {
+  const pendingCutoff = new Date(now - PENDING_GRACE_DAYS * DAY_MS)
+  const detachedCutoff = new Date(now - DETACHED_GRACE_DAYS * DAY_MS)
+  const assets = db.collection(MEDIA_ASSETS)
+  const [pending, detached] = await Promise.all([
+    assets.where('state', '==', 'pending').where('createdAt', '<=', pendingCutoff).limit(PURGE_PAGE).get(),
+    assets.where('state', '==', 'detached').where('detachedAt', '<=', detachedCutoff).limit(PURGE_PAGE).get(),
+  ])
+  return [...pending.docs, ...detached.docs]
+    .map((snap) => ({ id: snap.id, ...snap.data() }))
+    .filter((entry) => isDue(entry, now))
+}
+
+/**
+ * Does the document that let this file go hold it again after all? The
+ * ledger is only as right as the triggers that keep it, and a trigger that
+ * failed for good, or one from before they read the document itself
+ * (functions/mediaRefs.js), can have left a file "detached" that is still
+ * shown. One look at that document before deleting costs a read; a wrong
+ * delete costs a family photo.
+ */
+async function heldWhereItWasLetGo(db, entry) {
+  const [collection, docId, ...rest] = typeof entry.detachedFrom === 'string' ? entry.detachedFrom.split('/') : []
+  if (!collection || !docId || rest.length > 0) return false
+  const source = await db.collection(collection).doc(docId).get()
+  if (!source.exists) return false
+  // A document too big to trust cannot show that it lets the file go, so it
+  // counts as holding it: a file kept by mistake costs space, a wrong delete a photo.
+  if (isOverCap(source.data())) return true
+  return refsOf(source.data()).has(refOfEntry(entry))
+}
+
+/**
+ * Every file the family's documents name, with one document that names it.
+ *
+ * The ledger is kept by a trigger, and a trigger can be lost: it failed for
+ * good, or the functions deployed at the time did not know the collection yet.
+ * For a file a document let go, heldWhereItWasLetGo catches that. For a
+ * `pending` one nothing did: an attach that never arrived left a file the
+ * family sees every day looking like an abandoned upload, and a week later it
+ * was due. So the documents themselves are asked, which is what the ledger is
+ * derived from. Only `mediaRefs` is read, and only for families with a file
+ * due, once per run.
+ *
+ * @returns {Promise<Map<string, string>>} reference -> `collection/docId`
+ */
+async function holdersOfFamily(db, familyId) {
+  const holders = new Map()
+  const note = (path, data) => {
+    for (const ref of refsOf(data)) if (!holders.has(ref)) holders.set(ref, path)
+  }
+  await Promise.all(
+    MEDIA_COLLECTIONS.map(async (collection) => {
+      if (collection === 'families') {
+        const snap = await db.collection(collection).doc(familyId).get()
+        if (snap.exists) note(`${collection}/${familyId}`, snap.data())
+        return
+      }
+      const found = await db.collection(collection).where('familyId', '==', familyId).select('mediaRefs').get()
+      for (const snap of found.docs) note(`${collection}/${snap.id}`, snap.data())
+    }),
+  )
+  return holders
+}
+
+/**
+ * The document that holds this file although the ledger says none does: its
+ * path, `true` for one too big to read, or null. `sweeps` keeps each family's
+ * documents for the length of a run.
+ */
+async function holderOf(db, entry, sweeps) {
+  if (await heldWhereItWasLetGo(db, entry)) {
+    return isSingleDocPath(entry.detachedFrom) ? entry.detachedFrom : true
+  }
+  // Without a family there is nothing to ask, and unknown means kept.
+  if (typeof entry.familyId !== 'string' || !entry.familyId) return true
+  if (!sweeps.has(entry.familyId)) sweeps.set(entry.familyId, holdersOfFamily(db, entry.familyId))
+  return (await sweeps.get(entry.familyId)).get(refOfEntry(entry)) ?? null
+}
+
+const isSingleDocPath = (path) => typeof path === 'string' && path.split('/').length === 2
+
+/**
+ * Still due? Read again right before the destroy, so a file picked up since is
+ * kept — and put back in the ledger, if a document holds it.
+ */
+async function stillDue(db, id, now, sweeps) {
+  const snap = await db.collection(MEDIA_ASSETS).doc(id).get()
+  if (!snap.exists || !isDue(snap.data(), now)) return false
+  const entry = snap.data()
+  const holder = await holderOf(db, entry, sweeps)
+  if (!holder) return true
+  console.error('[media] a file the ledger called unused is still in use; kept:', id)
+  if (typeof holder === 'string') {
+    const [collection, docId] = holder.split('/')
+    // An over-cap document is left to the trigger's own rule: nothing is
+    // attached because of it.
+    const source = await db.collection(collection).doc(docId).get()
+    if (source.exists && !isOverCap(source.data())) {
+      await reconcileRef(db, () => now, refOfEntry(entry), collection, docId)
+    }
+  }
+  return false
+}
+
+/**
+ * Remove a destroyed file from the ledger and its size from the family's
+ * usage, in one transaction. Removed only while it is still due: an entry a
+ * document picked up in the moment between the check and the destroy is kept
+ * and reported, because its file is gone.
+ */
+async function forget(db, id, now) {
+  const ref = db.collection(MEDIA_ASSETS).doc(id)
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return 'gone'
+    const entry = snap.data()
+    if (!isDue(entry, now)) return 'raced'
+
+    // A file with a size gives it back; one whose size was never known (an
+    // upload that never happened, as a rule) gives back the estimate it was
+    // counted at. An entry from before either was counted gives back nothing.
+    const sized = typeof entry.bytes === 'number' && Number.isFinite(entry.bytes)
+    const unsized = entry.bytes === null
+    let usage = null
+    let usageRef = null
+    if ((sized || unsized) && entry.familyId) {
+      usageRef = db.collection(MEDIA_USAGE).doc(entry.familyId)
+      const usageSnap = await tx.get(usageRef)
+      usage = usageSnap.exists ? usageSnap.data() : null
+    }
+
+    tx.delete(ref)
+    if (usage) {
+      tx.set(usageRef, {
+        bytes: Math.max(0, (Number(usage.bytes) || 0) - (sized ? entry.bytes : 0)),
+        files: Math.max(0, (Number(usage.files) || 0) - (sized ? 1 : 0)),
+        unsized: Math.max(0, (Number(usage.unsized) || 0) - (unsized ? 1 : 0)),
+      })
+    }
+    return 'forgotten'
+  })
+}
+
+/**
+ * One run of the clean-up.
+ *
+ * @param {{ db: any, destroy: (resourceType: string, publicIds: string[]) => Promise<Set<string>>, dryRun: boolean, now?: () => number }} deps
+ * @returns {Promise<{ due: number, deleted: number, kept: number, failed: number, raced: number, dryRun: boolean, wouldDelete?: string[] }>}
+ */
+export async function purgeMedia({ db, destroy, dryRun, now = Date.now }) {
+  const at = now()
+  const due = await dueEntries(db, at)
+  const stats = { due: due.length, deleted: 0, kept: 0, failed: 0, raced: 0, dryRun }
+  const sweeps = new Map()
+
+  if (dryRun) {
+    // The same last look as a real run takes, so the report the switch to a
+    // real run is judged by does not list a file a document still shows.
+    stats.wouldDelete = []
+    for (const entry of due) {
+      if (await holderOf(db, entry, sweeps)) stats.kept++
+      else stats.wouldDelete.push(entry.publicId)
+    }
+    return stats
+  }
+
+  const byType = new Map()
+  for (const entry of due) {
+    if (typeof entry.publicId !== 'string' || !entry.resourceType) continue
+    const list = byType.get(entry.resourceType) ?? []
+    list.push(entry)
+    byType.set(entry.resourceType, list)
+  }
+
+  for (const [resourceType, entries] of byType) {
+    for (let i = 0; i < entries.length; i += DESTROY_BATCH) {
+      const checked = []
+      for (const entry of entries.slice(i, i + DESTROY_BATCH)) {
+        if (await stillDue(db, entry.id, at, sweeps)) checked.push(entry)
+        else stats.kept++
+      }
+      if (checked.length === 0) continue
+
+      let gone
+      try {
+        gone = await destroy(resourceType, checked.map((entry) => entry.publicId))
+      } catch (error) {
+        // Nothing in the ledger changed, so the next run tries these again.
+        console.error('[media] destroy failed', error)
+        stats.failed += checked.length
+        continue
+      }
+
+      await destroyUnderOtherTypes(destroy, resourceType, checked.map((entry) => entry.publicId).filter((id) => gone.has(id)))
+
+      for (const entry of checked) {
+        if (!gone.has(entry.publicId)) {
+          stats.failed++
+          continue
+        }
+        const result = await forget(db, entry.id, at)
+        if (result === 'raced') {
+          stats.raced++
+          console.error('[media] a file was picked up again while it was being deleted:', entry.id)
+        } else {
+          stats.deleted++
+        }
+      }
+    }
+  }
+  return stats
+}

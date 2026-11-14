@@ -1,41 +1,8 @@
 import { useState, useEffect } from 'react'
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  getDocs,
-  getDoc,
-  doc,
-  addDoc,
-  writeBatch,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore'
 import { db } from '../config/firebase'
-import { encryptFields, decryptFields, encryptJSON, decryptJSON } from '../utils/encryption'
+import { addRecipe, deleteRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 
-const ENCRYPTED_TEXT_FIELDS = ['title', 'description', 'instructions', 'chefNote', 'forkReason', 'author']
-
-async function encryptRecipe(key, data) {
-  if (!key) return data
-  const result = await encryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
-  if (result.ingredients != null && Array.isArray(result.ingredients)) {
-    result.ingredients = await encryptJSON(key, result.ingredients)
-  }
-  return result
-}
-
-async function decryptRecipe(key, data) {
-  if (!key) return data
-  const result = await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS)
-  if (result.ingredients != null && typeof result.ingredients === 'string') {
-    result.ingredients = await decryptJSON(key, result.ingredients)
-  }
-  return result
-}
-
-export function useRecipes(familyId, encryptionKey) {
+export function useRecipes(familyId, encryptionKey, { viewer = false } = {}) {
   const [recipes, setRecipes] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -45,65 +12,25 @@ export function useRecipes(familyId, encryptionKey) {
       return
     }
 
-    // Query all recipes for the family, filter root recipes client-side.
-    // Avoids a composite index requirement for rootId == null.
-    const q = query(
-      collection(db, 'recipes'),
-      where('familyId', '==', familyId),
-      orderBy('createdAt', 'desc')
-    )
+    return subscribeRecipes(familyId, encryptionKey, (list) => {
+      setRecipes(list)
+      setLoading(false)
+    }, (err) => {
+      if (import.meta.env.DEV) console.error('useRecipes snapshot error:', err)
+      setLoading(false)
+    }, { viewer })
+  }, [familyId, encryptionKey, viewer])
 
-    const unsubscribe = onSnapshot(
-      q,
-      async (snapshot) => {
-        const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        // Filter before decrypting, not after. Root recipes have no parentId;
-        // every fork used to be decrypted in full — 7 fields including the
-        // ingredients JSON — only to be thrown away on the next line.
-        // The query itself stays as-is deliberately: `where('parentId','==',null)`
-        // would silently drop root recipes that have no parentId field at all.
-        const roots = all.filter((r) => !r.parentId)
-        setRecipes(await Promise.all(roots.map((d) => decryptRecipe(encryptionKey, d))))
-        setLoading(false)
-      },
-      (err) => {
-        if (import.meta.env.DEV) console.error('useRecipes snapshot error:', err)
-        setLoading(false)
-      }
-    )
-
-    return unsubscribe
-  }, [familyId, encryptionKey])
-
-  const addRecipe = async (data) => {
-    const encrypted = await encryptRecipe(encryptionKey, data)
-    return await addDoc(collection(db, 'recipes'), {
-      ...encrypted,
-      familyId,
-      createdAt: serverTimestamp(),
-    })
+  return {
+    recipes,
+    loading,
+    addRecipe: (data) => addRecipe(familyId, encryptionKey, data),
+    updateRecipe: (id, data) => updateRecipe(encryptionKey, id, data),
+    deleteRecipe: (id) => deleteRecipe(familyId, id),
   }
-
-  const deleteRecipe = async (id) => {
-    const batch = writeBatch(db)
-    // Cascade-delete all forks in this lineage, scoped to this family
-    const forksSnap = await getDocs(
-      query(
-        collection(db, 'recipes'),
-        where('familyId', '==', familyId),
-        where('rootId', '==', id)
-      )
-    )
-    forksSnap.docs.forEach((d) => batch.delete(d.ref))
-    // Delete the root itself
-    batch.delete(doc(db, 'recipes', id))
-    await batch.commit()
-  }
-
-  return { recipes, loading, addRecipe, deleteRecipe }
 }
 
-export function useRecipeLineage(rootId, familyId, encryptionKey) {
+export function useRecipeLineage(rootId, familyId, encryptionKey, { viewer = false } = {}) {
   const [versions, setVersions] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -113,39 +40,20 @@ export function useRecipeLineage(rootId, familyId, encryptionKey) {
       return
     }
 
-    const fetchLineage = async () => {
-      try {
-        // Fetch the root recipe
-        const rootSnap = await getDoc(doc(db, 'recipes', rootId))
-        let rootDoc = rootSnap.exists() ? { id: rootSnap.id, ...rootSnap.data() } : null
-        // Verify familyId
-        if (rootDoc && rootDoc.familyId !== familyId) rootDoc = null
-        if (rootDoc) rootDoc = await decryptRecipe(encryptionKey, rootDoc)
-
-        // Fetch all forks in this lineage, scoped to same family.
-        const forksQuery = query(
-          collection(db, 'recipes'),
-          where('familyId', '==', familyId),
-          where('rootId', '==', rootId)
-        )
-        const forksSnap = await getDocs(forksQuery)
-        const forks = await Promise.all(
-          forksSnap.docs.map(async (d) => decryptRecipe(encryptionKey, { id: d.id, ...d.data() }))
-        )
-
-        // Merge root + forks, sort by year
-        const all = rootDoc ? [rootDoc, ...forks] : forks
-        all.sort((a, b) => (a.year || 0) - (b.year || 0))
-        setVersions(all)
-      } catch (err) {
+    getRecipeLineage(familyId, encryptionKey, rootId, { viewer })
+      .then(setVersions)
+      .catch((err) => {
         if (import.meta.env.DEV) console.error('useRecipeLineage error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
+      })
+      .finally(() => setLoading(false))
+  }, [rootId, familyId, encryptionKey, viewer])
 
-    fetchLineage()
-  }, [rootId, familyId, encryptionKey])
+  // Every version carries the flag, the root's included, so changing it is
+  // mirrored onto all of them here as well as in the database.
+  const setViewerVisible = async (visible) => {
+    await setRecipeViewerVisible(familyId, rootId, visible)
+    setVersions((list) => list.map((v) => ({ ...v, viewerVisible: visible })))
+  }
 
-  return { versions, loading }
+  return { versions, loading, setViewerVisible }
 }

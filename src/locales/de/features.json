@@ -1,0 +1,200 @@
+{
+  "nav": {
+    "home": "Kaydo",
+    "backHome": "Zurück zur Startseite",
+    "features": "Funktionen",
+    "login": "Login"
+  },
+  "cta": {
+    "title": "Schau es dir selbst an",
+    "text": "Die Demo-Familie läuft komplett in deinem Browser, ohne Konto und ohne Installation. Wenn du so weit bist, sicherst du dir die Adresse deiner Familie. Kaydo ist kostenlos, eine Kreditkarte brauchst du nicht.",
+    "demo": "Demo-Familie ansehen",
+    "getStarted": "Jetzt starten"
+  },
+  "related": "Was Kaydo noch kann",
+  "footer": {
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzerklärung",
+    "contact": "Kontakt",
+    "copyright": "© {{year}} Kaydo"
+  },
+  "pages": {
+    "photoSharing": {
+      "name": "Familienfotos privat teilen",
+      "seoTitle": "Familienfotos privat teilen – kostenlos mit Kaydo",
+      "seoDescription": "Teile Fotos, Videos und Sprachnachrichten in einem privaten, verschlüsselten Familien-Feed. Ein Passwort, kein Konto für Oma und Opa. Kostenlos mit Kaydo.",
+      "h1": "Familienfotos und Videos privat teilen",
+      "intro": "Die ersten Schritte, der Urlaub am See, das Sonntagsessen bei Oma: Solche Bilder gehören zu den Menschen, die sie lieben, und zu sonst niemandem. Kaydo gibt deiner Familie einen privaten Feed für Fotos, Videos und Sprachnachrichten, unter eurer eigenen Adresse und auf deinem Gerät verschlüsselt, bevor irgendetwas hochgeladen wird.",
+      "imageAlt": "Der Kaydo-Familien-Feed auf dem Smartphone, oben die Momente des Tages, darunter eine Familienerinnerung",
+      "sections": [
+        {
+          "heading": "Ein Feed für die ganze Familie",
+          "paragraphs": [
+            "Jeder spontane Schnappschuss, jedes Meilenstein-Video und jede Sprachnachricht landet in einem gemeinsamen, privaten Feed. Zu jeder Erinnerung gehört die Geschichte dahinter, damit ihr auch in ein paar Jahren noch wisst, warum dieses Foto wichtig war.",
+            "Über dem Feed liegen die Täglichen Momente als Story-Kreise, für den schnellen Schnappschuss aus dem Alltag, der keine Bildunterschrift braucht. Die smarte Timeline ordnet alles nach Jahreszeit und zeigt, was heute vor einem oder mehreren Jahren passiert ist.",
+            "In einem Gruppenchat rutschen Fotos zwischen den Nachrichten nach oben weg, und nach ein paar Wochen scrollt niemand mehr so weit zurück. In Kaydo bleiben sie dort, wo man sie wiederfindet: im Feed und in der Timeline, jedes mit seiner Geschichte."
+          ]
+        },
+        {
+          "heading": "Oma und Opa kommen ohne Konto hinein",
+          "paragraphs": [
+            "Der engste Kreis kommt mit einem gemeinsamen Familienpasswort hinein und sieht den Feed direkt im Browser. Niemand muss ein Konto anlegen, sich ein weiteres Login merken oder eine App installieren.",
+            "Die Admins der Familie posten, der engste Kreis schaut zu. Die Admins entscheiden, was geteilt wird, und mit einem sicheren Einladungslink holst du einen weiteren Admin dazu, damit beide Eltern posten können."
+          ]
+        },
+        {
+          "heading": "Die eigene Adresse eurer Familie",
+          "paragraphs": [
+            "Jede Familie sichert sich ihre eigene Adresse, etwa deinname.kaydo.app. Die Login-Seite unter dieser Adresse gestaltest du selbst, damit sie sich wie eure Haustür anfühlt.",
+            "Es gibt keine öffentlichen Profile, keine Follower und nichts zu entdecken außerhalb der eigenen Familie. Eure Erinnerungen sieht nur, wen ihr hereinlasst."
+          ]
+        },
+        {
+          "heading": "Verschlüsselt, bevor es dein Gerät verlässt",
+          "paragraphs": [
+            "Fotos, Videos und Sprachnachrichten werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden. Auf unseren Servern kommt nur Chiffretext an.",
+            "Kaydo zeigt keine Werbung, hat keine Werbe-Tracker, und deine Fotos trainieren nie eine KI. Kaydo ist Open Source: Jeder kann den Code lesen und prüfen, was er tut."
+          ]
+        },
+        {
+          "heading": "Funktioniert wie eine App und bleibt deins",
+          "paragraphs": [
+            "Du kannst Kaydo auf jedem Handy und jedem Computer installieren. Es lädt auch bei wackeligem Empfang schnell und kann die Familie benachrichtigen, wenn eine neue Erinnerung da ist.",
+            "Ein vollständiges Archiv aller Fotos und Videos kannst du jederzeit herunterladen, als ganz normale, lesbare Dateien. Du bist an nichts gebunden."
+          ]
+        }
+      ]
+    },
+    "timeCapsule": {
+      "name": "Zeitkapsel für Kinder",
+      "seoTitle": "Zeitkapsel und Briefe für deine Kinder – Kaydo",
+      "seoDescription": "Versiegle Briefe, Fotos und Sprachnachrichten bis zum 18. Geburtstag oder zur Hochzeit. Mit AES-256 im Browser verschlüsselt. Kostenlos mit Kaydo.",
+      "h1": "Eine Zeitkapsel für deine Kinder",
+      "intro": "Manches schreibt man für später: einen Brief, den deine Tochter an ihrem 18. Geburtstag lesen soll, eine Sprachnachricht zur Hochzeit deines Sohnes, die Fotos eines Jahres, die sie irgendwann öffnen sollen. Kaydo hält sie verschlossen bis zu dem Tag, den du wählst, und verschlüsselt sie in deinem Browser, bevor sie hochgeladen werden.",
+      "imageAlt": "Der Kaydo-Tresor mit einer Liste zeitversiegelter Kapseln für die Kinder der Familie",
+      "sections": [
+        {
+          "heading": "Versiegelt bis zu dem Tag, den du wählst",
+          "paragraphs": [
+            "Im Tresor versiegelst du Briefe, Sprachnachrichten, Fotos und Videos in einer Zeitkapsel. Sie bleibt verschlossen bis zu dem Tag, den du wählst: ein 18. Geburtstag, ein Schulabschluss, eine Hochzeit, bei der du vielleicht nicht dabei sein kannst.",
+            "Eine Kapsel öffnet sich an einem Datum deiner Wahl oder zu einem Lebensmeilenstein. Als Vermächtnis kann sie sich auch ein Jahr nach deiner letzten Meldung öffnen.",
+            "Du richtest eine Kapsel an eines deiner Kinder oder an die ganze Familie. Bis sie sich öffnet, ist sie ein Versprechen an sie; an dem Tag selbst ist sie eine Nachricht in deinen eigenen Worten und mit deiner eigenen Stimme."
+          ]
+        },
+        {
+          "heading": "Was hineingehört",
+          "paragraphs": [
+            "Alles, was sie eines Tages haben sollen: ein Brief über den Tag ihrer Geburt, eine Aufnahme, in der du ihre Lieblingsgutenachtgeschichte vorliest, Fotos von dem Haus, in dem sie aufgewachsen sind, ein paar Worte für den Moment, in dem sie ausziehen. Die Kapsel hält alles zusammen und verschlossen, bis es so weit ist."
+          ]
+        },
+        {
+          "heading": "Briefe und Tagebücher, während sie groß werden",
+          "paragraphs": [
+            "Neben dem Tresor hat jedes Kind ein eigenes Tagebuch. Schreib ihm Briefe, die es lesen wird, wenn es groß ist: die kleinen Freuden, die großen Meilensteine, eine Sprachnachricht in deinen eigenen Worten.",
+            "Im Tagebuch jedes Kindes wartet außerdem sein Geburtshimmel: Sterne, Planeten und Mond über seinem Geburtsort im Moment der Geburt, als Poster zum Drucken."
+          ]
+        },
+        {
+          "heading": "Verschlüsselt und nur für die Admins",
+          "paragraphs": [
+            "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256-GCM direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden. Auf unseren Servern kommt nur Chiffretext an.",
+            "Öffnen können sie nur die Admins der Familie. Der engste Kreis, der den Familien-Feed mit dem gemeinsamen Passwort ansieht, bekommt Tresor und Tagebücher nie zu sehen."
+          ]
+        },
+        {
+          "heading": "Auch in zwanzig Jahren noch deins",
+          "paragraphs": [
+            "Eine Zeitkapsel hat nur dann Sinn, wenn sie noch da ist, wenn sie sich öffnet. Du kannst jederzeit ein vollständiges Archiv aller Tagebucheinträge, Fotos und Videos herunterladen, und Kaydo ist Open Source: Du könntest es sogar selbst für deine Familie betreiben."
+          ]
+        }
+      ]
+    },
+    "recipeBook": {
+      "name": "Familien-Rezeptbuch",
+      "seoTitle": "Familien-Rezeptbuch mit Versionsverlauf – Kaydo",
+      "seoDescription": "Bewahre die Rezepte deiner Familie auf und sieh, wie sie sich über Generationen verändert haben, mit Notizen und Fotos. Privat und kostenlos mit Kaydo.",
+      "h1": "Ein Familien-Rezeptbuch, das mit euch wächst",
+      "intro": "Omas Pasta war nie zweimal ganz gleich. Deine Mutter hat sie leichter gemacht, dein Bruder vegetarisch, und deine Kinder werden sie wieder verändern. Kaydo bewahrt die Rezepte deiner Familie als Rezeptbaum auf: Jede Version bleibt erhalten, mit der Geschichte, warum sie sich verändert hat. So liegen eure Rezepte neben euren Fotos, Briefen und Sammelalben, unter der eigenen Adresse eurer Familie.",
+      "imageAlt": "Ein Kaydo-Rezeptbaum, der ein Familienrezept mit seinen Versionen über Generationen zeigt",
+      "sections": [
+        {
+          "heading": "Warum ein Baum besser passt als ein Karteikasten",
+          "paragraphs": [
+            "Ein Karteikasten hält von jedem Gericht eine Fassung fest, meistens die, die zuletzt jemand aufgeschrieben hat. Der Rest geht verloren: das Original in Omas Handschrift, die Änderung, mit der es endlich gelang, der Grund, warum die Familie irgendwann keine Rosinen mehr hineingetan hat.",
+            "Ein Rezeptbaum behält sie alle. Das erste Rezept steht an der Wurzel, und jede spätere Änderung wächst daraus hervor, mit dem Namen dessen, der sie gemacht hat, und der Geschichte dazu."
+          ]
+        },
+        {
+          "heading": "Jede Version eines Rezepts bleibt",
+          "paragraphs": [
+            "Rezepte bleiben nie, wie sie sind. Im Rezeptbaum verfolgst du, wie sich Omas Pasta über drei Generationen entwickelt hat, mit Notizen und Variationen auf dem Weg.",
+            "Jedes Rezept hat einen Versionsverlauf, eine Änderung löscht also nie, was vorher war. Das Original bleibt genau so, wie es aufgeschrieben wurde.",
+            "Zu einem Rezept gehört auch der Tisch, an dem es gegessen wurde. Füge Fotos von jedem Festessen hinzu, und der Baum erzählt von den Familienessen, die er satt gemacht hat."
+          ]
+        },
+        {
+          "heading": "Abzweigungen für die eigenen Varianten",
+          "paragraphs": [
+            "Kocht jemand in der Familie ein Rezept auf seine Art, legt er eine Abzweigung an. Die neue Version zweigt von der alten ab und behält ihren Platz im Baum, so siehst du, wer was geändert hat und warum."
+          ]
+        },
+        {
+          "heading": "Mit der Familie geteilt, wenn du willst",
+          "paragraphs": [
+            "Die Admins schreiben und ändern die Rezepte. Sobald du ein Rezept freigibst, kann der engste Kreis es mit all seinen Versionen lesen, mit nichts weiter als dem Familienpasswort.",
+            "Wie alles in Kaydo werden Rezepte auf deinem Gerät verschlüsselt, bevor sie hochgeladen werden. Es gibt keine Werbung, und du kannst jederzeit alles exportieren."
+          ]
+        },
+        {
+          "heading": "Fang mit dem Rezept an, das dir am meisten fehlen würde",
+          "paragraphs": [
+            "Fast jede Familie hat ein Gericht, das für sich allein schon ein Feiertag ist. Schreib zuerst dieses auf, so wie es heute gekocht wird, und füge die älteren Fassungen hinzu, sobald du sie in Notizbüchern und auf alten Zetteln findest. Dann frag die Familie, wie sie es macht, und lass den Baum wachsen."
+          ]
+        }
+      ]
+    },
+    "photoBook": {
+      "name": "Familien-Fotobuch und Sammelalbum",
+      "seoTitle": "Familien-Fotobuch und digitales Sammelalbum – Kaydo",
+      "seoDescription": "Gestalte aus Familienfotos ein digitales Sammelalbum mit Stickern und Notizen, exportiere es als PDF oder bestelle es als Buch. Kaydo selbst ist kostenlos.",
+      "h1": "Aus Familienfotos ein Sammelalbum oder ein gedrucktes Buch machen",
+      "intro": "Fotos auf dem Handy wischt man weiter. Auf einer Seite, mit einer Notiz in deiner Handschrift und einem Sticker, den dein Kind ausgesucht hat, werden sie zu einer Geschichte. Mit dem digitalen Sammelalbum von Kaydo ordnest du eure Familienerinnerungen frei an und bewahrst sie dann als PDF oder als gedrucktes Buch auf.",
+      "imageAlt": "Der Kaydo-Sammelalbum-Editor mit Polaroid-Fotos, Stickern und handschriftlichen Notizen auf einer Seite",
+      "sections": [
+        {
+          "heading": "Eine freie Leinwand für eure Erinnerungen",
+          "paragraphs": [
+            "Zieh Fotos, verspielte Sticker und persönliche Notizen per Drag & Drop auf eine freie Leinwand. Die Fotos sitzen in Polaroid-Rahmen, die du drehen und skalieren kannst, bis die Seite so aussieht, wie du sie haben willst."
+          ]
+        },
+        {
+          "heading": "Ideen für das erste Sammelalbum",
+          "paragraphs": [
+            "Ein Sommerurlaub, das erste Jahr mit einem Baby, Opas Geburtstag mit der ganzen Familie am Tisch: Ein Sammelalbum gelingt am besten mit einer Geschichte, die einen Anfang und ein Ende hat. Such die Fotos aus, die sie erzählen, schreib zu jeder Seite eine Notiz, was passiert ist, und lass die Kinder die Sticker aussuchen."
+          ]
+        },
+        {
+          "heading": "Als PDF oder als gedrucktes Buch",
+          "paragraphs": [
+            "Exportiere dein fertiges Sammelalbum als PDF, zum Aufheben, zum Verschicken an die Verwandtschaft oder zum Selbstdrucken.",
+            "Du kannst es auch als gedrucktes Buch bei der Druckerei Peecho bestellen. Bezahlt wird direkt bei Peecho; das ist das Einzige in Kaydo, das Geld kostet.",
+            "Eine Druckerei kann nur drucken, was sie lesen kann. Deshalb ist die Druckdatei die eine Datei, die Kaydo nicht verschlüsselt. Kaydo sagt dir das, bevor die Datei entsteht, gibt sie nur den Admins deiner Familie frei und löscht sie nach 30 Tagen."
+          ]
+        },
+        {
+          "heading": "Collagen und kurze Filme",
+          "paragraphs": [
+            "Nicht jede Fotoauswahl braucht gleich ein ganzes Buch. Für Collagen gibt es vierzehn fertige Vorlagen, vom einzelnen großen Bild bis zum Raster mit sechs Fotos. Zoome und verschiebe jedes Foto in seinem Feld, stell Farbe, Stärke und Ecken des Rahmens ein und lade die Collage als Bild herunter oder poste sie im Familien-Feed.",
+            "Mit Highlight-Videos wird aus einem Stapel Fotos ein kurzer Film. Kaydo schlägt fertige Reels aus dem vor, was eure Familie schon gepostet hat, etwa eure Sommer oder das Jahr, das gerade zu Ende ging, oder du wählst jede Aufnahme selbst. Den Film teilst du im Feed oder lädst ihn herunter."
+          ]
+        },
+        {
+          "heading": "Aus euren eigenen, privaten Fotos",
+          "paragraphs": [
+            "Deine Fotos werden mit AES-256 in deinem Browser verschlüsselt, bevor sie hochgeladen werden, und trainieren nie eine KI. Kaydo selbst ist kostenlos, ohne Werbung, und eine Kreditkarte brauchst du nicht."
+          ]
+        }
+      ]
+    }
+  }
+}

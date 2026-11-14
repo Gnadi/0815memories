@@ -4,21 +4,30 @@ import { formatRelativeDate } from '../../utils/helpers'
 import { useAuth } from '../../context/AuthContext'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
+import { focusStyleAt } from '../../utils/mediaFocus'
+import BestOfCircle from '../bestof/BestOfCircle'
 
-export default function DailyMoments({ moments, onAddMoment, onMomentClick, onViewAll }) {
+/**
+ * `bestOf` — last month's best-of, when there is one ({ month, cover }), shown
+ * first in the row with `bestOfSeen` deciding whether its ring still turns.
+ */
+export default function DailyMoments({ moments, bestOf, bestOfSeen, onOpenBestOf, onAddMoment, onMomentClick, onViewAll }) {
   const { t } = useTranslation('home')
   const { isAdmin } = useAuth()
 
   return (
     <section className="mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-xl font-bold text-bark">{t('dailyMoments.title')}</h2>
         <button onClick={onViewAll} className="text-sm font-semibold text-kaydo hover:text-kaydo-dark">
           {t('dailyMoments.viewAll')}
         </button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+      {/* Room at the top for the best-of's badge, which sits over the edge of
+          its circle: a row that scrolls sideways clips top and bottom too. Taken
+          off the heading's margin above, so the circles stay where they were. */}
+      <div className="flex gap-4 overflow-x-auto hide-scrollbar pt-1.5 pb-2">
         {/* Add moment button */}
         {isAdmin && (
           <button
@@ -32,6 +41,8 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
           </button>
         )}
 
+        {bestOf && <BestOfCircle bestOf={bestOf} seen={bestOfSeen} onOpen={onOpenBestOf} />}
+
         {/* Moment circles */}
         {moments.map((moment, index) => (
           <button
@@ -40,12 +51,19 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
             className="flex flex-col items-center gap-1.5 flex-shrink-0"
           >
             <div className="story-ring">
-              <div className="story-ring-inner relative">
+              <div className="story-ring-inner relative overflow-hidden">
                 {moment.images?.[0] ? (
                   <EncryptedImage
                     src={moment.images[0]}
                     thumbSrc={thumbAt(moment, 0)}
                     tinyPreview={tinyPreviewAt(moment, 0)}
+                    alt={moment.caption}
+                    style={focusStyleAt(moment, 0)}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                ) : moment.videos?.[0]?.posterUrl ? (
+                  <EncryptedImage
+                    src={moment.videos[0].posterUrl}
                     alt={moment.caption}
                     className="w-16 h-16 rounded-full object-cover"
                   />
@@ -57,12 +75,6 @@ export default function DailyMoments({ moments, onAddMoment, onMomentClick, onVi
                   <div className="w-16 h-16 rounded-full bg-cream-dark flex items-center justify-center">
                     <MomentPlaceholder />
                   </div>
-                )}
-                {/* Video badge: shown when moment has videos alongside images */}
-                {moment.images?.[0] && moment.videos?.length > 0 && (
-                  <span className="absolute bottom-0 right-0 w-5 h-5 bg-kaydo rounded-full flex items-center justify-center shadow">
-                    <Video className="w-3 h-3 text-white" />
-                  </span>
                 )}
               </div>
             </div>

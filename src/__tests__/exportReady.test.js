@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { EXPORT_PENDING_ATTR, waitForExportCanvases } from '../components/scrapbook/exportReady'
+import {
+  EXPORT_PENDING_ATTR,
+  EXPORT_FAILED_ATTR,
+  waitForExportCanvases,
+  unpaintedExportCanvases,
+} from '../components/scrapbook/exportReady'
 
 describe('waitForExportCanvases', () => {
   let root
@@ -54,5 +59,17 @@ describe('waitForExportCanvases', () => {
     await vi.advanceTimersByTimeAsync(200)
     await waiting
     expect(settled).toBe(true)
+  })
+
+  // The print file checks this after waiting: a photo still missing, or one
+  // that failed to load, stops it rather than leaving a hole on paper.
+  it('counts the canvases still without their photo, failed ones included', () => {
+    addCanvas(false)
+    expect(unpaintedExportCanvases(root)).toBe(0)
+    addCanvas(true)
+    const failed = addCanvas(false)
+    failed.setAttribute(EXPORT_FAILED_ATTR, '')
+    expect(unpaintedExportCanvases(root)).toBe(2)
+    expect(unpaintedExportCanvases(null)).toBe(0)
   })
 })

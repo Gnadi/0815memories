@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createThumbnail, THUMBNAIL_MAX_EDGE } from '../utils/imageThumbnail'
+import { createThumbnail, createVideoPoster, THUMBNAIL_MAX_EDGE } from '../utils/imageThumbnail'
 
 // A blob big enough to clear the "not worth downscaling" size floor.
 function imageBlob(bytes = 4 * 1024 * 1024, type = 'image/jpeg') {
@@ -101,5 +101,69 @@ describe('createThumbnail', () => {
   it('returns null when createImageBitmap is unavailable', async () => {
     delete globalThis.createImageBitmap
     expect(await createThumbnail(imageBlob())).toBeNull()
+  })
+})
+
+// A clip is stored encrypted, so the frame that stands for it in the story
+// circle has to be taken in the browser that uploads it.
+describe('createVideoPoster', () => {
+  const restores = []
+  const stub = (proto, key, descriptor) => {
+    const original = Object.getOwnPropertyDescriptor(proto, key)
+    Object.defineProperty(proto, key, { configurable: true, ...descriptor })
+    restores.push(() => {
+      if (original) Object.defineProperty(proto, key, original)
+      else delete proto[key]
+    })
+  }
+  const clip = () => new Blob([new Uint8Array(1024)], { type: 'video/mp4' })
+
+  beforeEach(() => {
+    URL.createObjectURL ??= () => 'blob:clip'
+    URL.revokeObjectURL ??= () => {}
+    // jsdom has no media loading, and says so on every clean-up.
+    stub(HTMLMediaElement.prototype, 'load', { value() {} })
+  })
+  afterEach(() => {
+    while (restores.length) restores.pop()()
+  })
+
+  it('takes a frame from early in the clip, at most the thumbnail size', async () => {
+    const drawn = []
+    let seekedTo = null
+    stub(HTMLMediaElement.prototype, 'src', { set() { queueMicrotask(() => this.onloadedmetadata?.()) } })
+    stub(HTMLMediaElement.prototype, 'duration', { get: () => 13 })
+    stub(HTMLMediaElement.prototype, 'currentTime', {
+      set(value) { seekedTo = value; queueMicrotask(() => this.onseeked?.()) },
+    })
+    stub(HTMLVideoElement.prototype, 'videoWidth', { get: () => 1920 })
+    stub(HTMLVideoElement.prototype, 'videoHeight', { get: () => 1080 })
+    stub(HTMLCanvasElement.prototype, 'getContext', {
+      value() {
+        const canvas = this
+        return { drawImage: (_v, _x, _y, w, h) => drawn.push([w, h, canvas.width, canvas.height]) }
+      },
+    })
+    stub(HTMLCanvasElement.prototype, 'toBlob', {
+      value(callback, type) { callback(new Blob(['frame'], { type })) },
+    })
+
+    const poster = await createVideoPoster(clip())
+
+    expect(poster.type).toBe('image/webp')
+    expect(seekedTo).toBe(0.5)
+    expect(drawn).toEqual([[THUMBNAIL_MAX_EDGE, 576, THUMBNAIL_MAX_EDGE, 576]])
+  })
+
+  it('returns null when the browser cannot read the clip', async () => {
+    stub(HTMLMediaElement.prototype, 'src', { set() { queueMicrotask(() => this.onerror?.()) } })
+    expect(await createVideoPoster(clip())).toBeNull()
+  })
+
+  it.each([
+    ['a photo', new Blob(['x'], { type: 'image/jpeg' })],
+    ['nothing', null],
+  ])('returns null for %s', async (_label, input) => {
+    expect(await createVideoPoster(input)).toBeNull()
   })
 })

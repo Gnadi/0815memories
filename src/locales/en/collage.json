@@ -51,7 +51,8 @@
     "selectPhoto": "Select this photo",
     "pickHint": "Tap a photo to place it",
     "backToCollages": "Back to collages",
-    "backToHighlights": "Back to highlight videos"
+    "backToHighlights": "Back to highlight videos",
+    "leaveUnsaved": "Your latest changes could not be saved. Leave anyway and lose them?"
   },
   "borders": {
     "heading": "Borders",
