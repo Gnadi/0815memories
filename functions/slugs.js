@@ -22,6 +22,14 @@ export const SLUGS = 'familySlugs'
 // not written by the app, and is not a valid document id to look up either.
 const isSlug = (value) => typeof value === 'string' && /^[a-z0-9-]{1,100}$/.test(value)
 
+// Addresses that look like the service's own and are not for a family to
+// claim: `login.kaydo.app` would be a ready-made phishing page. The list is
+// repeated in src/utils/familySlug.js for the signup form, and a test keeps
+// the two equal. It only stops a NEW claim: a family that already holds one of
+// these keeps it, so isSlug stays a format check and the block sits in
+// claimFamilySlug.
+export const RESERVED_SLUGS = ['www', 'api', 'app', 'admin', 'login', 'auth', 'support', 'help', 'mail', 'status', 'billing', 'account', 'security', 'kaydo', 'demo', 'static', 'assets', 'cdn']
+
 /**
  * Claim `slug` for `familyId`, or learn that another family holds it.
  *
@@ -29,6 +37,9 @@ const isSlug = (value) => typeof value === 'string' && /^[a-z0-9-]{1,100}$/.test
  * mirror. The first write to such a family registers it; until then, the
  * mirror itself counts as the claim, so nobody can register a slug a family
  * is already known by.
+ *
+ * A reserved slug is given to nobody new. A family that holds one already —
+ * in the registry, or only in its own mirror — keeps it.
  *
  * @param {import('firebase-admin/firestore').Firestore} db
  * @param {string} familyId
@@ -45,6 +56,7 @@ export async function claimFamilySlug(db, familyId, slug) {
 
     const mirrors = await tx.get(db.collection('familyPublic').where('familySlug', '==', slug))
     if (mirrors.docs.some((doc) => doc.id !== familyId)) return false
+    if (RESERVED_SLUGS.includes(slug) && !mirrors.docs.some((doc) => doc.id === familyId)) return false
 
     tx.set(ref, { familyId, claimedAt: new Date() })
     return true

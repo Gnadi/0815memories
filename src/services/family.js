@@ -22,6 +22,7 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { mediaRefsForMerge } from './mediaRefs'
+import { isReservedSlug } from '../utils/familySlug'
 
 const FAMILIES = 'families'
 const FAMILY_PUBLIC = 'familyPublic'
@@ -121,7 +122,9 @@ export async function isSlugAvailable(slug, excludeFamilyId = null) {
   if (!db || !isSlug(slug)) return false
 
   const claim = await getDoc(doc(db, FAMILY_SLUGS, slug))
-  if (!claim.exists()) return true
+  // A reserved name is free for nobody new; the family already holding one
+  // keeps it, which the check below allows.
+  if (!claim.exists()) return !isReservedSlug(slug)
 
   // If we're excluding a specific family (for edits), check if the claim is that family's
   return Boolean(excludeFamilyId) && claim.data().familyId === excludeFamilyId

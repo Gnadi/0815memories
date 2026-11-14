@@ -12,6 +12,13 @@ export function generateSlug(name) {
     .replace(/^-|-$/g, '')
 }
 
+// Addresses that look like the service's own and are not for a family to
+// claim. The same list is in functions/slugs.js, which is what enforces it; a
+// test keeps the two equal. Here it only lets the signup form say so early.
+export const RESERVED_SLUGS = ['www', 'api', 'app', 'admin', 'login', 'auth', 'support', 'help', 'mail', 'status', 'billing', 'account', 'security', 'kaydo', 'demo', 'static', 'assets', 'cdn']
+
+export const isReservedSlug = (slug) => RESERVED_SLUGS.includes(slug)
+
 /**
  * Extract a family slug from the current hostname's subdomain.
  * Returns null on localhost, IPs, bare domains, or vercel.app preview URLs.

@@ -18,7 +18,7 @@ import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
-import { claimFamilySlug, publicSlugFor, SLUGS } from '../../functions/slugs.js'
+import { claimFamilySlug, publicSlugFor, RESERVED_SLUGS, SLUGS } from '../../functions/slugs.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -78,6 +78,29 @@ describe.skipIf(!EMULATOR)('family slugs', () => {
       // …and lets that family register it on its next write.
       expect(await claimFamilySlug(db, 'fam-legacy', 'the-millers')).toBe(true)
       expect(await holderOf('the-millers')).toBe('fam-legacy')
+    })
+
+    it('gives no reserved address to a new claimant', async () => {
+      for (const slug of RESERVED_SLUGS) expect(await claimFamilySlug(db, 'fam-a', slug)).toBe(false)
+      expect(await holderOf('login')).toBe(null)
+      expect(await publicSlugFor(db, 'fam-a', 'admin', undefined)).toBe(null)
+      expect(await holderOf('admin')).toBe(null)
+    })
+
+    it('lets a family that already holds a reserved address keep it', async () => {
+      // In the registry, from before the list existed…
+      await db.collection(SLUGS).doc('support').set({ familyId: 'fam-a' })
+      expect(await claimFamilySlug(db, 'fam-a', 'support')).toBe(true)
+      expect(await publicSlugFor(db, 'fam-a', 'support', 'support')).toBe('support')
+      expect(await claimFamilySlug(db, 'fam-b', 'support')).toBe(false)
+      // …or only in the family's own public mirror, until its next write.
+      await db.doc('familyPublic/fam-legacy').set({ familySlug: 'help' })
+      expect(await claimFamilySlug(db, '0000', 'help')).toBe(false)
+      expect(await claimFamilySlug(db, 'fam-legacy', 'help')).toBe(true)
+      expect(await holderOf('help')).toBe('fam-legacy')
+      // Giving one up is always possible.
+      expect(await publicSlugFor(db, 'fam-a', 'the-millers', 'support')).toBe('the-millers')
+      expect(await holderOf('support')).toBe(null)
     })
 
     it('refuses anything generateSlug() would not have produced', async () => {

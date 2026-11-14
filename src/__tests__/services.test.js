@@ -439,6 +439,14 @@ describe('the family', () => {
     await expect(isSlugAvailable('the-smiths')).resolves.toBe(true)
   })
 
+  it('reports a reserved address as taken, unless the asking family already holds it', async () => {
+    await expect(isSlugAvailable('login')).resolves.toBe(false)
+    await expect(isSlugAvailable('www', 'fam-new')).resolves.toBe(false)
+    await fs.setDoc(fs.doc(null, 'familySlugs', 'support'), { familyId: 'fam-new' })
+    await expect(isSlugAvailable('support', 'fam-new')).resolves.toBe(true)
+    await expect(isSlugAvailable('support')).resolves.toBe(false)
+  })
+
   it('does not resolve an address whose public copy does not carry it', async () => {
     // A rename the mirror has not caught up with, or a registry entry whose
     // family is gone: the login page shows nothing rather than the wrong family.
