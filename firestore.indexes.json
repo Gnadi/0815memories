@@ -149,6 +149,14 @@
         { "fieldPath": "state", "order": "ASCENDING" },
         { "fieldPath": "detachedAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "mediaAssets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "deletingSince", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

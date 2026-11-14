@@ -29,7 +29,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
-import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
+import { adminUidsOf, reconcileAdminClaims, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
@@ -612,6 +612,18 @@ export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId
     },
   )
 })
+
+/**
+ * Nightly safety net for the trigger above: grants missing claims and clears
+ * stale ones, so a lost event or an exhausted retry does not leave a claim
+ * wrong for good. Runs at a time no other scheduled function uses.
+ */
+export const reconcileAdminClaimsNightly = onSchedule(
+  { schedule: '15 2 * * *', timeZone: ANNIVERSARY_TIMEZONE, timeoutSeconds: 540 },
+  async () => {
+    await reconcileAdminClaims({ db: getFirestore(), auth: getAuth() })
+  },
+)
 
 // ── 2b. Joining and leaving ─────────────────────────────────────────────────
 

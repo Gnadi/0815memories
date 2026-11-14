@@ -39,7 +39,10 @@ export async function syncClaimsForFamily({ db, auth }, { familyId, before, afte
       // Removal has to revoke as well as clear: a cleared claim still sits in
       // the ID token the removed admin is holding, which stays valid for up to
       // an hour.
-      const user = await auth.getUser(uid).catch(() => null)
+      const user = await auth.getUser(uid).catch((error) => {
+        if (isUserNotFound(error)) return null
+        throw error
+      })
       if (!user) return
       // Only clear a claim that points at *this* family, so an admin who moved
       // families does not lose the claim they were just given.
@@ -48,10 +51,106 @@ export async function syncClaimsForFamily({ db, auth }, { familyId, before, afte
       await auth.revokeRefreshTokens(uid)
     }),
   )
-  // Every uid is tried before any failure is reported, so one account Firebase
-  // Auth refuses does not hold up the others. Then it is thrown: the trigger
-  // retries, and a removed admin whose claim could not be cleared is not left
-  // with it.
-  const failed = results.find((result) => result.status === 'rejected')
-  if (failed) throw failed.reason
+
+  // A swallowed failure would end the invocation as a success and the claim
+  // would stay stale, so every failure is logged and the invocation is failed
+  // once all uids have been tried.
+  const failures = []
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled' || isUserNotFound(result.reason)) return
+    failures.push(changed[i])
+    logFailure(changed[i], result.reason)
+  })
+  if (failures.length > 0) {
+    throw new Error(`Could not sync admin claims for ${failures.length} user(s) of a family`)
+  }
+}
+
+/** True when Firebase Auth reports that the user does not exist (any more). */
+function isUserNotFound(error) {
+  return error?.code === 'auth/user-not-found'
+}
+
+// Only the uid and the error's code or message: never tokens or family content.
+function logFailure(uid, error) {
+  console.error('Admin claim sync failed', { uid, error: error?.code || error?.message || 'unknown' })
+}
+
+const isExactAdminClaim = (claims, familyId) =>
+  claims?.role === 'admin' && claims.familyId === familyId && Object.keys(claims).length === 2
+
+/**
+ * Nightly repair for what the trigger can miss: an event that failed for good,
+ * or one that never arrived. Walks every family and every Auth user, and makes
+ * the claims match the family documents again, in both directions.
+ *
+ * Viewers (uid `viewer:...`, role `viewer`) and users without claims are never
+ * touched. A uid that is admin of two families keeps a claim that points at a
+ * family that still lists them, so the pass does not flip it back and forth.
+ *
+ * One failing user does not stop the pass; it is counted, and the function
+ * throws at the end so the failure shows up in the logs and the scheduler.
+ */
+export async function reconcileAdminClaims({ db, auth }) {
+  const stats = { families: 0, granted: 0, cleared: 0, failed: 0 }
+  const adminsByFamily = new Map()
+  const snapshot = await db.collection('families').get()
+  snapshot.forEach((doc) => adminsByFamily.set(doc.id, adminUidsOf(doc.data())))
+  stats.families = adminsByFamily.size
+
+  // The list above is read once, and a pass takes a while. Before a claim is
+  // written, the one family it concerns is read again, so that someone who
+  // joined or was removed during the pass is judged by where they stand now —
+  // clearing on the old list would sign out an admin who has just joined.
+  const isAdminNow = async (familyId, uid) => {
+    const snap = await db.doc(`families/${familyId}`).get()
+    return snap.exists && adminUidsOf(snap.data()).includes(uid)
+  }
+
+  const attempt = async (uid, work) => {
+    try {
+      await work()
+    } catch (error) {
+      if (isUserNotFound(error)) return
+      stats.failed += 1
+      logFailure(uid, error)
+    }
+  }
+
+  for (const [familyId, adminUids] of adminsByFamily) {
+    for (const uid of adminUids) {
+      await attempt(uid, async () => {
+        const { customClaims } = await auth.getUser(uid)
+        if (isExactAdminClaim(customClaims, familyId)) return
+        const otherFamily = customClaims?.role === 'admin' ? customClaims.familyId : null
+        if (otherFamily && otherFamily !== familyId && adminsByFamily.get(otherFamily)?.includes(uid)) return
+        if (!(await isAdminNow(familyId, uid))) return
+        await auth.setCustomUserClaims(uid, { familyId, role: 'admin' })
+        stats.granted += 1
+      })
+    }
+  }
+
+  let pageToken
+  do {
+    const page = await auth.listUsers(1000, pageToken)
+    for (const user of page.users) {
+      const claims = user.customClaims
+      if (user.uid.startsWith('viewer:') || claims?.role !== 'admin' || !claims.familyId) continue
+      if (adminsByFamily.get(claims.familyId)?.includes(user.uid)) continue
+      await attempt(user.uid, async () => {
+        if (await isAdminNow(claims.familyId, user.uid)) return
+        await auth.setCustomUserClaims(user.uid, null)
+        await auth.revokeRefreshTokens(user.uid)
+        stats.cleared += 1
+      })
+    }
+    pageToken = page.pageToken
+  } while (pageToken)
+
+  console.log('Admin claims reconciled', stats)
+  if (stats.failed > 0) {
+    throw new Error(`Admin claim reconciliation failed for ${stats.failed} user(s)`)
+  }
+  return stats
 }

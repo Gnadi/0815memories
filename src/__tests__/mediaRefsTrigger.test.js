@@ -236,3 +236,29 @@ describe('files from before the ledger', () => {
     expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toMatchObject({ familyId: 'fam-1', refs: ['memories/theirs'] })
   })
 })
+
+describe('files the clean-up has reserved or is destroying', () => {
+  const write = { collection: 'memories', docId: 'm1', before: memory({ images: [] }), after: memory({ images: [pid('a')] }) }
+
+  it('cancels a reservation when a document attaches the file', async () => {
+    const db = ledger([['a', { state: 'deleting', deletingSince: new Date(NOW - 1000), deletingFrom: 'detached', detachedAt: new Date(NOW - 5000) }]])
+    const stats = await run(db, write)
+    expect(stats.attached).toBe(1)
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'], detachedAt: null, deletingSince: null, deletingFrom: null })
+  })
+
+  it('leaves a reservation alone when a document lets the file go', async () => {
+    const db = ledger([['a', { state: 'deleting', deletingSince: new Date(NOW - 1000), deletingFrom: 'detached' }]])
+    const stats = await run(db, { ...write, before: write.after, after: write.before })
+    expect(stats.detached).toBe(1)
+    expect(entry(db, 'a')).toMatchObject({ state: 'deleting', refs: [] })
+  })
+
+  it('only records a reference on a file already being destroyed or lost', async () => {
+    for (const state of ['destroying', 'lost']) {
+      const db = ledger([['a', { state }]])
+      await run(db, write)
+      expect(entry(db, 'a')).toMatchObject({ state, refs: ['memories/m1'] })
+    }
+  })
+})

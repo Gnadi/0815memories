@@ -13,9 +13,10 @@ import {
   purgeMedia,
   DETACHED_GRACE_DAYS,
   PENDING_GRACE_DAYS,
+  RESERVATION_MS,
 } from '../../functions/mediaPurge.js'
 import { MEDIA_ASSETS, MEDIA_USAGE } from '../../functions/mediaSigning.js'
-import { MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
+import { MAX_MEDIA_REFS, reconcileRef, trackMediaRefs } from '../../functions/mediaRefs.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-23T04:15:00Z')
@@ -43,7 +44,17 @@ const detached = (c, age, extra = {}) => [
 
 const ledger = (db) => db.collectionData(MEDIA_ASSETS)
 const destroyAll = () => vi.fn(async (_type, ids) => new Set(ids))
+// Calls for the kind a file was signed for (`raw` here), leaving out the
+// clearing of the other kinds that follows a confirmed destroy.
+const ownCalls = (destroy) => destroy.mock.calls.filter(([type]) => type === 'raw')
 const run = (db, destroy, dryRun = false) => purgeMedia({ db, destroy, dryRun, now: () => NOW })
+// The next night's run: a file is reserved by the first and destroyed by this one.
+const NEXT = NOW + DAY
+const runLater = (db, destroy, dryRun = false, at = NEXT) => purgeMedia({ db, destroy, dryRun, now: () => at })
+const runTwice = async (db, destroy) => {
+  await run(db, destroy)
+  return runLater(db, destroy)
+}
 
 describe('isDue', () => {
   it('waits a week for a pending file and a month for a detached one', () => {
@@ -60,6 +71,10 @@ describe('isDue', () => {
     expect(isDue(null, NOW)).toBe(false)
     // A file from before the ledger, whatever state it is in.
     expect(isDue(detached('a', 90, { legacy: true })[1], NOW)).toBe(false)
+    // The clean-up's own states are never due again.
+    for (const state of ['deleting', 'destroying', 'lost']) {
+      expect(isDue(detached('a', 90, { state })[1], NOW)).toBe(false)
+    }
   })
 })
 
@@ -72,9 +87,34 @@ describe('purgeMedia', () => {
     expect(stats.wouldDelete.sort()).toEqual([`kaydo/fam-1/${hex('a')}`, `kaydo/fam-1/${hex('b')}`])
     expect(destroy).not.toHaveBeenCalled()
     expect(Object.keys(ledger(db))).toHaveLength(2)
+    expect(Object.values(ledger(db)).map((e) => e.state).sort()).toEqual(['detached', 'pending'])
   })
 
-  it('destroys what is due, forgets it, and gives its space back to the family', async () => {
+  it('reserves what is due in the first run and destroys nothing', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10), detached('b', 40), pending('c', 1)]))
+    const destroy = destroyAll()
+    const stats = await run(db, destroy)
+    expect(stats).toMatchObject({ due: 2, reserved: 2, deleted: 0, failed: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'deleting', deletingFrom: 'pending', deletingSince: new Date(NOW) })
+    expect(ledger(db)[hex('b')]).toMatchObject({ state: 'deleting', deletingFrom: 'detached', detachedAt: daysAgo(40) })
+    expect(ledger(db)[hex('c')].state).toBe('pending')
+  })
+
+  it('does not destroy a reservation before it has stood RESERVATION_MS', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const destroy = destroyAll()
+    await run(db, destroy)
+    const stats = await runLater(db, destroy, false, NOW + RESERVATION_MS - 1)
+    expect(stats).toMatchObject({ deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')].state).toBe('deleting')
+    // At the limit it goes.
+    expect(await runLater(db, destroy, false, NOW + RESERVATION_MS)).toMatchObject({ deleted: 1 })
+    expect(ownCalls(destroy)).toHaveLength(1)
+  })
+
+  it('destroys what is due a run later, forgets it, and gives its space back to the family', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([
       pending('a', 10, { bytes: 100 }),
       detached('b', 40, { bytes: 300 }),
@@ -84,9 +124,9 @@ describe('purgeMedia', () => {
       [`${MEDIA_USAGE}/fam-1`, { bytes: 1000, files: 5 }],
     ]))
     const destroy = destroyAll()
-    const stats = await run(db, destroy)
+    const stats = await runTwice(db, destroy)
 
-    expect(stats).toMatchObject({ due: 2, deleted: 2, kept: 0, failed: 0, raced: 0 })
+    expect(stats).toMatchObject({ deleted: 2, kept: 0, failed: 0, raced: 0 })
     expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('a')}`, `kaydo/fam-1/${hex('b')}`])
     expect(Object.keys(ledger(db)).sort()).toEqual([hex('c'), hex('d'), hex('e')])
     expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 600, files: 3, unsized: 0 })
@@ -98,7 +138,7 @@ describe('purgeMedia', () => {
       [`${MEDIA_USAGE}/fam-1`, { bytes: 500, files: 2, unsized: 3 }],
     ]))
     // Cloudinary never had it.
-    await run(db, vi.fn(async (_type, ids) => new Set(ids)))
+    await runTwice(db, vi.fn(async (_type, ids) => new Set(ids)))
     expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 500, files: 2, unsized: 2 })
   })
 
@@ -108,7 +148,7 @@ describe('purgeMedia', () => {
       pending('b', 10, { resourceType: 'image', publicId: `kaydo/public/fam-1/${hex('b')}` }),
     ]))
     const destroy = destroyAll()
-    await run(db, destroy)
+    await runTwice(db, destroy)
     // First each file under the kind it was signed for…
     expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('a')}`])
     expect(destroy).toHaveBeenCalledWith('image', [`kaydo/public/fam-1/${hex('b')}`])
@@ -119,7 +159,7 @@ describe('purgeMedia', () => {
     // files under one id, and the ledger knows of one.
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
     const destroy = destroyAll()
-    const stats = await run(db, destroy)
+    const stats = await runTwice(db, destroy)
     expect(destroy.mock.calls).toEqual([
       ['raw', [`kaydo/fam-1/${hex('a')}`]],
       ['image', [`kaydo/fam-1/${hex('a')}`]],
@@ -129,14 +169,14 @@ describe('purgeMedia', () => {
   })
 
   it('does not touch the other kinds of a file Cloudinary kept, and survives their refusal', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const kept = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
     const refuse = vi.fn(async () => new Set())
-    await run(kept, refuse)
+    await runTwice(kept, refuse)
     expect(refuse.mock.calls.map(([type]) => type)).toEqual(['raw'])
 
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const stats = await run(db, vi.fn(async (type, ids) => {
+    const stats = await runTwice(db, vi.fn(async (type, ids) => {
       if (type !== 'raw') throw new Error('503')
       return new Set(ids)
     }))
@@ -206,8 +246,8 @@ describe('purgeMedia', () => {
       detached('a', 40, { detachedFrom: 'memories/m1' }),
       ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [] } }],
     ]))
-    const stats = await run(db, destroyAll())
-    expect(stats).toMatchObject({ due: 1, deleted: 1 })
+    const stats = await runTwice(db, destroyAll())
+    expect(stats).toMatchObject({ deleted: 1 })
   })
 
   it('keeps and attaches a "pending" file a document of the family names', async () => {
@@ -220,11 +260,12 @@ describe('purgeMedia', () => {
     ]))
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const destroy = destroyAll()
-    const stats = await run(db, destroy)
-    error.mockRestore()
-    expect(stats).toMatchObject({ due: 2, kept: 1, deleted: 1 })
-    expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('b')}`])
+    expect(await run(db, destroy)).toMatchObject({ due: 2, kept: 1, reserved: 1 })
     expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['recipes/r1'] })
+    expect(await runLater(db, destroy)).toMatchObject({ deleted: 1 })
+    error.mockRestore()
+    expect(destroy).toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('b')}`])
+    expect(destroy).not.toHaveBeenCalledWith('raw', [`kaydo/fam-1/${hex('a')}`])
   })
 
   it('keeps a "detached" file another document of the family names', async () => {
@@ -235,8 +276,24 @@ describe('purgeMedia', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const stats = await run(db, destroyAll())
     error.mockRestore()
-    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
+    expect(stats).toMatchObject({ kept: 1, reserved: 0 })
     expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['scrapbooks/s1'] })
+  })
+
+  it('cancels, at the destroy step, a reservation another document of the family names by then', async () => {
+    // A write whose trigger has not run: the family's documents are read once
+    // more before the point of no return.
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const destroy = destroyAll()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await run(db, destroy)
+    expect(ledger(db)[hex('a')].state).toBe('deleting')
+    db.docs.set('journals/j1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } })
+    const stats = await runLater(db, destroy)
+    error.mockRestore()
+    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['journals/j1'] })
   })
 
   it('keeps a file the family document names for its login page', async () => {
@@ -253,33 +310,143 @@ describe('purgeMedia', () => {
       pending('a', 10),
       ['memories/m9', { familyId: 'fam-2', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } }],
     ]))
-    expect(await run(db, destroyAll())).toMatchObject({ due: 1, deleted: 1 })
+    expect(await runTwice(db, destroyAll())).toMatchObject({ deleted: 1 })
   })
 
   it('keeps a file whose ledger entry names no family', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10, { familyId: undefined })]))
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const destroy = destroyAll()
-    const stats = await run(db, destroy)
+    expect(await run(db, destroy)).toMatchObject({ kept: 1, reserved: 0 })
+    expect(await runLater(db, destroy)).toMatchObject({ deleted: 0 })
     error.mockRestore()
-    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
     expect(destroy).not.toHaveBeenCalled()
   })
 
-  it('leaves the ledger alone when Cloudinary refuses, so the next run tries again', async () => {
+  it('keeps a failed destroy as destroying, and the next run retries and finishes it', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const stats = await run(db, vi.fn(async () => { throw new Error('503') }))
-    error.mockRestore()
+    await run(db, destroyAll())
+    const stats = await runLater(db, vi.fn(async () => { throw new Error('503') }))
     expect(stats).toMatchObject({ failed: 1, deleted: 0 })
-    expect(Object.keys(ledger(db))).toEqual([hex('a')])
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'destroying', destroyingSince: new Date(NEXT) })
+
+    // No reservation is needed again: the job is already past that.
+    const destroy = destroyAll()
+    const retry = await runLater(db, destroy, false, NEXT + DAY)
+    error.mockRestore()
+    expect(retry).toMatchObject({ failed: 0, deleted: 1 })
+    expect(ownCalls(destroy)).toHaveLength(1)
+    expect(Object.keys(ledger(db))).toEqual([])
   })
 
-  it('keeps the entry of a file Cloudinary did not report as gone', async () => {
+  it('keeps the entry of a file Cloudinary did not report as gone, destroying, until it does', async () => {
     const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10), pending('b', 10)]))
-    const stats = await run(db, vi.fn(async () => new Set([`kaydo/fam-1/${hex('a')}`])))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await run(db, destroyAll())
+    const stats = await runLater(db, vi.fn(async () => new Set([`kaydo/fam-1/${hex('a')}`])))
+    error.mockRestore()
     expect(stats).toMatchObject({ deleted: 1, failed: 1 })
     expect(Object.keys(ledger(db))).toEqual([hex('b')])
+    expect(ledger(db)[hex('b')].state).toBe('destroying')
+  })
+
+  it('cancels the reservation when a document attaches the file between the runs', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [] } }],
+    ]))
+    const destroy = destroyAll()
+    await run(db, destroy)
+    expect(ledger(db)[hex('a')].state).toBe('deleting')
+
+    // The document re-uses the file; its trigger runs only now.
+    db.docs.set('memories/m1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } })
+    await trackMediaRefs({ db, now: () => NOW + 1000 }, {
+      collection: 'memories',
+      docId: 'm1',
+      before: { familyId: 'fam-1', mediaRefs: { images: [] } },
+      after: db.docs.get('memories/m1'),
+    })
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['memories/m1'], detachedAt: null })
+
+    const stats = await runLater(db, destroy)
+    expect(stats).toMatchObject({ deleted: 0, due: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')].state).toBe('attached')
+  })
+
+  it('cancels, at the destroy step, a reservation whose file the source document holds again', async () => {
+    // A trigger that never ran: the last look at the document is what is left.
+    const db = fakeAdminFirestore(Object.fromEntries([
+      detached('a', 40, { detachedFrom: 'memories/m1' }),
+      ['memories/m1', { familyId: 'fam-1', mediaRefs: { images: [] } }],
+    ]))
+    const destroy = destroyAll()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await run(db, destroy)
+    db.docs.set('memories/m1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } })
+    const stats = await runLater(db, destroy)
+    error.mockRestore()
+    expect(stats).toMatchObject({ kept: 1, deleted: 0 })
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+
+  it('keeps a file attached after the check but before the destroy step from being destroyed (the reported race)', async () => {
+    // The old order was check, document re-uses the file, destroy. The attach
+    // now lands on the reservation, and the destroy step finds it cancelled.
+    const db = fakeAdminFirestore(Object.fromEntries([detached('a', 40)]))
+    const destroy = destroyAll()
+    await run(db, destroy)
+    db.docs.set('memories/m2', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } })
+    await reconcileRef(db, () => NOW + 1000, `kaydo/fam-1/${hex('a')}`, 'memories', 'm2')
+    await runLater(db, destroy)
+    expect(destroy).not.toHaveBeenCalled()
+    expect(ledger(db)[hex('a')].state).toBe('attached')
+  })
+
+  it('leaves a detach during the reservation as a reservation', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([detached('a', 40, { detachedFrom: 'memories/m1' })]))
+    await run(db, destroyAll())
+    await reconcileRef(db, () => NOW + 1000, `kaydo/fam-1/${hex('a')}`, 'memories', 'm1', 'fam-1')
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'deleting', deletingSince: new Date(NOW) })
+  })
+
+  it('records an attach during destroying, keeps the file as lost, counts it and never retries it', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10)]))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await run(db, destroyAll())
+    // Cloudinary fails after the point of no return, and the document attaches meanwhile.
+    await runLater(db, vi.fn(async () => { throw new Error('503') }))
+    expect(ledger(db)[hex('a')].state).toBe('destroying')
+    db.docs.set('memories/m1', { familyId: 'fam-1', mediaRefs: { images: [`kaydo/fam-1/${hex('a')}`] } })
+    await reconcileRef(db, () => NEXT + 1000, `kaydo/fam-1/${hex('a')}`, 'memories', 'm1')
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'destroying', refs: ['memories/m1'] })
+
+    const destroy = destroyAll()
+    const stats = await runLater(db, destroy, false, NEXT + DAY)
+    expect(stats).toMatchObject({ raced: 1, deleted: 0 })
+    expect(ledger(db)[hex('a')]).toMatchObject({ state: 'lost', lostAt: new Date(NEXT + DAY), refs: ['memories/m1'] })
+    expect(error).toHaveBeenCalled()
+    error.mockRestore()
+
+    const again = await runLater(db, destroy, false, NEXT + 2 * DAY)
+    expect(again).toMatchObject({ raced: 0, deleted: 0, failed: 0 })
+    expect(ownCalls(destroy)).toHaveLength(1)
+    expect(ledger(db)[hex('a')].state).toBe('lost')
+  })
+
+  it('makes no change in a dry run, and does not destroy earlier reservations, only counts them', async () => {
+    const db = fakeAdminFirestore(Object.fromEntries([pending('a', 10), detached('b', 40), pending('c', 10)]))
+    await run(db, destroyAll(), false)
+    db.docs.set(`${MEDIA_ASSETS}/${hex('d')}`, { ...pending('d', 10)[1], state: 'destroying' })
+    const before = JSON.stringify([...db.docs])
+    const destroy = destroyAll()
+    const stats = await runLater(db, destroy, true)
+    expect(destroy).not.toHaveBeenCalled()
+    expect(stats).toMatchObject({ dryRun: true, deleted: 0, reserved: 0, inFlight: 4 })
+    expect(JSON.stringify([...db.docs])).toBe(before)
   })
 })
 
