@@ -688,7 +688,7 @@ export const deleteMyAccount = membershipCall(async (request) => {
  * must not be distinguishable, or this endpoint becomes a way to enumerate
  * which families exist.
  *
- * `rawRequest.ip` is only a hint: the functions framework trusts
+ * The caller's address is not used: the functions framework trusts
  * X-Forwarded-For, so the caller chooses it. The limits that hold are the
  * family's (for devices that have never signed in) and the device's own.
  */
@@ -721,7 +721,6 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       familyId: request.data?.familyId,
       password: request.data?.password,
       deviceToken: request.data?.deviceToken,
-      ip: request.rawRequest?.ip,
     },
   )
 

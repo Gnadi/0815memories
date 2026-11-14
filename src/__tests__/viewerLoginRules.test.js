@@ -17,10 +17,13 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import {
   checkViewerLogin,
   DEVICES,
   MAX_FAILURES,
+  MAX_ATTEMPTS_PER_DAY,
+  ATTEMPT_BUDGET_WINDOW_MS,
   MAX_BLOCK_MS,
   FAILURE_WINDOW_MS,
   RATE_LIMIT_TTL_MS,
@@ -44,6 +47,19 @@ let db
 let deps
 
 const login = (input) => checkViewerLogin(deps, { familyId: FAMILY, ip: '203.0.113.7', ...input })
+
+const budgetOfDevice = (token) =>
+  db.doc(`rateLimits/viewerDeviceBudget__${createHash('sha256').update(token).digest('hex')}`)
+const counterOf = (familyId = FAMILY) => db.doc(`rateLimits/viewerLogin__${familyId}`)
+const budgetOf = (familyId = FAMILY) => db.doc(`rateLimits/viewerLoginBudget__${familyId}`)
+
+/** Fills a budget up to its daily limit, as if the attempts had just been made. */
+const exhaust = (ref, at) =>
+  ref.set({
+    attempts: Array.from({ length: MAX_ATTEMPTS_PER_DAY }, () => at),
+    updatedAt: new Date(at),
+    expireAt: new Date(at + ATTEMPT_BUDGET_WINDOW_MS),
+  })
 
 /** A stranger's guesses, each from a different claimed IP — X-Forwarded-For is theirs to set. */
 async function lockOutFamily(familyId = FAMILY) {
@@ -156,7 +172,7 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     for (let i = 0; i < 20 && !blockLengths.includes(MAX_BLOCK_MS); i++) {
       // Waiting out the block exactly is the fastest a guesser can go.
       expect(await login({ password: `guess-${i}`, ip: '198.51.100.1' })).toEqual({ outcome: 'denied' })
-      const record = await db.doc(`rateLimits/${(await db.collection('rateLimits').get()).docs[0].id}`).get()
+      const record = await counterOf().get()
       const until = record.data().blockedUntil
       if (until) {
         blockLengths.push(until.toMillis() - t)
@@ -186,11 +202,92 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
   it('accepts the right password after failures, and clears the record', async () => {
     for (let i = 0; i < MAX_FAILURES - 1; i++) await login({ password: `guess-${i}` })
     expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
-    expect((await db.collection('rateLimits').get()).size).toBe(0)
+    expect((await counterOf().get()).exists).toBe(false)
     // A full allowance is available again.
     for (let i = 0; i < MAX_FAILURES; i++) {
       expect(await login({ password: `guess-${i}` })).toEqual({ outcome: 'denied' })
     }
+  })
+
+  it('refuses attempts of any outcome once the daily budget is used, without running bcrypt', async () => {
+    const t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    // 99 of the day's attempts are made; the last one is the allowance.
+    await budgetOf().set({
+      attempts: Array.from({ length: MAX_ATTEMPTS_PER_DAY - 1 }, () => t - 60 * 60 * 1000),
+      updatedAt: new Date(t),
+      expireAt: new Date(t + RATE_LIMIT_TTL_MS),
+    })
+    expect(await login({ password: 'wrong' })).toEqual({ outcome: 'denied' })
+    deps.compare.mockClear()
+
+    expect(await login({ password: 'wrong again' })).toEqual({ outcome: 'blocked' })
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect(deps.mintToken).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(0)
+    // Refused attempts are not recorded, so the budget does not grow.
+    expect((await budgetOf().get()).data().attempts).toHaveLength(MAX_ATTEMPTS_PER_DAY)
+  })
+
+  it('counts successful logins against the budget too, and keeps the budget after one', async () => {
+    for (let i = 0; i < MAX_ATTEMPTS_PER_DAY; i++) {
+      expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
+    }
+    expect((await budgetOf().get()).data().attempts).toHaveLength(MAX_ATTEMPTS_PER_DAY)
+    deps.compare.mockClear()
+
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(MAX_ATTEMPTS_PER_DAY)
+    // Another family has a budget of its own.
+    expect(await login({ familyId: OTHER_FAMILY, password: RIGHT })).toMatchObject({ outcome: 'ok' })
+  }, 60_000)
+
+  it('lets the budget roll: attempts older than a day stop counting', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    await exhaust(budgetOf(), t)
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+
+    t += ATTEMPT_BUDGET_WINDOW_MS - 1
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    t += 1
+    expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
+    // Only the attempt just made is left in the record.
+    expect((await budgetOf().get()).data().attempts).toEqual([t])
+  })
+
+  it('gives a known device a budget of its own', async () => {
+    const t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    const { deviceToken } = await login({ password: RIGHT })
+    const { deviceToken: otherDevice } = await login({ password: RIGHT })
+
+    // The family's budget used up: new devices wait, known ones carry on.
+    await exhaust(budgetOf(), t)
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+
+    // A known device's own budget used up: only that device waits.
+    expect((await budgetOfDevice(deviceToken).get()).exists).toBe(true)
+    await exhaust(budgetOfDevice(deviceToken), t)
+    deps.compare.mockClear()
+    expect(await login({ password: RIGHT, deviceToken })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect(await login({ password: RIGHT, deviceToken: otherDevice })).toMatchObject({ outcome: 'ok' })
+    expect(await login({ familyId: OTHER_FAMILY, password: RIGHT })).toMatchObject({ outcome: 'ok' })
+  })
+
+  it('keeps no record per caller address', async () => {
+    await login({ password: 'wrong', ip: '198.51.100.77' })
+    await login({ password: RIGHT, ip: '198.51.100.78' })
+    const records = (await db.collection('rateLimits').get()).docs
+    for (const record of records) {
+      expect(record.id).not.toMatch(/ip/i)
+      expect(JSON.stringify(record.data())).not.toContain('198.51.100')
+    }
+    expect(records.map((r) => r.id).sort()).toEqual([`viewerLoginBudget__${FAMILY}`])
   })
 
   it('does not let a token from one family exempt a device in another', async () => {
@@ -291,8 +388,8 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     let t = Date.parse('2030-01-01T00:00:00Z')
     deps.now = () => t
     await login({ password: 'wrong' })
-    const [counter] = (await db.collection('rateLimits').get()).docs
-    expect(counter.data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
+    expect((await counterOf().get()).data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
+    expect((await budgetOf().get()).data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
 
     const { deviceToken } = await login({ password: RIGHT })
     const [device] = (await db.collection(DEVICES).get()).docs
