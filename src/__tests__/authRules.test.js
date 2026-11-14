@@ -712,6 +712,77 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
     })
   })
 
+  // ── The fields the login page shows ──────────────────────────────────────
+  //
+  // familyName, familySlug and loginHeaderImage are mirrored into the
+  // world-readable familyPublic, so their type and size are limited.
+
+  describe('the family fields the login page shows', () => {
+    const KEY = { k: 'the-secret-key', kty: 'oct' }
+    // An `undefined` in `extra` leaves the field out.
+    const founding = (extra = {}) =>
+      Object.fromEntries(
+        Object.entries({
+          adminUid: 'uid-new-owner',
+          adminUids: ['uid-new-owner'],
+          familyName: 'The Newcomers',
+          familySlug: 'the-newcomers',
+          encryptionKeyJwk: KEY,
+          ...extra,
+        }).filter(([, value]) => value !== undefined),
+      )
+    const found = (extra) => setDoc(doc(asNewAccount('uid-new-owner'), 'families', 'family-new'), founding(extra))
+    const edit = (fields) => updateDoc(doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY), fields)
+
+    it('lets the client write what it writes today', async () => {
+      await assertSucceeds(found())
+      await assertSucceeds(edit({ familyName: 'The Miller Family', familySlug: 'the-miller-family' }))
+      await assertSucceeds(edit({ loginHeaderImage: 'https://res.cloudinary.com/demo/image/upload/v1/kaydo/public/family-1/' + 'a'.repeat(32) }))
+      await assertSucceeds(edit({ loginHeaderImage: null }))
+      await assertSucceeds(edit({ loginHeaderImage: '' }))
+    })
+
+    it('limits the name to a string of 200 characters, on create and on update', async () => {
+      await assertSucceeds(edit({ familyName: 'x'.repeat(200) }))
+      await assertFails(edit({ familyName: 'x'.repeat(201) }))
+      await assertFails(edit({ familyName: 12345 }))
+      await assertFails(edit({ familyName: { not: 'a string' } }))
+      await assertFails(found({ familyName: 'x'.repeat(201) }))
+      await assertFails(found({ familyName: undefined }))
+      await assertFails(found({ familyName: 7 }))
+    })
+
+    it('lets a family without a name keep saving, as one from before the limit may be', async () => {
+      await assertSucceeds(edit({ familyName: deleteField() }))
+      await assertSucceeds(edit({ memoryCardStyle: 'polaroid' }))
+    })
+
+    it('limits the address to a string of 100 characters', async () => {
+      await assertSucceeds(edit({ familySlug: 'a'.repeat(100) }))
+      await assertFails(edit({ familySlug: 'a'.repeat(101) }))
+      await assertFails(edit({ familySlug: { not: 'a string' } }))
+      await assertFails(found({ familySlug: 'a'.repeat(101) }))
+      await assertFails(found({ familySlug: ['x'] }))
+      // A family without one is fine.
+      await assertSucceeds(found({ familySlug: undefined }))
+    })
+
+    it('limits the header image to null or a string of 2048 characters', async () => {
+      await assertSucceeds(edit({ loginHeaderImage: 'h'.repeat(2048) }))
+      await assertFails(edit({ loginHeaderImage: 'h'.repeat(2049) }))
+      await assertFails(edit({ loginHeaderImage: 12345 }))
+      await assertFails(edit({ loginHeaderImage: { url: 'x' } }))
+      await assertFails(found({ loginHeaderImage: 'h'.repeat(2049) }))
+      await assertSucceeds(found({ loginHeaderImage: null }))
+    })
+
+    it('holds for a merge that leaves the field out, as the other settings do', async () => {
+      const family = doc(asAdmin(ADMIN, FAMILY), 'families', FAMILY)
+      await assertSucceeds(setDoc(family, { memoryCardStyle: 'polaroid' }, { merge: true }))
+      await assertFails(setDoc(family, { familyName: 'x'.repeat(500000) }, { merge: true }))
+    })
+  })
+
   // ── 9. The encryption key ─────────────────────────────────────────────────
   //
   // The family's content is encrypted with it, so replacing or removing it

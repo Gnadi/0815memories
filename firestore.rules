@@ -137,6 +137,22 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
+    // Type and size limits for the fields the mirrorFamilyPublic function copies
+    // into the world-readable familyPublic. Without them an admin could make
+    // the document that every login-page visitor downloads as large as a
+    // document may be. There is deliberately no list of allowed keys: the
+    // family document grows with the app, and the protected fields above each
+    // have a check of their own. A new family must have a name; an existing
+    // one without it may still save, or a family from before this check could
+    // change nothing at all.
+    function familyShapeOk(nameRequired) {
+      let d = request.resource.data;
+      return (('familyName' in d) ? (d.familyName is string && d.familyName.size() <= 200) : !nameRequired)
+        && (!('familySlug' in d) || (d.familySlug is string && d.familySlug.size() <= 100))
+        && (!('loginHeaderImage' in d) || d.loginHeaderImage == null
+            || (d.loginHeaderImage is string && d.loginHeaderImage.size() <= 2048));
+    }
+
     // The invite epoch counts admin removals, and only the removal itself
     // raises it (functions/membership.js). An invite carries the epoch it was
     // minted under and is redeemable only while the family is still on it, so
@@ -209,9 +225,11 @@ service cloud.firestore {
                     && request.resource.data.adminUids == [request.auth.uid]
                     && hasEncryptionKey()
                     && !('deletion' in request.resource.data)
+                    && familyShapeOk(true)
                     && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
+                    && familyShapeOk(false)
                     && loginCustomOk()
                     && keepsEncryptionKey()
                     && deletionUnchanged()
