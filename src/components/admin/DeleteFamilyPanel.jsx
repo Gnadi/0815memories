@@ -8,7 +8,9 @@ import {
   requestFamilyDeletion,
   DELETION_GRACE_DAYS,
 } from '../../services/familyDeletion'
+import { needsFreshLogin } from '../../services/callable'
 import { devError } from '../../utils/devLog'
+import ReauthDialog from './ReauthDialog'
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
 
@@ -27,6 +29,7 @@ export default function DeleteFamilyPanel() {
   const [typedName, setTypedName] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [askPassword, setAskPassword] = useState(false)
 
   const isOwner = !!user && user.uid === ownerUid
   // The other admins have nothing to do here until the owner has asked.
@@ -47,11 +50,13 @@ export default function DeleteFamilyPanel() {
     } catch (err) {
       devError('Family deletion call failed:', err?.code, err?.message)
       setMessage(
-        err?.code === 'functions/permission-denied'
-          ? t('deleteFamily.notOwner')
-          : err?.code === 'functions/failed-precondition'
-            ? t('deleteFamily.alreadyBegun')
-            : t('deleteFamily.failed'),
+        needsFreshLogin(err)
+          ? t('reauth.stale')
+          : err?.code === 'functions/permission-denied'
+            ? t('deleteFamily.notOwner')
+            : err?.code === 'functions/failed-precondition'
+              ? t('deleteFamily.alreadyBegun')
+              : t('deleteFamily.failed'),
       )
     } finally {
       setBusy(false)
@@ -89,7 +94,9 @@ export default function DeleteFamilyPanel() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            run(requestFamilyDeletion, '')
+            // Starting the deletion asks for the password; taking it back does not.
+            if (isDemo) run(requestFamilyDeletion, '')
+            else setAskPassword(true)
           }}
         >
           <p className="text-xs text-bark-muted mb-3">
@@ -120,6 +127,19 @@ export default function DeleteFamilyPanel() {
       )}
 
       {message && <p className="text-sm text-bark mt-3" role="status">{message}</p>}
+
+      {askPassword && (
+        <ReauthDialog
+          title={t('deleteFamily.label')}
+          description={t('deleteFamily.reauthDescription', { days: DELETION_GRACE_DAYS })}
+          confirmLabel={t('deleteFamily.submit', { days: DELETION_GRACE_DAYS })}
+          onConfirmed={() => {
+            setAskPassword(false)
+            run(requestFamilyDeletion, '')
+          }}
+          onCancel={() => setAskPassword(false)}
+        />
+      )}
     </div>
   )
 }

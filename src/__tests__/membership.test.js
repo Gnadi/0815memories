@@ -7,7 +7,7 @@
  * removed admin again; the owner always stays.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { deleteFcmTokens, redeemInvite, removeAdmin } from '../../functions/membership.js'
+import { deleteFcmTokens, deleteMyAccount, FRESH_LOGIN_SECONDS, redeemInvite, removeAdmin, requireRecentLogin } from '../../functions/membership.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-11-10T10:00:00Z')
@@ -178,5 +178,94 @@ describe('deleteFcmTokens', () => {
     for (let i = 0; i < 450; i++) db.docs.set(`fcmTokens/v${i}`, { familyId: 'fam-1', uid: 'viewer:fam-1' })
     expect(await deleteFcmTokens(db, 'fam-1', 'viewer:fam-1')).toBe(450)
     expect(Object.keys(db.collectionData('fcmTokens')).sort()).toEqual(['admin', 'other-family'])
+  })
+})
+
+describe('deleteMyAccount', () => {
+  const deleteAccount = (db, caller = { uid: ADMIN }, deleteUser = vi.fn(async () => {})) =>
+    deleteMyAccount({ db, deleteUser }, caller).then((result) => ({ result, deleteUser }))
+
+  it('takes a co-admin out of every family they are in, then deletes the account', async () => {
+    const db = seeded()
+    db.docs.set('families/fam-2', { adminUid: 'uid-other', adminUids: ['uid-other', ADMIN] })
+    db.docs.set('families/fam-2/admins/uid-admin', { email: 'admin@example.test' })
+    db.docs.set('fcmTokens/mine', { familyId: 'fam-1', uid: ADMIN, token: 'a' })
+    db.docs.set('fcmTokens/mine-2', { familyId: 'fam-2', uid: ADMIN, token: 'b' })
+    db.docs.set('fcmTokens/owner', { familyId: 'fam-1', uid: OWNER, token: 'c' })
+
+    const { result, deleteUser } = await deleteAccount(db)
+
+    expect(result).toEqual({ ok: true })
+    expect(family(db).adminUids).toEqual([OWNER])
+    expect(db.docs.get('families/fam-2').adminUids).toEqual(['uid-other'])
+    expect(db.docs.has('families/fam-1/admins/uid-admin')).toBe(false)
+    expect(db.docs.has('families/fam-2/admins/uid-admin')).toBe(false)
+    expect(Object.keys(db.collectionData('fcmTokens'))).toEqual(['owner'])
+    expect(deleteUser).toHaveBeenCalledExactlyOnceWith(ADMIN)
+  })
+
+  it('deletes an account that is in no family', async () => {
+    const db = seeded()
+    const { deleteUser } = await deleteAccount(db, { uid: 'uid-loner' })
+    expect(deleteUser).toHaveBeenCalledExactlyOnceWith('uid-loner')
+    expect(family(db).adminUids).toEqual([OWNER, ADMIN])
+  })
+
+  it('turns an owner away and deletes nothing', async () => {
+    const db = seeded()
+    const deleteUser = vi.fn()
+    await expect(deleteMyAccount({ db, deleteUser }, { uid: OWNER })).rejects.toMatchObject({ code: 'failed-precondition' })
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(family(db).adminUids).toEqual([OWNER, ADMIN])
+  })
+
+  it('turns an owner away even when they also admin another family, before leaving any', async () => {
+    const db = seeded()
+    db.docs.set('families/fam-2', { adminUid: 'uid-other', adminUids: ['uid-other', OWNER] })
+    const deleteUser = vi.fn()
+    await expect(deleteMyAccount({ db, deleteUser }, { uid: OWNER })).rejects.toMatchObject({ code: 'failed-precondition' })
+    expect(db.docs.get('families/fam-2').adminUids).toEqual(['uid-other', OWNER])
+    expect(deleteUser).not.toHaveBeenCalled()
+  })
+
+  it('refuses a viewer and a caller who is not signed in', async () => {
+    const db = seeded()
+    const deleteUser = vi.fn()
+    await expect(deleteMyAccount({ db, deleteUser }, { uid: 'viewer:fam-1', role: 'viewer' })).rejects.toMatchObject({ code: 'permission-denied' })
+    await expect(deleteMyAccount({ db, deleteUser }, { uid: ADMIN, role: 'viewer' })).rejects.toMatchObject({ code: 'permission-denied' })
+    await expect(deleteMyAccount({ db, deleteUser }, {})).rejects.toMatchObject({ code: 'unauthenticated' })
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(family(db).adminUids).toEqual([OWNER, ADMIN])
+  })
+
+  it('keeps the account when leaving a family fails, so it can be tried again', async () => {
+    const db = seeded()
+    const runTransaction = db.runTransaction
+    db.runTransaction = async () => { throw new Error('unavailable') }
+    const deleteUser = vi.fn()
+    await expect(deleteMyAccount({ db, deleteUser }, { uid: ADMIN })).rejects.toThrow('unavailable')
+    expect(deleteUser).not.toHaveBeenCalled()
+    db.runTransaction = runTransaction
+  })
+})
+
+describe('requireRecentLogin', () => {
+  const now = () => NOW
+  const at = (secondsAgo) => ({ auth_time: NOW / 1000 - secondsAgo })
+
+  it('lets a password typed a moment ago through', () => {
+    expect(() => requireRecentLogin(at(5), now)).not.toThrow()
+    expect(() => requireRecentLogin(at(FRESH_LOGIN_SECONDS), now)).not.toThrow()
+  })
+
+  it('asks again once the sign-in is older than that', () => {
+    expect(() => requireRecentLogin(at(FRESH_LOGIN_SECONDS + 1), now)).toThrow('Confirm your password again')
+    expect(() => requireRecentLogin(at(3600), now)).toThrowError(expect.objectContaining({ code: 'failed-precondition' }))
+  })
+
+  it('refuses a token that does not say when the sign-in was', () => {
+    for (const token of [undefined, {}, { auth_time: '1' }, { auth_time: null }]) {
+      expect(() => requireRecentLogin(token, now)).toThrowError(expect.objectContaining({ code: 'failed-precondition' }))
+    }
   })
 })

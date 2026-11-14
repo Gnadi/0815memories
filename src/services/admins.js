@@ -93,3 +93,12 @@ export async function revokeInvite(familyId, token) {
 export async function removeAdmin(familyId, uid) {
   await callFunction('removeFamilyAdmin', { familyId, uid })
 }
+
+/**
+ * Delete the caller's own account (deleteMyAccount in functions/index.js): the
+ * admin leaves every family they are in and their sign-in is deleted. The
+ * server turns an owner away, because an owner deletes the family instead.
+ */
+export async function deleteMyAccount() {
+  await callFunction('deleteMyAccount', {})
+}

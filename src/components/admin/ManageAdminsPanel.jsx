@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { Shield, Plus, Trash2, Loader2, User, Copy, Check, Link as LinkIcon } from 'lucide-react'
 import { buildInviteUrl } from '../../utils/inviteToken'
 import { getFamily } from '../../services/family'
+import { needsFreshLogin } from '../../services/callable'
+import ReauthDialog from './ReauthDialog'
 import {
   createInvite, removeAdmin, revokeInvite, subscribeAdmins, subscribeOpenInvites,
 } from '../../services/admins'
@@ -26,6 +28,8 @@ export default function ManageAdminsPanel() {
   const [generatedLink, setGeneratedLink] = useState('')
   const [copied, setCopied] = useState(false)
   const [removingUid, setRemovingUid] = useState(null)
+  // The admin whose removal waits for the password.
+  const [confirmingUid, setConfirmingUid] = useState(null)
   const [revokingToken, setRevokingToken] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -124,6 +128,11 @@ export default function ManageAdminsPanel() {
       return
     }
     if (!window.confirm(t('admins.removeConfirm', { email: targetEmail }))) return
+    setConfirmingUid(targetUid)
+  }
+
+  const removeConfirmed = async (targetUid) => {
+    setConfirmingUid(null)
     setError('')
     setNotice('')
     setRemovingUid(targetUid)
@@ -133,8 +142,8 @@ export default function ManageAdminsPanel() {
       await loadFamily()
       setNotice(t('admins.removed'))
       setTimeout(() => setNotice(''), 4000)
-    } catch {
-      setError(t('admins.removeFailed'))
+    } catch (err) {
+      setError(needsFreshLogin(err) ? t('reauth.stale') : t('admins.removeFailed'))
     } finally {
       setRemovingUid(null)
     }
@@ -251,6 +260,14 @@ export default function ManageAdminsPanel() {
         {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
         {t('admins.generate')}
       </button>
+
+      {confirmingUid && (
+        <ReauthDialog
+          description={t('admins.removeReauth')}
+          onConfirmed={() => removeConfirmed(confirmingUid)}
+          onCancel={() => setConfirmingUid(null)}
+        />
+      )}
 
       {pendingInvites.length > 0 && (
         <div className="mt-5">

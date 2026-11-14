@@ -14,3 +14,10 @@ export async function callFunction(name, data) {
   const result = await httpsCallable(functions, name)(data)
   return result.data
 }
+
+/** Mirrors REAUTH_REQUIRED_MESSAGE in functions/membership.js. */
+export const REAUTH_REQUIRED = 'Confirm your password again'
+
+/** Whether the server refused because the password was not typed recently enough. */
+export const needsFreshLogin = (err) =>
+  err?.code === 'functions/failed-precondition' && err?.message === REAUTH_REQUIRED

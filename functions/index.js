@@ -41,7 +41,7 @@ import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { givenUp } from './retries.js'
-import { MembershipError, deleteFcmTokens, redeemInvite, removeAdmin } from './membership.js'
+import { MembershipError, deleteFcmTokens, deleteMyAccount as deleteAccount, redeemInvite, removeAdmin, requireRecentLogin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
 import { checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
 import {
@@ -467,23 +467,25 @@ export const reportLegacyMedia = onSchedule(
 // Deleting a family — see functions/familyDeletion.js
 // ---------------------------------------------------------------------------
 
-const deletionCall = (action, event) =>
+const deletionCall = (action, event, { fresh = false } = {}) =>
   onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
     try {
+      // Before anything is read: asking for a deletion needs a recent password.
+      if (fresh) requireRecentLogin(request.auth?.token)
       const result = await action({ db: getFirestore() }, request.auth?.uid, request.data)
       // Only a call that was allowed gets here: the family and the owner are
       // known to be real. No address, no ip.
       console.log(`[deletion] ${event} family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)}`)
       return result
     } catch (error) {
-      if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
+      if (error instanceof DeletionError || error instanceof MembershipError) throw new HttpsError(error.code, error.message)
       console.error('[deletion] call failed', error)
       throw new HttpsError('internal', 'Could not change the deletion')
     }
   })
 
 /** Schedule the caller's family for deletion. Owner only. */
-export const requestFamilyDeletion = deletionCall(requestDeletion, 'requested')
+export const requestFamilyDeletion = deletionCall(requestDeletion, 'requested', { fresh: true })
 
 /** Take a scheduled deletion back, until it has begun. Owner only. */
 export const cancelFamilyDeletion = deletionCall(cancelDeletion, 'cancelled')
@@ -619,9 +621,11 @@ export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId
 
 // ── 2b. Joining and leaving ─────────────────────────────────────────────────
 
-const membershipCall = (action) =>
+const membershipCall = (action, { fresh = false } = {}) =>
   onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
     try {
+      // The calls that cannot be undone need a password typed a moment ago.
+      if (fresh) requireRecentLogin(request.auth?.token)
       return await action(request)
     } catch (error) {
       if (error instanceof MembershipError) throw new HttpsError(error.code, error.message)
@@ -657,7 +661,22 @@ export const removeFamilyAdmin = membershipCall(async (request) => {
     `[membership] admin removed family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)} target=${loggable(request.data?.uid)}`,
   )
   return result
-})
+}, { fresh: true })
+
+/**
+ * Delete the caller's own account, for an admin who owns no family. The
+ * function wiring only supplies who is asking, from the verified token, and
+ * the Auth call; the rules are in functions/membership.js. The log line has
+ * the uid and not the address.
+ */
+export const deleteMyAccount = membershipCall(async (request) => {
+  const result = await deleteAccount(
+    { db: getFirestore(), deleteUser: (uid) => getAuth().deleteUser(uid) },
+    { uid: request.auth?.uid, role: request.auth?.token?.role },
+  )
+  console.log(`[membership] account deleted uid=${loggable(request.auth?.uid)}`)
+  return result
+}, { fresh: true })
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
