@@ -343,5 +343,10 @@
     "link": "Read the story behind Kaydo",
     "note": "(in German)",
     "url": "https://blog.gnadlinger.me/blog/kaydo/"
+  },
+  "lightbox": {
+    "close": "Close",
+    "previous": "Previous picture",
+    "next": "Next picture"
   }
 }

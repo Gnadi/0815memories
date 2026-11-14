@@ -119,21 +119,22 @@ export default function ManageAdminsPanel() {
   const handleRemove = async (targetUid) => {
     if (!targetUid) return
     const targetEmail = adminMeta[targetUid]?.email || t('admins.removeFallbackTarget')
+    if (isDemo) {
+      setError(t('demo:unavailable'))
+      return
+    }
     if (!window.confirm(t('admins.removeConfirm', { email: targetEmail }))) return
     setError('')
     setNotice('')
     setRemovingUid(targetUid)
     try {
-      // With the invites they minted, which would let them straight back in.
-      const theirInvites = pendingInvites
-        .filter((invite) => invite.createdBy === targetUid)
-        .map((invite) => invite.id)
-      await removeAdmin(familyId, targetUid, theirInvites)
+      // Every pending invite goes with them, on the server (services/admins.js).
+      await removeAdmin(familyId, targetUid)
       await loadFamily()
       setNotice(t('admins.removed'))
       setTimeout(() => setNotice(''), 4000)
-    } catch (err) {
-      setError(err.message || t('admins.removeFailed'))
+    } catch {
+      setError(t('admins.removeFailed'))
     } finally {
       setRemovingUid(null)
     }

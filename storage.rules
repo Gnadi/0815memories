@@ -12,14 +12,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // The same test firestore.rules applies to every write: the admin claim
-    // first, then the family document for an admin whose claim has not landed
-    // yet (syncAdminClaims writes it after the write that made them admin).
+    // Asks the family document only, not the admin claim: a claim outlives the
+    // removal of an admin by up to an hour, and the print files are the one
+    // place a family's photos sit unencrypted.
     function isFamilyAdmin(familyId) {
-      return request.auth != null
-        && ((request.auth.token.get('familyId', '') == familyId
-             && request.auth.token.get('role', '') == 'admin')
-            || isAdminByDocument(familyId));
+      return request.auth != null && isAdminByDocument(familyId);
     }
 
     function isAdminByDocument(familyId) {

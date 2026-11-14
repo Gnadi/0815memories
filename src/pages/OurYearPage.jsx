@@ -32,6 +32,7 @@ export default function OurYearPage() {
 
   const { ritual, loading: ritualLoading } = useOurYearRitual(familyId, uid, encryptionKey)
   const { chapters, loading: chaptersLoading, addChapter } = useOurYearChapters(
+    familyId,
     ritual?.id ?? null,
     uid,
     encryptionKey,

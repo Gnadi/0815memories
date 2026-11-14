@@ -1,8 +1,11 @@
 /**
  * Presentational device frames for the landing page. They wrap real app
  * screenshots so visitors immediately read them as "this is the actual product".
- * Purely decorative — no state, no app dependencies.
+ * Presentational — no state of their own, no app dependencies. A click on a
+ * picture enlarges it where the page has a LightboxProvider (ImageLightbox).
  */
+
+import { ZoomTarget } from './ImageLightbox'
 
 /**
  * A minimal browser-window chrome around a desktop screenshot.
@@ -33,18 +36,20 @@ export function BrowserFrame({ src, srcSet, sizes, alt, width, height, className
         </a>
       </div>
       <div className={fill ? 'relative aspect-[8/5] md:aspect-auto md:flex-1 md:min-h-[16rem]' : undefined}>
-        <img
-          src={src}
-          srcSet={srcSet}
-          sizes={sizes}
-          alt={alt}
-          width={width}
-          height={height}
-          loading={priority ? 'eager' : 'lazy'}
-          fetchPriority={priority ? 'high' : 'auto'}
-          decoding="async"
-          className={fill ? 'absolute inset-0 w-full h-full object-cover object-left-top' : 'block w-full h-auto'}
-        />
+        <ZoomTarget src={src} alt={alt} className={fill ? 'absolute inset-0 w-full h-full' : 'block w-full'}>
+          <img
+            src={src}
+            srcSet={srcSet}
+            sizes={sizes}
+            alt={alt}
+            width={width}
+            height={height}
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
+            decoding="async"
+            className={fill ? 'absolute inset-0 w-full h-full object-cover object-left-top' : 'block w-full h-auto'}
+          />
+        </ZoomTarget>
       </div>
     </figure>
   )
@@ -64,14 +69,16 @@ export function PhoneFrame({ src, alt, width, height, className = '', statusBar 
       <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-5 bg-bark rounded-b-2xl z-10" />
       <div className="rounded-[2rem] overflow-hidden" style={{ backgroundColor: statusBar }}>
         <div className="h-6" aria-hidden="true" />
-        <img
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          loading="lazy"
-          className="block w-full h-auto"
-        />
+        <ZoomTarget src={src} alt={alt} className="block w-full">
+          <img
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            loading="lazy"
+            className="block w-full h-auto"
+          />
+        </ZoomTarget>
       </div>
     </figure>
   )

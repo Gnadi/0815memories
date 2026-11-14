@@ -69,24 +69,24 @@ export function useOurYearRitual(familyId, uid, encryptionKey) {
 // ---------------------------------------------------------------------------
 
 /** The couple's chapters, newest first. */
-export function useOurYearChapters(ritualId, uid, encryptionKey) {
+export function useOurYearChapters(familyId, ritualId, uid, encryptionKey) {
   const [chapters, setChapters] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!ritualId || !uid || !db) {
+    if (!familyId || !ritualId || !uid || !db) {
       setChapters([])
       setLoading(false)
       return
     }
-    return subscribeChapters(ritualId, uid, encryptionKey, (list) => {
+    return subscribeChapters(familyId, ritualId, uid, encryptionKey, (list) => {
       setChapters(list)
       setLoading(false)
     }, (error) => {
       devError('Failed to load Our Year chapters:', error)
       setLoading(false)
     })
-  }, [ritualId, uid, encryptionKey])
+  }, [familyId, ritualId, uid, encryptionKey])
 
   const add = useCallback(
     (ritual, data) => addChapter(encryptionKey, ritual, data),

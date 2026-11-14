@@ -1,0 +1,108 @@
+name: Cloud Functions
+
+# Deploys functions/ to Firebase when a change to it lands on main.
+#
+# The functions used to be deployed by hand, while the app goes out with every
+# merge (Vercel) and the rules with firebase-firestore.yml. The three share
+# contracts — a collection that starts holding media is named in the app and in
+# functions/mediaRefs.js — and functions left behind by a merge break them
+# quietly: uploads to that collection stay "pending" in the media ledger.
+#
+# Off until the repository variable DEPLOY_FUNCTIONS is "true", because the
+# service account needs more roles for this than for the rules (README, Cloud
+# Functions). Until then merges behave as before and the deploy stays manual.
+#
+# The functions' tests run in ci.yml with the rest of the Vitest suite.
+on:
+  push:
+    branches: [main]
+    paths:
+      - functions/**
+      - firebase.json
+      - .github/workflows/firebase-functions.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two merges in quick succession deploy one after the other, never in parallel.
+concurrency:
+  group: functions-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Firebase
+    # workflow_dispatch can start this from any branch; only main may use the production credentials.
+    if: vars.DEPLOY_FUNCTIONS == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Check the deploy configuration
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          missing=0
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT is not set (Settings → Secrets and variables → Actions)."
+            missing=1
+          fi
+          if [ -z "$FIREBASE_PROJECT_ID" ]; then
+            echo "::error::Variable FIREBASE_PROJECT_ID is not set (Settings → Secrets and variables → Actions → Variables)."
+            missing=1
+          fi
+          exit "$missing"
+
+      # firebase-tools is a devDependency of the root package; it loads the
+      # functions' code to see what to deploy, which needs their dependencies.
+      - run: npm ci
+      - run: npm ci --prefix functions
+
+      # The functions' parameters (MEDIA_PURGE_DRY_RUN, CLOUDINARY_CLOUD_NAME,
+      # PEECHO_API_BASE, …) come from functions/.env.<project>, which is not in
+      # the repository. Without it a deploy from here would put every one of
+      # them back to its default — the media clean-up back to a dry run, for
+      # one. None of them is a secret; those stay in Secret Manager.
+      - name: Write the functions' parameters
+        env:
+          FUNCTIONS_ENV: ${{ vars.FUNCTIONS_ENV }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$FUNCTIONS_ENV" ]; then
+            echo "::warning::Variable FUNCTIONS_ENV is empty: every function parameter is deployed with its default."
+          fi
+          printf '%s\n' "$FUNCTIONS_ENV" > "functions/.env.$FIREBASE_PROJECT_ID"
+
+      - name: Write the service-account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          umask 077
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          node -e "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/firebase-service-account.json','utf8'))" \
+            || { echo "::error::FIREBASE_SERVICE_ACCOUNT is not valid JSON."; exit 1; }
+
+      # --project overrides the demo project from .firebaserc (demo-kaydo).
+      # No --force: a function that exists in Firebase but is gone from
+      # functions/ stops the deploy instead of being deleted.
+      - name: Deploy the functions
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          npx firebase-tools deploy \
+            --only functions \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"

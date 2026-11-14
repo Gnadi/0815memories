@@ -9,7 +9,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { webcrypto } from 'node:crypto'
 
-vi.mock('../config/firebase', () => ({ db: {}, auth: null }))
+vi.mock('../config/firebase', () => ({ db: {}, auth: null, functions: {} }))
+
+const callable = vi.hoisted(() => vi.fn(async () => ({ data: { ok: true } })))
+vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (data) => callable(name, data) }))
 
 import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
@@ -455,24 +458,23 @@ describe('admins and invites', () => {
     expect(invites.map((i) => i.id)).toEqual([open])
   })
 
-  it('removes an admin together with the invites they minted', async () => {
-    const theirs = await createInvite('fam', 'uid-b')
-    await fs.setDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'), { email: 'b@example.com' })
-
-    await removeAdmin('fam', 'uid-b', [theirs])
-
-    expect((await fs.getDoc(invite(theirs))).exists()).toBe(false)
-    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-b'))).exists()).toBe(false)
-    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a'])
+  it('stamps an invite with the family\'s invite epoch', async () => {
+    const before = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(before))).data().epoch).toBe(0)
+    await fs.updateDoc(family(), { inviteEpoch: 3 })
+    const after = await createInvite('fam', 'uid-a')
+    expect((await fs.getDoc(invite(after))).data().epoch).toBe(3)
   })
 
-  it('redeems an invite: spent, the new admin listed, and in adminUids', async () => {
-    const token = await createInvite('fam', 'uid-a')
-    await redeemInvite('fam', token, { uid: 'uid-new', email: 'new@example.com' })
+  // Who is an admin changes on the server (functions/membership.js, tested in
+  // membership.test.js); the services only ask.
+  it('asks the server to remove an admin', async () => {
+    await removeAdmin('fam', 'uid-b')
+    expect(callable).toHaveBeenCalledWith('removeFamilyAdmin', { familyId: 'fam', uid: 'uid-b' })
+  })
 
-    expect((await fs.getDoc(invite(token))).data()).toMatchObject({ used: true, redeemedBy: 'uid-new' })
-    expect((await fs.getDoc(fs.doc(null, 'families', 'fam', 'admins', 'uid-new'))).data())
-      .toMatchObject({ email: 'new@example.com', viaInvite: token })
-    expect((await fs.getDoc(family())).data().adminUids).toEqual(['uid-a', 'uid-b', 'uid-new'])
+  it('asks the server to redeem an invite, without saying who is asking', async () => {
+    await redeemInvite('fam', 'token-1')
+    expect(callable).toHaveBeenCalledWith('redeemFamilyInvite', { familyId: 'fam', token: 'token-1' })
   })
 })

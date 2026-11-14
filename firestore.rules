@@ -19,38 +19,46 @@ service cloud.firestore {
       return request.auth != null ? request.auth.token.get('role', '') : '';
     }
 
-    // Reads the family document, for an admin who is in `adminUids` but whose
-    // claim has not landed yet.
+    // Is the caller in the family's `adminUids` right now?
     //
-    // This is not migration debt to be cleaned up later. The claim is written by
-    // the syncAdminClaims trigger, so it always arrives *after* the write that
-    // makes someone an admin — and an invited admin takes their encryption key
-    // from this very document. Without this branch they would hold no key until
-    // the claim arrived and something re-subscribed, which nothing does.
+    // The role claim in the ID token is not consulted for this. It is minted by
+    // syncAdminClaims and stays in an issued token for up to an hour after the
+    // admin is removed, because revoking refresh tokens does not reach a token
+    // that was already issued. Membership is therefore read from the family
+    // document, which also covers a new admin whose claim has not landed yet:
+    // an invited admin takes their encryption key from this very document.
     //
-    // It is free in the common case: isFamilyAdmin checks the claim first and
-    // `||` short-circuits, so this runs only for a caller who has none.
+    // This costs one get() of the family document per request. Firestore
+    // caches a document that is read more than once in the same request, so a
+    // rule that asks several times still counts it once against the limit.
     function isAdminByDocument(familyId) {
       let fam = get(/databases/$(database)/documents/families/$(familyId)).data;
       return request.auth != null && request.auth.uid in fam.adminUids;
     }
 
     function isFamilyAdmin(familyId) {
-      return request.auth != null
-        && ((tokenFamily() == familyId && tokenRole() == 'admin')
-            || isAdminByDocument(familyId));
+      return request.auth != null && isAdminByDocument(familyId);
     }
 
     // A viewer reads, and only within their own family. Nothing grants a viewer
     // write access anywhere — every write rule below asks for isFamilyAdmin.
+    //
+    // The token's `sv` claim must match the family's viewerSessionVersion, which
+    // the setSharedPassword function raises on every password change. Revoking
+    // refresh tokens alone leaves ID tokens already issued valid for up to an
+    // hour; this makes them stop working at once. A family that has never
+    // changed its password has no version (0) and a token from before the claim
+    // existed has no `sv` (0), so those keep working until the first change.
     function isFamilyViewer(familyId) {
-      return tokenFamily() == familyId && tokenRole() == 'viewer';
+      return tokenFamily() == familyId && tokenRole() == 'viewer'
+          && request.auth.token.get('sv', 0)
+             == get(/databases/$(database)/documents/families/$(familyId)).data.get('viewerSessionVersion', 0);
     }
 
-    // Viewer first, deliberately: the check is pure token arithmetic, so a
-    // viewer never falls through to the get() inside isAdminByDocument. On a
-    // feed listing dozens of documents that is the difference between no
-    // document reads and one per evaluation.
+    // Viewer first: it is a cheap token comparison before the get() inside
+    // isAdminByDocument, and both read the same family document, which Firestore
+    // caches within a request, so a feed listing dozens of documents still reads
+    // it once.
     function isFamilyMember(familyId) {
       return isFamilyViewer(familyId) || isFamilyAdmin(familyId);
     }
@@ -61,9 +69,9 @@ service cloud.firestore {
     // the account over. Without this check, an admin who signed up with a typo,
     // or with someone else's address, handed a family — key included — to
     // whoever owns that address. So an account becomes an admin only once its
-    // address is confirmed: when it founds a family, and when it redeems an
-    // invite. Admins from before this check keep their access; the app asks
-    // them to confirm.
+    // address is confirmed: when it founds a family, here, and when it redeems
+    // an invite, in functions/membership.js. Admins from before this check
+    // keep their access; the app asks them to confirm.
     function hasVerifiedEmail() {
       return request.auth != null
           && request.auth.token.get('email_verified', false) == true;
@@ -129,6 +137,33 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
+    // The invite epoch counts admin removals, and only the removal itself
+    // raises it (functions/membership.js). An invite carries the epoch it was
+    // minted under and is redeemable only while the family is still on it, so
+    // removing an admin retires every link that was pending, whoever made it.
+    // A family that has never removed an admin has no `inviteEpoch` (0), and an
+    // invite from before the field existed has no `epoch` (0) either, so those
+    // keep working until the first removal and die at it.
+    function inviteEpochUnchanged() {
+      return request.resource.data.get('inviteEpoch', 0) == resource.data.get('inviteEpoch', 0);
+    }
+
+    // The viewer session version is raised by the setSharedPassword function
+    // (Admin SDK, which bypasses these rules) and by nothing else. A client that
+    // could write it could log every viewer out, or, by lowering it, bring back
+    // the tokens a password change had retired.
+    function viewerSessionVersionUnchanged() {
+      return request.resource.data.get('viewerSessionVersion', 0) == resource.data.get('viewerSessionVersion', 0);
+    }
+
+    // The date a family is deleted on, set and cleared by the functions of
+    // functions/familyDeletion.js for the owner alone (Admin SDK, which
+    // bypasses these rules). A client that could write it could schedule a
+    // family's deletion as any admin, or pull the date to today.
+    function deletionUnchanged() {
+      return request.resource.data.get('deletion', null) == resource.data.get('deletion', null);
+    }
+
     // The family's AES key. The family's content is encrypted with it, so a
     // write that replaced or removed it would leave all of that unreadable for
     // every member at once — whether by a bug, by two devices racing, or by a
@@ -148,9 +183,9 @@ service cloud.firestore {
 
     // Families — readable by the family only. The password check that used to
     // need a public read now happens in the viewerLogin Cloud Function.
-    // Updates fall into one of four explicit paths; everything else is denied.
-    // Admin-list mutations only happen via these gated paths — there is no
-    // server endpoint with elevated privileges in this app.
+    // A client updates the family's own fields and nothing else: the admin
+    // list, the invite epoch, the viewer session version, the key and the
+    // deletion date each have a function that writes them, or nothing does.
     match /families/{familyId} {
       // Was `if true`, which handed the encryption key and the password hash to
       // anyone who knew the family id — and the login page handed the id out.
@@ -173,46 +208,22 @@ service cloud.firestore {
                     && request.resource.data.adminUid == request.auth.uid
                     && request.resource.data.adminUids == [request.auth.uid]
                     && hasEncryptionKey()
+                    && !('deletion' in request.resource.data)
                     && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
                     && loginCustomOk()
                     && keepsEncryptionKey()
-                    && (
-                      // Path A: existing admin edits regular fields; adminUids unchanged.
-                      (
-                        request.auth.uid in resource.data.adminUids
-                        && request.resource.data.adminUids == resource.data.adminUids
-                      )
-                      // Path C: invite redemption — caller adds exactly themselves,
-                      // and changes nothing else.
-                      //
-                      // The proof is an `admins/{caller}` document created in this
-                      // same batch; its rule only allows that while consuming a
-                      // fresh invite. It has to be new: a document that merely
-                      // exists proves only that an invite was redeemed once, and
-                      // accepting that let a removed admin whose old document was
-                      // recreated from the spent invite walk straight back in.
-                      || (
-                        hasVerifiedEmail()
-                        && !(request.auth.uid in resource.data.adminUids)
-                        && request.auth.uid in request.resource.data.adminUids
-                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() + 1
-                        && request.resource.data.adminUids.hasAll(resource.data.adminUids)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids'])
-                        && !exists(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
-                        && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid))
-                      )
-                      // Path D: existing admin removes another admin (or self, leaving owner).
-                      // The owner is always retained because `adminUid` is unchanged AND
-                      // the resulting array must still contain `adminUid`.
-                      || (
-                        request.auth.uid in resource.data.adminUids
-                        && request.resource.data.adminUids.size() == resource.data.adminUids.size() - 1
-                        && resource.data.adminUids.hasAll(request.resource.data.adminUids)
-                        && resource.data.adminUid in request.resource.data.adminUids
-                      )
-                    );
+                    && deletionUnchanged()
+                    // An admin edits the family's own fields. Who the admins
+                    // are is not among them: joining with an invite and
+                    // removing an admin are transactions of
+                    // functions/membership.js, so no write from a client
+                    // changes `adminUids`, however it is put together.
+                    && request.auth.uid in resource.data.adminUids
+                    && request.resource.data.adminUids == resource.data.adminUids
+                    && inviteEpochUnchanged()
+                    && viewerSessionVersionUnchanged();
       allow delete: if false;
     }
 
@@ -261,32 +272,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Admins subcollection — display metadata for the Manage Admins UI AND
-    // the proof of redemption for the invite flow (via `viaInvite`).
-    //
-    // Redemption is one batch of three writes, and each rule insists on the
-    // other two: the invite is consumed, this document is created, and the
-    // caller joins `adminUids` (Path C above). It used to be three separate
-    // writes, and the invite stayed `used` by the redeemer until it expired —
-    // so an admin removed within a week of joining could recreate this document
-    // from their spent invite and re-add themselves.
+    // Admins subcollection — what the settings show about each admin. Written
+    // with the admin list itself, by functions/membership.js: an entry is
+    // made when an invite is redeemed and deleted when the admin is removed.
+    // It used to double as the proof of a redemption the rules checked, which
+    // a removed admin could recreate from their spent invite.
     match /families/{familyId}/admins/{uid} {
       allow read: if isFamilyAdmin(familyId);
-      // Only while consuming an invite that was still unused before this batch
-      // and is used by this caller after it, and only while joining adminUids.
-      allow create: if request.auth != null
-                    && tokenRole() != 'viewer'
-                    && hasVerifiedEmail()
-                    && request.auth.uid == uid
-                    && request.resource.data.viaInvite is string
-                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == false
-                    && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.expiresAt > request.time
-                    && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.used == true
-                    && getAfter(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.viaInvite)).data.redeemedBy == request.auth.uid
-                    && request.auth.uid in getAfter(/databases/$(database)/documents/families/$(familyId)).data.get('adminUids', []);
-      allow update: if false;
-      // Admin can revoke (used when removing an admin from the family).
-      allow delete: if isFamilyAdmin(familyId);
+      allow write: if false;
     }
 
     // Invites subcollection — one-time tokens that grant family-admin status
@@ -309,20 +302,12 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.used == false
                     && request.resource.data.redeemedBy == null
-                    && request.resource.data.expiresAt is timestamp;
-      // The redeemer marks the invite as used, in the batch that also creates
-      // their admins/{uid} document. Strict false → true transition; immutable
-      // createdBy / expiresAt.
-      allow update: if request.auth != null
-                    && tokenRole() != 'viewer'
-                    && hasVerifiedEmail()
-                    && resource.data.used == false
-                    && resource.data.expiresAt > request.time
-                    && request.resource.data.used == true
-                    && request.resource.data.redeemedBy == request.auth.uid
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.expiresAt == resource.data.expiresAt
-                    && existsAfter(/databases/$(database)/documents/families/$(familyId)/admins/$(request.auth.uid));
+                    && request.resource.data.expiresAt is timestamp
+                    && request.resource.data.get('epoch', 0)
+                        == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0);
+      // Redeeming is the redeemFamilyInvite function's, in the transaction
+      // that adds the redeemer to the family.
+      allow update: if false;
       // Admins can revoke pending invites.
       allow delete: if isFamilyAdmin(familyId);
     }
@@ -772,9 +757,17 @@ service cloud.firestore {
       return encryptedOk(d, 'occasionLabel') && encryptedOk(d, 'partners');
     }
 
+    // Being a participant is not enough on its own: the caller must still be an
+    // admin of the family, so a partner who was removed as admin loses access.
+    // Every read asks for both. A list proves the second from its own filter,
+    // so the queries filter on familyId as well as on participantUids.
     match /ourYearRituals/{ritualId} {
-      allow read: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+      allow get: if request.auth != null
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
+      allow list: if request.auth != null
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -787,11 +780,13 @@ service cloud.firestore {
       // someone else.
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && ritualEncryptedOk();
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId);
     }
 
     // One chapter = one review of a self-chosen period. Carries only metadata
@@ -803,10 +798,23 @@ service cloud.firestore {
         && encryptedOk(d, 'quizReactions') && encryptedOk(d, 'keepsakes');
     }
 
+    // Is there a letter for this chapter that is sealed and not yet due?
+    function letterIsSealed(chapterId) {
+      let path = /databases/$(database)/documents/ourYearLetters/$(chapterId);
+      return exists(path)
+        && get(path).data.get('sealedAt', null) != null
+        && request.time < get(path).data.openAt;
+    }
+
     match /ourYearChapters/{chapterId} {
-      allow read: if request.auth != null
+      allow get: if request.auth != null
                     && (resource == null
-                        || request.auth.uid in resource.data.get('participantUids', []));
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)));
+      allow list: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)));
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
@@ -819,6 +827,7 @@ service cloud.firestore {
       // then). Everything else is frozen for good.
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (
@@ -827,8 +836,15 @@ service cloud.firestore {
                            .hasOnly(['letterStatus', 'letterOpenedAt', 'updatedAt'])
                     )
                     && chapterEncryptedOk();
+      // A chapter whose letter is still sealed is not discarded: the letter
+      // cannot go before its open date (see ourYearLetters), and a chapter
+      // deleted around it would leave the letter behind with nothing pointing
+      // at it. The letter document is asked rather than the chapter's own
+      // `letterStatus`, which the partners can edit.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
+                    && !letterIsSealed(chapterId);
     }
 
     // Has the caller handed in their own answers to the same part of the same
@@ -849,25 +865,46 @@ service cloud.firestore {
       return encryptedOk(d, 'answers');
     }
 
+    // `submitted` is what lets a partner open the other's answers (see
+    // callerHandedIn), so it cannot be set on an entry that holds none.
+    function handedInOnlyWithAnswers() {
+      let d = request.resource.data;
+      return d.get('submitted', false) != true || d.get('answers', null) != null;
+    }
+
     match /ourYearEntries/{entryId} {
       // `resource == null` covers a document that does not exist yet: a client
       // subscribes to its own entry before writing it, and denying that read
       // would kill the listener instead of reporting an empty answer sheet.
       // Nothing leaks — there is nothing there.
-      allow read: if request.auth != null
+      allow get: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
+      allow list: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
+                            && (resource.data.get('authorUid', '') == request.auth.uid
+                                || resource.data.get('revealed', false) == true)));
+      // A new entry starts unrevealed, and may be handed in only with its
+      // answers. The document id is not bound to the author here: the rules
+      // that matter (callerHandedIn, the reveal) look the canonical id up
+      // themselves, so an entry stored under any other id opens nothing.
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
                     && request.resource.data.get('authorUid', '') == request.auth.uid
+                    && request.resource.data.get('revealed', false) != true
+                    && handedInOnlyWithAnswers()
                     && entryEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && (
                       // Your own answers, yours to edit until you hand them in.
                       // After that they are fixed, or the look at your
@@ -876,6 +913,7 @@ service cloud.firestore {
                       // revealed, are not the author's to change either.
                       (resource.data.get('authorUid', '') == request.auth.uid
                         && resource.data.get('submitted', false) != true
+                        && handedInOnlyWithAnswers()
                         && !request.resource.data.diff(resource.data).affectedKeys()
                               .hasAny(['familyId', 'participantUids', 'authorUid', 'chapterId', 'kind', 'revealed']))
                       // The reveal: whoever finishes second flips this flag on
@@ -901,6 +939,7 @@ service cloud.firestore {
       // for exactly this reason.
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && (resource.data.get('submitted', false) != true
                         || !exists(/databases/$(database)/documents/ourYearChapters/$(resource.data.chapterId)));
     }
@@ -915,9 +954,16 @@ service cloud.firestore {
     }
 
     match /ourYearLetters/{chapterId} {
-      allow read: if request.auth != null
+      allow get: if request.auth != null
                     && (resource == null
                         || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
+                            && (resource.data.get('sealedAt', null) == null
+                                || request.time >= resource.data.openAt)));
+      allow list: if request.auth != null
+                    && (resource == null
+                        || (request.auth.uid in resource.data.get('participantUids', [])
+                            && isFamilyAdmin(resource.data.familyId)
                             && (resource.data.get('sealedAt', null) == null
                                 || request.time >= resource.data.openAt)));
       allow create: if request.auth != null
@@ -929,15 +975,31 @@ service cloud.firestore {
                     && letterSectionsEncryptedOk();
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
                     && (resource.data.get('sealedAt', null) == null
                         || request.time >= resource.data.openAt)
                     && letterSectionsEncryptedOk();
-      // Deleting is allowed (a chapter can be discarded while it is open);
-      // reading early is not, which is the property that matters.
+      // Deleting is allowed while the letter is a draft or once it is due (a
+      // chapter can be discarded while it is open). A sealed letter stays until
+      // its open date: removing it early would destroy what the seal promised.
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.get('participantUids', []);
+                    && request.auth.uid in resource.data.get('participantUids', [])
+                    && isFamilyAdmin(resource.data.familyId)
+                    && (resource.data.get('sealedAt', null) == null
+                        || request.time >= resource.data.openAt);
+    }
+
+    function tokenWellFormed() {
+      let d = request.resource.data;
+      return request.auth != null
+        && d.keys().hasOnly(['familyId', 'token', 'lang', 'uid', 'updatedAt'])
+        && d.familyId is string
+        && d.uid == request.auth.uid
+        && d.token is string
+        && d.token.size() > 0
+        && d.token.size() < 4096;
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.
@@ -951,15 +1013,26 @@ service cloud.firestore {
     // identity — it is since viewerLogin started minting them, so this is no
     // longer an anonymously writable collection.
     match /fcmTokens/{tokenId} {
-      allow create, update: if request.resource.data.familyId is string
-                            && isFamilyMember(request.resource.data.familyId)
-                            && request.resource.data.token is string
-                            && request.resource.data.token.size() > 0
-                            && request.resource.data.token.size() < 4096;
+      // The fields src/services/pushTokens.js writes, and nothing else. `uid`
+      // is the signed-in caller, which the triggers use to skip the device that
+      // created a memory.
+      allow create: if tokenWellFormed()
+                    && isFamilyMember(request.resource.data.familyId);
+      // An existing document is only touched by its own family, and does not
+      // move to another one.
+      allow update: if tokenWellFormed()
+                    && isFamilyMember(resource.data.familyId)
+                    && request.resource.data.familyId == resource.data.familyId;
       // A device unsubscribing on logout. Scoped to the family, so no one can
       // silence another family's devices.
       allow delete: if isFamilyMember(resource.data.familyId);
       allow read: if false;
+    }
+
+    // One marker per family whose deletion has begun, kept by the daily run
+    // of functions/familyDeletion.js so it can finish what it started.
+    match /familyDeletions/{familyId} {
+      allow read, write: if false;
     }
 
     // Login throttle counters, written by the viewerLogin function through the
