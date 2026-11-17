@@ -31,7 +31,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # The official image, which bundles shellcheck. Pinned by version;
-      # bump it together with the version in the comment.
+      # The official image, which bundles shellcheck. Pinned by version and by
+      # digest, because a tag can be moved to other content; Dependabot does not
+      # see images run from a script, so bump all three by hand together.
       - name: Run actionlint 1.7.12
-        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
