@@ -72,3 +72,11 @@ function isValidRating(rating) {
 function truncate(value, max) {
   return typeof value === 'string' ? value.slice(0, max) : ''
 }
+
+// How long a note is kept: feedback is plaintext, so it is not kept longer than
+// it is useful. The client writes the date as `expireAt`, and a TTL policy on
+// that field (README, "Records that expire") deletes the document. The rules
+// accept it only within FEEDBACK_RETENTION_SLACK_DAYS of this, so a client
+// cannot ask for a note that never goes. Change them together.
+export const FEEDBACK_RETENTION_DAYS = 365
+export const FEEDBACK_RETENTION_SLACK_DAYS = 2

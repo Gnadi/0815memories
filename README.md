@@ -288,17 +288,29 @@ log-based metric on `outcome=denied` shows a password being guessed.
 
 ### Records that expire
 
-The counters that throttle the viewer login (`rateLimits`) and the remembered
-viewer devices (`viewerDevices`) carry an `expireAt` date, a day and 180 days
-after their last use. Firestore deletes them at that date once a TTL policy
-names the field, which is switched on once per project:
+The counters that throttle the viewer login (`rateLimits`), the remembered
+viewer devices (`viewerDevices`), feedback notes (`feedback`) and invite links
+(`invites`) carry a date after which they are of no use: `expireAt` (a day and
+180 days after last use, and 12 months after a note was sent) and, on an
+invite, its own `expiresAt` (at most 14 days after it was made). Firestore
+deletes a document at that date once a TTL policy names the field, which is
+switched on once per project:
 
 ```bash
 gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
 gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=feedback --enable-ttl
+gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl
 ```
 
-Until then the field does nothing and both collections only grow.
+Until then the field does nothing and the collections only grow. Feedback sent
+before the field existed has none and stays until someone deletes it. The
+`invites` policy needs no code behind it: nothing reads an invite once it has
+expired. A redeemed invite stays only as the `viaInvite` token on the admin's
+entry, which nothing looks up, and a link opened after its invite was
+deleted says it is invalid rather than expired. Deletion runs within a day or
+so of the date, so an expired invite is still refused by `redeemFamilyInvite`
+in the meantime.
 
 ## Firestore rules & indexes
 

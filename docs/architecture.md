@@ -141,7 +141,7 @@ family.
 | `notificationsQueue` | retired; closed in the rules | nobody |
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
 | `familyDeletions` | one marker per family whose deletion has begun | functions only |
-| `feedback` | app feedback, deliberately unencrypted, append-only | family members |
+| `feedback` | app feedback, deliberately unencrypted, append-only; `expireAt` 12 months out (TTL) | family members |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
 from CI on merge (`.github/workflows/firebase-firestore.yml`).
