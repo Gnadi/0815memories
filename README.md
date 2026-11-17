@@ -376,8 +376,14 @@ scrapbook editor, **Print** opens a dialog that:
    captured at 300 dpi (`src/utils/printBook.js`). The editor's 4:3 page is
    centred on the print format, and its background fills the difference: 8.5 mm
    either side on A4 landscape. Nothing is cropped.
-3. Uploads the PDF and a cover picture to Firebase Storage
-   (`src/utils/printUpload.js`).
+3. Asks the `reservePrintUpload` Cloud Function for leave to upload
+   (`functions/printReservations.js`), then uploads the PDF and a cover picture
+   to Firebase Storage (`src/utils/printUpload.js`). `storage.rules` accept a
+   file only in a folder the function has reserved for that family, for one
+   hour. A family gets 5 reservations in any 30 days (the `PRINT_UPLOADS_PER_30_DAYS`
+   parameter), whether or not they were used, which is what keeps one account
+   from filling the shared bucket; a retry after a failed upload takes another.
+   Admins only, and not while the family is being deleted.
 4. Calls the `createPrintCheckout` Cloud Function (`functions/peechoCheckout.js`).
    It checks that the caller is an admin of the family and that the file is in
    Storage, then creates a Peecho *product listing* for it through Peecho's API

@@ -13,13 +13,15 @@
  * holding it and for no one else, since its token is unguessable and nothing
  * lists the bucket. storage.rules keeps the folder to the family's admins and
  * makes each file write-once, so a URL already handed to Peecho cannot be made
- * to point at different content. The purgePrintFiles Cloud Function deletes
- * every file after PRINT_FILE_RETENTION_DAYS.
+ * to point at different content. A folder must also have been reserved
+ * (reservePrintUpload, a limited number per family). The purgePrintFiles Cloud
+ * Function deletes every file after PRINT_FILE_RETENTION_DAYS.
  *
  *   printFiles/{familyId}/{printId}/book.pdf
  *   printFiles/{familyId}/{printId}/cover.jpg
  */
 import { getStorageInstance } from '../config/firebase'
+import { reservePrintUpload } from '../services/printReservation'
 
 export function printFilePaths(familyId, printId) {
   const folder = `printFiles/${familyId}/${printId}`
@@ -41,7 +43,9 @@ export async function uploadPrintFile({ familyId, pdf, thumbnail, onProgress = (
   if (!storage) throw new Error('Firebase Storage is not configured')
   const { ref, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } = await import('firebase/storage')
 
-  const printId = crypto.randomUUID()
+  // The server picks the folder: storage.rules refuse any other. Asked for
+  // last, so the hour it is good for starts when the upload does.
+  const { printId } = await reservePrintUpload(familyId)
   const paths = printFilePaths(familyId, printId)
   const pdfRef = ref(storage, paths.pdf)
   const thumbnailRef = ref(storage, paths.thumbnail)

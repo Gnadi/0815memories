@@ -45,6 +45,8 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
   const [failedAt, setFailedAt] = useState(null)
   // The page a photo could not be loaded for, when that is what went wrong.
   const [missingPhotoPage, setMissingPhotoPage] = useState(null)
+  // The family has used its print uploads for now.
+  const [quotaUsed, setQuotaUsed] = useState(false)
   const cancelledRef = useRef(false)
 
   // Leaving the dialog, however it happens, stops a render or upload under way.
@@ -85,6 +87,7 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
     cancelledRef.current = false
     setFailedAt(null)
     setMissingPhotoPage(null)
+    setQuotaUsed(false)
     setRendered({ done: 0, total: pageCount })
     setPhase('rendering')
     let printFile
@@ -107,6 +110,7 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
       if (isCancelled()) return
       devError('Preparing the print file failed', err)
       if (err?.code === 'missing-photos') setMissingPhotoPage(err.page)
+      if (err?.code === 'print-quota') setQuotaUsed(true)
       setFailedAt('file')
       setPhase('error')
       return
@@ -256,9 +260,11 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
             <p role="alert" className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700">
               {failedAt === 'checkout'
                 ? t('print.checkoutFailed')
-                : missingPhotoPage
-                  ? t('print.photosMissing', { page: missingPhotoPage })
-                  : t('print.failed')}
+                : quotaUsed
+                  ? t('print.quotaUsed')
+                  : missingPhotoPage
+                    ? t('print.photosMissing', { page: missingPhotoPage })
+                    : t('print.failed')}
             </p>
           )}
         </div>

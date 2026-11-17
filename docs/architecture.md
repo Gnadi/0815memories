@@ -142,6 +142,7 @@ family.
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
 | `familyDeletions` | one marker per family whose deletion has begun | functions only |
 | `feedback` | app feedback, deliberately unencrypted, append-only; `expireAt` 12 months out (TTL) | family members |
+| `printReservations` | leave to upload a print file, one per `printId`, counted per family for the quota | `reservePrintUpload` function only |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
 from CI on merge (`.github/workflows/firebase-firestore.yml`).
@@ -163,6 +164,7 @@ the top of `functions/index.js`.
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
+| `reservePrintUpload` | callable, admins | reserves a `printId` for one print-file upload, which `storage.rules` require; at most 5 per family in 30 days; refuses a family whose deletion is due or has begun |
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7, in two steps a night apart: the first run only reserves a file (`deleting`), a later one destroys it (a dry run until switched on) |

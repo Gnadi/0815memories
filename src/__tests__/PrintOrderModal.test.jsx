@@ -156,6 +156,14 @@ describe('PrintOrderModal', () => {
     expect(createPrintCheckout).not.toHaveBeenCalled()
   })
 
+  it('says so when the family has used up its print uploads', async () => {
+    uploadPrintFile.mockRejectedValue(Object.assign(new Error('quota'), { code: 'print-quota' }))
+    open()
+    prepare()
+    expect(await screen.findByText(/used up its print files for now/)).toBeInTheDocument()
+    expect(createPrintCheckout).not.toHaveBeenCalled()
+  })
+
   it('ignores a backdrop click while it is working', async () => {
     const onRender = vi.fn(() => new Promise(() => {}))
     const { onClose } = open({ onRender })

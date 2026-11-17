@@ -213,6 +213,7 @@
     "orderAtPeecho": "Order at Peecho",
     "preview": "Preview the whole book (PDF)",
     "failed": "The print file could not be prepared. Please try again.",
+    "quotaUsed": "This family has used up its print files for now. To keep storage costs down, a family can prepare only a few per 30 days. Please try again later.",
     "tryAgain": "Try again",
     "creatingCheckout": "Setting up the checkout at Peecho…",
     "linkExpires": "The checkout link works until {{date}}.",

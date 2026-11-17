@@ -25,6 +25,7 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
@@ -33,6 +34,7 @@ import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
+import { DEFAULT_PRINT_RESERVATIONS_PER_WINDOW, reservePrintUpload as reserveUpload, ReservationError } from './printReservations.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
@@ -224,6 +226,32 @@ export const purgePrintFiles = onSchedule(
   async () => {
     const { checked, deleted, failed } = await purgeExpiredPrintFiles(getStorage().bucket())
     console.log(`[print] checked=${checked} deleted=${deleted} failed=${failed}`)
+  },
+)
+
+const PRINT_UPLOADS_PER_30_DAYS = defineInt('PRINT_UPLOADS_PER_30_DAYS', {
+  default: DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
+  description: 'Print files one family may upload in 30 days (each one is up to 300 MB of the shared bucket)',
+})
+
+/**
+ * Leave to upload one print file — see functions/printReservations.js. Without
+ * the reservation it returns, storage.rules refuse the upload. Admin only.
+ */
+export const reservePrintUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK },
+  async (request) => {
+    try {
+      return await reserveUpload(
+        { db: getFirestore(), limit: PRINT_UPLOADS_PER_30_DAYS.value(), randomId: randomUUID },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof ReservationError) throw new HttpsError(error.code, error.message)
+      console.error('[print] reservation failed', error)
+      throw new HttpsError('internal', 'Could not reserve the print upload')
+    }
   },
 )
 

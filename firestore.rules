@@ -1117,6 +1117,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Leave to upload a print file, issued by reservePrintUpload and checked by
+    // storage.rules (functions/printReservations.js). A client that could write
+    // one could lift its own upload quota.
+    match /printReservations/{printId} {
+      allow read, write: if false;
+    }
+
     // Feedback about the app itself — write-only, for every family member.
     //
     // Three things make this collection different from the rest of the app:

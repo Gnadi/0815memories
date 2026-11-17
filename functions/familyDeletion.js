@@ -62,6 +62,7 @@ export const FAMILY_COLLECTIONS = [
   'ourYearLetters',
   'fcmTokens',
   'feedback',
+  'printReservations',
   DEVICES,
 ]
 

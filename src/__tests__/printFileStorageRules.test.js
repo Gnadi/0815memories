@@ -12,7 +12,7 @@
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 
 const env = globalThis.process?.env ?? {}
@@ -31,6 +31,13 @@ const JPEG = { contentType: 'image/jpeg' }
 const bytes = (n = 16) => new Uint8Array(n)
 
 let testEnv
+
+const reservation = (familyId, hours) => ({
+  familyId,
+  createdBy: ADMIN,
+  createdAt: Timestamp.now(),
+  expireAt: Timestamp.fromMillis(Date.now() + hours * 60 * 60 * 1000),
+})
 // A folder of its own for every test: clearStorage() only deletes objects at
 // the top of the bucket, and print files are nested three folders deep.
 let printId = 0
@@ -52,6 +59,8 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'families', FAMILY), { adminUids: [ADMIN, NEW_ADMIN] })
       await setDoc(doc(context.firestore(), 'families', OTHER_FAMILY), { adminUids: [OTHER_ADMIN] })
+      // Two hours either way: the emulator reads the clock itself.
+      await setDoc(doc(context.firestore(), 'printReservations', 'expired-print'), reservation(FAMILY, -2))
     })
   })
 
@@ -59,8 +68,11 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
     await testEnv?.cleanup()
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     printId += 1
+    // The server's part: reservePrintUpload issues the folder before the upload.
+    await testEnv.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), 'printReservations', `print-${printId}`), reservation(FAMILY, 1)))
   })
 
   const admin = () => testEnv.authenticatedContext(ADMIN, { familyId: FAMILY, role: 'admin' }).storage()
@@ -76,6 +88,23 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
   async function seed(name = 'book.pdf', metadata = PDF) {
     await testEnv.withSecurityRulesDisabled((context) => context.storage().ref(path(name)).put(bytes(), metadata))
   }
+
+  // The folder must have been issued by reservePrintUpload, or any family's
+  // admin could fill the shared bucket under ever new ids.
+  it('refuses a folder the server never reserved', async () => {
+    await assertFails(admin().ref(`printFiles/${FAMILY}/never-reserved/book.pdf`).put(bytes(), PDF))
+    await assertFails(admin().ref(`printFiles/${FAMILY}/never-reserved/cover.jpg`).put(bytes(), JPEG))
+  })
+
+  it('refuses a reservation that ran out', async () => {
+    await assertFails(admin().ref(`printFiles/${FAMILY}/expired-print/book.pdf`).put(bytes(), PDF))
+  })
+
+  it('refuses another family’s reservation', async () => {
+    await testEnv.withSecurityRulesDisabled((context) =>
+      setDoc(doc(context.firestore(), 'printReservations', 'theirs'), reservation(OTHER_FAMILY, 1)))
+    await assertFails(admin().ref(`printFiles/${FAMILY}/theirs/book.pdf`).put(bytes(), PDF))
+  })
 
   it('lets an admin store a book and its cover picture', async () => {
     await assertSucceeds(admin().ref(path('book.pdf')).put(bytes(), PDF))
@@ -130,6 +159,13 @@ describe.skipIf(!STORAGE_EMULATOR || !FIRESTORE_EMULATOR)('Storage security rule
     await assertFails(viewer().ref(path('book.pdf')).delete())
     await assertFails(otherAdmin().ref(path('book.pdf')).delete())
     await assertSucceeds(admin().ref(path('book.pdf')).delete())
+  })
+
+  // A client that could write a reservation would write its own quota.
+  it('keeps the reservations out of the clients’ hands', async () => {
+    const db = testEnv.authenticatedContext(ADMIN, { familyId: FAMILY, role: 'admin' }).firestore()
+    await assertFails(setDoc(doc(db, 'printReservations', 'mine'), reservation(FAMILY, 1)))
+    await assertFails(getDoc(doc(db, 'printReservations', `print-${printId}`)))
   })
 
   it('closes the rest of the bucket', async () => {

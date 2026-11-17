@@ -25,6 +25,18 @@ service firebase.storage {
         || request.auth.uid == fam.get('adminUid', '');
     }
 
+    // A folder exists only with leave from the server: reservePrintUpload
+    // (functions/printReservations.js) hands one out to an admin, a limited
+    // number of times per family. Without that, any account that founds a family
+    // could fill the project's bucket. The id is random, so one
+    // family's reservation names no folder of another's.
+    function hasReservation(familyId, printId) {
+      let path = /databases/(default)/documents/printReservations/$(printId);
+      return firestore.exists(path)
+        && firestore.get(path).data.familyId == familyId
+        && firestore.get(path).data.expireAt > request.time;
+    }
+
     match /printFiles/{familyId}/{printId}/{name} {
       // Reading the metadata is what getDownloadURL() needs.
       allow read: if isFamilyAdmin(familyId);
@@ -35,6 +47,7 @@ service firebase.storage {
       // the file must not exist yet.
       allow create: if resource == null
         && isFamilyAdmin(familyId)
+        && hasReservation(familyId, printId)
         && ((name == 'book.pdf'
              && request.resource.contentType == 'application/pdf'
              && request.resource.size < 300 * 1024 * 1024)

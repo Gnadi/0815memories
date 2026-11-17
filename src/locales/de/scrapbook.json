@@ -213,6 +213,7 @@
     "orderAtPeecho": "Bei Peecho bestellen",
     "preview": "Ganzes Buch ansehen (PDF)",
     "failed": "Die Druckdatei konnte nicht vorbereitet werden. Bitte versuche es erneut.",
+    "quotaUsed": "Diese Familie hat ihre Druckdateien für den Moment aufgebraucht. Um die Speicherkosten zu begrenzen, kann eine Familie nur wenige innerhalb von 30 Tagen vorbereiten. Bitte versuche es später noch einmal.",
     "tryAgain": "Erneut versuchen",
     "creatingCheckout": "Die Kasse bei Peecho wird eingerichtet…",
     "linkExpires": "Der Link zur Kasse gilt bis {{date}}.",
