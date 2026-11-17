@@ -433,3 +433,41 @@ describe('decrypted the way the app decrypts', () => {
     expect(ritual).toMatchObject({ occasionLabel: 'The day we met', partners: [{ name: 'Lena' }] })
   })
 })
+
+describe('a stored field named id', () => {
+  // The document ID ends up in the archive path of its media. A stored `id`
+  // used to replace the real one, and `../` in it left the export folder.
+  beforeEach(() => {
+    respond({
+      collections: {
+        memories: [{ id: 'm1', familyId: FAMILY, title: 'Beach', images: ['https://cdn/a.enc'] }],
+      },
+    })
+    // The service reads the real ID from the snapshot, the stored one from data().
+    getDocs.mockImplementation(async (q) => {
+      const name = (q.ref ?? q).name
+      if (name !== 'memories') return snap([])
+      return {
+        docs: [{
+          id: 'real1',
+          data: () => ({ id: '../../evil', familyId: FAMILY, title: 'Beach', images: ['https://cdn/a.enc'] }),
+        }],
+        empty: false,
+      }
+    })
+    globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) }))
+  })
+
+  it('keeps the real document ID in the data file', async () => {
+    await run()
+    expect(data('memories.json')[0].id).toBe('real1')
+  })
+
+  it('writes media only under media/', async () => {
+    await run()
+    const mediaPaths = Object.keys(zipFiles).filter((k) => k.includes('/media/'))
+    expect(mediaPaths).toHaveLength(1)
+    expect(mediaPaths[0]).toMatch(/\/media\/memories\/real1\/image-0\.enc$/)
+    for (const path of Object.keys(zipFiles)) expect(path).not.toContain('..')
+  })
+})
