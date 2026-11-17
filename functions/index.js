@@ -43,7 +43,7 @@ import { publicSlugFor, releaseFamilySlug } from './slugs.js'
 import { givenUp } from './retries.js'
 import { MembershipError, deleteFcmTokens, deleteMyAccount as deleteAccount, redeemInvite, removeAdmin, requireRecentLogin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
-import { checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
+import { PasswordChangeError, checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -765,7 +765,14 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   // the point of changing it. Revoking refresh tokens stops renewals; the
   // version bump is what ends ID tokens already issued, which the rules compare
   // with the token's `sv` claim.
-  await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash)
+  // The admin check above came before the hash; replaceSharedPassword checks
+  // again where it writes, so a removal in between wins.
+  try {
+    await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash, uid)
+  } catch (error) {
+    if (error instanceof PasswordChangeError) throw new HttpsError(error.code, error.message)
+    throw error
+  }
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
 
   // Housekeeping, and none of it is what ends the old sessions: the device

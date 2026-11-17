@@ -154,7 +154,7 @@ the top of `functions/index.js`.
 | Function | Trigger | Does |
 | --- | --- | --- |
 | `viewerLogin` | callable | password check, rate limit, viewer token |
-| `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions |
+| `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions; the admin check is repeated in the transaction that writes, so a removal in between wins |
 | `redeemFamilyInvite` | callable, a confirmed account holding an invite | makes the caller an admin and spends the invite |
 | `removeFamilyAdmin` | callable, admins | removes an admin, their entry and every pending invite; raises the invite epoch |
 | `deleteMyAccount` | callable, admins who own no family | leaves every family the caller is an admin of (as `removeFamilyAdmin` does), then deletes their Auth account; the owner deletes the family instead |

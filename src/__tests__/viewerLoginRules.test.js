@@ -312,8 +312,8 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
   })
 
   // A password change as setSharedPassword makes it.
-  const changePassword = (password, familyId = FAMILY) =>
-    replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, reversed(password))
+  const changePassword = (password, familyId = FAMILY, uid = 'owner') =>
+    replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, reversed(password), uid)
 
   it('refuses a login whose password changed while it was being compared', async () => {
     // The race: the old hash is read, then bcrypt runs, and the admin's change
@@ -333,6 +333,49 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     expect(deps.mintToken).toHaveBeenCalledWith(FAMILY, 3)
     await login({ password: RIGHT, deviceToken })
     expect(deps.mintToken).toHaveBeenLastCalledWith(FAMILY, 3)
+  })
+
+  describe('changing the password as an admin who may be removed', () => {
+    const stored = async () => (await db.doc(`families/${FAMILY}/secrets/auth`).get()).data().sharedPassword
+    const version = async () => (await db.doc(`families/${FAMILY}`).get()).data().viewerSessionVersion
+
+    it('writes nothing when the admin was removed after the check and before the write', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      // What setSharedPassword does: the check passes, then bcrypt takes its
+      // time, and the removal lands before the write.
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner'] })
+
+      await expect(changePassword(NEW_PASSWORD, FAMILY, 'co-admin')).rejects.toMatchObject({ code: 'permission-denied' })
+      expect(await stored()).toBe(reversed(RIGHT))
+      expect(await version()).toBe(0)
+    })
+
+    it('refuses a removal that lands inside the write, too', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      // Both run at once: whichever commits second sees the other's result.
+      const removal = db.doc(`families/${FAMILY}`).update({ adminUids: ['owner'] })
+      const change = changePassword(NEW_PASSWORD, FAMILY, 'co-admin').then(() => 'changed', (error) => error.code)
+      await removal
+      const outcome = await change
+      if (outcome === 'changed') {
+        // The change committed first, which was legitimate: the admin still was one.
+        expect(await version()).toBe(1)
+      } else {
+        expect(outcome).toBe('permission-denied')
+        expect(await stored()).toBe(reversed(RIGHT))
+        expect(await version()).toBe(0)
+      }
+    })
+
+    it('still changes the password for an admin, and for a family that is gone it refuses', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      await changePassword(NEW_PASSWORD, FAMILY, 'co-admin')
+      expect(await stored()).toBe(reversed(NEW_PASSWORD))
+      expect(await version()).toBe(1)
+
+      await expect(changePassword(NEW_PASSWORD, 'no-such-family')).rejects.toMatchObject({ code: 'permission-denied' })
+      await expect(changePassword(NEW_PASSWORD, FAMILY, null)).rejects.toMatchObject({ code: 'permission-denied' })
+    })
   })
 
   it('writes the hash and the version bump together', async () => {

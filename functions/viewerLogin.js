@@ -31,6 +31,7 @@
  * run this against the emulator.
  */
 import { createHash, randomBytes } from 'node:crypto'
+import { adminUidsOf } from './adminClaims.js'
 
 export const MAX_FAILURES = 5
 export const FAILURE_WINDOW_MS = 15 * 60 * 1000
@@ -174,20 +175,46 @@ function sessionOf(db, familyId, hash) {
   })
 }
 
+export class PasswordChangeError extends Error {
+  /** @param {'permission-denied'} code */
+  constructor(code, message) {
+    super(message)
+    this.code = code
+  }
+}
+
 /**
- * Replace the shared password. The hash and the version bump are one batch:
+ * Replace the shared password on behalf of `uid`, who must still be an admin
+ * when the write happens. The hash and the version bump are one transaction:
  * written one after the other, a login could slip in between them.
+ *
+ * The caller's right to change the password was checked before the slow bcrypt
+ * hash, which leaves time for an admin to be removed. A removed admin who knew
+ * it was coming could have a change in flight and set a password they know,
+ * which would get them back in as a viewer, with the family key. So the family
+ * document is read again here, in the transaction that writes: removing an
+ * admin (functions/membership.js) writes that document, so one of the two
+ * transactions runs again and sees the other's result.
  *
  * @param {object} deps
  * @param {any} deps.db
  * @param {(n: number) => unknown} deps.increment  FieldValue.increment, passed in to keep this module free of firebase-admin
  * @param {() => number} [deps.now]
+ * @param {string} familyId
+ * @param {string} hash  already computed: bcrypt stays outside the transaction
+ * @param {string} uid  the caller, from the verified ID token
+ * @throws {PasswordChangeError} `permission-denied`, with nothing written, when `uid` is no longer an admin
  */
-export async function replaceSharedPassword({ db, increment, now = Date.now }, familyId, hash) {
-  const batch = db.batch()
-  batch.set(db.doc(`families/${familyId}/secrets/auth`), { sharedPassword: hash, updatedAt: new Date(now()) })
-  batch.update(db.doc(`families/${familyId}`), { viewerSessionVersion: increment(1) })
-  await batch.commit()
+export async function replaceSharedPassword({ db, increment, now = Date.now }, familyId, hash, uid) {
+  const familyRef = db.doc(`families/${familyId}`)
+  await db.runTransaction(async (tx) => {
+    const family = await tx.get(familyRef)
+    if (!uid || !family.exists || !adminUidsOf(family.data()).includes(uid)) {
+      throw new PasswordChangeError('permission-denied', 'Not an admin of this family')
+    }
+    tx.set(db.doc(`families/${familyId}/secrets/auth`), { sharedPassword: hash, updatedAt: new Date(now()) })
+    tx.update(familyRef, { viewerSessionVersion: increment(1) })
+  })
 }
 
 /** Forget every remembered device of a family, a batch at a time. @returns {Promise<number>} how many */
