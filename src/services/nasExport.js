@@ -60,7 +60,19 @@ async function fetchCollection(collectionName, familyId, orderField = 'createdAt
     orderBy(orderField, orderDir)
   )
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+  return snap.docs.map((d) => ({ ...serializeTimestamps(d.data()), id: d.id }))
+}
+
+/**
+ * A value that becomes one segment of an archive path.
+ *
+ * The document ID is the real one today, but a segment built from stored data
+ * must not be able to hold `..` or a slash whatever a future source puts there:
+ * the archive would then extract outside the export folder. Firestore IDs of
+ * this app are within [A-Za-z0-9_-], so nothing legitimate changes.
+ */
+function pathSegment(value) {
+  return String(value ?? '').replace(/[^A-Za-z0-9_-]/g, '_') || '_'
 }
 
 /**
@@ -72,7 +84,7 @@ function collectMediaUrls(data, prefix) {
   function addUrl(url, docId, name) {
     if (!url || typeof url !== 'string') return
     const ext = getExtensionFromUrl(url) || '.bin'
-    entries.push({ url, zipPath: `media/${prefix}/${docId}/${name}${ext}` })
+    entries.push({ url, zipPath: `media/${prefix}/${pathSegment(docId)}/${pathSegment(name)}${ext}` })
   }
 
   function addArrayUrls(arr, docId, fieldPrefix) {
@@ -298,7 +310,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
     where('participantUids', 'array-contains', uid),
   ))
   const rituals = ritualSnap.docs
-    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .map((d) => ({ ...serializeTimestamps(d.data()), id: d.id }))
     .filter((r) => r.familyId === familyId)
   if (rituals.length === 0) return { rituals: [], chapters: [], entries: [], letters: [] }
 
@@ -309,7 +321,7 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
   ))
   const ritualIds = new Set(rituals.map((r) => r.id))
   const chapters = chapterSnap.docs
-    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .map((d) => ({ ...serializeTimestamps(d.data()), id: d.id }))
     .filter((c) => ritualIds.has(c.ritualId))
 
   const entrySnap = await getDocs(query(
@@ -320,14 +332,14 @@ async function fetchOurYear(familyId, uid, encryptionKey) {
   ))
   const chapterIds = new Set(chapters.map((c) => c.id))
   const entries = entrySnap.docs
-    .map((d) => ({ id: d.id, ...serializeTimestamps(d.data()) }))
+    .map((d) => ({ ...serializeTimestamps(d.data()), id: d.id }))
     .filter((e) => chapterIds.has(e.chapterId))
 
   const letters = []
   for (const chapter of chapters) {
     try {
       const snap = await getDoc(doc(db, 'ourYearLetters', chapter.id))
-      if (snap.exists()) letters.push({ id: snap.id, ...serializeTimestamps(snap.data()) })
+      if (snap.exists()) letters.push({ ...serializeTimestamps(snap.data()), id: snap.id })
     } catch {
       letters.push({ id: chapter.id, chapterId: chapter.id, sealed: true })
     }

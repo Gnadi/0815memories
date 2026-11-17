@@ -39,11 +39,11 @@ import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
 import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
-import { publicSlugFor, releaseFamilySlug } from './slugs.js'
+import { mirrorFamily } from './slugs.js'
 import { givenUp } from './retries.js'
 import { MembershipError, deleteFcmTokens, deleteMyAccount as deleteAccount, redeemInvite, removeAdmin, requireRecentLogin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
-import { checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
+import { PasswordChangeError, checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -567,34 +567,10 @@ const PUBLIC_FAMILY_FIELDS = [
 
 export const mirrorFamilyPublic = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
   if (abandoned('mirror', event)) return
-  const { familyId } = event.params
-  const db = getFirestore()
-  const before = event.data?.before?.exists ? event.data.before.data() : null
-  const after = event.data?.after
-  const publicRef = db.doc(`familyPublic/${familyId}`)
-
-  if (!after?.exists) {
-    await publicRef.delete().catch(() => {})
-    await releaseFamilySlug(db, familyId, before?.familySlug).catch(() => {})
-    return
-  }
-
-  const data = after.data() || {}
-  const mirror = {}
-  for (const field of PUBLIC_FAMILY_FIELDS) {
-    if (data[field] !== undefined) mirror[field] = data[field]
-  }
-
-  // The address is the one public field that has to be unique, and the family
-  // document cannot promise that — any signed-in client can write any slug to
-  // it. So the mirror carries only a slug this family holds in the registry.
-  const slug = await publicSlugFor(db, familyId, data.familySlug, before?.familySlug)
-  if (slug) mirror.familySlug = slug
-  else delete mirror.familySlug
-
-  // set() without merge, so a field cleared on the private document is cleared
-  // here too rather than lingering in public forever.
-  await publicRef.set(mirror)
+  // Only the id is taken from the event. Events can arrive late and out of
+  // order, and a retry can replay one for up to an hour, so what is mirrored is
+  // the family document as it is now (functions/slugs.js).
+  await mirrorFamily(getFirestore(), event.params.familyId, PUBLIC_FAMILY_FIELDS)
 })
 
 // ── 2. Admin claims ─────────────────────────────────────────────────────────
@@ -765,7 +741,14 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   // the point of changing it. Revoking refresh tokens stops renewals; the
   // version bump is what ends ID tokens already issued, which the rules compare
   // with the token's `sv` claim.
-  await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash)
+  // The admin check above came before the hash; replaceSharedPassword checks
+  // again where it writes, so a removal in between wins.
+  try {
+    await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash, uid)
+  } catch (error) {
+    if (error instanceof PasswordChangeError) throw new HttpsError(error.code, error.message)
+    throw error
+  }
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
 
   // Housekeeping, and none of it is what ends the old sessions: the device

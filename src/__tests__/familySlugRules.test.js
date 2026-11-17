@@ -18,7 +18,7 @@ import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
-import { claimFamilySlug, publicSlugFor, RESERVED_SLUGS, SLUGS } from '../../functions/slugs.js'
+import { claimFamilySlug, mirrorFamily, publicSlugFor, RESERVED_SLUGS, SLUGS } from '../../functions/slugs.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -162,6 +162,38 @@ describe.skipIf(!EMULATOR)('family slugs', () => {
       const member = testEnv.authenticatedContext('uid-a', { familyId: 'fam-a', role: 'admin' }).firestore()
       await assertFails(getDocs(collection(member, 'familyPublic')))
       await assertFails(getDocs(collection(member, SLUGS)))
+    })
+  })
+
+  describe('mirroring from the current family document', () => {
+    const FIELDS = ['familySlug', 'familyName', 'loginHeaderImage']
+
+    it('does not restore a removed image, and registers the address once', async () => {
+      await db.doc('families/fam-a').set({ familyName: 'Millers', familySlug: 'the-millers' })
+      await db.doc('familyPublic/fam-a').set({ familyName: 'Millers', loginHeaderImage: 'old' })
+      expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('mirrored')
+      expect((await db.doc('familyPublic/fam-a').get()).data()).toEqual({ familyName: 'Millers', familySlug: 'the-millers' })
+      expect(await holderOf('the-millers')).toBe('fam-a')
+    })
+
+    it('removes the mirror and the address of a deleted family, and keeps it removed on a retry', async () => {
+      await claimFamilySlug(db, 'fam-a', 'the-millers')
+      await db.doc('familyPublic/fam-a').set({ familySlug: 'the-millers' })
+      await claimFamilySlug(db, 'fam-b', 'the-smiths')
+      for (let run = 0; run < 2; run++) {
+        expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('removed')
+        expect((await db.doc('familyPublic/fam-a').get()).exists).toBe(false)
+        expect(await holderOf('the-millers')).toBe(null)
+      }
+      expect(await holderOf('the-smiths')).toBe('fam-b')
+    })
+
+    it('does not mirror a family whose deletion has begun', async () => {
+      await db.doc('families/fam-a').set({ familySlug: 'the-millers' })
+      await db.doc('familyDeletions/fam-a').set({ ownerUid: 'uid-a' })
+      expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('deleting')
+      expect((await db.doc('familyPublic/fam-a').get()).exists).toBe(false)
+      expect(await holderOf('the-millers')).toBe(null)
     })
   })
 

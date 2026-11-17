@@ -62,6 +62,14 @@ export function readStored(key) {
   return attempt(() => window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key))
 }
 
+/** Remove one session value from both stores. */
+export function removeStored(key) {
+  attempt(() => {
+    window.localStorage.removeItem(key)
+    window.sessionStorage.removeItem(key)
+  })
+}
+
 /**
  * Write a session value to the store this login chose, clearing the other one
  * so a "remember me" session can never be shadowed by a leftover from a

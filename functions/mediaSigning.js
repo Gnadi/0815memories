@@ -27,6 +27,12 @@ export const MEDIA_RATES = 'mediaRates'
 
 export const RATE_WINDOW_MS = 60 * 60 * 1000
 
+// Cloudinary accepts a signature's timestamp for an hour. The family deletion
+// waits this long, plus a margin for an upload that started late, before it
+// trusts that a `pending` ledger entry will never get a file.
+export const SIGNATURE_VALID_MS = 60 * 60 * 1000
+export const SIGNATURE_MARGIN_MS = 15 * 60 * 1000
+
 // What the browser may ask for. Family content is ciphertext, which Cloudinary
 // cannot decode, so it goes up as `raw`. The exception is a picture shown
 // without the family key — the login page's header above all (UploadWidget's
@@ -41,7 +47,7 @@ const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
 
 export class SigningError extends Error {
   /**
-   * @param {'unauthenticated'|'invalid-argument'|'permission-denied'|'resource-exhausted'} code
+   * @param {'unauthenticated'|'invalid-argument'|'permission-denied'|'failed-precondition'|'resource-exhausted'} code
    * @param {string} message
    * @param {{ reason: 'rate'|'storage' }} [details]  sent to the browser with a refused quota
    */
@@ -50,6 +56,23 @@ export class SigningError extends Error {
     this.code = code
     this.details = details
   }
+}
+
+// The marker collection of functions/familyDeletion.js, which imports this
+// module and so cannot be imported here.
+const FAMILY_DELETIONS = 'familyDeletions'
+
+const millisOf = (value) => {
+  if (value == null) return NaN
+  if (typeof value.toMillis === 'function') return value.toMillis()
+  if (value instanceof Date) return value.getTime()
+  return Number(value)
+}
+
+/** Has the family's deletion begun, or is its date reached? `marker` is the familyDeletions document, if read. */
+function deletionHasBegun(familyData, marker, at) {
+  if (marker?.exists) return true
+  return millisOf(familyData?.deletion?.deleteAfter) <= at
 }
 
 function adminUidsOf(data) {
@@ -135,20 +158,37 @@ export async function signUpload(deps, uid, data) {
   const kind = Object.hasOwn(UPLOAD_KINDS, kindName) ? UPLOAD_KINDS[kindName] : null
   if (!kind) throw new SigningError('invalid-argument', 'Unknown upload kind')
 
-  const family = await db.doc(`families/${familyId}`).get()
+  const createdAtMs = now()
+  const familyRef = db.doc(`families/${familyId}`)
+  const family = await familyRef.get()
   if (!family.exists || !adminUidsOf(family.data()).includes(uid)) {
     throw new SigningError('permission-denied', 'Only family admins can upload')
   }
 
+  // A family being deleted takes no new files: the deletion would race the
+  // upload and could report success with the file left behind. Checked again in
+  // the transaction below, against the marker the deletion writes.
+  if (deletionHasBegun(family.data(), null, createdAtMs)) {
+    throw new SigningError('failed-precondition', 'This family is being deleted')
+  }
+
   const assetId = randomId()
   const publicId = `${kind.prefix}/${familyId}/${assetId}`
-  const createdAt = new Date(now())
+  const createdAt = new Date(createdAtMs)
   const rateRef = db.collection(MEDIA_RATES).doc(uid)
   const usageRef = db.collection(MEDIA_USAGE).doc(familyId)
   const assetRef = db.collection(MEDIA_ASSETS).doc(assetId)
 
   const quota = await db.runTransaction(async (tx) => {
-    const [rate, usage] = await Promise.all([tx.get(rateRef), tx.get(usageRef)])
+    const [rate, usage, familyNow, marker] = await Promise.all([
+      tx.get(rateRef),
+      tx.get(usageRef),
+      tx.get(familyRef),
+      tx.get(db.collection(FAMILY_DELETIONS).doc(familyId)),
+    ])
+    if (!familyNow.exists || deletionHasBegun(familyNow.data(), marker, createdAtMs)) {
+      throw new SigningError('failed-precondition', 'This family is being deleted')
+    }
     const decision = checkQuota(
       { rate: rate.exists ? rate.data() : null, usage: usage.exists ? usage.data() : null },
       createdAt.getTime(),

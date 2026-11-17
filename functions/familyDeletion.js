@@ -25,7 +25,7 @@
  * bucket, Auth, the Cloudinary call and the clock come in as arguments, so the
  * tests can stub them.
  */
-import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE } from './mediaSigning.js'
+import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, SIGNATURE_MARGIN_MS, SIGNATURE_VALID_MS } from './mediaSigning.js'
 import { DESTROY_BATCH, destroyUnderOtherTypes } from './mediaPurge.js'
 import { PRINT_FILES_PREFIX } from './printFiles.js'
 import { releaseFamilySlug } from './slugs.js'
@@ -208,8 +208,16 @@ async function deleteFamilyDocuments(db, familyId, outOfTime, stats) {
  * Destroy the family's files and forget them. A ledger entry leaves only once
  * Cloudinary has confirmed its file is gone, so a refused delete is tried
  * again by the next run rather than forgotten.
+ *
+ * Two more reasons an entry stays. A `pending` entry younger than a signature
+ * stays valid may still get its file: signUpload refuses a family whose
+ * deletion is due, but a signature issued just before can be used for another
+ * hour, and a file uploaded after its entry is gone could never be traced to
+ * the family. Waiting a day for those is simpler than tracking each one, and
+ * the next run finds them old. And a file also stored under another resource
+ * type (mediaPurge.js) counts as refused until those are gone as well.
  */
-async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
+async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats, now) {
   const assets = db.collection(MEDIA_ASSETS).where('familyId', '==', familyId)
   for (;;) {
     if (outOfTime()) return false
@@ -218,8 +226,14 @@ async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
 
     const byType = new Map()
     const forget = []
+    let refused = 0
+    let young = 0
     for (const snap of page.docs) {
       const entry = snap.data()
+      if (entry.state === 'pending' && !entry.legacy && millis(entry.createdAt) > now() - SIGNATURE_VALID_MS - SIGNATURE_MARGIN_MS) {
+        young++
+        continue
+      }
       if (entry.legacy || typeof entry.publicId !== 'string' || !entry.resourceType) {
         if (entry.legacy) stats.legacyFilesKept++
         forget.push(snap)
@@ -230,7 +244,6 @@ async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
       byType.set(entry.resourceType, list)
     }
 
-    let refused = 0
     for (const [resourceType, entries] of byType) {
       if (!destroy) {
         refused += entries.length
@@ -239,10 +252,12 @@ async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
       for (let i = 0; i < entries.length; i += DESTROY_BATCH) {
         const batch = entries.slice(i, i + DESTROY_BATCH)
         const gone = await destroy(resourceType, batch.map((entry) => entry.publicId))
-        // A signature can be used once per resource type (mediaPurge.js).
-        await destroyUnderOtherTypes(destroy, resourceType, batch.map((entry) => entry.publicId).filter((id) => gone.has(id)))
+        // A signature can be used once per resource type (mediaPurge.js). Once
+        // the entry is deleted nothing says whose the other files are, so an
+        // entry stays until they are gone too.
+        const uncleared = await destroyUnderOtherTypes(destroy, resourceType, batch.map((entry) => entry.publicId).filter((id) => gone.has(id)))
         for (const entry of batch) {
-          if (gone.has(entry.publicId)) forget.push(entry.snap)
+          if (gone.has(entry.publicId) && !uncleared.has(entry.publicId)) forget.push(entry.snap)
           else refused++
         }
       }
@@ -250,11 +265,10 @@ async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats) {
 
     await Promise.all(forget.map((snap) => snap.ref.delete()))
     stats.files += forget.length
-    // The refused ones would come back as the next page, for ever.
-    if (refused > 0) {
-      stats.filesRefused += refused
-      return false
-    }
+    // The refused and the young ones would come back as the next page, for ever.
+    stats.filesRefused += refused
+    stats.filesPending += young
+    if (refused > 0 || young > 0) return false
   }
 }
 
@@ -300,11 +314,11 @@ async function deleteAccounts(db, auth, familyId, ownerUid, stats) {
  * @param {() => number} [deps.now]
  * @param {number} [deps.deadline]  stop starting new work after this time
  * @param {string} familyId
- * @returns {Promise<{ outcome: 'deleted'|'incomplete'|'not-due', documents: number, files: number, filesRefused: number, legacyFilesKept: number, printFiles: number, ownerAccountDeleted: boolean }>}
+ * @returns {Promise<{ outcome: 'deleted'|'incomplete'|'not-due', documents: number, files: number, filesRefused: number, filesPending: number, legacyFilesKept: number, printFiles: number, ownerAccountDeleted: boolean }>}
  */
 export async function deleteFamily(deps, familyId) {
   const { db, bucket, auth, destroy, now = Date.now, deadline = Infinity } = deps
-  const stats = { outcome: 'incomplete', documents: 0, files: 0, filesRefused: 0, legacyFilesKept: 0, printFiles: 0, ownerAccountDeleted: false }
+  const stats = { outcome: 'incomplete', documents: 0, files: 0, filesRefused: 0, filesPending: 0, legacyFilesKept: 0, printFiles: 0, ownerAccountDeleted: false }
   const outOfTime = () => now() > deadline
 
   const familyRef = db.doc(`families/${familyId}`)
@@ -330,7 +344,7 @@ export async function deleteFamily(deps, familyId) {
   if (!marker) return { ...stats, outcome: 'not-due' }
 
   if (!(await deleteFamilyDocuments(db, familyId, outOfTime, stats))) return stats
-  if (!(await deleteFamilyMedia(db, familyId, destroy, outOfTime, stats))) return stats
+  if (!(await deleteFamilyMedia(db, familyId, destroy, outOfTime, stats, now))) return stats
   await deletePrintFiles(bucket, familyId, stats)
 
   for (const name of FAMILY_SUBCOLLECTIONS) {

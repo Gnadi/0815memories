@@ -154,16 +154,16 @@ the top of `functions/index.js`.
 | Function | Trigger | Does |
 | --- | --- | --- |
 | `viewerLogin` | callable | password check, rate limit, viewer token |
-| `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions |
+| `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions; the admin check is repeated in the transaction that writes, so a removal in between wins |
 | `redeemFamilyInvite` | callable, a confirmed account holding an invite | makes the caller an admin and spends the invite |
 | `removeFamilyAdmin` | callable, admins | removes an admin, their entry and every pending invite; raises the invite epoch |
 | `deleteMyAccount` | callable, admins who own no family | leaves every family the caller is an admin of (as `removeFamilyAdmin` does), then deletes their Auth account; the owner deletes the family instead |
 | `syncAdminClaims` | `families/{id}` written | admin role claims |
-| `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
+| `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry, from the family document as it is read now (gone: both removed) |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
-| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
+| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
@@ -178,6 +178,12 @@ again the next day. A collection added to `firestore.rules` goes into
 `familyDeletionCoverage.test.js` fails: a new collection has to say what
 happens to it when its family is deleted.
 
+A ledger entry leaves only when its file is gone under every resource type,
+and a `pending` one only once it is older than a signature stays valid
+(`SIGNATURE_VALID_MS`): `signUpload` refuses a family whose deletion is due, but
+a signature issued just before still works for an hour. Until then the run
+reports `incomplete` and the next day's run carries on.
+
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.
 They are deployed from CI on merge once that is switched on, and by hand until
@@ -186,8 +192,9 @@ then (README, *Cloud Functions*).
 The triggers that keep something in step with the documents —
 `trackMediaReferences`, `syncAdminClaims`, `mirrorFamilyPublic` — retry a run
 that failed, for up to an hour (`functions/retries.js`). They can because each
-decides from the document as it is now, not from the event, so a second run
-lands on the same answer; a trigger added to that list has to work the same
+decides from the document as it is now, not from the event (`mirrorFamilyPublic`
+takes only the family id from it and reads the document in the transaction that
+writes), so a second run lands on the same answer; a trigger added to that list has to work the same
 way. The push triggers do not retry: a second run would be a second
 notification.
 
