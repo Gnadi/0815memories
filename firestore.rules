@@ -1053,8 +1053,10 @@ service cloud.firestore {
 
     // The id must be the token's SHA-256 in lowercase hex, as notifications.js
     // derives it: a member cannot fill the collection with documents under ids
-    // of their choosing, and the supported languages are the only ones the
-    // functions have texts for (SUPPORTED_LANGUAGES in src/i18n/index.js).
+    // of their choosing. `lang` is the device's interface language, so it is
+    // one of the app's languages (SUPPORTED_LANGUAGES in src/i18n/index.js; a
+    // test keeps the two lists equal). The functions send English or German
+    // and fall back to German for the others (normalizeLang in functions/push.js).
     function tokenWellFormed(tokenId) {
       let d = request.resource.data;
       return request.auth != null
@@ -1065,7 +1067,7 @@ service cloud.firestore {
         && d.token.size() > 0
         && d.token.size() < 4096
         && tokenId == hashing.sha256(d.token).toHexString().lower()
-        && d.get('lang', 'de') in ['en', 'de'];
+        && d.get('lang', 'de') in ['en', 'de', 'ar', 'fr'];
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.

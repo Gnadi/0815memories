@@ -437,14 +437,15 @@ describe.skipIf(!EMULATOR)('access control rules', () => {
       await assertFails(setDoc(doc(admin, 'fcmTokens', tokenId(base.token).toUpperCase()), base))
     })
 
-    it('are written in a language the notifications exist in', async () => {
+    it('are written in one of the app’s languages', async () => {
       const admin = asAdmin(ADMIN, FAMILY)
       const base = { familyId: FAMILY, token: 'fcm-token-lang', uid: ADMIN }
       const ref = doc(admin, 'fcmTokens', tokenId(base.token))
       await assertFails(setDoc(ref, { ...base, lang: 'x'.repeat(100_000) }))
-      await assertFails(setDoc(ref, { ...base, lang: 'fr' }))
-      await assertSucceeds(setDoc(ref, { ...base, lang: 'en' }))
-      await assertSucceeds(setDoc(ref, { ...base, lang: 'de' }))
+      await assertFails(setDoc(ref, { ...base, lang: 'xx' }))
+      for (const lang of ['en', 'de', 'ar', 'fr']) {
+        await assertSucceeds(setDoc(ref, { ...base, lang }))
+      }
     })
 
     it('stay with the family that registered them', async () => {
