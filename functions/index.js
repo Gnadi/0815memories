@@ -25,6 +25,7 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
@@ -33,10 +34,11 @@ import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
+import { DEFAULT_PRINT_RESERVATIONS_PER_WINDOW, reservePrintUpload as reserveUpload, ReservationError } from './printReservations.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
-import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { LEGACY_REFS_PER_DAY, MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { mirrorFamily } from './slugs.js'
@@ -227,6 +229,32 @@ export const purgePrintFiles = onSchedule(
   },
 )
 
+const PRINT_UPLOADS_PER_30_DAYS = defineInt('PRINT_UPLOADS_PER_30_DAYS', {
+  default: DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
+  description: 'Print files one family may upload in 30 days (each one is up to 300 MB of the shared bucket)',
+})
+
+/**
+ * Leave to upload one print file — see functions/printReservations.js. Without
+ * the reservation it returns, storage.rules refuse the upload. Admin only.
+ */
+export const reservePrintUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK },
+  async (request) => {
+    try {
+      return await reserveUpload(
+        { db: getFirestore(), limit: PRINT_UPLOADS_PER_30_DAYS.value(), randomId: randomUUID },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof ReservationError) throw new HttpsError(error.code, error.message)
+      console.error('[print] reservation failed', error)
+      throw new HttpsError('internal', 'Could not reserve the print upload')
+    }
+  },
+)
+
 // The merchant API key from Peecho's dashboard (Settings > API), held in
 // Secret Manager: `firebase functions:secrets:set PEECHO_API_KEY`.
 const PEECHO_API_KEY = defineSecret('PEECHO_API_KEY')
@@ -312,6 +340,13 @@ function abandoned(name, event) {
   return true
 }
 
+// How many files from before the ledger one family can add to it a day; the
+// reason for the default is in functions/mediaRefs.js.
+const MEDIA_LEGACY_REFS_PER_DAY = defineInt('MEDIA_LEGACY_REFS_PER_DAY', {
+  default: LEGACY_REFS_PER_DAY,
+  description: 'New ledger entries for files from before the ledger, per family and day',
+})
+
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
  * `mediaAssets` ledger before it exists.
@@ -359,7 +394,7 @@ export const trackMediaReferences = onDocumentWritten({ document: '{collection}/
   const after = event.data?.after?.exists ? event.data.after.data() : null
   if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
 
-  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  const stats = await trackMediaRefs({ db: getFirestore(), legacyPerDay: MEDIA_LEGACY_REFS_PER_DAY.value() }, { collection, docId, before, after })
   if (stats.attached || stats.detached || stats.ignored) {
     console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
   }

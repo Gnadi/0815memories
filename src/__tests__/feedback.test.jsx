@@ -259,7 +259,12 @@ describe('useFeedbackWriter', () => {
       role: 'admin',
       status: 'new',
       createdAt: 'SERVER_TIMESTAMP',
+      expireAt: expect.any(Date),
     })
+    // Twelve months out, for the TTL policy on the field.
+    const days = (written.expireAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+    expect(days).toBeGreaterThan(364.9)
+    expect(days).toBeLessThanOrEqual(365)
   })
 
   // The modal turns this into the message under the field rather than the

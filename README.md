@@ -288,17 +288,29 @@ log-based metric on `outcome=denied` shows a password being guessed.
 
 ### Records that expire
 
-The counters that throttle the viewer login (`rateLimits`) and the remembered
-viewer devices (`viewerDevices`) carry an `expireAt` date, a day and 180 days
-after their last use. Firestore deletes them at that date once a TTL policy
-names the field, which is switched on once per project:
+The counters that throttle the viewer login (`rateLimits`), the remembered
+viewer devices (`viewerDevices`), feedback notes (`feedback`) and invite links
+(`invites`) carry a date after which they are of no use: `expireAt` (a day and
+180 days after last use, and 12 months after a note was sent) and, on an
+invite, its own `expiresAt` (at most 14 days after it was made). Firestore
+deletes a document at that date once a TTL policy names the field, which is
+switched on once per project:
 
 ```bash
 gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
 gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=feedback --enable-ttl
+gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl
 ```
 
-Until then the field does nothing and both collections only grow.
+Until then the field does nothing and the collections only grow. Feedback sent
+before the field existed has none and stays until someone deletes it. The
+`invites` policy needs no code behind it: nothing reads an invite once it has
+expired. A redeemed invite stays only as the `viaInvite` token on the admin's
+entry, which nothing looks up, and a link opened after its invite was
+deleted says it is invalid rather than expired. Deletion runs within a day or
+so of the date, so an expired invite is still refused by `redeemFamilyInvite`
+in the meantime.
 
 ## Firestore rules & indexes
 
@@ -364,8 +376,14 @@ scrapbook editor, **Print** opens a dialog that:
    captured at 300 dpi (`src/utils/printBook.js`). The editor's 4:3 page is
    centred on the print format, and its background fills the difference: 8.5 mm
    either side on A4 landscape. Nothing is cropped.
-3. Uploads the PDF and a cover picture to Firebase Storage
-   (`src/utils/printUpload.js`).
+3. Asks the `reservePrintUpload` Cloud Function for leave to upload
+   (`functions/printReservations.js`), then uploads the PDF and a cover picture
+   to Firebase Storage (`src/utils/printUpload.js`). `storage.rules` accept a
+   file only in a folder the function has reserved for that family, for one
+   hour. A family gets 5 reservations in any 30 days (the `PRINT_UPLOADS_PER_30_DAYS`
+   parameter), whether or not they were used, which is what keeps one account
+   from filling the shared bucket; a retry after a failed upload takes another.
+   Admins only, and not while the family is being deleted.
 4. Calls the `createPrintCheckout` Cloud Function (`functions/peechoCheckout.js`).
    It checks that the caller is an admin of the family and that the file is in
    Storage, then creates a Peecho *product listing* for it through Peecho's API

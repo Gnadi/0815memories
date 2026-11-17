@@ -7,7 +7,8 @@
  * browser before the field is encrypted. When a document is written, the ids
  * it gained are attached to it in the ledger, and the ids it lost — all of
  * them when it is deleted — are let go. A file no document holds any more is
- * `detached`, which is what the clean-up of phase 4 will look for.
+ * `detached`, which is what the clean-up of phase 4 will look for. An attach
+ * to a file the clean-up has reserved (`deleting`) cancels the reservation.
  *
  * Only files of the document's own family are touched. A document can name
  * any id it likes; an id whose ledger entry belongs to another family, or that
@@ -19,7 +20,7 @@
  * Nothing here imports firebase-admin or firebase-functions, so the tests can
  * hand in a stand-in for Firestore.
  */
-import { MEDIA_ASSETS } from './mediaSigning.js'
+import { MEDIA_ASSETS, MEDIA_RATES } from './mediaSigning.js'
 
 // The collections whose documents can carry `mediaRefs`. The family document
 // holds the login page's pictures; its family is its own id.
@@ -51,8 +52,30 @@ export const MAX_MEDIA_REFS = 500
 const PUBLIC_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/([0-9a-f]{32})$/
 
 // A file from before the ledger, as src/services/mediaRefs.js names it:
-// `legacy:<resourceType>/<publicId>`.
-const LEGACY_REF = /^legacy:(raw|image|video)\/(kaydo\/[A-Za-z0-9_\-./]{1,300})$/
+// `legacy:<resourceType>/<publicId>`. Those files were uploaded without a
+// public id of their own, so Cloudinary chose the id: a random run of about
+// twenty letters and digits, with the original's extension for a raw file.
+// They went into the folders every family shared (`kaydo/encrypted`,
+// `kaydo/videos`, `kaydo/audio` and `kaydo` itself) and, for the last two weeks
+// before the ledger, into a folder per family
+// (`kaydo/f/<familyId>/{encrypted,videos,audio,public}`, the signer of 10 to 23
+// October 2026). Nothing else can be an old file, and a reference of any other
+// shape is one a family invented: it would open a ledger entry for a file that
+// does not exist, and legacy entries are never deleted.
+const LEGACY_REF = /^legacy:(raw|image|video)\/(kaydo\/(?:(?:encrypted|videos|audio)\/|f\/[A-Za-z0-9_-]{1,100}\/(?:encrypted|videos|audio|public)\/)?[A-Za-z0-9]{16,24}(?:\.[A-Za-z0-9]{1,10})?)$/
+
+// How many files from before the ledger one family can add to it in a day
+// (UTC). A real family adds them when its admin runs the backfill
+// (src/services/mediaIndex.js), which writes every media document in one go,
+// one document at a time: a family that used the app for years can name a few
+// thousand old photos, videos and thumbnails, and all of them must get through
+// in that one run. Five thousand covers that with room to spare, and still
+// keeps an invented flood to five thousand small documents a family a day
+// instead of five hundred for every memory it writes. A reference over the
+// limit gets no entry: the file is only left out of the family's usage, and
+// nothing is deleted or hidden because of it. It is a parameter of the
+// trigger (MEDIA_LEGACY_REFS_PER_DAY in functions/index.js).
+export const LEGACY_REFS_PER_DAY = 5000
 
 // What signUpload makes: `kaydo/<familyId>/<32 hex>`. A file with such an id
 // was uploaded since the ledger and has, or had, a ledger entry of its own, so
@@ -153,9 +176,10 @@ export function refChanges(collection, docId, before, after) {
  * @param {string} docId
  * @param {string|null} writtenFamily  the family the triggering write named,
  *   for a document that no longer exists to say it
+ * @param {number} legacyPerDay  how many new old-file entries a family may open a day
  * @returns {Promise<'attached'|'detached'|'kept'|'ignored'>}
  */
-export async function reconcileRef(db, now, mediaRef, collection, docId, writtenFamily = null) {
+export async function reconcileRef(db, now, mediaRef, collection, docId, writtenFamily = null, legacyPerDay = LEGACY_REFS_PER_DAY) {
   const path = `${collection}/${docId}`
   const ref = db.collection(MEDIA_ASSETS).doc(ledgerIdOf(mediaRef))
   const source = db.collection(collection).doc(docId)
@@ -169,6 +193,23 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
     const entry = snap.exists ? snap.data() : null
     const legacy = parseLegacyRef(mediaRef)
     if (!entry && legacy && attach && familyId) {
+      // The family's count of new old-file entries today, kept next to the
+      // upload counters. Read before anything is written.
+      const day = new Date(now()).toISOString().slice(0, 10)
+      const quotaRef = db.collection(MEDIA_RATES).doc(`legacy~${familyId}`)
+      const quotaSnap = await tx.get(quotaRef)
+      const quota = quotaSnap.exists ? quotaSnap.data() : {}
+      const today = quota.day === day
+      const used = today ? Number(quota.count) || 0 : 0
+      if (used >= legacyPerDay) {
+        // Said once a day and family, not once per file.
+        if (!(today && quota.warned)) {
+          tx.set(quotaRef, { day, count: used, warned: true })
+          console.warn('[media] a family names more files from before the ledger than allowed a day; the rest are not recorded:', familyId)
+        }
+        return 'ignored'
+      }
+      tx.set(quotaRef, { day, count: used + 1, warned: false })
       tx.set(ref, {
         familyId,
         publicId: legacy.publicId,
@@ -194,15 +235,28 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
     if (attach) refs.add(path)
     else refs.delete(path)
 
+    // Past the point of no return (functions/mediaPurge.js): the file is being
+    // or has been destroyed and cannot be saved. Only the reference is
+    // recorded, so the clean-up sees the conflict and reports it.
+    if (entry.state === 'destroying' || entry.state === 'lost') {
+      tx.update(ref, { refs: [...refs].sort() })
+      return attach ? 'attached' : 'detached'
+    }
     if (refs.size > 0) {
-      tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null })
+      // A reference cancels a reservation in this same transaction. The
+      // clean-up moves `deleting` to `destroying` in a transaction on this
+      // entry too, so exactly one of the two wins. The reservation's fields
+      // are nulled, not removed: this module has no FieldValue.delete.
+      const cancel = entry.state === 'deleting' ? { deletingSince: null, deletingFrom: null } : {}
+      tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null, ...cancel })
       return attach ? 'attached' : 'kept'
     }
     // A file no document ever held stays pending: it was abandoned, not let go.
     if (entry.state === 'pending') return 'ignored'
     // Already let go by an earlier run for the same document: keep the date
     // the grace period counts from.
-    if (entry.state === 'detached' || entry.state === 'unused') return 'detached'
+    // A reservation stays one: the file was let go, and the clean-up decides.
+    if (entry.state === 'detached' || entry.state === 'unused' || entry.state === 'deleting') return 'detached'
     // `detachedFrom` lets the clean-up look at that document once more before
     // it deletes anything (functions/mediaPurge.js).
     tx.update(ref, {
@@ -218,11 +272,11 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
 /**
  * Bring the ledger in line with one document write.
  *
- * @param {{ db: any, now?: () => number }} deps
+ * @param {{ db: any, now?: () => number, legacyPerDay?: number }} deps
  * @param {{ collection: string, docId: string, before: object|null, after: object|null }} write
  * @returns {Promise<{ attached: number, detached: number, ignored: number }>}
  */
-export async function trackMediaRefs({ db, now = Date.now }, { collection, docId, before, after }) {
+export async function trackMediaRefs({ db, now = Date.now, legacyPerDay = LEGACY_REFS_PER_DAY }, { collection, docId, before, after }) {
   const stats = { attached: 0, detached: 0, ignored: 0 }
   if (!MEDIA_COLLECTIONS.includes(collection)) return stats
   // Neither side of an over-cap write can be trusted to say what was lost, and
@@ -234,9 +288,15 @@ export async function trackMediaRefs({ db, now = Date.now }, { collection, docId
   // be comes from the document itself (reconcileRef says why).
   const { added, removed, removedFamily } = refChanges(collection, docId, before, after)
 
-  const results = await Promise.all(
-    [...added, ...removed].map((id) => reconcileRef(db, now, id, collection, docId, removedFamily)),
-  )
+  const reconcile = (id) => reconcileRef(db, now, id, collection, docId, removedFamily, legacyPerDay)
+  // Files from before the ledger share one counter per family, which every
+  // new entry updates in its own transaction: one after the other, so a
+  // backfilled document with many of them does not make its transactions
+  // fight over that counter.
+  const [old, fresh] = [[], []]
+  for (const id of [...added, ...removed]) (parseLegacyRef(id) ? old : fresh).push(id)
+  const results = await Promise.all(fresh.map(reconcile))
+  for (const id of old) results.push(await reconcile(id))
   for (const result of results) {
     if (result === 'attached') stats.attached++
     else if (result === 'detached') stats.detached++

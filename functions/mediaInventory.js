@@ -15,6 +15,11 @@
  *   families have not run it yet — while any have not, an unclaimed file may
  *   still be theirs.
  *
+ * - a file whose id is not of a shape an old upload had (functions/mediaRefs.js,
+ *   LEGACY_REF) can never be claimed, so it is reported apart, as
+ *   `unrecognized`: it is not proof of an orphan, only of an id nobody
+ *   expected, and has to be looked at before anything is decided about it.
+ *
  * Nothing of that is deleted here. Whether unclaimed files go is the
  * operator's call, made in Cloudinary, once every family has been through the
  * backfill.
@@ -120,6 +125,9 @@ export async function inventoryLegacyMedia({ db, list, destroy = null, dryRun = 
     unclaimed: 0,
     unclaimedBytes: 0,
     unclaimedSample: [],
+    unrecognized: 0,
+    unrecognizedBytes: 0,
+    unrecognizedSample: [],
     familiesNotIndexed: 0,
     // Signed ids stored as another kind than signed, and signed ids the
     // ledger does not know (the header says why only the first are deleted).
@@ -157,7 +165,13 @@ export async function inventoryLegacyMedia({ db, list, destroy = null, dryRun = 
         const bytes = Number(resource.bytes) || 0
         report.files++
         report.bytes += bytes
-        if (claimed) {
+        if (!ledgerId) {
+          report.unrecognized++
+          report.unrecognizedBytes += bytes
+          if (report.unrecognizedSample.length < REPORT_SAMPLE) {
+            report.unrecognizedSample.push(`${resourceType}/${resource.public_id}`)
+          }
+        } else if (claimed) {
           report.claimed++
           report.claimedBytes += bytes
           if (await countOnce(db, ledgerId, bytes)) report.newlyCounted++

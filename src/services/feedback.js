@@ -14,7 +14,7 @@
  */
 import { addDoc, collection, serverTimestamp } from '../config/firestore'
 import { db } from '../config/firebase'
-import { buildFeedbackDocument } from '../constants/feedback'
+import { buildFeedbackDocument, FEEDBACK_RETENTION_DAYS } from '../constants/feedback'
 
 export async function sendFeedback(familyId, { uid = null, role = null } = {}, input) {
   if (!db) throw new Error('Firebase not configured')
@@ -38,5 +38,8 @@ export async function sendFeedback(familyId, { uid = null, role = null } = {}, i
     // 'new' on create, so it can only ever be moved on server-side.
     status: 'new',
     createdAt: serverTimestamp(),
+    // The rules take the client's clock only within a window, since the server
+    // time cannot be added to in a write.
+    expireAt: new Date(Date.now() + FEEDBACK_RETENTION_DAYS * 24 * 60 * 60 * 1000),
   })
 }

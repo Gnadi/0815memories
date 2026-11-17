@@ -62,6 +62,7 @@ export const FAMILY_COLLECTIONS = [
   'ourYearLetters',
   'fcmTokens',
   'feedback',
+  'printReservations',
   DEVICES,
 ]
 
@@ -78,7 +79,7 @@ export const OTHER_COLLECTIONS = {
   familySlugs: 'released with the family document',
   mediaAssets: 'deleted with the files they stand for',
   mediaUsage: 'named after the family, deleted',
-  mediaRates: 'named after an admin, deleted for the owner',
+  mediaRates: 'named after an admin, deleted for the owner; `legacy~<familyId>` counts the family\'s old-file entries, deleted',
   mediaReports: 'the operator\'s inventory, holds no family',
   rateLimits: 'the family\'s and its devices\' login counters, deleted',
   notificationsQueue: 'retired and closed',
@@ -216,6 +217,12 @@ async function deleteFamilyDocuments(db, familyId, outOfTime, stats) {
  * the family. Waiting a day for those is simpler than tracking each one, and
  * the next run finds them old. And a file also stored under another resource
  * type (mediaPurge.js) counts as refused until those are gone as well.
+ *
+ * The state of an entry does not matter otherwise. One the daily clean-up has
+ * reserved (`deleting`) or begun to destroy (`destroying`) is destroyed here
+ * like any other, and so is a `lost` one, whose file Cloudinary will report as
+ * not found, which counts as gone. The entry is deleted either way, so the
+ * clean-up that finds it missing treats it as done, and it is counted once.
  */
 async function deleteFamilyMedia(db, familyId, destroy, outOfTime, stats, now) {
   const assets = db.collection(MEDIA_ASSETS).where('familyId', '==', familyId)
@@ -351,6 +358,7 @@ export async function deleteFamily(deps, familyId) {
     if (!(await deleteAll(db.collection(`families/${familyId}/${name}`), outOfTime))) return stats
   }
   await db.collection(MEDIA_USAGE).doc(familyId).delete()
+  await db.collection(MEDIA_RATES).doc(`legacy~${familyId}`).delete()
   await db.doc(`rateLimits/${safeKey('viewerLogin', familyId)}`).delete()
 
   // The family document last: until it goes, the rules still know the family,

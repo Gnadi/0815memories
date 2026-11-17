@@ -1117,6 +1117,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Leave to upload a print file, issued by reservePrintUpload and checked by
+    // storage.rules (functions/printReservations.js). A client that could write
+    // one could lift its own upload quota.
+    match /printReservations/{printId} {
+      allow read, write: if false;
+    }
+
     // Feedback about the app itself — write-only, for every family member.
     //
     // Three things make this collection different from the rest of the app:
@@ -1139,7 +1146,7 @@ service cloud.firestore {
       let d = request.resource.data;
       return d.keys().hasOnly(['familyId', 'uid', 'role', 'message', 'category',
                                'rating', 'contact', 'path', 'language',
-                               'userAgent', 'status', 'createdAt'])
+                               'userAgent', 'status', 'createdAt', 'expireAt'])
         && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
         && d.category in ['bug', 'idea', 'praise', 'other']
         && (d.rating == null || (d.rating is int && d.rating >= 1 && d.rating <= 5))
@@ -1151,6 +1158,12 @@ service cloud.firestore {
         // may only ever open one at the start of that process.
         && d.status == 'new'
         && d.createdAt == request.time
+        // The date a TTL policy deletes the note on, 12 months out. The client
+        // computes it, so the rules only hold it to a window around that: a
+        // note must not be able to name a date that never comes.
+        && d.expireAt is timestamp
+        && d.expireAt >= request.time + duration.value(363, 'd')
+        && d.expireAt <= request.time + duration.value(367, 'd')
         && d.uid == request.auth.uid
         && d.role in ['admin', 'viewer']
         // A viewer cannot sign their feedback as an admin. The reverse is not

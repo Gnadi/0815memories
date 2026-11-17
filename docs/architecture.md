@@ -141,7 +141,8 @@ family.
 | `notificationsQueue` | retired; closed in the rules | nobody |
 | `rateLimits`, `viewerDevices` | viewer-login throttling and remembered devices | functions only |
 | `familyDeletions` | one marker per family whose deletion has begun | functions only |
-| `feedback` | app feedback, deliberately unencrypted, append-only | family members |
+| `feedback` | app feedback, deliberately unencrypted, append-only; `expireAt` 12 months out (TTL) | family members |
+| `printReservations` | leave to upload a print file, one per `printId`, counted per family for the quota | `reservePrintUpload` function only |
 
 Composite indexes are in `firestore.indexes.json`. Both files are deployed
 from CI on merge (`.github/workflows/firebase-firestore.yml`).
@@ -163,9 +164,10 @@ the top of `functions/index.js`.
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
+| `reservePrintUpload` | callable, admins | reserves a `printId` for one print-file upload, which `storage.rules` require; at most 5 per family in 30 days; refuses a family whose deletion is due or has begun |
 | `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
-| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
+| `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7, in two steps a night apart: the first run only reserves a file (`deleting`), a later one destroys it (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
 | `requestFamilyDeletion`, `cancelFamilyDeletion` | callable, the owner | set and clear the date a family is deleted on, 14 days out |
 | `deleteScheduledFamilies` | schedule, 02:45 Europe/Berlin | deletes the families whose date has come: documents, files, print files, the viewer identity, the owner's account, the family document |
@@ -182,7 +184,19 @@ A ledger entry leaves only when its file is gone under every resource type,
 and a `pending` one only once it is older than a signature stays valid
 (`SIGNATURE_VALID_MS`): `signUpload` refuses a family whose deletion is due, but
 a signature issued just before still works for an hour. Until then the run
-reports `incomplete` and the next day's run carries on.
+reports `incomplete` and the next day's run carries on. Entries in any state
+are deleted the same way, including the ones the daily clean-up has reserved
+(`deleting`), begun to destroy (`destroying`) or given up on (`lost`). Entries
+of files from before the ledger (`legacy`) go, the files stay: nothing proves
+which family an old file belongs to, so the run only counts them
+(`legacyFilesKept`) and the deletion dialog says so.
+
+The trigger gives a file from before the ledger an entry only for the shapes
+old uploads had (the shared folders `kaydo/encrypted`, `kaydo/videos`,
+`kaydo/audio` and `kaydo`, and from 10 to 23 October 2026 a folder per family,
+`kaydo/f/<familyId>/…`, each with Cloudinary's random id), and at most
+`MEDIA_LEGACY_REFS_PER_DAY` new ones per family and day, counted in
+`mediaRates/legacy~<familyId>`.
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.

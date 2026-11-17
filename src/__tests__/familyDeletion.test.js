@@ -290,6 +290,40 @@ describe('deleteFamily', () => {
     expect(db.docs.has('mediaAssets/legacy~raw~x')).toBe(false)
   })
 
+  it('deletes entries the daily clean-up has reserved, begun to destroy or given up on, once each', async () => {
+    const db = seeded()
+    db.docs.set(...asset('d', { state: 'deleting', refs: [], deletingSince: new Date(NOW - 20 * 60 * 60 * 1000), deletingFrom: 'detached' }))
+    db.docs.set(...asset('e', { state: 'destroying', refs: [] }))
+    // Its file is already gone from Cloudinary, which reports it as not found.
+    db.docs.set(...asset('f', { state: 'lost', refs: ['memories/m1'], lostAt: new Date(NOW - DAY) }))
+    const d = deps(db)
+    const stats = await deleteFamily(d, 'fam-1')
+    expect(stats).toMatchObject({ outcome: 'deleted', files: 5, filesRefused: 0, filesPending: 0 })
+    const destroyed = d.destroy.mock.calls.filter(([type]) => type === 'raw').flatMap(([, ids]) => ids)
+    for (const c of ['d', 'e', 'f']) {
+      expect(destroyed.filter((id) => id === `kaydo/fam-1/${hex(c)}`)).toHaveLength(1)
+      expect(db.docs.has('mediaAssets/' + hex(c))).toBe(false)
+    }
+    expect(db.docs.has('mediaAssets/' + hex('9'))).toBe(true)
+  })
+
+  it('keeps such an entry while Cloudinary has not confirmed its file gone', async () => {
+    const db = seeded()
+    db.docs.set(...asset('e', { state: 'destroying', refs: [] }))
+    const refusing = deps(db, { destroy: vi.fn(async (type, ids) => new Set(type === 'raw' ? ids.filter((id) => id !== `kaydo/fam-1/${hex('e')}`) : ids)) })
+    expect(await deleteFamily(refusing, 'fam-1')).toMatchObject({ outcome: 'incomplete', filesRefused: 1 })
+    expect(db.docs.has('mediaAssets/' + hex('e'))).toBe(true)
+  })
+
+  it('deletes the counter of legacy entries the trigger keeps for the family', async () => {
+    const db = seeded()
+    db.docs.set('mediaRates/legacy~fam-1', { day: '2026-11-09', count: 3, warned: false })
+    db.docs.set('mediaRates/legacy~fam-2', { day: '2026-11-09', count: 3, warned: false })
+    await deleteFamily(deps(db), 'fam-1')
+    expect(db.docs.has('mediaRates/legacy~fam-1')).toBe(false)
+    expect(db.docs.has('mediaRates/legacy~fam-2')).toBe(true)
+  })
+
   it('carries on when the accounts are already gone', async () => {
     const db = seeded()
     const gone = Object.assign(new Error('gone'), { code: 'auth/user-not-found' })
