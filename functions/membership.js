@@ -32,6 +32,14 @@ export class MembershipError extends Error {
   }
 }
 
+/** How recent a password check the irreversible calls accept, in seconds. */
+export const FRESH_LOGIN_SECONDS = 10 * 60
+/** Mirrored by REAUTH_REQUIRED in src/services/callable.js, which the settings look for. */
+export const REAUTH_REQUIRED_MESSAGE = 'Confirm your password again'
+
+// A page of push registrations to delete at once.
+const TOKEN_PAGE = 400
+
 const adminUidsOf = (data) => (Array.isArray(data?.adminUids) ? data.adminUids : [])
 
 const millis = (value) => {
@@ -113,6 +121,26 @@ export async function redeemInvite({ db, now = Date.now }, caller, data) {
 }
 
 /**
+ * Stop sending a family's notifications to one identity's devices. Their push
+ * registrations are the browser's to delete, and a person who lost access never
+ * signs out, so without this they would keep receiving what the family does.
+ *
+ * @param {any} db
+ * @param {string} familyId
+ * @param {string} uid  an admin's uid, or `viewer:<familyId>` for the shared viewer identity
+ * @returns {Promise<number>} how many registrations were deleted
+ */
+export async function deleteFcmTokens(db, familyId, uid) {
+  let deleted = 0
+  for (;;) {
+    const page = await db.collection('fcmTokens').where('familyId', '==', familyId).where('uid', '==', uid).limit(TOKEN_PAGE).get()
+    if (page.docs.length === 0) return deleted
+    await Promise.all(page.docs.map((snap) => snap.ref.delete()))
+    deleted += page.docs.length
+  }
+}
+
+/**
  * Remove an admin from a family. Any admin may remove another, or leave; the
  * owner cannot be removed and cannot leave, so a family always has one.
  *
@@ -134,7 +162,7 @@ export async function removeAdmin({ db }, uid, data) {
   const familyRef = db.doc(`families/${familyId}`)
   const invites = db.collection(`families/${familyId}/invites`)
 
-  return db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const familySnap = await tx.get(familyRef)
     const family = familySnap.exists ? familySnap.data() : null
     const admins = adminUidsOf(family)
@@ -153,4 +181,64 @@ export async function removeAdmin({ db }, uid, data) {
     })
     return { ok: true }
   })
+
+  // After the transaction, and not part of it: the removal stands even if this
+  // fails, and a registration left behind only costs a few notifications.
+  await deleteFcmTokens(db, familyId, target).catch((error) => {
+    console.error(`[membership] family=${familyId} could not delete the push tokens of ${target}`, error)
+  })
+  return result
+}
+
+/**
+ * Delete the caller's own account. An admin who is not the owner of any family
+ * leaves every family they are in, as `removeAdmin` has them leave, and then
+ * their sign-in is deleted. The owner is turned away: a family always has one,
+ * so the owner's way out is deleting the family (functions/familyDeletion.js),
+ * which takes the account with it.
+ *
+ * The family comes first and the account second. If deleting the account
+ * fails, the person is out of their families but can still sign in and try
+ * again; the other order would leave a family listing an admin who no longer
+ * exists.
+ *
+ * @param {{ db: any, deleteUser: (uid: string) => Promise<void> }} deps
+ * @param {{ uid?: string, role?: unknown }} caller  from the verified ID token
+ */
+export async function deleteMyAccount({ db, deleteUser }, caller) {
+  const uid = caller?.uid
+  if (!uid) throw new MembershipError('unauthenticated', 'Sign in first')
+  // A viewer shares one identity with the whole family; it is not an account.
+  if (caller.role === 'viewer' || uid.startsWith('viewer:')) {
+    throw new MembershipError('permission-denied', 'Viewers have no account to delete')
+  }
+
+  const owned = await db.collection('families').where('adminUid', '==', uid).limit(1).get()
+  if (owned.docs.length > 0) {
+    throw new MembershipError('failed-precondition', 'The owner of a family deletes the family instead')
+  }
+
+  const member = await db.collection('families').where('adminUids', 'array-contains', uid).get()
+  for (const snap of member.docs) {
+    await removeAdmin({ db }, uid, { familyId: snap.id, uid })
+  }
+
+  await deleteUser(uid)
+  return { ok: true }
+}
+
+/**
+ * Insist that the caller typed their password a moment ago. The settings ask
+ * for it first, but a call made straight to the function would skip that;
+ * `auth_time` in the verified ID token is when the person last signed in, and
+ * reauthenticating renews it. Used by the calls that cannot be undone.
+ *
+ * @param {{ auth_time?: unknown }|undefined} token  `request.auth.token`
+ * @param {() => number} [now]  the clock, in milliseconds
+ */
+export function requireRecentLogin(token, now = Date.now) {
+  const authTime = token?.auth_time
+  if (typeof authTime !== 'number' || !Number.isFinite(authTime) || now() / 1000 - authTime > FRESH_LOGIN_SECONDS) {
+    throw new MembershipError('failed-precondition', REAUTH_REQUIRED_MESSAGE)
+  }
 }

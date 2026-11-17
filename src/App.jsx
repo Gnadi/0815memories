@@ -15,6 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 
 import { getSubdomainSlug } from './utils/familySlug'
+import { filterAnalyticsEvent } from './utils/analyticsFilter'
 import { FEATURE_PAGES } from './seoRoutes'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
@@ -216,7 +217,8 @@ function RevealPage() {
 // Vercel's analytics and speed insights scripts are only served on Vercel
 // deployments; on localhost, the preview server, or any other host they 404
 // and log console errors. Gate them to real hosts so they stay silent locally
-// (and in Lighthouse runs) while still reporting from production.
+// (and in Lighthouse runs) while still reporting from production. Even there,
+// filterAnalyticsEvent lets only the public pages through.
 function SiteAnalytics() {
   // Decided once at first render. On the server (pre-render) there is no window,
   // so it stays off; <Analytics /> and <SpeedInsights /> emit no DOM either way,
@@ -229,8 +231,8 @@ function SiteAnalytics() {
   })
   return enabled ? (
     <>
-      <Analytics />
-      <SpeedInsights />
+      <Analytics beforeSend={filterAnalyticsEvent} />
+      <SpeedInsights beforeSend={filterAnalyticsEvent} />
     </>
   ) : null
 }

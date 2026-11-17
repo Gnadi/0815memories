@@ -224,7 +224,8 @@
     "revokeFailed": "Einladung konnte nicht widerrufen werden",
     "expiresToday": "läuft heute ab",
     "expiresInOneDay": "läuft in 1 Tag ab",
-    "expiresInDays": "läuft in {{count}} Tagen ab"
+    "expiresInDays": "läuft in {{count}} Tagen ab",
+    "removeReauth": "Gib dein Passwort ein, um diese Admin-Person zu entfernen."
   },
   "upload": {
     "previewAlt": "Vorschau",
@@ -243,6 +244,28 @@
     "cancelled": "Die Familie bleibt. Es wurde nichts gelöscht.",
     "failed": "Das hat nicht geklappt. Bitte versuch es noch einmal.",
     "notOwner": "Das kann nur der Besitzer der Familie.",
-    "alreadyBegun": "Das Löschen hat bereits begonnen und lässt sich nicht mehr aufhalten."
+    "alreadyBegun": "Das Löschen hat bereits begonnen und lässt sich nicht mehr aufhalten.",
+    "reauthDescription": "Gib dein Passwort ein, um die Familie in {{days}} Tagen zu löschen. Bis dahin kannst du es zurücknehmen."
+  },
+  "reauth": {
+    "title": "Bestätige, dass du es bist",
+    "description": "Gib dein Passwort noch einmal ein, um fortzufahren. Das lässt sich nicht rückgängig machen.",
+    "passwordLabel": "Dein Passwort",
+    "confirm": "Weiter",
+    "cancel": "Abbrechen",
+    "wrongPassword": "Das Passwort stimmt nicht.",
+    "tooManyRequests": "Zu viele Versuche. Warte einen Moment und versuche es dann erneut.",
+    "failed": "Wir konnten dein Passwort nicht prüfen. Bitte versuche es erneut.",
+    "stale": "Zu deiner Sicherheit: Bestätige dein Passwort noch einmal und versuche es dann erneut."
+  },
+  "deleteAccount": {
+    "label": "Mein Konto löschen",
+    "description": "Entfernt dich aus dieser Familie und löscht dein Konto. Die Familie und alles darin bleibt für die anderen erhalten. Das lässt sich nicht rückgängig machen.",
+    "confirm": "Dein Konto löschen? Du wirst aus dieser Familie entfernt und kannst dich nicht mehr anmelden.",
+    "reauthDescription": "Gib dein Passwort ein, um dein Konto endgültig zu löschen.",
+    "submit": "Mein Konto löschen",
+    "ownerNote": "Dir gehört diese Familie, daher wird dein Konto zusammen mit ihr gelöscht. Um beides zu beenden, lösche oben die Familie.",
+    "ownerFirst": "Dir gehört eine Familie, daher lässt sich dein Konto nur zusammen mit ihr löschen. Lösche stattdessen die Familie.",
+    "failed": "Das hat nicht geklappt. Bitte versuche es erneut."
   }
 }

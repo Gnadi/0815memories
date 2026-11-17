@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../config/firebase'
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 import { useAuth } from '../context/AuthContext'
 import { getFamilyPublic } from '../services/family'
 import { getInvite, redeemInvite } from '../services/invites'
@@ -112,8 +113,8 @@ export default function InviteRedeemPage() {
       setError(t('invite.errors.passwordMismatch'))
       return
     }
-    if (password.length < 6) {
-      setError(t('invite.errors.passwordTooShort'))
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('invite.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
     }
 
@@ -129,7 +130,7 @@ export default function InviteRedeemPage() {
         'auth/invalid-email': 'invite.errors.invalidEmail',
         'auth/weak-password': 'invite.errors.weakPassword',
       }
-      setError(t(messages[err.code] || 'invite.errors.generic'))
+      setError(t(messages[err.code] || 'invite.errors.generic', { min: MIN_PASSWORD_LENGTH }))
     } finally {
       setLoading(false)
     }
@@ -343,10 +344,10 @@ function RedeemForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
+            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             disabled={disabled}
           />
           <button
@@ -370,7 +371,7 @@ function RedeemForm({
             placeholder="Repeat your password"
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             disabled={disabled}
           />
           <button

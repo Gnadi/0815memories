@@ -71,9 +71,11 @@ startup files from importing Firebase again.
 
 A family is addressed by its slug: `<slug>.kaydo.app` in production and
 `/family/<slug>` anywhere (`src/utils/familySlug.js`). Before sign-in, the
-login page can read only `familyPublic/{familyId}`: the family name and the
+login page can read two documents, each by its id and neither as a list:
+`familySlugs/{slug}`, which names the family holding an address and keeps
+slugs unique, and `familyPublic/{familyId}`, the family name and the
 login-page design, mirrored there by `mirrorFamilyPublic` from a fixed
-allowlist. `familySlugs/{slug}` keeps slugs unique.
+allowlist. Nobody without an account can list the families.
 
 ## Encryption
 
@@ -155,6 +157,7 @@ the top of `functions/index.js`.
 | `setSharedPassword` | callable, admins | stores a new password hash and revokes viewer sessions |
 | `redeemFamilyInvite` | callable, a confirmed account holding an invite | makes the caller an admin and spends the invite |
 | `removeFamilyAdmin` | callable, admins | removes an admin, their entry and every pending invite; raises the invite epoch |
+| `deleteMyAccount` | callable, admins who own no family | leaves every family the caller is an admin of (as `removeFamilyAdmin` does), then deletes their Auth account; the owner deletes the family instead |
 | `syncAdminClaims` | `families/{id}` written | admin role claims |
 | `mirrorFamilyPublic` | `families/{id}` written | `familyPublic` mirror and slug registry |
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |

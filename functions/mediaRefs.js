@@ -54,10 +54,18 @@ const PUBLIC_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/([0-9a-f]{32})$/
 // `legacy:<resourceType>/<publicId>`.
 const LEGACY_REF = /^legacy:(raw|image|video)\/(kaydo\/[A-Za-z0-9_\-./]{1,300})$/
 
+// What signUpload makes: `kaydo/<familyId>/<32 hex>`. A file with such an id
+// was uploaded since the ledger and has, or had, a ledger entry of its own, so
+// it is never "from before the ledger". Naming it as `legacy:` would let any
+// family open a never-deleted entry for another family's file, so such a
+// reference is not one the ledger can hold.
+const SIGNED_ID = /^kaydo\/(?:public\/)?[A-Za-z0-9_-]{1,100}\/[0-9a-f]{32}$/
+
 /** The resource type and public id of a file from before the ledger, or null. */
 export function parseLegacyRef(ref) {
   const match = typeof ref === 'string' ? LEGACY_REF.exec(ref) : null
-  return match ? { resourceType: match[1], publicId: match[2] } : null
+  if (!match || SIGNED_ID.test(match[2])) return null
+  return { resourceType: match[1], publicId: match[2] }
 }
 
 /**

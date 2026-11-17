@@ -89,6 +89,10 @@ export default function LoginPage() {
 
   // Key the family is looked up by: slug (route param or subdomain) first,
   // ?family= id as fallback. Empty on a plain /login visit.
+  // On a slug or subdomain page the family is fixed by the address; a
+  // ?family= id there would only let a crafted link put another family's
+  // design on this family's login page.
+  const hasSlug = !!(routeSlug || getSubdomainSlug())
   const lookupKey = routeSlug || getSubdomainSlug() || urlFamilyId || ''
 
   // Family resolution state, seeded from the localStorage snapshot so the
@@ -132,7 +136,7 @@ export default function LoginPage() {
 
   // Load customization for families accessed via ?family= query param (no slug)
   useEffect(() => {
-    if (!urlFamilyId || resolvedFamilyId) return
+    if (!urlFamilyId || resolvedFamilyId || hasSlug) return
     if (!db) {
       setResolving(false)
       return
@@ -147,10 +151,10 @@ export default function LoginPage() {
       })
       .catch(() => {})
       .finally(() => setResolving(false))
-  }, [urlFamilyId, resolvedFamilyId])
+  }, [urlFamilyId, resolvedFamilyId, hasSlug])
 
   // The effective familyId: resolved slug takes priority, then query param fallback
-  const effectiveFamilyId = resolvedFamilyId || urlFamilyId
+  const effectiveFamilyId = resolvedFamilyId || (hasSlug ? null : urlFamilyId)
 
   // Already signed in — nothing to log into. Rendered as <Navigate> rather than
   // a navigate() call in the render body, which updates router state mid-render.

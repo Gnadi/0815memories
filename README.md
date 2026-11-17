@@ -279,6 +279,27 @@ with:
 An alert on `severity>=ERROR` for the functions catches these and every
 uncaught failure as well, at the price of more noise.
 
+The functions also log what tests or changes a family's access, one line
+each and never with a password, a token, an email address or an IP:
+`[viewerLogin] family=… outcome=ok|denied|blocked device=new|known`,
+`[password] shared password changed`, `[membership] invite redeemed`,
+`[membership] admin removed` and `[deletion] requested` or `cancelled`. A
+log-based metric on `outcome=denied` shows a password being guessed.
+
+### Records that expire
+
+The counters that throttle the viewer login (`rateLimits`) and the remembered
+viewer devices (`viewerDevices`) carry an `expireAt` date, a day and 180 days
+after their last use. Firestore deletes them at that date once a TTL policy
+names the field, which is switched on once per project:
+
+```bash
+gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
+```
+
+Until then the field does nothing and both collections only grow.
+
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
@@ -294,6 +315,13 @@ Actions):
 | --- | --- | --- |
 | `FIREBASE_SERVICE_ACCOUNT` | Secret | The complete JSON key of a Google Cloud service account for the Firebase project |
 | `FIREBASE_PROJECT_ID` | Variable | The Firebase project id to deploy to |
+
+Keep the secret in an environment, not among the repository's secrets: create
+`production` under Settings → Environments, limit its *Deployment branches* to
+`main`, and add `FIREBASE_SERVICE_ACCOUNT` there. Both deploy jobs name that
+environment. A repository secret is handed to a workflow on any branch, and
+the check for `main` in the workflow file can be edited on that branch; the
+environment's branch rule is enforced by GitHub.
 
 The service account needs three roles:
 

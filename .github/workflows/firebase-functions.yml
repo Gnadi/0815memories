@@ -12,7 +12,8 @@ name: Cloud Functions
 # service account needs more roles for this than for the rules (README, Cloud
 # Functions). Until then merges behave as before and the deploy stays manual.
 #
-# The functions' tests run in ci.yml with the rest of the Vitest suite.
+# The functions' tests run in the test job below, which the deploy waits
+# for, and in ci.yml on every pull request.
 on:
   push:
     branches: [main]
@@ -31,14 +32,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A failing test stops the deploy. Until now the functions' tests ran only in
+  # ci.yml, which does not gate this workflow.
+  test:
+    name: Cloud Functions tests
+    # The same condition as deploy: a run from another branch neither tests nor deploys.
+    if: vars.DEPLOY_FUNCTIONS == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - run: npm test
+
   deploy:
     name: Deploy to Firebase
+    needs: test
     # workflow_dispatch can start this from any branch; only main may use the production credentials.
     if: vars.DEPLOY_FUNCTIONS == 'true' && github.ref == 'refs/heads/main'
+    # The environment holds the deploy credentials and is limited to main in the
+    # repository settings (Deployment branches). The if: above alone can be
+    # changed on any branch.
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

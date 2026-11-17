@@ -44,6 +44,7 @@ import { BrowserFrame, PhoneFrame } from '../components/landing/DeviceFrame'
 import { LightboxProvider, ZoomTarget } from '../components/landing/ImageLightbox'
 import { SCREENSHOTS, screenshotPath, screenshotSize, screenshotSrcSet } from '../components/landing/screenshots'
 import { generateSlug } from '../utils/familySlug'
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 import usePWAInstall from '../hooks/usePWAInstall'
 
 const OG_LOCALES = { en: 'en_US', de: 'de_DE', ar: 'ar_AR', fr: 'fr_FR' }
@@ -1065,8 +1066,8 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
-      setError(t('claim.errors.passwordTooShort'))
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('claim.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
     }
 
@@ -1080,7 +1081,7 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
       const messages = {
         'auth/email-already-in-use': t('claim.errors.emailInUse'),
         'auth/invalid-email': t('claim.errors.invalidEmail'),
-        'auth/weak-password': t('claim.errors.weakPassword'),
+        'auth/weak-password': t('claim.errors.weakPassword', { min: MIN_PASSWORD_LENGTH }),
       }
       // If the slug was claimed between the check and now, signup throws too.
       setError(messages[err.code] || t('claim.errors.generic'))
@@ -1198,11 +1199,11 @@ function ClaimFamilyName({ navigate, isAuthenticated, firebaseReady, lng }) {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('claim.passwordPlaceholder')}
+                placeholder={t('claim.passwordPlaceholder', { min: MIN_PASSWORD_LENGTH })}
                 aria-label={t('claim.passwordAriaLabel')}
                 className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
                 required
-                minLength={6}
+                minLength={MIN_PASSWORD_LENGTH}
               />
               <button
                 type="button"

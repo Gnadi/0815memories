@@ -221,6 +221,27 @@ describe('files from before the ledger', () => {
     })
   })
 
+  it('does not let a legacy reference claim a file the server signed', async () => {
+    const signed = `kaydo/fam-2/${'a'.repeat(32)}`
+    for (const publicId of [signed, `kaydo/public/fam-2/${'b'.repeat(32)}`]) {
+      const ref = `legacy:image/${publicId}`
+      expect(parseLegacyRef(ref)).toBe(null)
+      expect(ledgerIdOf(ref)).toBe(null)
+      expect(refsOf(memory({ images: [ref] }))).toEqual(new Set())
+    }
+    const db = ledger([])
+    const stats = await run(db, {
+      collection: 'memories',
+      docId: 'm1',
+      before: null,
+      after: memory({ images: [`legacy:image/${signed}`] }),
+    })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(Object.keys(db.collectionData(MEDIA_ASSETS) ?? {})).toEqual([])
+    // An old id that merely resembles one, with another tail, is still legacy.
+    expect(parseLegacyRef(`legacy:image/kaydo/fam-2/${'a'.repeat(31)}`)).not.toBe(null)
+  })
+
   it('marks one no document holds any more unused, not detached, so the clean-up never sees it', async () => {
     const db = ledger([])
     await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: [LEGACY] }) })

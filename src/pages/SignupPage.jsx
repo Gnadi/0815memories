@@ -7,6 +7,7 @@ import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 import { generateSlug } from '../utils/familySlug'
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 
 /**
  * Signing up is three steps: the account, the confirmation of its email
@@ -64,7 +65,7 @@ export default function SignupPage() {
       'auth/too-many-requests': 'signup.errors.tooManyRequests',
       'email-not-verified': 'signup.errors.notVerified',
     }
-    if (messages[err?.code]) return t(messages[err.code])
+    if (messages[err?.code]) return t(messages[err.code], { min: MIN_PASSWORD_LENGTH })
     if (/already taken/i.test(err?.message || '')) return t('signup.errors.familyNameTaken')
     if (/invalid URL/i.test(err?.message || '')) return t('signup.errors.familyNameInvalid')
     return t(fallback)
@@ -79,8 +80,8 @@ export default function SignupPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError(t('signup.errors.passwordTooShort'))
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('signup.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
     }
 
@@ -354,10 +355,10 @@ function SignupForm({
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('signup.form.passwordPlaceholder')}
+            placeholder={t('signup.form.passwordPlaceholder', { min: MIN_PASSWORD_LENGTH })}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
           <button
             type="button"
@@ -384,7 +385,7 @@ function SignupForm({
             placeholder={t('signup.form.confirmPasswordPlaceholder')}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
           <button
             type="button"

@@ -3,6 +3,7 @@ import {
   onAuthStateChanged, signInWithEmailAndPassword,
   signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
   signInWithCustomToken, sendPasswordResetEmail, sendEmailVerification,
+  EmailAuthProvider, reauthenticateWithCredential,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
@@ -309,6 +310,19 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Asks Firebase to check the password again before something that cannot be
+  // taken back: a session left open on a shared device should not be enough
+  // to remove an admin or delete a family or an account. A wrong password
+  // rejects with auth/wrong-password or auth/invalid-credential.
+  const reauthenticate = useCallback(async (password) => {
+    const current = auth?.currentUser
+    if (!current?.email) throw new Error('Not signed in with a password')
+    await reauthenticateWithCredential(current, EmailAuthProvider.credential(current.email, password))
+    // The server reads auth_time from the token it is sent; reauthenticating
+    // renews it only once the token is refreshed.
+    await current.getIdToken(true)
+  }, [])
+
   // Creating an admin account is two steps with the mailbox in between.
   //
   // A password reset goes to the address the account was registered with, so
@@ -475,6 +489,7 @@ export function AuthProvider({ children }) {
     loginAsViewer,
     loginAsAdmin,
     sendAdminPasswordReset,
+    reauthenticate,
     signup,
     emailVerified,
     sendVerificationEmail,
@@ -488,7 +503,7 @@ export function AuthProvider({ children }) {
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
     memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
-    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, signup, emailVerified,
+    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, reauthenticate, signup, emailVerified,
     sendVerificationEmail, checkEmailVerified, createOwnFamily, discardNewAccount,
     logout, setActiveFamilyId,
     stayLoggedIn, setStayLoggedIn,

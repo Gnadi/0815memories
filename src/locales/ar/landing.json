@@ -322,7 +322,7 @@
     "displayNameAriaLabel": "اسمك",
     "emailPlaceholder": "البريد الإلكتروني",
     "emailAriaLabel": "البريد الإلكتروني",
-    "passwordPlaceholder": "كلمة المرور (6 أحرف على الأقل)",
+    "passwordPlaceholder": "كلمة المرور ({{min}} حرفًا على الأقل)",
     "passwordAriaLabel": "كلمة المرور",
     "showPassword": "إظهار كلمة المرور",
     "hidePassword": "إخفاء كلمة المرور",
@@ -331,10 +331,10 @@
     "login": "تسجيل الدخول",
     "errors": {
       "couldNotCheck": "تعذّر التحقق من التوفر — يُرجى المحاولة مرة أخرى.",
-      "passwordTooShort": "يجب ألا تقل كلمة المرور عن 6 أحرف",
+      "passwordTooShort": "يجب ألا تقل كلمة المرور عن {{min}} حرفًا",
       "emailInUse": "يوجد حساب بهذا البريد الإلكتروني بالفعل",
       "invalidEmail": "يُرجى إدخال بريد إلكتروني صالح",
-      "weakPassword": "يجب ألا تقل كلمة المرور عن 6 أحرف",
+      "weakPassword": "يجب ألا تقل كلمة المرور عن {{min}} حرفًا",
       "generic": "تعذّر إنشاء الحساب"
     }
   },

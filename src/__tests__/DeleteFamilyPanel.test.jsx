@@ -6,7 +6,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
-const auth = { user: { uid: 'owner-1' }, isAdmin: true, isDemo: false, familyId: 'fam1' }
+const auth = {
+  user: { uid: 'owner-1' }, isAdmin: true, isDemo: false, familyId: 'fam1',
+  reauthenticate: vi.fn(async () => {}),
+}
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 vi.mock('../config/firebase', () => ({ db: {}, functions: {} }))
 
@@ -27,6 +30,12 @@ vi.mock('../services/familyDeletion', async (original) => ({
 
 import DeleteFamilyPanel from '../components/admin/DeleteFamilyPanel'
 import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
+
+// The prompt for the password that follows the name (ReauthDialog).
+const confirmPassword = () => {
+  fireEvent.change(screen.getByLabelText('Your password'), { target: { value: 'secret-pw' } })
+  fireEvent.click(screen.getAllByRole('button', { name: /Delete in 14 days/ }).at(-1))
+}
 
 const ON = new Date(2026, 10, 23)
 const base = { adminUid: 'owner-1', familyName: 'Hartmann' }
@@ -52,6 +61,7 @@ describe('DeleteFamilyPanel', () => {
     expect(button).toBeEnabled()
 
     fireEvent.click(button)
+    confirmPassword()
     await waitFor(() => expect(calls.request).toHaveBeenCalledWith('fam1'))
   })
 
@@ -87,6 +97,7 @@ describe('DeleteFamilyPanel', () => {
     render(<DeleteFamilyPanel />)
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hartmann' } })
     fireEvent.click(screen.getByRole('button', { name: /Delete in 14 days/ }))
+    confirmPassword()
     expect(await screen.findByText("Only the family's owner can do this.")).toBeInTheDocument()
     quiet.mockRestore()
   })

@@ -322,7 +322,7 @@
     "displayNameAriaLabel": "Votre nom",
     "emailPlaceholder": "E-mail",
     "emailAriaLabel": "E-mail",
-    "passwordPlaceholder": "Mot de passe (au moins 6 caractères)",
+    "passwordPlaceholder": "Mot de passe (au moins {{min}} caractères)",
     "passwordAriaLabel": "Mot de passe",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
@@ -331,10 +331,10 @@
     "login": "Connexion",
     "errors": {
       "couldNotCheck": "Impossible de vérifier la disponibilité — veuillez réessayer.",
-      "passwordTooShort": "Le mot de passe doit comporter au moins 6 caractères",
+      "passwordTooShort": "Le mot de passe doit comporter au moins {{min}} caractères",
       "emailInUse": "Un compte avec cet e-mail existe déjà",
       "invalidEmail": "Veuillez saisir une adresse e-mail valide",
-      "weakPassword": "Le mot de passe doit comporter au moins 6 caractères",
+      "weakPassword": "Le mot de passe doit comporter au moins {{min}} caractères",
       "generic": "Impossible de créer le compte"
     }
   },

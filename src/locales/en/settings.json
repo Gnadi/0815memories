@@ -224,7 +224,8 @@
     "revokeFailed": "Failed to revoke invite",
     "expiresToday": "expires today",
     "expiresInOneDay": "expires in 1 day",
-    "expiresInDays": "expires in {{count}} days"
+    "expiresInDays": "expires in {{count}} days",
+    "removeReauth": "Enter your password to remove this admin."
   },
   "upload": {
     "previewAlt": "Preview",
@@ -243,6 +244,28 @@
     "cancelled": "The family stays. Nothing was deleted.",
     "failed": "That did not work. Please try again.",
     "notOwner": "Only the family's owner can do this.",
-    "alreadyBegun": "The deletion has already begun and can no longer be stopped."
+    "alreadyBegun": "The deletion has already begun and can no longer be stopped.",
+    "reauthDescription": "Enter your password to delete the family in {{days}} days. Until then you can take it back."
+  },
+  "reauth": {
+    "title": "Confirm it's you",
+    "description": "Enter your password again to continue. This cannot be undone.",
+    "passwordLabel": "Your password",
+    "confirm": "Continue",
+    "cancel": "Cancel",
+    "wrongPassword": "That password is not correct.",
+    "tooManyRequests": "Too many attempts. Please wait a moment and try again.",
+    "failed": "We could not check your password. Please try again.",
+    "stale": "For your safety, please confirm your password again and retry."
+  },
+  "deleteAccount": {
+    "label": "Delete my account",
+    "description": "Removes you from this family and deletes your account. The family and everything in it stays for the others. This cannot be undone.",
+    "confirm": "Delete your account? You will be removed from this family and can no longer sign in.",
+    "reauthDescription": "Enter your password to delete your account for good.",
+    "submit": "Delete my account",
+    "ownerNote": "You own this family, so your account is deleted together with it. To end both, delete the family above.",
+    "ownerFirst": "You own a family, so your account can only be deleted together with it. Delete the family instead.",
+    "failed": "That did not work. Please try again."
   }
 }
