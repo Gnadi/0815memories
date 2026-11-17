@@ -51,19 +51,27 @@ export const RESOURCE_TYPES = ['raw', 'image', 'video']
  * goes, its entry goes with it, and afterwards nothing would say whose the
  * other two are — so they go now.
  *
- * Best effort: the file the ledger knows is gone by the time this runs, and a
- * refusal here must not make that look undone. The weekly inventory
- * (functions/mediaInventory.js) deletes such files too, while their entry is
- * still there to prove them.
+ * Best effort for the daily purge: the file the ledger knows is gone by the
+ * time this runs, and a refusal here must not make that look undone. The weekly
+ * inventory (functions/mediaInventory.js) deletes such files too, while their
+ * entry is still there to prove them. The family deletion cannot be that
+ * relaxed: it removes the entry for good, so it reads the answer and keeps the
+ * entry of every id that is not cleared (a "not found" counts as cleared).
+ *
+ * @returns {Promise<Set<string>>} the ids not confirmed gone under every other type
  */
 export async function destroyUnderOtherTypes(destroy, resourceType, publicIds) {
-  if (publicIds.length === 0) return
+  const uncleared = new Set()
+  if (publicIds.length === 0) return uncleared
   for (const other of RESOURCE_TYPES) {
     if (other === resourceType) continue
-    await destroy(other, publicIds).catch((error) => {
+    const gone = await destroy(other, publicIds).catch((error) => {
       console.error('[media] could not clear the other resource types of deleted files', error)
+      return new Set()
     })
+    for (const id of publicIds) if (!gone.has(id)) uncleared.add(id)
   }
+  return uncleared
 }
 
 // Per state and run. What is left over waits for the next day.

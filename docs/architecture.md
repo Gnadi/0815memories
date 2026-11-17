@@ -163,7 +163,7 @@ the top of `functions/index.js`.
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
-| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
+| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
@@ -177,6 +177,12 @@ again the next day. A collection added to `firestore.rules` goes into
 `FAMILY_COLLECTIONS` or `OTHER_COLLECTIONS` there, or
 `familyDeletionCoverage.test.js` fails: a new collection has to say what
 happens to it when its family is deleted.
+
+A ledger entry leaves only when its file is gone under every resource type,
+and a `pending` one only once it is older than a signature stays valid
+(`SIGNATURE_VALID_MS`): `signUpload` refuses a family whose deletion is due, but
+a signature issued just before still works for an hour. Until then the run
+reports `incomplete` and the next day's run carries on.
 
 Logic worth testing lives in its own module (`viewerLogin.js`, `slugs.js`,
 `anniversary.js`, `bestOf.js`, `push.js`), and `src/__tests__/` imports it directly.

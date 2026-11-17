@@ -9,6 +9,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   cloudinaryDestroyer,
+  destroyUnderOtherTypes,
   isDue,
   purgeMedia,
   DETACHED_GRACE_DAYS,
@@ -280,6 +281,23 @@ describe('purgeMedia', () => {
     const stats = await run(db, vi.fn(async () => new Set([`kaydo/fam-1/${hex('a')}`])))
     expect(stats).toMatchObject({ deleted: 1, failed: 1 })
     expect(Object.keys(ledger(db))).toEqual([hex('b')])
+  })
+})
+
+describe('destroyUnderOtherTypes', () => {
+  it('names the ids that are not gone under every other type, and never throws', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const destroy = vi.fn(async (type, ids) => {
+      if (type === 'video') throw new Error('503')
+      return new Set(ids.filter((id) => id !== 'b'))
+    })
+    const uncleared = await destroyUnderOtherTypes(destroy, 'raw', ['a', 'b'])
+    error.mockRestore()
+    expect([...uncleared].sort()).toEqual(['a', 'b'])
+
+    const fine = await destroyUnderOtherTypes(vi.fn(async (_type, ids) => new Set(ids)), 'raw', ['a'])
+    expect(fine.size).toBe(0)
+    expect((await destroyUnderOtherTypes(destroy, 'raw', [])).size).toBe(0)
   })
 })
 
