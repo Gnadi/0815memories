@@ -234,7 +234,7 @@
   },
   "deleteFamily": {
     "label": "Familie löschen",
-    "description": "Löscht alles, was diese Familie gespeichert hat: jede Erinnerung, jedes Foto und Video, die Tagebücher, den Tresor, die Rezepte und alle Einstellungen. Dein Konto wird mitgelöscht, außer du bist Admin einer weiteren Familie. Andere Admins behalten ihr Konto und verlieren den Zugang zu dieser Familie. {{days}} Tage lang wird nichts gelöscht, und so lange kannst du es zurücknehmen. Danach lässt es sich nicht rückgängig machen. Lade deshalb vorher oben ein Backup herunter, wenn du etwas behalten willst.",
+    "description": "Löscht alles, was diese Familie gespeichert hat: jede Erinnerung, die Tagebücher, den Tresor, die Rezepte und alle Einstellungen sowie die Fotos und Videos, die seit Einführung der heutigen Medienverwaltung hochgeladen wurden. Fotos und Videos aus der Zeit davor lassen sich keiner Familie sicher zuordnen und werden deshalb nicht automatisch gelöscht; sie bleiben verschlüsselt beim Speicheranbieter. Dein Konto wird mitgelöscht, außer du bist Admin einer weiteren Familie. Andere Admins behalten ihr Konto und verlieren den Zugang zu dieser Familie. {{days}} Tage lang wird nichts gelöscht, und so lange kannst du es zurücknehmen. Danach lässt es sich nicht rückgängig machen. Lade deshalb vorher oben ein Backup herunter, wenn du etwas behalten willst.",
     "confirmLabel": "Gib zur Bestätigung den Namen der Familie ein: {{name}}",
     "submit": "In {{days}} Tagen löschen",
     "scheduledTitle": "Diese Familie wird am {{date}} gelöscht",

@@ -234,7 +234,7 @@
   },
   "deleteFamily": {
     "label": "Delete family",
-    "description": "Deletes everything this family has stored: every memory, photo and video, the journals, the Vault, the recipes and all settings. Your account is deleted with it, unless you are an admin of another family. Other admins keep their accounts and lose access to this family. Nothing is deleted for {{days}} days, and until then you can take it back. After that it cannot be undone, so download a backup above first if you want to keep anything.",
+    "description": "Deletes everything this family has stored: every memory, the journals, the Vault, the recipes and all settings, and the photos and videos uploaded since media management was introduced. Photos and videos uploaded before that cannot be matched to a family with certainty, so they are not deleted automatically; they stay encrypted with our storage provider. Your account is deleted with it, unless you are an admin of another family. Other admins keep their accounts and lose access to this family. Nothing is deleted for {{days}} days, and until then you can take it back. After that it cannot be undone, so download a backup above first if you want to keep anything.",
     "confirmLabel": "Type the family's name to confirm: {{name}}",
     "submit": "Delete in {{days}} days",
     "scheduledTitle": "This family will be deleted on {{date}}",
