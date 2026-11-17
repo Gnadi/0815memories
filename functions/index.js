@@ -36,7 +36,7 @@ import { purgeExpiredPrintFiles } from './printFiles.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
-import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { LEGACY_REFS_PER_DAY, MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
 import { mirrorFamily } from './slugs.js'
@@ -312,6 +312,13 @@ function abandoned(name, event) {
   return true
 }
 
+// How many files from before the ledger one family can add to it a day; the
+// reason for the default is in functions/mediaRefs.js.
+const MEDIA_LEGACY_REFS_PER_DAY = defineInt('MEDIA_LEGACY_REFS_PER_DAY', {
+  default: LEGACY_REFS_PER_DAY,
+  description: 'New ledger entries for files from before the ledger, per family and day',
+})
+
 /**
  * Sign one Cloudinary upload for an admin, and record the file in the
  * `mediaAssets` ledger before it exists.
@@ -359,7 +366,7 @@ export const trackMediaReferences = onDocumentWritten({ document: '{collection}/
   const after = event.data?.after?.exists ? event.data.after.data() : null
   if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
 
-  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  const stats = await trackMediaRefs({ db: getFirestore(), legacyPerDay: MEDIA_LEGACY_REFS_PER_DAY.value() }, { collection, docId, before, after })
   if (stats.attached || stats.detached || stats.ignored) {
     console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
   }

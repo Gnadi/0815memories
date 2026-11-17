@@ -17,7 +17,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
 import { MEDIA_ASSETS, MEDIA_RATES, MEDIA_USAGE, signUpload } from '../../functions/mediaSigning.js'
 import { syncMediaSizes } from '../../functions/mediaSizes.js'
-import { purgeMedia } from '../../functions/mediaPurge.js'
+import { purgeMedia, RESERVATION_MS } from '../../functions/mediaPurge.js'
 import { inventoryLegacyMedia, MEDIA_REPORTS } from '../../functions/mediaInventory.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
@@ -125,15 +125,18 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
     await db.collection(MEDIA_USAGE).doc(FAMILY).set({ bytes: 50, files: 3 })
 
     const destroyed = []
-    const stats = await purgeMedia({
-      db,
-      dryRun: false,
-      // Each file is also cleared under the other kinds its signature could
-      // have been used for (functions/mediaPurge.js); `raw` is its own.
-      destroy: async (type, ids) => { if (type === 'raw') destroyed.push(...ids); return new Set(ids) },
-    })
+    // Each file is also cleared under the other kinds its signature could
+    // have been used for (functions/mediaPurge.js); `raw` is its own.
+    const destroy = async (type, ids) => { if (type === 'raw') destroyed.push(...ids); return new Set(ids) }
 
-    expect(stats).toMatchObject({ due: 2, deleted: 2 })
+    // A due file is reserved first and destroyed only by a run at least
+    // RESERVATION_MS later, so a document that takes it up again in between wins.
+    const first = await purgeMedia({ db, dryRun: false, destroy, now: () => now })
+    expect(first).toMatchObject({ due: 2, reserved: 2, deleted: 0 })
+    expect(destroyed).toEqual([])
+
+    const stats = await purgeMedia({ db, dryRun: false, destroy, now: () => now + RESERVATION_MS + 1000 })
+    expect(stats).toMatchObject({ deleted: 2 })
     expect(destroyed.sort()).toEqual([`kaydo/${FAMILY}/old-detached`, `kaydo/${FAMILY}/old-pending`])
     const left = (await db.collection(MEDIA_ASSETS).get()).docs.map((d) => d.id).sort()
     expect(left).toEqual(['in-use', 'new-pending'])
@@ -142,7 +145,7 @@ describe.skipIf(!EMULATOR)('media ledger', () => {
 
   it('runs the legacy inventory with real queries, and keeps its report from clients', async () => {
     const list = async (type) => ({
-      resources: type === 'raw' ? [{ public_id: 'kaydo/encrypted/lost.dat', bytes: 5 }] : [],
+      resources: type === 'raw' ? [{ public_id: 'kaydo/encrypted/lostfile0123456789ab.dat', bytes: 5 }] : [],
     })
     const report = await inventoryLegacyMedia({ db, list, now: () => Date.parse('2026-10-26T05:15:00Z') })
     expect(report).toMatchObject({ files: 1, unclaimed: 1, familiesNotIndexed: 1 })
