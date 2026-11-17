@@ -32,17 +32,68 @@ beforeEach(() => {
 
 describe('fetchUploadSignature', () => {
   it('asks signUpload for one encrypted file of the current family', async () => {
-    callable.mockResolvedValue({ data: SIGNED })
+    callable.mockResolvedValue({ data: { uploads: [SIGNED] } })
 
     await expect(fetchUploadSignature()).resolves.toEqual(SIGNED)
     expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'signUpload')
-    expect(callable).toHaveBeenCalledWith({ familyId: 'fam-1', kind: 'encrypted' })
+    expect(callable).toHaveBeenCalledWith({ familyId: 'fam-1', kind: 'encrypted', count: 1 })
   })
 
   it('passes the kind on', async () => {
-    callable.mockResolvedValue({ data: SIGNED })
+    callable.mockResolvedValue({ data: { uploads: [SIGNED] } })
     await fetchUploadSignature('public')
-    expect(callable).toHaveBeenCalledWith({ familyId: 'fam-1', kind: 'public' })
+    expect(callable).toHaveBeenCalledWith({ familyId: 'fam-1', kind: 'public', count: 1 })
+  })
+
+  const signedAs = (n) => ({ ...SIGNED, publicId: `kaydo/fam-1/${n}` })
+  const answer = ({ count }, start = 0) =>
+    ({ data: { uploads: Array.from({ length: count }, (_, i) => signedAs(start + i)) } })
+
+  it('signs the files asked for together in one call', async () => {
+    // One call per file had a choice of photos queue on the same two
+    // documents in the signing transaction.
+    callable.mockImplementation(async (data) => answer(data))
+    const signed = await Promise.all([fetchUploadSignature(), fetchUploadSignature(), fetchUploadSignature()])
+    expect(callable).toHaveBeenCalledTimes(1)
+    expect(callable).toHaveBeenCalledWith({ familyId: 'fam-1', kind: 'encrypted', count: 3 })
+    expect(signed.map((s) => s.publicId)).toEqual(['kaydo/fam-1/0', 'kaydo/fam-1/1', 'kaydo/fam-1/2'])
+  })
+
+  it('collects what is asked during a call into the next one', async () => {
+    let calls = 0
+    callable.mockImplementation(async (data) => answer(data, 10 * calls++))
+    const first = fetchUploadSignature()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const later = [fetchUploadSignature(), fetchUploadSignature()]
+    await Promise.all([first, ...later])
+    expect(callable.mock.calls.map(([data]) => data.count)).toEqual([1, 2])
+  })
+
+  it('sends a large choice as several calls', async () => {
+    callable.mockImplementation(async (data) => answer(data))
+    await Promise.all(Array.from({ length: 25 }, () => fetchUploadSignature()))
+    expect(callable.mock.calls.map(([data]) => data.count)).toEqual([20, 5])
+  })
+
+  it('asks again for the files a limit left out, and passes the refusal on', async () => {
+    callable
+      .mockResolvedValueOnce({ data: { uploads: [signedAs(0)] } })
+      .mockRejectedValueOnce(Object.assign(new Error('Upload limit reached'), {
+        code: 'functions/resource-exhausted',
+        details: { reason: 'storage' },
+      }))
+    const [a, b] = await Promise.allSettled([fetchUploadSignature(), fetchUploadSignature()])
+    expect(a.value.publicId).toBe('kaydo/fam-1/0')
+    expect(b.reason.code).toBe(UPLOAD_QUOTA)
+    expect(b.reason.reason).toBe('storage')
+    expect(callable.mock.calls.map(([data]) => data.count)).toEqual([2, 1])
+  })
+
+  it('works with a function from before batches, one signature per call', async () => {
+    let n = 0
+    callable.mockImplementation(async () => ({ data: signedAs(n++) }))
+    const signed = await Promise.all([fetchUploadSignature(), fetchUploadSignature()])
+    expect(signed.map((s) => s.publicId)).toEqual(['kaydo/fam-1/0', 'kaydo/fam-1/1'])
   })
 
   it('reports a refusal as a failed signature', async () => {

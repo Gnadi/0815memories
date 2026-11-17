@@ -313,7 +313,7 @@ function abandoned(name, event) {
 }
 
 /**
- * Sign one Cloudinary upload for an admin, and record the file in the
+ * Sign Cloudinary uploads for an admin, and record each file in the
  * `mediaAssets` ledger before it exists.
  */
 export const signUpload = onCall(

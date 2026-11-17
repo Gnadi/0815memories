@@ -39,6 +39,11 @@ export const UPLOAD_KINDS = {
 
 const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
 
+// The most uploads one call signs. A photo is two files (the original and its
+// thumbnail), so this covers a choice of ten photos in one call; the browser
+// sends a larger choice as several.
+export const MAX_BATCH = 20
+
 export class SigningError extends Error {
   /**
    * @param {'unauthenticated'|'invalid-argument'|'permission-denied'|'resource-exhausted'} code
@@ -75,7 +80,7 @@ export function cloudinarySignature(params, secret) {
 }
 
 /**
- * Whether one more upload is allowed, and the admin's rate after it.
+ * How many of `wanted` uploads are allowed, and the admin's rate after them.
  *
  * The rate is a fixed window that starts with the first upload after the
  * previous one ran out — simple, and an hour is long enough that its edges do
@@ -89,26 +94,34 @@ export function cloudinarySignature(params, secret) {
  * Counting them at their largest can refuse an upload a little early, never
  * let one through too late, and the daily lookup puts the real sizes in.
  *
+ * A batch near a limit gets the part of it that fits rather than nothing, so
+ * the uploads it covers go through as they would have one at a time; the
+ * browser asks again for the rest and is told which limit refused them.
+ *
  * @param {{ rate?: { windowStart?: number, count?: number } | null, usage?: { bytes?: number, unsized?: number } | null }} state
  * @param {number} now
  * @param {{ uploadsPerHour: number, familyBytes: number, maxFileBytes: number }} limits
- * @returns {{ allowed: true, rate: { windowStart: number, count: number } } | { allowed: false, reason: 'rate'|'storage' }}
+ * @param {number} [wanted]
+ * @returns {{ allowed: true, granted: number, rate: { windowStart: number, count: number } } | { allowed: false, reason: 'rate'|'storage' }}
  */
-export function checkQuota({ rate, usage }, now, limits) {
+export function checkQuota({ rate, usage }, now, limits, wanted = 1) {
   const current = rate && Number.isFinite(rate.windowStart) && now - rate.windowStart < RATE_WINDOW_MS
   const windowStart = current ? rate.windowStart : now
   const count = current ? (Number(rate.count) || 0) : 0
-  if (count >= limits.uploadsPerHour) return { allowed: false, reason: 'rate' }
+  const rateLeft = limits.uploadsPerHour - count
+  if (rateLeft <= 0) return { allowed: false, reason: 'rate' }
   const stored = (Number(usage?.bytes) || 0) + (Number(usage?.unsized) || 0) * limits.maxFileBytes
-  if (stored + limits.maxFileBytes > limits.familyBytes) return { allowed: false, reason: 'storage' }
-  return { allowed: true, rate: { windowStart, count: count + 1 } }
+  const storageLeft = Math.floor((limits.familyBytes - stored) / limits.maxFileBytes)
+  if (storageLeft <= 0) return { allowed: false, reason: 'storage' }
+  const granted = Math.min(wanted, rateLeft, storageLeft)
+  return { allowed: true, granted, rate: { windowStart, count: count + granted } }
 }
 
 /** Random, URL-safe, and long enough that nobody guesses another file's id. */
 const defaultRandomId = () => randomBytes(16).toString('hex')
 
 /**
- * Sign one upload for an admin of `data.familyId`, and record it as pending.
+ * Sign uploads for an admin of `data.familyId`, and record them as pending.
  *
  * The family comes from the browser — the one it is working in — and is
  * checked against the family document rather than the caller's claim, which
@@ -116,13 +129,23 @@ const defaultRandomId = () => randomBytes(16).toString('hex')
  * the right family: a later phase deletes files that no document of their own
  * family uses.
  *
- * Quotas are checked in the same transaction that records the file, so two
- * uploads at once cannot both take the last one.
+ * Quotas are checked in the same transaction that records the files, so two
+ * uploads at once cannot both take the last one. That transaction writes the
+ * admin's rate and the family's usage, two documents every upload shares; one
+ * call per file made a choice of ten photos twenty transactions queueing on
+ * them, which is why the browser asks for several files at once
+ * (`data.count`) and gets them from one.
+ *
+ * Without `count` the answer is one signature, as before batches; with it,
+ * `{ uploads }`, which holds fewer than asked for when a limit leaves room for
+ * only some.
  *
  * @param {{ db: any, apiKey: string, secret: string, limits: { uploadsPerHour: number, familyBytes: number, maxFileBytes: number }, now?: () => number, randomId?: () => string }} deps
  * @param {string|undefined} uid  the caller, from the verified ID token
- * @param {{ familyId?: unknown, kind?: unknown }} data
- * @returns {Promise<{ apiKey: string, signature: string, resourceType: string, publicId: string, params: Record<string, string|number> }>}
+ * @param {{ familyId?: unknown, kind?: unknown, count?: unknown }} data
+ * @returns {Promise<Signed | { uploads: Signed[] }>}
+ *
+ * @typedef {{ apiKey: string, signature: string, resourceType: string, publicId: string, params: Record<string, string|number> }} Signed
  */
 export async function signUpload(deps, uid, data) {
   const { db, apiKey, secret, limits, now = Date.now, randomId = defaultRandomId } = deps
@@ -135,17 +158,20 @@ export async function signUpload(deps, uid, data) {
   const kind = Object.hasOwn(UPLOAD_KINDS, kindName) ? UPLOAD_KINDS[kindName] : null
   if (!kind) throw new SigningError('invalid-argument', 'Unknown upload kind')
 
+  const batch = data?.count !== undefined
+  const wanted = batch ? data.count : 1
+  if (!Number.isInteger(wanted) || wanted < 1 || wanted > MAX_BATCH) {
+    throw new SigningError('invalid-argument', `Ask for 1 to ${MAX_BATCH} uploads`)
+  }
+
   const family = await db.doc(`families/${familyId}`).get()
   if (!family.exists || !adminUidsOf(family.data()).includes(uid)) {
     throw new SigningError('permission-denied', 'Only family admins can upload')
   }
 
-  const assetId = randomId()
-  const publicId = `${kind.prefix}/${familyId}/${assetId}`
   const createdAt = new Date(now())
   const rateRef = db.collection(MEDIA_RATES).doc(uid)
   const usageRef = db.collection(MEDIA_USAGE).doc(familyId)
-  const assetRef = db.collection(MEDIA_ASSETS).doc(assetId)
 
   const quota = await db.runTransaction(async (tx) => {
     const [rate, usage] = await Promise.all([tx.get(rateRef), tx.get(usageRef)])
@@ -153,6 +179,7 @@ export async function signUpload(deps, uid, data) {
       { rate: rate.exists ? rate.data() : null, usage: usage.exists ? usage.data() : null },
       createdAt.getTime(),
       limits,
+      wanted,
     )
     if (!decision.allowed) return decision
 
@@ -161,47 +188,56 @@ export async function signUpload(deps, uid, data) {
     tx.set(usageRef, {
       bytes: Number(current.bytes) || 0,
       files: Number(current.files) || 0,
-      unsized: (Number(current.unsized) || 0) + 1,
+      unsized: (Number(current.unsized) || 0) + decision.granted,
     })
-    // Written before the signature leaves, so there is no file the ledger does
-    // not know about. An entry whose upload never happens stays pending, and is
-    // what the clean-up of abandoned uploads will remove.
-    tx.set(assetRef, {
-      familyId,
-      uid,
-      kind: kindName,
-      publicId,
-      resourceType: kind.resourceType,
-      state: 'pending',
-      refs: [],
-      // null until the daily lookup finds the file on Cloudinary
-      // (functions/mediaSizes.js), which queries for exactly this.
-      bytes: null,
-      createdAt,
-    })
-    return decision
+    // Picked inside the transaction, so a retried attempt records the same
+    // number of files it counted, and written before the signatures leave, so
+    // there is no file the ledger does not know about. An entry whose upload
+    // never happens stays pending, and the clean-up removes it.
+    const publicIds = []
+    for (let i = 0; i < decision.granted; i++) {
+      const assetId = randomId()
+      const publicId = `${kind.prefix}/${familyId}/${assetId}`
+      publicIds.push(publicId)
+      tx.set(db.collection(MEDIA_ASSETS).doc(assetId), {
+        familyId,
+        uid,
+        kind: kindName,
+        publicId,
+        resourceType: kind.resourceType,
+        state: 'pending',
+        refs: [],
+        // null until the daily lookup finds the file on Cloudinary
+        // (functions/mediaSizes.js), which queries for exactly this.
+        bytes: null,
+        createdAt,
+      })
+    }
+    return { ...decision, publicIds }
   })
 
   if (!quota.allowed) {
     throw new SigningError('resource-exhausted', 'Upload limit reached', { reason: quota.reason })
   }
 
-  // Signed uploads overwrite by default, so `overwrite` is signed as false: a
-  // second upload with the same signature lands on the same public_id and
-  // stores nothing new. The tag lets Cloudinary's console and Admin API find a
-  // family's files without the ledger.
-  const params = {
-    overwrite: 'false',
-    public_id: publicId,
-    tags: `family:${familyId}`,
-    timestamp: Math.floor(createdAt.getTime() / 1000),
-  }
-
-  return {
-    apiKey,
-    signature: cloudinarySignature(params, secret),
-    resourceType: kind.resourceType,
-    publicId,
-    params,
-  }
+  const uploads = quota.publicIds.map((publicId) => {
+    // Signed uploads overwrite by default, so `overwrite` is signed as false: a
+    // second upload with the same signature lands on the same public_id and
+    // stores nothing new. The tag lets Cloudinary's console and Admin API find
+    // a family's files without the ledger.
+    const params = {
+      overwrite: 'false',
+      public_id: publicId,
+      tags: `family:${familyId}`,
+      timestamp: Math.floor(createdAt.getTime() / 1000),
+    }
+    return {
+      apiKey,
+      signature: cloudinarySignature(params, secret),
+      resourceType: kind.resourceType,
+      publicId,
+      params,
+    }
+  })
+  return batch ? { uploads } : uploads[0]
 }

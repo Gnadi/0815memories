@@ -136,21 +136,39 @@ describe('encryptAndUploadWithThumb', () => {
     expect(result.thumbUrl).toBe('')
   })
 
-  it('uploads the original before attempting the thumbnail', async () => {
-    // Ordering matters: the original must be safely stored even if the tab is
-    // closed while the derivative is still encoding.
-    const order = []
-    createThumbnail.mockImplementation(async () => {
-      order.push('thumbnail')
-      return new Blob(['thumb'], { type: 'image/webp' })
-    })
+  it('makes and uploads the thumbnail without waiting for the original', async () => {
+    // Nothing is kept until the form is saved, and the form waits for both, so
+    // doing them one after the other only added the thumbnail's time.
+    let releaseOriginal
+    const originalHeld = new Promise((resolve) => { releaseOriginal = resolve })
+    createThumbnail.mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }))
     const originalFetch = globalThis.fetch
+    let uploads = 0
     globalThis.fetch = vi.fn(async (url, init) => {
-      if (init?.method === 'POST') order.push('upload')
+      if (++uploads === 1) await originalHeld
       return originalFetch(url, init)
     })
 
-    await encryptAndUploadWithThumb(file(), { fake: 'key' })
-    expect(order).toEqual(['upload', 'thumbnail', 'upload'])
+    const done = encryptAndUploadWithThumb(file(), { fake: 'key' })
+    await vi.waitFor(() => expect(uploads).toBe(2))
+    releaseOriginal()
+
+    const result = await done
+    expect(result.url).toBeTruthy()
+    expect(result.thumbUrl).toBeTruthy()
+  })
+
+  it('fails when the original fails, whatever became of the thumbnail', async () => {
+    createThumbnail.mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }))
+    globalThis.fetch = vi.fn(async () => {
+      const n = ++uploadCount
+      // The original asks first, so it is the first upload.
+      if (n === 1) {
+        return { ok: false, status: 500, headers: { get: () => null }, json: async () => ({}) }
+      }
+      return { ok: true, json: async () => ({ secure_url: `https://cdn/asset-${n}.enc`, public_id: `pub-${n}` }) }
+    })
+
+    await expect(encryptAndUploadWithThumb(file(), { fake: 'key' })).rejects.toThrow('Upload failed (500)')
   })
 })

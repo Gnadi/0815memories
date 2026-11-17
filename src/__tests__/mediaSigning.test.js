@@ -17,6 +17,7 @@ import {
   MEDIA_ASSETS,
   MEDIA_RATES,
   MEDIA_USAGE,
+  MAX_BATCH,
   RATE_WINDOW_MS,
 } from '../../functions/mediaSigning.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
@@ -172,22 +173,89 @@ describe('signUpload', () => {
   })
 })
 
+describe('signUpload for several files', () => {
+  // Every signature writes the admin's rate and the family's usage. One call
+  // per file had a choice of photos queue on those two documents; one call for
+  // all of them takes them once.
+  const counting = () => {
+    let n = 0
+    return () => `id${++n}`
+  }
+
+  it('signs and records each file in one call', async () => {
+    const d = deps({ randomId: counting(), limits: { ...LIMITS, uploadsPerHour: 10 } })
+    const { uploads } = await signUpload(d, ADMIN, { familyId: FAMILY, count: 3 })
+
+    expect(uploads.map((u) => u.publicId)).toEqual(['kaydo/fam-1/id1', 'kaydo/fam-1/id2', 'kaydo/fam-1/id3'])
+    for (const signed of uploads) {
+      expect(signed.params.public_id).toBe(signed.publicId)
+      expect(signed.signature).toBe(cloudinarySignature(signed.params, 'api-secret'))
+    }
+    expect(Object.keys(ledger(d)).sort()).toEqual(['id1', 'id2', 'id3'])
+    expect(ledger(d).id2).toMatchObject({ familyId: FAMILY, uid: ADMIN, state: 'pending', publicId: 'kaydo/fam-1/id2' })
+    expect(d.db.collectionData(MEDIA_RATES)[ADMIN]).toEqual({ windowStart: NOW, count: 3 })
+    expect(d.db.collectionData(MEDIA_USAGE)[FAMILY]).toEqual({ bytes: 0, files: 0, unsized: 3 })
+  })
+
+  it('signs the part of a batch the hourly limit leaves room for', async () => {
+    const d = deps({ randomId: counting(), seed: { [`${MEDIA_RATES}/${ADMIN}`]: { windowStart: NOW - 1000, count: 1 } } })
+    const { uploads } = await signUpload(d, ADMIN, { familyId: FAMILY, count: 5 })
+    expect(uploads).toHaveLength(2)
+    expect(Object.keys(ledger(d))).toHaveLength(2)
+    expect(d.db.collectionData(MEDIA_RATES)[ADMIN].count).toBe(3)
+  })
+
+  it('signs the part of a batch the family storage leaves room for', async () => {
+    // 1000 bytes allowed, 100 the largest file, 700 stored: three more.
+    const d = deps({
+      randomId: counting(),
+      limits: { ...LIMITS, uploadsPerHour: 10 },
+      seed: { [`${MEDIA_USAGE}/${FAMILY}`]: { bytes: 700, files: 7 } },
+    })
+    const { uploads } = await signUpload(d, ADMIN, { familyId: FAMILY, count: 5 })
+    expect(uploads).toHaveLength(3)
+    expect(d.db.collectionData(MEDIA_USAGE)[FAMILY]).toEqual({ bytes: 700, files: 7, unsized: 3 })
+  })
+
+  it('refuses a batch nothing is left for, with the reason', async () => {
+    const d = deps({ seed: { [`${MEDIA_RATES}/${ADMIN}`]: { windowStart: NOW - 1000, count: 3 } } })
+    const error = await signUpload(d, ADMIN, { familyId: FAMILY, count: 2 }).catch((e) => e)
+    expect(error.code).toBe('resource-exhausted')
+    expect(error.details).toEqual({ reason: 'rate' })
+    expect(ledger(d)).toEqual({})
+  })
+
+  it.each([0, -1, 1.5, '2', MAX_BATCH + 1, null])('refuses a count of %j, and records nothing', async (count) => {
+    const d = deps()
+    const error = await signUpload(d, ADMIN, { familyId: FAMILY, count }).catch((e) => e)
+    expect(error).toBeInstanceOf(SigningError)
+    expect(error.code).toBe('invalid-argument')
+    expect(ledger(d)).toEqual({})
+  })
+
+  it('answers a call without a count with one signature, as before batches', async () => {
+    const signed = await signUpload(deps(), ADMIN, { familyId: FAMILY })
+    expect(signed.publicId).toBe('kaydo/fam-1/abc123')
+    expect(signed).not.toHaveProperty('uploads')
+  })
+})
+
 describe('checkQuota', () => {
   const limits = { uploadsPerHour: 2, familyBytes: 100, maxFileBytes: 10 }
 
   it('starts a window with the first upload', () => {
-    expect(checkQuota({}, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
+    expect(checkQuota({}, NOW, limits)).toEqual({ allowed: true, granted: 1, rate: { windowStart: NOW, count: 1 } })
   })
 
   it('counts inside the window and refuses at the limit', () => {
     const rate = { windowStart: NOW - 10, count: 1 }
-    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW - 10, count: 2 } })
+    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, granted: 1, rate: { windowStart: NOW - 10, count: 2 } })
     expect(checkQuota({ rate: { ...rate, count: 2 } }, NOW, limits)).toEqual({ allowed: false, reason: 'rate' })
   })
 
   it('starts over once the window has run out', () => {
     const rate = { windowStart: NOW - RATE_WINDOW_MS, count: 2 }
-    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, rate: { windowStart: NOW, count: 1 } })
+    expect(checkQuota({ rate }, NOW, limits)).toEqual({ allowed: true, granted: 1, rate: { windowStart: NOW, count: 1 } })
   })
 
   it('refuses an upload that could take the family past its storage', () => {
@@ -198,5 +266,11 @@ describe('checkQuota', () => {
   it('counts a file whose size is not known yet at the largest a file can be', () => {
     expect(checkQuota({ usage: { bytes: 50, unsized: 4 } }, NOW, limits).allowed).toBe(true)
     expect(checkQuota({ usage: { bytes: 50, unsized: 5 } }, NOW, limits)).toEqual({ allowed: false, reason: 'storage' })
+  })
+
+  it('grants as much of a batch as both limits leave room for', () => {
+    expect(checkQuota({}, NOW, limits, 5)).toEqual({ allowed: true, granted: 2, rate: { windowStart: NOW, count: 2 } })
+    expect(checkQuota({ usage: { bytes: 85 } }, NOW, { ...limits, uploadsPerHour: 10 }, 5))
+      .toEqual({ allowed: true, granted: 1, rate: { windowStart: NOW, count: 1 } })
   })
 })

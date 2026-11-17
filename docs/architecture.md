@@ -160,7 +160,7 @@ the top of `functions/index.js`.
 | `notifyOnMemory`, `notifyOnMoment` | document created | push to the family |
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
-| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits |
+| `signUpload` | callable, admins | signs Cloudinary uploads, up to 20 per call, records each in `mediaAssets`, applies the upload limits |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7 (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |

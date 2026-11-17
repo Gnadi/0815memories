@@ -33,14 +33,16 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
   // Nothing is encrypted — the demo family has no key — and nothing is sent.
   if (isDemoMode()) return { url: URL.createObjectURL(blob), publicId: '' }
 
-  // 1. Encrypt
-  const encryptedBuffer = await encryptBlob(encryptionKey, blob)
+  // 1. Encrypt, and meanwhile get a signature for this one file (a raw
+  // resource). Asked for before the first await, so the files of one choice
+  // ask in the same task and are signed in one call (uploadSignature.js).
+  const [encryptedBuffer, signed] = await Promise.all([
+    encryptBlob(encryptionKey, blob),
+    fetchUploadSignature('encrypted'),
+  ])
   const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
 
-  // 2. Get a signature for this one file (a raw resource)
-  const signed = await fetchUploadSignature('encrypted')
-
-  // 3. Upload encrypted blob to Cloudinary as raw
+  // 2. Upload encrypted blob to Cloudinary as raw
   const response = await fetch(signedUploadUrl(signed), {
     method: 'POST',
     body: signedUploadForm(encryptedBlob, 'encrypted.dat', signed),
@@ -80,35 +82,43 @@ export async function encryptAndUpload(file, encryptionKey) {
  * empty strings whenever a thumbnail could not be produced or uploaded — the
  * original is always what matters, so a thumbnail failure must never fail the
  * upload. Readers fall back to the original when a thumb is missing.
+ *
+ * The thumbnail is made and uploaded alongside the original rather than after
+ * it: nothing is kept until the form is saved, and the form waits for both, so
+ * waiting only added the thumbnail's time to every photo. A thumbnail whose
+ * original then fails is a file no document uses, which the clean-up removes.
  */
 export async function encryptAndUploadWithThumb(file, encryptionKey) {
   const blob = file instanceof Blob ? file : new Blob([file])
-  const original = await uploadEncryptedBlob(blob, encryptionKey)
+  const original = uploadEncryptedBlob(blob, encryptionKey)
 
-  let thumb = null
-  try {
-    const thumbBlob = await createThumbnail(blob)
-    if (thumbBlob) thumb = await uploadEncryptedBlob(thumbBlob, encryptionKey)
-  } catch {
-    thumb = null
-  }
+  const thumb = (async () => {
+    try {
+      const thumbBlob = await createThumbnail(blob)
+      return thumbBlob ? await uploadEncryptedBlob(thumbBlob, encryptionKey) : null
+    } catch {
+      return null
+    }
+  })()
 
   // The blur-up preview is not uploaded: it is encrypted as text and stored on
   // the document itself, which is the whole point — it arrives with the fields
   // the feed already decrypts, costing no request. Encrypted here so the caller
   // never holds a plaintext copy of anything.
-  let tinyPreview = ''
-  try {
-    const dataUrl = await createTinyPreview(blob)
-    if (dataUrl) tinyPreview = await encryptText(encryptionKey, dataUrl)
-  } catch {
-    tinyPreview = ''
-  }
+  const tinyPreview = (async () => {
+    try {
+      const dataUrl = await createTinyPreview(blob)
+      return dataUrl ? await encryptText(encryptionKey, dataUrl) : ''
+    } catch {
+      return ''
+    }
+  })()
 
+  const [stored, thumbStored, tiny] = await Promise.all([original, thumb, tinyPreview])
   return {
-    ...original,
-    thumbUrl: thumb?.url ?? '',
-    thumbPublicId: thumb?.publicId ?? '',
-    tinyPreview,
+    ...stored,
+    thumbUrl: thumbStored?.url ?? '',
+    thumbPublicId: thumbStored?.publicId ?? '',
+    tinyPreview: tiny,
   }
 }

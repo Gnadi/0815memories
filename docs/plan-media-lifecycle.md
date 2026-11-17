@@ -132,6 +132,12 @@ before phase 4.
   the free plan, which Cloudinary enforces however the browser was changed).
   So the limit can refuse an upload a little early, never let one through
   that takes the family past it.
+- The browser asks for several signatures at once (`count`, up to 20): every
+  signing transaction writes `mediaRates/{uid}` and `mediaUsage/{familyId}`,
+  so one call per file made a choice of photos queue on those two documents.
+  `uploadSignature.js` runs one call at a time per family and kind, carrying
+  every request made meanwhile. Near a limit a batch gets the part that fits,
+  and the next call refuses the rest with the reason.
 - `purgeUnusedMedia` looks the real sizes up once a day before it cleans up
   (`functions/mediaSizes.js`): the entries with `bytes == null`, a hundred at a
   time through the Admin API. A size found goes onto its entry and into
