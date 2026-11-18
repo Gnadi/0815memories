@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
+import { appCheckReady } from '../../config/appCheck'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug } from '../../utils/familySlug'
@@ -76,6 +77,7 @@ export default function SettingsPanel() {
       // Hashed and stored server-side. The hash lands in a subcollection no
       // client can read, and the call revokes every viewer session signed in
       // with the old password.
+      await appCheckReady()
       await httpsCallable(functions, 'setSharedPassword')({
         familyId,
         password: newPassword,

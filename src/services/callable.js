@@ -6,11 +6,12 @@
  * someone presses a button.
  */
 import { functions } from '../config/firebase'
+import { appCheckReady } from '../config/appCheck'
 
 /** The function's answer. Rejects with the SDK's error, whose `code` is `functions/<code>`. */
 export async function callFunction(name, data) {
   if (!functions) throw new Error('Firebase is not configured')
-  const { httpsCallable } = await import('firebase/functions')
+  const [{ httpsCallable }] = await Promise.all([import('firebase/functions'), appCheckReady()])
   const result = await httpsCallable(functions, name)(data)
   return result.data
 }

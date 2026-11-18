@@ -1,4 +1,5 @@
 import { auth, functions } from '../config/firebase'
+import { appCheckReady } from '../config/appCheck'
 import { CLOUDINARY_CLOUD_NAME } from '../config/cloudinary'
 import { readStored } from './authStorage'
 
@@ -34,7 +35,7 @@ async function drain(key, familyId, kind) {
   try {
     // Loaded when the first upload is signed rather than with the module: every
     // upload path imports this file, and the callable SDK is not needed before.
-    const { httpsCallable } = await import('firebase/functions')
+    const [{ httpsCallable }] = await Promise.all([import('firebase/functions'), appCheckReady()])
     const sign = httpsCallable(functions, 'signUpload')
     while (queue.waiting.length) {
       const batch = queue.waiting.splice(0, MAX_BATCH)

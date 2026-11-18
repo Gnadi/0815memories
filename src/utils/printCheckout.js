@@ -4,11 +4,12 @@
  * the browser only names the print file it uploaded.
  */
 import { functions } from '../config/firebase'
+import { appCheckReady } from '../config/appCheck'
 
 /** @returns {Promise<{ checkoutUrl: string, expiresAt: string }>} */
 export async function createPrintCheckout({ familyId, printId, pageCount, format, currency, language, title }) {
   if (!functions) throw new Error('Firebase is not configured')
-  const { httpsCallable } = await import('firebase/functions')
+  const [{ httpsCallable }] = await Promise.all([import('firebase/functions'), appCheckReady()])
   const call = httpsCallable(functions, 'createPrintCheckout')
   const { data } = await call({
     familyId,

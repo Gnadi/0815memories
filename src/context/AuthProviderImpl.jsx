@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
+import { appCheckReady } from '../config/appCheck'
 import { generateSlug } from '../utils/familySlug'
 import { createFamily, findAdminFamilies, isSlugAvailable } from '../services/family'
 import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
@@ -295,6 +296,7 @@ export function AuthProvider({ children }) {
 
     let token
     try {
+      await appCheckReady()
       const result = await httpsCallable(functions, 'viewerLogin')({
         familyId: viewerFamilyId,
         password,

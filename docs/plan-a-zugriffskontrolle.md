@@ -290,14 +290,15 @@ worker cache and will fail quietly against the new rules. Ship the client (step
 
 ## Still open
 
-**App Check is not set up.** `viewerLogin` and `setSharedPassword` already read
-an `ENFORCE_APP_CHECK` env var, defaulting to off, so the server half is ready
-whenever the client half is built. What is missing is the client: a reCAPTCHA
-key (Enterprise for a new integration, or a classic v3 key) registered under
-Firebase Console → App Check, and `initializeAppCheck` in
-`src/config/firebase.js`.
+**App Check is built, not switched on.** `viewerLogin`, `setSharedPassword`
+and the other callables read an `ENFORCE_APP_CHECK` env var, defaulting to off.
+The client half is `src/config/appCheck.js`: it starts App Check with a
+reCAPTCHA Enterprise provider when `VITE_APPCHECK_SITE_KEY` is set, and every
+callable waits for it. What is missing is the key: register the web app under
+Firebase Console → App Check with a reCAPTCHA Enterprise key, and set it as
+`VITE_APPCHECK_SITE_KEY` for the production build.
 
-When that happens, the order matters — key and client first, then give installed
+The order matters — key in the build first, then give installed
 PWAs time to pick up the new bundle, and only then set `ENFORCE_APP_CHECK=true`
 on the functions. Enforcing while clients still send no token locks everyone out
 of the login. The rate limiter does not depend on any of this.
