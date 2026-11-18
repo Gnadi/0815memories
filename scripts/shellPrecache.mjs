@@ -7,7 +7,7 @@
  * marketing page downloaded the whole app in the background, about 3 MB, for
  * people who may never sign in.
  *
- * The shell is the HTML, the CSS, and the JavaScript every page load runs
+ * The shell is the app's page, the CSS, and the JavaScript every page load runs
  * before a page is chosen — exactly what the first visit fetches anyway, so
  * installing the worker costs next to nothing extra. Route chunks are cached by sw.js the
  * first time a page needs them.
@@ -43,10 +43,21 @@ export function shellFiles(viteManifest) {
   return files
 }
 
-/** Keep every non-script entry, and the scripts the shell needs. */
+// Of the pre-rendered pages, only "/", which the installed app starts from.
+// The landing pages in each language and the legal pages each carry the whole
+// stylesheet inline (scripts/inlineCss.mjs), 130–220 KB apiece, so precaching
+// all of them added about 460 KB to a first visit and again after every
+// deploy, for pages a visitor reads online once.
+const SHELL_PAGES = new Set(['index.html'])
+
+/** Keep the app's page, the styles and icons, and the scripts the shell needs. */
 export function filterToShell(entries, viteManifest) {
   const shell = shellFiles(viteManifest)
-  return entries.filter((entry) => !entry.url.endsWith('.js') || shell.has(entry.url))
+  return entries.filter((entry) => {
+    if (entry.url.endsWith('.js')) return shell.has(entry.url)
+    if (entry.url.endsWith('.html')) return SHELL_PAGES.has(entry.url)
+    return true
+  })
 }
 
 /** A workbox `manifestTransforms` entry reading Vite's manifest from `path`. */

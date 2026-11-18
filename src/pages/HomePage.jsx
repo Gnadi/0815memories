@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/layout/Sidebar'
@@ -10,13 +10,18 @@ import MemoryFeed from '../components/home/MemoryFeed'
 import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import AdventHomeCard from '../components/advent/AdventHomeCard'
-import PostEntryModal from '../components/admin/PostEntryModal'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
 import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
 import { useAuth } from '../context/AuthContext'
 import { takeFeedMemory } from '../utils/feedPosition'
+
+// The forms for writing a memory or a moment are admin-only and open on a
+// tap, yet a static import put them, drag and drop and the voice recorder
+// included (about 32 KB gz), in front of every member's home page.
+const loadPostEntryModal = () => import('../components/admin/PostEntryModal')
+const PostEntryModal = lazy(loadPostEntryModal)
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -62,6 +67,14 @@ export default function HomePage() {
     setShowMomentModal(false)
     setEditingMoment(null)
   }
+
+  // An admin is likely to write something, so their device fetches the form
+  // once the feed has had its turn, and the first tap does not wait for it.
+  useEffect(() => {
+    if (!isAdmin) return
+    const timer = setTimeout(() => { loadPostEntryModal().catch(() => {}) }, 4000)
+    return () => clearTimeout(timer)
+  }, [isAdmin])
 
   // Coming back from a memory, jump to its card instead of the top. Taken once
   // the feed has rendered; a card that is gone (deleted, past the page size)
@@ -149,37 +162,39 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Post Memory Modal */}
-      {showPostModal && (
-        <PostEntryModal
-          type="memory"
-          entry={editingMemory}
-          onClose={handleCloseModal}
-          onSave={editingMemory ? updateMemory : addMemory}
-        />
-      )}
+      <Suspense fallback={null}>
+        {/* Post Memory Modal */}
+        {showPostModal && (
+          <PostEntryModal
+            type="memory"
+            entry={editingMemory}
+            onClose={handleCloseModal}
+            onSave={editingMemory ? updateMemory : addMemory}
+          />
+        )}
 
-      {/* Moment Viewer */}
-      {viewingMomentIndex !== null && moments.length > 0 && (
-        <MomentViewer
-          moments={moments}
-          initialIndex={viewingMomentIndex}
-          onClose={() => setViewingMomentIndex(null)}
-          isAdmin={isAdmin}
-          onEdit={handleEditMoment}
-          onDelete={handleDeleteMoment}
-        />
-      )}
+        {/* Moment Viewer */}
+        {viewingMomentIndex !== null && moments.length > 0 && (
+          <MomentViewer
+            moments={moments}
+            initialIndex={viewingMomentIndex}
+            onClose={() => setViewingMomentIndex(null)}
+            isAdmin={isAdmin}
+            onEdit={handleEditMoment}
+            onDelete={handleDeleteMoment}
+          />
+        )}
 
-      {/* Post Moment Modal (admin only) */}
-      {showMomentModal && (
-        <PostEntryModal
-          type="moment"
-          entry={editingMoment}
-          onClose={handleCloseMomentModal}
-          onSave={editingMoment ? updateMoment : addMoment}
-        />
-      )}
+        {/* Post Moment Modal (admin only) */}
+        {showMomentModal && (
+          <PostEntryModal
+            type="moment"
+            entry={editingMoment}
+            onClose={handleCloseMomentModal}
+            onSave={editingMoment ? updateMoment : addMoment}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }

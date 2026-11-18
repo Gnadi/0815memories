@@ -286,9 +286,12 @@ Build and delivery details that affect many changes:
   language needs an address of its own. Anything on the public routes must
   render in Node, without `window`. The signed-in app is client-only and
   lazy-loaded.
-- **The shell is kept small.** Only the startup code is precached by the
-  service worker (`scripts/shellPrecache.mjs`); pages and the signed-in
-  translations load on demand. CI reports the shell's size on every PR.
+- **The shell is kept small.** Only the startup code and `index.html` are
+  precached by the service worker (`scripts/shellPrecache.mjs`); pages and the
+  signed-in translations load on demand. The HTML carries no module preloads,
+  so the landing page paints first; a lazy page's own imports are preloaded
+  together with it (`build.modulePreload` in `vite.config.js`). CI reports the
+  shell's size on every PR.
 - **Hosting** is Vercel (`vercel.json`): the SPA rewrite, cache headers,
   security headers. Everything server-side is a Cloud Function.
 

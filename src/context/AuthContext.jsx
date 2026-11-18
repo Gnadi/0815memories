@@ -23,9 +23,12 @@ const AuthProviderImpl = lazy(() => loadProvider().then((m) => ({ default: m.Aut
 // demo are hard navigations (demo/demoMode.js).
 const DEMO = isDemoMode()
 
-// Every path the provider is needed on: the pre-rendered pages are the only
-// ones that work without it.
-const needsProvider = (pathname) => !PRERENDERED_PATHS.includes(pathname)
+// Every path the provider is needed on: the pre-rendered pages work without
+// it, and so does /demo, which only sets the demo flag and reloads into it
+// (App.jsx DemoEntry). Waiting there for Firebase held the demo back by about
+// 177 KB, a second and more on a phone, before the page it reloads into loaded
+// everything again anyway.
+export const needsProvider = (pathname) => !PRERENDERED_PATHS.includes(pathname) && pathname !== '/demo'
 
 /**
  * Starts loading the provider before React asks for it, so that on a login, a

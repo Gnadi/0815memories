@@ -67,6 +67,16 @@ describe('shell precache', () => {
     ])
   })
 
+  it('keeps only the app’s page of the pre-rendered ones', () => {
+    // Each pre-rendered page carries the whole stylesheet inline; precaching
+    // every language and legal page cost a first visit about 460 KB.
+    const kept = filterToShell(
+      entries('index.html', 'de.html', 'terms.html', 'de/familien-fotobuch.html', 'assets/app-1.css'),
+      VITE_MANIFEST,
+    ).map((e) => e.url)
+    expect(kept).toEqual(['index.html', 'assets/app-1.css'])
+  })
+
   it('precaches everything, as before, when the Vite manifest is missing', async () => {
     const all = entries('index.html', 'assets/app-1.js', 'assets/HomePage-1.js')
     const { manifest, warnings } = await shellPrecache('/nonexistent/manifest.json')(all)
