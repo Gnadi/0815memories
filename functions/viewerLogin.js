@@ -275,24 +275,25 @@ export async function checkViewerLogin(deps, input) {
   // answered like a block: the comparison is not run, and the caller gets a
   // clear answer instead of an internal error.
   //
-  // The hash is read meanwhile — the only place it lives. Reading it is cheap
-  // and decides nothing; what must wait for the reservation is the comparison,
-  // and it still does. Read one after the other, the two were two round trips
-  // on every sign-in.
-  const secretRead = db.doc(`families/${familyId}/secrets/auth`).get()
+  // The hash first — the only place it lives. A family without one, or an id
+  // that names no family, has nothing to guess against, so the answer is the
+  // wrong-password one, without a write. Reserving first created counters and
+  // budgets for any well-formed id anyone sent, at a write each, and nothing
+  // bounded how many ids that could be. Reading is cheap and decides nothing;
+  // what must wait for the reservation is the comparison, and it still does.
+  // Family ids are not secret (the login page resolves them from the public
+  // slug), so answering an unknown one sooner gives nothing away.
+  const secretSnap = await db.doc(`families/${familyId}/secrets/auth`).get()
+  const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
+  if (!hash) return report({ outcome: 'denied' }, device)
+
   const reserved = await reserveAttempt(db, keys, budgetKeys, now()).catch((err) => {
     if (err?.code === 10 || err?.code === 'aborted') return false
     throw err
   })
-  if (!reserved) {
-    secretRead.catch(() => {})
-    return report({ outcome: 'blocked' }, device)
-  }
+  if (!reserved) return report({ outcome: 'blocked' }, device)
 
-  const secretSnap = await secretRead
-  const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
-
-  if (!hash || !(await compare(password, hash))) return report({ outcome: 'denied' }, device)
+  if (!(await compare(password, hash))) return report({ outcome: 'denied' }, device)
 
   // The comparison takes a while, long enough for the password to change under
   // it. The attempt then counts as a failure, like any other wrong password.

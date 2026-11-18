@@ -51,6 +51,17 @@ describe('checkViewerLogin', () => {
     expect(deps.db.collectionData(DEVICES)).toEqual({})
   })
 
+  // Any well-formed id used to get a counter and a budget written for it before
+  // anything asked whether it named a family, and nothing bounded the ids.
+  it('writes nothing for a family that does not exist, or has no password yet', async () => {
+    const deps = setup({ 'families/no-password': {} })
+    for (const familyId of ['no-such-family', 'no-password']) {
+      await expect(checkViewerLogin(deps, { familyId, password: 'right' })).resolves.toEqual({ outcome: 'denied' })
+    }
+    expect(deps.db.collectionData('rateLimits')).toEqual({})
+    expect(deps.compare).not.toHaveBeenCalled()
+  })
+
   it('does not compare once the day’s attempts are used up, though the hash is at hand', async () => {
     const attempts = Array.from({ length: MAX_ATTEMPTS_PER_DAY }, (_, i) => NOW - 1000 - i)
     const deps = setup({ [`rateLimits/${safeKey('viewerLoginBudget', FAMILY)}`]: { attempts } })
