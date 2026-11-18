@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Lock, Unlock, Trash2, MoreVertical, Calendar, Star, BookOpen, RefreshCw } from 'lucide-react'
 import { isUnlocked, daysUntilUnlock, LEGACY_GRACE_MONTHS } from '../../hooks/useBlackBox'
 import EncryptedImage from '../media/EncryptedImage'
-import EncryptedVideo from '../media/EncryptedVideo'
+import VideoOnTap from '../media/VideoOnTap'
 import EncryptedAudio from '../media/EncryptedAudio'
 import { formatDateIn } from '../../utils/dateFormat'
 
@@ -202,11 +202,10 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
               {content?.videos?.length > 0 && (
                 <div className="space-y-2 mt-2">
                   {content.videos.map((v, i) => (
-                    <EncryptedVideo
+                    <VideoOnTap
                       key={v.publicId || i}
                       src={v.url}
-                      controls
-                      playsInline
+                      title={v.title}
                       className="w-full rounded-xl bg-black max-h-64"
                     />
                   ))}

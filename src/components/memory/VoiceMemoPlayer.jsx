@@ -7,6 +7,11 @@ import EncryptedAudio from '../media/EncryptedAudio'
  * rather than growing a second seek/progress implementation. See RichContent.
  */
 export function SingleMemoPlayer({ memo }) {
+  // The recording is fetched and decrypted on the first tap, not when the page
+  // opens: an encrypted file cannot stream, so every memo on a page used to be
+  // downloaded whole on arrival, alongside the page's photos. Its length is
+  // stored with it, so the player shows it before then.
+  const [requested, setRequested] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
@@ -30,9 +35,15 @@ export function SingleMemoPlayer({ memo }) {
       el.removeEventListener('timeupdate', onTime)
       el.removeEventListener('ended', onEnded)
     }
-  }, [memo.duration])
+  }, [memo.duration, requested])
 
   const togglePlay = () => {
+    if (!requested) {
+      // The element mounts with autoPlay and starts once its file is ready.
+      setRequested(true)
+      setIsPlaying(true)
+      return
+    }
     const el = audioRef.current
     if (!el) return
     if (isPlaying) {
@@ -60,7 +71,7 @@ export function SingleMemoPlayer({ memo }) {
 
   return (
     <div className="flex items-center gap-3 bg-cream-dark rounded-xl px-4 py-3">
-      <EncryptedAudio src={memo.url} audioRef={audioRef} preload="metadata" />
+      {requested && <EncryptedAudio src={memo.url} audioRef={audioRef} autoPlay />}
 
       <button
         onClick={togglePlay}

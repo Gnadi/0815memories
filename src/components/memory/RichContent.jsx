@@ -1,7 +1,6 @@
-import { Fragment, useState } from 'react'
-import { Play } from 'lucide-react'
+import { Fragment } from 'react'
 import EncryptedImage from '../media/EncryptedImage'
-import EncryptedVideo from '../media/EncryptedVideo'
+import VideoOnTap from '../media/VideoOnTap'
 import { SingleMemoPlayer } from './VoiceMemoPlayer'
 import { isRichDoc } from '../../utils/richText'
 import { safeHref } from '../../utils/safeHref'
@@ -75,35 +74,6 @@ function Marked({ node }) {
  * the shared decrypt pool and the object-URL cache. The poster costs nothing
  * until the reader actually wants the clip.
  */
-function InlineVideo({ src, title }) {
-  const [playing, setPlaying] = useState(false)
-
-  if (playing) {
-    return (
-      <EncryptedVideo
-        src={src}
-        controls
-        autoPlay
-        playsInline
-        className="w-full rounded-2xl bg-black max-h-[480px]"
-      />
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setPlaying(true)}
-      aria-label={title || undefined}
-      className="w-full aspect-video rounded-2xl bg-bark/90 flex items-center justify-center group"
-    >
-      <span className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center group-hover:bg-white transition-colors">
-        <Play className="w-6 h-6 text-bark ml-1" />
-      </span>
-    </button>
-  )
-}
-
 function Caption({ text }) {
   if (!text) return null
   return <figcaption className="mt-2 text-sm text-bark-muted italic text-center">{text}</figcaption>
@@ -206,7 +176,7 @@ function renderNode(node, key, depth, compact) {
       if (!node.attrs?.src) return null
       return (
         <figure key={key} className="my-6">
-          <InlineVideo src={node.attrs.src} title={node.attrs.title} />
+          <VideoOnTap src={node.attrs.src} title={node.attrs.title} className="w-full rounded-2xl bg-black max-h-[480px]" />
           <Caption text={node.attrs.caption || node.attrs.title} />
         </figure>
       )

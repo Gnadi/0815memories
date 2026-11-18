@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useJournal, useJournalWriter } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
-import EncryptedVideo from '../components/media/EncryptedVideo'
+import VideoOnTap from '../components/media/VideoOnTap'
 import EncryptedAudio from '../components/media/EncryptedAudio'
 import JournalContent from '../components/journal/JournalContent'
 import { entryDate } from '../utils/journalContent'
@@ -131,7 +131,7 @@ export default function JournalDetailPage() {
             <div className="mt-6 space-y-4">
               {entry.videos.map((v, i) => (
                 <figure key={i}>
-                  <EncryptedVideo src={v.url} controls playsInline className="w-full rounded-2xl bg-black max-h-[70vh]" />
+                  <VideoOnTap src={v.url} title={v.title} className="w-full rounded-2xl bg-black max-h-[70vh]" />
                   {v.title && <figcaption className="text-sm text-bark-muted mt-1.5">{v.title}</figcaption>}
                 </figure>
               ))}
