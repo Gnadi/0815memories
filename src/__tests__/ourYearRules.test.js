@@ -670,6 +670,129 @@ describe.skipIf(!EMULATOR)('Our Year security rules', () => {
     })
   })
 
+  // The chapter's own list decides who reads it and everything written into
+  // it, and the couple's timeline finds it by ritual id. A chapter filed under
+  // the couple's ritual with somebody else on the list would show up as the
+  // couple's own while a third admin read along.
+  describe('a new chapter', () => {
+    const newChapter = (overrides = {}) => ({
+      familyId: FAMILY,
+      ritualId: 'ritual-1',
+      participantUids: PARTICIPANTS,
+      title: CIPHERTEXT,
+      status: 'open',
+      letterStatus: 'none',
+      ...overrides,
+    })
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore()
+        await setDoc(doc(db, 'families', 'family-2'), {
+          adminUid: MALLORY,
+          adminUids: [MALLORY, A],
+          familyName: 'Other',
+        })
+        await setDoc(doc(db, 'ourYearRituals/ritual-other'), {
+          familyId: 'family-2',
+          participantUids: [A, MALLORY],
+          rhythm: 'manual',
+        })
+      })
+    })
+
+    it('can be started by either partner for their ritual', async () => {
+      await assertSucceeds(setDoc(doc(as(A), 'ourYearChapters/new-1'), newChapter()))
+      await assertSucceeds(setDoc(doc(as(B), 'ourYearChapters/new-2'), newChapter()))
+    })
+
+    it('cannot add a third admin to the couple', async () => {
+      await assertFails(
+        setDoc(doc(as(A), 'ourYearChapters/new-1'), newChapter({ participantUids: [A, B, OUTSIDER] })),
+      )
+    })
+
+    it('cannot swap the partner for somebody else', async () => {
+      await assertFails(
+        setDoc(doc(as(A), 'ourYearChapters/new-1'), newChapter({ participantUids: [A, OUTSIDER] })),
+      )
+    })
+
+    it('cannot be filed under a ritual that is not there, or not named at all', async () => {
+      await assertFails(
+        setDoc(doc(as(A), 'ourYearChapters/new-1'), newChapter({ ritualId: 'no-such-ritual' })),
+      )
+      const { ritualId, ...withoutRitual } = newChapter()
+      expect(ritualId).toBe('ritual-1')
+      await assertFails(setDoc(doc(as(A), 'ourYearChapters/new-1'), withoutRitual))
+    })
+
+    it('cannot be filed under a ritual of another family', async () => {
+      await assertFails(
+        setDoc(doc(as(A), 'ourYearChapters/new-1'), newChapter({ ritualId: 'ritual-other' })),
+      )
+    })
+
+    it('cannot be created by a third admin who names the couple', async () => {
+      await assertFails(setDoc(doc(as(OUTSIDER), 'ourYearChapters/new-1'), newChapter()))
+    })
+
+    it('cannot be moved to another ritual later', async () => {
+      await assertFails(
+        updateDoc(doc(as(A), 'ourYearChapters', CHAPTER), { ritualId: 'ritual-other' }),
+      )
+    })
+  })
+
+  describe('the letter of a closed chapter', () => {
+    const letterPath = `ourYearLetters/${CHAPTER}`
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore()
+        await updateDoc(doc(db, 'ourYearChapters', CHAPTER), {
+          status: 'closed',
+          letterStatus: 'sealed',
+        })
+        await setDoc(doc(db, letterPath), {
+          familyId: FAMILY,
+          chapterId: CHAPTER,
+          participantUids: PARTICIPANTS,
+          sections: CIPHERTEXT,
+          sealedAt: Timestamp.fromDate(new Date(2026, 0, 1)),
+          openAt: Timestamp.fromDate(new Date(Date.now() - 1000)),
+          openedAt: null,
+        })
+      })
+    })
+
+    it('can be opened once it is due', async () => {
+      await assertSucceeds(
+        updateDoc(doc(as(A), letterPath), { openedAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+      )
+    })
+
+    it('cannot be rewritten once it is due', async () => {
+      await assertFails(updateDoc(doc(as(A), letterPath), { sections: sealed('rewritten') }))
+      await assertFails(updateDoc(doc(as(B), letterPath), { sealedAt: null }))
+    })
+
+    it('cannot be thrown away, nor its chapter', async () => {
+      await assertFails(deleteDoc(doc(as(A), letterPath)))
+      await assertFails(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+    })
+  })
+
+  describe('a closed chapter without a letter', () => {
+    it('cannot be discarded', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'ourYearChapters', CHAPTER), { status: 'closed' })
+      })
+      await assertFails(deleteDoc(doc(as(A), 'ourYearChapters', CHAPTER)))
+      await assertFails(deleteDoc(doc(as(B), 'ourYearChapters', CHAPTER)))
+    })
+  })
+
   describe('the ritual', () => {
     it('cannot be handed to somebody else', async () => {
       await assertFails(

@@ -871,6 +871,31 @@ service cloud.firestore {
         && get(path).data.participantUids == d.participantUids;
     }
 
+    // Does a new chapter name a ritual of its family, with exactly that ritual's
+    // couple? The chapter's own list decides who may read it and everything
+    // hanging off it, and the couple's timeline finds a chapter by ritual id.
+    // Without this, a partner could file a chapter under the couple's ritual
+    // with a third admin on the list, and everything the other partner later
+    // wrote into it would be readable to that third admin.
+    function chapterMatchesRitual() {
+      let d = request.resource.data;
+      let path = /databases/$(database)/documents/ourYearRituals/$(d.ritualId);
+      return d.ritualId is string
+        && exists(path)
+        && get(path).data.familyId == d.familyId
+        && get(path).data.participantUids == d.participantUids;
+    }
+
+    // Is this chapter closed? A closed chapter is a time capsule: its letter
+    // may be opened, but neither rewritten nor thrown away. A chapter of
+    // another family under the same id does not count.
+    function chapterIsClosed(chapterId, familyId) {
+      let path = /databases/$(database)/documents/ourYearChapters/$(chapterId);
+      return exists(path)
+        && get(path).data.familyId == familyId
+        && get(path).data.get('status', 'open') == 'closed';
+    }
+
     // Is there a letter for this chapter that is sealed and not yet due?
     // A letter of another family under the same id does not count.
     function letterIsSealed(chapterId, familyId) {
@@ -895,7 +920,9 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.resource.data.participantUids is list
+                    && request.resource.data.participantUids.size() == 2
                     && request.auth.uid in request.resource.data.participantUids
+                    && chapterMatchesRitual()
                     && chapterEncryptedOk();
       // A closed chapter is a time capsule: once it is closed, only the letter
       // bookkeeping may still change (opening a letter that was written back
@@ -905,6 +932,7 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
+                    && request.resource.data.get('ritualId', null) == resource.data.get('ritualId', null)
                     && (
                       resource.data.get('status', 'open') != 'closed'
                       || request.resource.data.diff(resource.data).affectedKeys()
@@ -915,10 +943,13 @@ service cloud.firestore {
       // cannot go before its open date (see ourYearLetters), and a chapter
       // deleted around it would leave the letter behind with nothing pointing
       // at it. The letter document is asked rather than the chapter's own
-      // `letterStatus`, which the partners can edit.
+      // `letterStatus`, which the partners can edit. A closed chapter is not
+      // discarded at all: the app only offers that while a chapter is open, and
+      // closing it promised that it stays as it was.
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && isFamilyAdmin(resource.data.familyId)
+                    && resource.data.get('status', 'open') != 'closed'
                     && !letterIsSealed(chapterId, resource.data.familyId);
     }
 
@@ -1060,17 +1091,24 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId
                     && request.resource.data.participantUids == resource.data.participantUids
+                    // A draft may change freely. A sealed letter is what was
+                    // written back then: once it is due, it may only be marked
+                    // as opened, never rewritten.
                     && (resource.data.get('sealedAt', null) == null
-                        || request.time >= resource.data.openAt)
+                        || (request.time >= resource.data.openAt
+                            && request.resource.data.diff(resource.data).affectedKeys()
+                                 .hasOnly(['openedAt', 'updatedAt'])))
                     && letterSectionsEncryptedOk();
       // Deleting is allowed while the letter is a draft or once it is due (a
       // chapter can be discarded while it is open). A sealed letter stays until
       // its open date: removing it early would destroy what the seal promised.
+      // A sealed letter of a closed chapter stays for good, like the chapter.
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && isFamilyAdmin(resource.data.familyId)
                     && (resource.data.get('sealedAt', null) == null
-                        || request.time >= resource.data.openAt);
+                        || (request.time >= resource.data.openAt
+                            && !chapterIsClosed(chapterId, resource.data.familyId)));
     }
 
     // The id must be the token's SHA-256 in lowercase hex, as notifications.js
