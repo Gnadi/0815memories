@@ -215,6 +215,11 @@ export async function signUpload(deps, uid, data) {
     if (!familyNow.exists || deletionHasBegun(familyNow.data(), marker, createdAtMs)) {
       throw new SigningError('failed-precondition', 'This family is being deleted')
     }
+    // Asked again here, where it is decided: an admin removed between the
+    // check above and this transaction would otherwise still get signatures.
+    if (!adminUidsOf(familyNow.data()).includes(uid)) {
+      throw new SigningError('permission-denied', 'Only family admins can upload')
+    }
     const decision = checkQuota(
       { rate: rate.exists ? rate.data() : null, usage: usage.exists ? usage.data() : null },
       createdAt.getTime(),

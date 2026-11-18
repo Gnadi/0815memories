@@ -299,3 +299,21 @@ describe('checkQuota', () => {
       .toEqual({ allowed: true, granted: 1, rate: { windowStart: NOW, count: 1 } })
   })
 })
+
+// The admin check used to run only before the quota transaction, so an upload
+// asked for while the admin was being removed still got its signature.
+describe('signUpload for an admin removed while asking', () => {
+  it('refuses when the transaction finds the admin gone, and records nothing', async () => {
+    const d = deps()
+    const runTransaction = d.db.runTransaction.bind(d.db)
+    d.db.runTransaction = (fn) => {
+      // The removal lands between the first read and the transaction.
+      d.db.docs.set(`families/${FAMILY}`, { adminUids: [] })
+      return runTransaction(fn)
+    }
+    const error = await signUpload(d, ADMIN, { familyId: FAMILY }).catch((e) => e)
+    expect(error.code).toBe('permission-denied')
+    expect(ledger(d)).toEqual({})
+    expect(d.db.collectionData(MEDIA_RATES)).toEqual({})
+  })
+})
