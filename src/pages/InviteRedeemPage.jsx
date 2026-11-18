@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
-import { auth } from '../config/firebase'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 import { useAuth } from '../context/AuthContext'
 import { getFamilyPublic } from '../services/family'
@@ -281,13 +279,17 @@ export default function InviteRedeemPage() {
 }
 
 function AlreadySignedInBanner() {
+  // The app's own logout, not Firebase's signOut alone: it also unsubscribes
+  // this device from the family's notifications and clears the key and the
+  // decrypted caches, as signing out anywhere else in the app does.
+  const { logout } = useAuth()
   return (
     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
       You're already signed in. To redeem this invite as a fresh admin, please{' '}
       <button
         type="button"
         className="underline font-semibold"
-        onClick={async () => { try { await signOut(auth) } catch { /* noop */ } window.location.reload() }}
+        onClick={async () => { try { await logout() } catch { /* noop */ } window.location.reload() }}
       >
         sign out first
       </button>.

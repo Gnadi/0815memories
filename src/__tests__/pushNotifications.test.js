@@ -75,6 +75,22 @@ describe('groupTokensByLang', () => {
     expect(groups.get('de').map((d) => d.data().token)).toEqual(['other'])
   })
 
+  // A removed admin whose registrations could not be deleted, or a device
+  // signed out without unsubscribing, kept hearing what the family did.
+  it('reaches only devices of people who are in the family now', () => {
+    const members = new Set(['uid-1', 'viewer:fam'])
+    const groups = groupTokensByLang(
+      [
+        tokenDoc({ token: 'admin', lang: 'de', uid: 'uid-1' }),
+        tokenDoc({ token: 'viewer', lang: 'de', uid: 'viewer:fam' }),
+        tokenDoc({ token: 'removed', lang: 'de', uid: 'uid-removed' }),
+        tokenDoc({ token: 'unknown', lang: 'de', uid: null }),
+      ],
+      { isMember: (uid) => members.has(uid) },
+    )
+    expect(groups.get('de').map((d) => d.data().token)).toEqual(['admin', 'viewer'])
+  })
+
   it('never excludes on a null uid', () => {
     // Documents written before `uid` existed have none; they must still be
     // notified rather than matched against an absent author.

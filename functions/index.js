@@ -109,12 +109,17 @@ async function sendToFamily(familyId, build, { excludeUid = null } = {}) {
   const stats = { devices: 0, sent: 0, failed: 0 }
   if (!familyId) return stats
 
-  const snapshot = await getFirestore()
-    .collection('fcmTokens')
-    .where('familyId', '==', familyId)
-    .get()
+  const db = getFirestore()
+  const [snapshot, family] = await Promise.all([
+    db.collection('fcmTokens').where('familyId', '==', familyId).get(),
+    db.doc(`families/${familyId}`).get(),
+  ])
+  if (!family.exists) return stats
 
-  const byLang = groupTokensByLang(snapshot.docs, { excludeUid })
+  // Who is in the family now, by the family document, not by who registered.
+  const admins = adminUidsOf(family.data())
+  const isMember = (uid) => typeof uid === 'string' && (admins.includes(uid) || uid === `viewer:${familyId}`)
+  const byLang = groupTokensByLang(snapshot.docs, { excludeUid, isMember })
   if (byLang.size === 0) return stats
 
   const messaging = getMessaging()

@@ -59,11 +59,16 @@ export const isDeadToken = (code) => DEAD_TOKEN_CODES.has(code)
  * @param {{ excludeUid?: string|null }} [options]
  * @returns {Map<'de'|'en', Array>} in insertion order, empty groups omitted
  */
-export function groupTokensByLang(docs, { excludeUid = null } = {}) {
+export function groupTokensByLang(docs, { excludeUid = null, isMember = null } = {}) {
   const byLang = new Map()
   for (const doc of docs) {
     const data = doc.data() || {}
     if (!data.token) continue
+    // A device registered by someone who is no longer in the family: an admin
+    // removed, whose own registrations could not be deleted, or a device that
+    // signed out without unsubscribing. The app registers again on every
+    // start, so a current member's device always names its member.
+    if (isMember && !isMember(data.uid)) continue
     // The author's own device stays quiet. Viewers share one identity
     // (`viewer:<familyId>`), but viewers cannot create anything either.
     if (excludeUid && data.uid === excludeUid) continue

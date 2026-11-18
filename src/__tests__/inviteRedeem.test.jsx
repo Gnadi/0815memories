@@ -11,7 +11,7 @@
  * which is why a refused redemption no longer deletes it: it is not a dead end.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const mockRedeem = vi.fn()
@@ -154,5 +154,19 @@ describe('InviteRedeemPage', () => {
     for (const button of screen.getAllByRole('button', { name: /join family/i })) {
       expect(button).toBeDisabled()
     }
+  })
+
+  // Firebase's signOut alone left the device subscribed to the family's
+  // notifications, and the key and decrypted caches in memory until the reload.
+  it('signs out the way the rest of the app does', async () => {
+    setSession({ user: { uid: 'uid-admin', email: 'admin@example.com' }, familyId: 'fam-other', emailVerified: true })
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    render(<InviteRedeemPage />)
+    const [signOutButton] = await screen.findAllByRole('button', { name: 'sign out first' })
+    fireEvent.click(signOutButton)
+    await waitFor(() => expect(reload).toHaveBeenCalled())
+    expect(session.logout).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
   })
 })
