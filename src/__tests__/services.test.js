@@ -27,7 +27,7 @@ import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
 import { redeemInvite } from '../services/invites'
-import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOfs } from '../services/bestOf'
+import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOf, subscribeBestOfs } from '../services/bestOf'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -401,6 +401,17 @@ describe('best-of', () => {
     const list = await firstDelivery((onData, onError) => subscribeBestOfs(FAMILY, key, onData, onError))
     expect(list.map((b) => b.month)).toEqual(['2026-09', '2026-08'])
     expect(list[0].doc.slides[0].place).toBe('Zell am See')
+  })
+
+  it('follows one month, and says so when it has none', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-08'))
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+
+    const one = await firstDelivery((onData, onError) => subscribeBestOf(FAMILY, key, '2026-08', onData, onError))
+    expect(one.month).toBe('2026-08')
+    expect(one.doc.slides[0].place).toBe('Zell am See')
+    const none = await firstDelivery((onData, onError) => subscribeBestOf(FAMILY, key, '2026-07', onData, onError))
+    expect(none).toBeNull()
   })
 
   it("reads one month's memories and moments, decrypted, and nothing around it", async () => {

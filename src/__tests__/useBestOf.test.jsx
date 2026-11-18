@@ -6,7 +6,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 
 vi.mock('../config/firebase', () => ({ db: { type: 'test' }, auth: null }))
 
-const h = vi.hoisted(() => ({ saved: new Map(), entries: null, lastYear: null, listeners: new Set() }))
+const h = vi.hoisted(() => ({ saved: new Map(), entries: null, lastYear: null, listeners: new Set(), monthListens: [] }))
 
 // The month asked for, and the same month a year before.
 const getMonthEntries = vi.fn(async (familyId, key, month) => {
@@ -31,6 +31,17 @@ vi.mock('../services/bestOf', () => ({
     emit()
     return () => h.listeners.delete(emit)
   },
+  // The moments row asks for its one month, not the list.
+  subscribeBestOf: (familyId, key, month, onData) => {
+    h.monthListens.push(month)
+    const emit = () => {
+      const doc = h.saved.get(month)
+      onData(doc ? { month, version: doc.version, doc } : null)
+    }
+    h.listeners.add(emit)
+    emit()
+    return () => h.listeners.delete(emit)
+  },
 }))
 import { makeBestOf, useBestOfMonth, useCurrentBestOf } from '../hooks/useBestOf'
 
@@ -48,6 +59,7 @@ beforeEach(() => {
   h.saved.clear()
   h.entries = SEPTEMBER
   h.lastYear = null
+  h.monthListens.length = 0
   getMonthEntries.mockClear()
   saveBestOf.mockClear()
 })
@@ -142,6 +154,15 @@ describe('useCurrentBestOf', () => {
     await act(() => vi.advanceTimersByTimeAsync(5000))
     await waitFor(() => expect(result.current).toMatchObject({ month: '2026-09', saved: true }))
     expect(saveBestOf).toHaveBeenCalledTimes(1)
+  })
+
+  it('listens to its one month only', async () => {
+    h.saved.set('2026-09', { month: '2026-09', version: 1, cover: { url: 'saved' } })
+    h.saved.set('2026-08', { month: '2026-08', version: 1, cover: { url: 'older' } })
+    const { result } = renderHook(() => useCurrentBestOf({ ...family, isAdmin: false, now: NOW }))
+    await waitFor(() => expect(result.current).toEqual({ month: '2026-09', cover: { url: 'saved' }, saved: true }))
+    expect(h.monthListens).toEqual(['2026-09'])
+    expect(getMonthEntries).not.toHaveBeenCalled()
   })
 
   it('leaves the making to an admin, and offers nothing for a thin month', async () => {

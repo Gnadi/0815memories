@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { db } from '../config/firebase'
-import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOfs } from '../services/bestOf'
+import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOf, subscribeBestOfs } from '../services/bestOf'
 import {
   BEST_OF_VERSION,
   buildBestOf,
@@ -82,6 +82,27 @@ export function useBestOfs(familyId, encryptionKey) {
   return { bestOfs: loadedFor === familyId ? bestOfs : [], loading }
 }
 
+// One month's saved best-of, or null. The moments row used to take it from
+// useBestOfs, which reads and decrypts up to two years of whole stories to find
+// this one; after two years that was over a megabyte on every start.
+function useSavedBestOf(familyId, encryptionKey, month) {
+  const [state, setState] = useState({ for: null, bestOf: null })
+  const target = familyId ? `${familyId}_${month}` : null
+
+  useEffect(() => {
+    if (!target || !db) return
+    return subscribeBestOf(familyId, encryptionKey, month, (bestOf) => {
+      setState({ for: target, bestOf: bestOf?.doc && typeof bestOf.doc === 'object' ? bestOf : null })
+    }, (err) => {
+      devError('Failed to load the best-of', err)
+      setState({ for: target, bestOf: null })
+    })
+  }, [target, familyId, encryptionKey, month])
+
+  const loading = !!target && !!db && state.for !== target
+  return { saved: state.for === target ? state.bestOf : null, loading }
+}
+
 // Which months this device has watched, per family — only to tell the circle
 // in the moments row whether to glow. Losing it costs one glow.
 const SEEN_KEY = 'kaydo_bestof_seen'
@@ -119,8 +140,7 @@ const BACKGROUND_DELAY_MS = 4000
  */
 export function useCurrentBestOf({ familyId, encryptionKey, isAdmin, now }) {
   const [month] = useState(() => currentBestOfMonth(now))
-  const { bestOfs, loading } = useBestOfs(familyId, encryptionKey)
-  const saved = bestOfs.find((b) => b.month === month)
+  const { saved, loading } = useSavedBestOf(familyId, encryptionKey, month)
 
   // For a month nobody has made yet: whether it had enough, and its cover.
   const [pending, setPending] = useState(null) // { for, cover } | { for, cover: null }
