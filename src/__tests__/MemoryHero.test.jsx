@@ -22,6 +22,12 @@ vi.mock('../components/media/EncryptedImage', () => ({
     />
   ),
 }))
+// The lightbox crossfades; render what it was given the same way.
+vi.mock('../components/media/CrossfadeImage', () => ({
+  default: ({ src, thumbSrc, tinyPreview }) => (
+    <img data-lightbox="" data-src={src} data-thumb={thumbSrc ?? ''} data-tiny={tinyPreview ?? ''} alt="" />
+  ),
+}))
 const auth = { encryptionKey: { fake: 'key' } }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 
@@ -64,14 +70,14 @@ describe('the hero image', () => {
     expect(images()[0].getAttribute('data-thumb')).toBe('')
   })
 
-  it('keeps the lightbox on the full-resolution original', () => {
+  it('opens the lightbox on the thumbnail already on screen, with the original to follow', () => {
+    // The original alone showed a placeholder square until it had loaded.
     render(<MemoryHero images={IMAGES} thumbs={THUMBS} />)
     fireEvent.click(images()[0])
 
-    // Two images now: the hero and the lightbox. The lightbox gets no thumb.
-    const lightbox = images().at(-1)
+    const lightbox = document.querySelector('[data-lightbox]')
     expect(lightbox.getAttribute('data-src')).toBe(IMAGES[0])
-    expect(lightbox.getAttribute('data-thumb')).toBe('')
+    expect(lightbox.getAttribute('data-thumb')).toBe(THUMBS[0])
   })
 })
 
