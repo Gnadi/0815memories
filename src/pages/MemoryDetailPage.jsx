@@ -160,6 +160,7 @@ export default function MemoryDetailPage() {
           images={memory.images}
           imageUrl={memory.imageUrl}
           thumbs={memory.thumbs}
+          thumbsTiny={memory.thumbsTiny}
           category={memory.category}
         />
         <MemoryBody memory={memory} />

@@ -16,7 +16,7 @@ vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (dat
 
 import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
-import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
+import { generateEncryptionKey, clearDecryptedTextCache, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
 import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
@@ -248,6 +248,15 @@ describe('one decryption for the list and the page', () => {
 
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+
+  it("memories: the page gets the photos' blur-up previews decrypted", async () => {
+    const tiny = 'data:image/webp;base64,AAA'
+    await addMemory(FAMILY, key, { title: 'Lake day', images: ['a.enc'] })
+    const [{ id }] = (await fs.getDocs(fs.collection(null, 'memories'))).docs
+    await fs.updateDoc(fs.doc(null, 'memories', id), { thumbsTiny: [await encryptText(key, tiny)] })
+
+    await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ thumbsTiny: [tiny] })
   })
 })
 

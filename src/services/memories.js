@@ -113,9 +113,19 @@ export function subscribeMemories(familyId, key, { pageSize }, onData, onError) 
   )
 }
 
-/** One memory, decrypted in full. */
+/**
+ * One memory, decrypted in full, for its page — with the blur-up previews,
+ * which the hero shows while a photo loads. decryptMemoryDoc leaves them alone,
+ * because the export and the media index read it and want neither.
+ */
 export function getMemory(familyId, key, id) {
-  return getFamilyDocument(MEMORIES, id, familyId, (data) => decryptMemoryDoc(key, data))
+  return getFamilyDocument(MEMORIES, id, familyId, async (data) => {
+    const result = await decryptMemoryDoc(key, data)
+    if (key && Array.isArray(result.thumbsTiny)) {
+      result.thumbsTiny = await decryptStringArray(key, result.thumbsTiny)
+    }
+    return result
+  })
 }
 
 // Plaintext on purpose: notifyOnMemory uses it to leave the author's own device

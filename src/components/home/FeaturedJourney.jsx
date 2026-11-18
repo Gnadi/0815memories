@@ -152,6 +152,15 @@ function SlideArrow({ side, label, onClick }) {
   )
 }
 
+// The card is at most 480px tall and was loading the full original, up to
+// 10 MB, at the top of the home page — and the feed below loaded the same photo
+// again as its thumb. `imageUrl` is the first photo, so its thumb and blur-up
+// are the first ones; a document where it is not leaves them off.
+function featuredThumb(memory) {
+  if (memory.images?.[0] !== memory.imageUrl) return {}
+  return { thumbSrc: thumbAt(memory, 0), tinyPreview: tinyPreviewAt(memory, 0) }
+}
+
 function FeaturedSlide({ memory }) {
   const navigate = useNavigate()
   const { t } = useTranslation('home')
@@ -164,6 +173,7 @@ function FeaturedSlide({ memory }) {
       {memory.imageUrl ? (
         <EncryptedImage
           src={memory.imageUrl}
+          {...featuredThumb(memory)}
           alt={memory.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />

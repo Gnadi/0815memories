@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
-import { thumbsFor } from '../../utils/mediaThumbs'
+import { thumbsFor, tinyPreviewAt } from '../../utils/mediaThumbs'
 import { useAuth } from '../../context/AuthContext'
 
 // A pinch to zoom is two fingers moving apart, which on the first finger's
@@ -35,7 +35,7 @@ function useSwipe(onPrev, onNext) {
   }
 }
 
-export default function MemoryHero({ images, imageUrl, thumbs, category }) {
+export default function MemoryHero({ images, imageUrl, thumbs, thumbsTiny, category }) {
   const { t } = useTranslation('memory')
   const { encryptionKey } = useAuth()
   // Memoised because the prefetch effect below depends on it: a fresh array
@@ -59,10 +59,15 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
   useEffect(() => {
     if (!encryptionKey || allImages.length < 2) return
     for (const offset of [1, -1]) {
-      const neighbour = allImages[(index + offset + allImages.length) % allImages.length]
+      // What the hero will show there: the thumb where there is one. Warming
+      // the original instead fetched up to two full-size photos per page that
+      // only the lightbox needs, and left the next arrow press to load its
+      // thumb from cold.
+      const at = (index + offset + allImages.length) % allImages.length
+      const neighbour = heroThumbs[at] || allImages[at]
       if (neighbour) prefetchDecryptedMedia(neighbour, encryptionKey, 'image/*')
     }
-  }, [index, allImages, encryptionKey])
+  }, [index, allImages, heroThumbs, encryptionKey])
 
   const heroSwipe = useSwipe(prev, next)
   const lightboxSwipe = useSwipe(prev, next)
@@ -102,6 +107,7 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
             <EncryptedImage
               src={allImages[index]}
               thumbSrc={heroThumbs[index]}
+              tinyPreview={tinyPreviewAt({ images: allImages, thumbsTiny }, index)}
               alt=""
               className="w-full h-full object-cover"
               onClick={() => setFullscreen(true)}

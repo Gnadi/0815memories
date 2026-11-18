@@ -11,10 +11,11 @@ vi.mock('../components/media/useDecryptedMedia', () => ({
 }))
 // Render the src/thumbSrc pair as data attributes so the choice is assertable.
 vi.mock('../components/media/EncryptedImage', () => ({
-  default: ({ src, thumbSrc, onClick, className }) => (
+  default: ({ src, thumbSrc, tinyPreview, onClick, className }) => (
     <img
       data-src={src}
       data-thumb={thumbSrc ?? ''}
+      data-tiny={tinyPreview ?? ''}
       className={className}
       onClick={onClick}
       alt=""
@@ -45,6 +46,12 @@ describe('the hero image', () => {
     expect(img.getAttribute('data-thumb')).toBe(THUMBS[0])
   })
 
+  it('shows the blur-up preview of the photo on screen while it loads', () => {
+    const TINY = ['data:image/webp;base64,AAA', 'data:image/webp;base64,BBB', 'data:image/webp;base64,CCC']
+    render(<MemoryHero images={IMAGES} thumbs={THUMBS} thumbsTiny={TINY} />)
+    expect(images()[0].getAttribute('data-tiny')).toBe(TINY[0])
+  })
+
   it('falls back to the original when a document has no thumbs yet', () => {
     render(<MemoryHero images={IMAGES} />)
     expect(images()[0].getAttribute('data-thumb')).toBe('')
@@ -73,9 +80,9 @@ describe('warming the neighbours', () => {
     render(<MemoryHero images={IMAGES} thumbs={THUMBS} />)
 
     const asked = prefetchDecryptedMedia.mock.calls.map(([u]) => u)
-    expect(asked).toContain(IMAGES[1])   // next
-    expect(asked).toContain(IMAGES[2])   // previous, wrapping round
-    expect(asked).not.toContain(IMAGES[0])
+    expect(asked).toContain(THUMBS[1])   // next
+    expect(asked).toContain(THUMBS[2])   // previous, wrapping round
+    expect(asked).not.toContain(THUMBS[0])
   })
 
   it('re-warms around the new index after an arrow press', () => {
@@ -86,8 +93,8 @@ describe('warming the neighbours', () => {
     fireEvent.click(document.querySelectorAll('button')[2])
 
     const asked = prefetchDecryptedMedia.mock.calls.map(([u]) => u)
-    expect(asked).toContain(IMAGES[2])
-    expect(asked).toContain(IMAGES[0])
+    expect(asked).toContain(THUMBS[2])
+    expect(asked).toContain(THUMBS[0])
   })
 
   it('does nothing for a single-photo memory', () => {
@@ -101,10 +108,18 @@ describe('warming the neighbours', () => {
     expect(prefetchDecryptedMedia).not.toHaveBeenCalled()
   })
 
-  it('asks for originals, not thumbnails — the arrow press needs the real thing', () => {
+  it('warms what the hero will show: the thumbs, leaving the originals to the lightbox', () => {
+    // An arrow press shows the neighbour's thumb. Warming its original fetched
+    // up to two full-size photos per page that only the lightbox uses.
     render(<MemoryHero images={IMAGES} thumbs={THUMBS} />)
     const asked = prefetchDecryptedMedia.mock.calls.map(([u]) => u)
-    for (const thumb of THUMBS) expect(asked).not.toContain(thumb)
+    for (const original of IMAGES) expect(asked).not.toContain(original)
+  })
+
+  it('warms the originals of a memory that has no thumbs yet', () => {
+    render(<MemoryHero images={IMAGES} />)
+    const asked = prefetchDecryptedMedia.mock.calls.map(([u]) => u)
+    expect(asked).toEqual(expect.arrayContaining([IMAGES[1], IMAGES[2]]))
   })
 })
 
