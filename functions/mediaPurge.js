@@ -144,6 +144,11 @@ export function cloudinaryDestroyer({ fetch, cloudName, apiKey, secret }) {
   return async (resourceType, publicIds) => {
     const query = new URLSearchParams()
     for (const id of publicIds) query.append('public_ids[]', id)
+    // A raw file is ciphertext, and stays useless in a CDN cache. Anything
+    // else was served readable (the login pictures under kaydo/public, images
+    // from before encryption), and without this the CDN goes on serving it at
+    // its known address for up to 30 days after the family is gone.
+    if (resourceType !== 'raw') query.append('invalidate', 'true')
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/resources/${encodeURIComponent(resourceType)}/upload?${query}`,
       { method: 'DELETE', headers: { Authorization: `Basic ${auth}` } },

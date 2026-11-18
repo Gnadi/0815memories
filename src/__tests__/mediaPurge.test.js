@@ -442,6 +442,15 @@ describe('cloudinaryDestroyer', () => {
     expect(init.headers.Authorization).toBe(`Basic ${btoa('key:secret')}`)
   })
 
+  it('has the CDN forget a readable picture, and leaves ciphertext to expire', async () => {
+    const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ deleted: {} }) }))
+    const destroy = cloudinaryDestroyer({ fetch, cloudName: 'demo', apiKey: 'key', secret: 'secret' })
+    await destroy('image', ['kaydo/public/fam/login'])
+    await destroy('raw', ['kaydo/fam/photo'])
+    expect(new URL(fetch.mock.calls[0][0]).searchParams.get('invalidate')).toBe('true')
+    expect(new URL(fetch.mock.calls[1][0]).searchParams.has('invalidate')).toBe(false)
+  })
+
   it('throws when Cloudinary refuses', async () => {
     const destroy = cloudinaryDestroyer({ fetch: async () => ({ ok: false, status: 401 }), cloudName: 'demo', apiKey: 'k', secret: 's' })
     await expect(destroy('raw', ['x'])).rejects.toThrow('401')
