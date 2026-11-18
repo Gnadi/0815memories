@@ -566,4 +566,5 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
   saveAs(zipBlob, `${rootFolder}.zip`)
 
   onProgress({ phase: 'done', current: 1, total: 1, message: 'Export complete!' })
+  return { failedDownloads: failedDownloads.length }
 }

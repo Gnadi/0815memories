@@ -171,7 +171,9 @@
     "complete": "Export complete! Check your downloads folder.",
     "exportAgain": "Export Again",
     "download": "Download Full Backup (ZIP)",
-    "failed": "Export failed"
+    "failed": "Export failed",
+    "incomplete_one": "The ZIP is saved, but {{count}} file could not be backed up. The archive's manifest.json lists it under failedDownloads: don't count on this backup for it.",
+    "incomplete_other": "The ZIP is saved, but {{count}} files could not be backed up. The archive's manifest.json lists them under failedDownloads: don't count on this backup for them."
   },
   "optimizePhotos": {
     "label": "Optimise photos",

@@ -15,6 +15,10 @@ export default function NasExportButton() {
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ phase: '', current: 0, total: 0, message: '' })
   const [error, setError] = useState(null)
+  // Files that did not make it into the archive. Their list is in the
+  // archive's manifest.json; the person needs to know to look before they rely
+  // on it, perhaps as the last copy before the family is deleted.
+  const [failedDownloads, setFailedDownloads] = useState(0)
   const abortRef = useRef(null)
 
   useEffect(() => {
@@ -34,13 +38,14 @@ export default function NasExportButton() {
   const handleExport = async () => {
     setExporting(true)
     setError(null)
+    setFailedDownloads(0)
     setProgress({ phase: 'data', current: 0, total: 1, message: t('export.starting') })
 
     const controller = new AbortController()
     abortRef.current = controller
 
     try {
-      await runNasExport({
+      const result = await runNasExport({
         familyId,
         familyName,
         uid: user?.uid,
@@ -48,6 +53,7 @@ export default function NasExportButton() {
         onProgress: setProgress,
         signal: controller.signal,
       })
+      setFailedDownloads(result?.failedDownloads ?? 0)
     } catch (err) {
       if (err.name === 'AbortError') {
         setProgress({ phase: '', current: 0, total: 0, message: '' })
@@ -92,7 +98,13 @@ export default function NasExportButton() {
   if (progress.phase === 'done') {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-green-700">{t('export.complete')}</p>
+        {failedDownloads > 0 ? (
+          <p role="alert" className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg">
+            {t('export.incomplete', { count: failedDownloads })}
+          </p>
+        ) : (
+          <p className="text-sm text-green-700">{t('export.complete')}</p>
+        )}
         <button
           type="button"
           onClick={() => setProgress({ phase: '', current: 0, total: 0, message: '' })}

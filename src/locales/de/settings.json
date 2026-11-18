@@ -171,7 +171,9 @@
     "complete": "Export abgeschlossen! Schau in deinem Download-Ordner nach.",
     "exportAgain": "Erneut exportieren",
     "download": "Vollständiges Backup herunterladen (ZIP)",
-    "failed": "Export fehlgeschlagen"
+    "failed": "Export fehlgeschlagen",
+    "incomplete_one": "Das ZIP ist gespeichert, aber {{count}} Datei konnte nicht gesichert werden. Die manifest.json im Archiv führt sie unter failedDownloads: Verlass dich für diese Datei nicht auf dieses Backup.",
+    "incomplete_other": "Das ZIP ist gespeichert, aber {{count}} Dateien konnten nicht gesichert werden. Die manifest.json im Archiv führt sie unter failedDownloads: Verlass dich für diese Dateien nicht auf dieses Backup."
   },
   "optimizePhotos": {
     "label": "Fotos optimieren",
