@@ -5,6 +5,7 @@ import { isUnlocked, daysUntilUnlock, LEGACY_GRACE_MONTHS } from '../../hooks/us
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import EncryptedAudio from '../media/EncryptedAudio'
+import { formatDateIn } from '../../utils/dateFormat'
 
 // A legacy capsule this close to opening is worth mentioning on the card.
 const CHECK_IN_NUDGE_DAYS = 60
@@ -51,7 +52,7 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
     // it is both honest and more useful than a euphemism.
     if (!box.unlockDate) return t('card.unknownDate')
     const d = box.unlockDate.toDate ? box.unlockDate.toDate() : new Date(box.unlockDate)
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    return formatDateIn(d, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
   function getTriggerDescription(box) {

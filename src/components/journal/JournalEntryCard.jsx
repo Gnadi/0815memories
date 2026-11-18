@@ -3,6 +3,7 @@ import { Image as ImageIcon, Mic, Video } from 'lucide-react'
 import { EMOTIONS } from '../../constants/emotions'
 import EncryptedImage from '../media/EncryptedImage'
 import { entryDate, entryPlainText } from '../../utils/journalContent'
+import { formatDateIn } from '../../utils/dateFormat'
 
 /**
  * One entry in a child's archive: its date set apart on the left, the words on
@@ -14,9 +15,9 @@ export default function JournalEntryCard({ entry, onView }) {
 
   const emotion = EMOTIONS.find((e) => e.key === entry.emotion) || EMOTIONS[1]
   const date = entryDate(entry)
-  const day = date?.toLocaleDateString(i18n.language, { day: 'numeric' })
-  const month = date?.toLocaleDateString(i18n.language, { month: 'short' })
-  const fullDate = date?.toLocaleDateString(i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const day = date && formatDateIn(date, i18n.language, { day: 'numeric' })
+  const month = date && formatDateIn(date, i18n.language, { month: 'short' })
+  const fullDate = date && formatDateIn(date, i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const preview = entryPlainText(entry)
   const photos = entry.photos?.length || 0
   const videos = entry.videos?.length || 0
