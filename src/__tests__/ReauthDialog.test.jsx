@@ -188,6 +188,21 @@ describe('the other sensitive actions', () => {
     await waitFor(() => expect(calls.removeAdmin).toHaveBeenCalledTimes(1))
   })
 
+  // Removing an admin leaves the shared password as it was, and whoever knows
+  // it can still open the feed. The confirmation used to promise they could
+  // not sign in any more.
+  it('says the shared password still works, and points to changing it', async () => {
+    render(<ManageAdminsPanel />)
+    const [first] = await screen.findAllByRole('button', { name: 'Remove' })
+    fireEvent.click(first)
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/shared password stays the same/))
+
+    type('secret-pw')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    const link = await screen.findByRole('link', { name: 'Change shared password' })
+    expect(link.getAttribute('href')).toBe('#family-password')
+  })
+
   it('does not remove the admin when the password is wrong', async () => {
     auth.reauthenticate.mockRejectedValue({ code: 'auth/wrong-password' })
     render(<ManageAdminsPanel />)

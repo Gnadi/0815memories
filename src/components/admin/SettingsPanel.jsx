@@ -269,7 +269,7 @@ export default function SettingsPanel() {
       )}
 
       {/* Change shared password */}
-      <form onSubmit={handleSavePassword} className="mb-6">
+      <form id="family-password" onSubmit={handleSavePassword} className="mb-6 scroll-mt-24">
         <label className="block text-sm font-medium text-bark mb-1.5">
           {t('password.label')}
         </label>

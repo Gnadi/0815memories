@@ -33,6 +33,10 @@ export default function ManageAdminsPanel() {
   const [revokingToken, setRevokingToken] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  // Set after a removal and left up: removing an admin does not change the
+  // family password, so someone who knows it can still open the feed as a
+  // viewer. Only a new password ends that.
+  const [passwordHint, setPasswordHint] = useState(false)
 
   const loadFamily = useCallback(async () => {
     if (!familyId || !db) return
@@ -140,8 +144,7 @@ export default function ManageAdminsPanel() {
       // Every pending invite goes with them, on the server (services/admins.js).
       await removeAdmin(familyId, targetUid)
       await loadFamily()
-      setNotice(t('admins.removed'))
-      setTimeout(() => setNotice(''), 4000)
+      setPasswordHint(true)
     } catch (err) {
       setError(needsFreshLogin(err) ? t('reauth.stale') : t('admins.removeFailed'))
     } finally {
@@ -214,6 +217,14 @@ export default function ManageAdminsPanel() {
       )}
       {notice && (
         <p className="text-sm text-kaydo bg-cream-dark px-4 py-2 rounded-lg mb-3">{notice}</p>
+      )}
+      {passwordHint && (
+        <p role="status" className="text-sm text-bark bg-cream-dark px-4 py-2 rounded-lg mb-3">
+          {t('admins.removedPasswordHint')}{' '}
+          <a href="#family-password" className="text-kaydo font-medium underline">
+            {t('admins.changePasswordLink')}
+          </a>
+        </p>
       )}
 
       <div className="space-y-2 mb-3">
