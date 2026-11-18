@@ -86,6 +86,15 @@ function writes() {
 }
 
 describe('useBlackBox addBox', () => {
+  it('keeps the photos\' thumbnails with them, on the sealed document', async () => {
+    const { key } = await generateEncryptionKey()
+    const { result } = renderHook(() => useBlackBox('fam1', key))
+    await act(async () => { await result.current.addBox({ ...capsule(), photoThumbs: ['https://cdn/a-t.enc'] }) })
+    const { blackbox, blackboxContent } = writes()
+    expect(blackboxContent.photoThumbs).toEqual(['https://cdn/a-t.enc'])
+    expect(blackbox).not.toHaveProperty('photoThumbs')
+  })
+
   it('encrypts the capsule\'s words before they reach Firestore', async () => {
     const { key } = await generateEncryptionKey()
     const { result } = renderHook(() => useBlackBox('fam1', key))
@@ -116,6 +125,7 @@ describe('useBlackBox addBox', () => {
     expect(blackbox).not.toHaveProperty('voiceNote')
 
     expect(blackboxContent.photos).toEqual(['https://cdn/a.enc'])
+    expect(blackbox).not.toHaveProperty('photoThumbs')
     // The content document carries familyId because its own read rule needs it.
     expect(blackboxContent.familyId).toBe('fam1')
   })

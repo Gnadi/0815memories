@@ -81,7 +81,7 @@ export default function PhotoBar({
 
         {/* Memory library */}
         {memoryPhotos.map((p) => (
-          <PhotoThumb key={p.id} url={p.url} title={p.memoryTitle} onClick={() => onPick?.(p.url)} />
+          <PhotoThumb key={p.id} url={p.url} thumbUrl={p.thumbUrl} title={p.memoryTitle} onClick={() => onPick?.(p.url)} />
         ))}
 
         {memoryPhotos.length === 0 && sessionPhotos.length === 0 && !uploading && (
@@ -94,7 +94,9 @@ export default function PhotoBar({
   )
 }
 
-function PhotoThumb({ url, title, onClick }) {
+// A 96px tile shows the memory's thumbnail where it has one: the bar lists
+// dozens of photos, and each used to load its full original.
+function PhotoThumb({ url, thumbUrl, title, onClick }) {
   return (
     <button
       type="button"
@@ -104,6 +106,7 @@ function PhotoThumb({ url, title, onClick }) {
     >
       <EncryptedImage
         src={url}
+        thumbSrc={thumbUrl || undefined}
         alt={title || ''}
         className="w-full h-full object-cover"
       />

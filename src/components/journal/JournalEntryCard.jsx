@@ -4,6 +4,7 @@ import { EMOTIONS } from '../../constants/emotions'
 import EncryptedImage from '../media/EncryptedImage'
 import { entryDate, entryPlainText } from '../../utils/journalContent'
 import { formatDateIn } from '../../utils/dateFormat'
+import { photoThumbsFor } from '../../utils/mediaThumbs'
 
 /**
  * One entry in a child's archive: its date set apart on the left, the words on
@@ -71,6 +72,7 @@ export default function JournalEntryCard({ entry, onView }) {
       {photos > 0 && (
         <EncryptedImage
           src={entry.photos[0]}
+          thumbSrc={photoThumbsFor(entry.photos, entry.photoThumbs)[0] || undefined}
           alt=""
           className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover self-center"
         />

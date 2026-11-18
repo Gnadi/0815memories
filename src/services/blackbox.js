@@ -42,12 +42,13 @@ export const CONTENT_ENCRYPTED_FIELDS = ['message']
 
 /** The payload, which lives on the content document. */
 function splitCapsule(box) {
-  const { message, photos, videos, voiceNote, ...metadata } = box
+  const { message, photos, photoThumbs, videos, voiceNote, ...metadata } = box
   return {
     metadata,
     content: {
       message: message ?? '',
       photos: photos ?? [],
+      photoThumbs: photoThumbs ?? [],
       videos: videos ?? [],
       voiceNote: voiceNote ?? null,
     },

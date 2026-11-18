@@ -11,6 +11,7 @@ import VideoOnTap from '../components/media/VideoOnTap'
 import EncryptedAudio from '../components/media/EncryptedAudio'
 import JournalContent from '../components/journal/JournalContent'
 import { entryDate } from '../utils/journalContent'
+import { photoThumbsFor } from '../utils/mediaThumbs'
 
 const HEADER_BUTTON = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0'
 
@@ -120,6 +121,7 @@ export default function JournalDetailPage() {
                 <EncryptedImage
                   key={i}
                   src={url}
+                  thumbSrc={photoThumbsFor(entry.photos, entry.photoThumbs)[i] || undefined}
                   alt=""
                   className={`rounded-2xl object-cover w-full ${entry.photos.length === 1 ? 'max-h-[70vh]' : 'aspect-square'}`}
                 />

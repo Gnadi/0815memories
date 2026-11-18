@@ -161,6 +161,7 @@ export default function CreateBlackBoxPage() {
         milestone: form.triggerType === 'milestone' ? form.milestone : null,
         unlockDate: unlockDate ? Timestamp.fromDate(unlockDate) : null,
         photos: photos.filter((p) => p.url).map((p) => p.url),
+        photoThumbs: photos.filter((p) => p.url).map((p) => p.thumbUrl || ''),
         videos: videos.filter((v) => v.url).map((v) => ({ url: v.url, publicId: v.publicId })),
         voiceNote: voiceNote || null,
       }

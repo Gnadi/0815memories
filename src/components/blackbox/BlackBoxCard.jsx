@@ -6,6 +6,7 @@ import EncryptedImage from '../media/EncryptedImage'
 import VideoOnTap from '../media/VideoOnTap'
 import EncryptedAudio from '../media/EncryptedAudio'
 import { formatDateIn } from '../../utils/dateFormat'
+import { photoThumbsFor } from '../../utils/mediaThumbs'
 
 // A legacy capsule this close to opening is worth mentioning on the card.
 const CHECK_IN_NUDGE_DAYS = 60
@@ -192,7 +193,7 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
               {content?.photos?.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {content.photos.map((url, i) => (
-                    <EncryptedImage key={i} src={url} alt="" className="w-24 h-24 rounded-xl object-cover" />
+                    <EncryptedImage key={i} src={url} thumbSrc={photoThumbsFor(content.photos, content.photoThumbs)[i] || undefined} alt="" className="w-24 h-24 rounded-xl object-cover" />
                   ))}
                 </div>
               )}

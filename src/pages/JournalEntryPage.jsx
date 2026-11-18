@@ -13,6 +13,7 @@ import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
 import JournalContentField from '../components/journal/JournalContentField'
 import { devError } from '../utils/devLog'
+import { photoThumbsFor } from '../utils/mediaThumbs'
 import {
   EMPTY_CONTENT,
   contentFromEntry,
@@ -134,7 +135,9 @@ export default function JournalEntryPage() {
     })
     setContent(contentFromEntry(entry))
     setImages(
-      entry.photos?.map((url, i) => ({ id: i, preview: url, url, uploading: false })) || []
+      entry.photos?.map((url, i) => ({
+        id: i, preview: url, url, thumbUrl: photoThumbsFor(entry.photos, entry.photoThumbs)[i] || '', uploading: false,
+      })) || []
     )
     setVideos(
       entry.videos?.map((v, i) => ({
@@ -178,6 +181,9 @@ export default function JournalEntryPage() {
         ...fields,
         date: Timestamp.fromDate(new Date(form.date)),
         photos: images.filter((img) => img.url).map((img) => img.url),
+        // Positional, '' where a photo has none: the list card and the entry's
+        // grid show these instead of the originals.
+        photoThumbs: images.filter((img) => img.url).map((img) => img.thumbUrl || ''),
         videos: videos.filter((v) => v.url).map((v) => ({ url: v.url, publicId: v.publicId, title: v.title })),
         voiceMemos,
       }
