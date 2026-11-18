@@ -22,6 +22,10 @@
  */
 import { MEDIA_ASSETS, MEDIA_RATES } from './mediaSigning.js'
 
+// functions/familyDeletion.js; named here too, since that module imports
+// half the functions and this one is loaded by every write.
+const FAMILY_DELETIONS = 'familyDeletions'
+
 // The collections whose documents can carry `mediaRefs`. The family document
 // holds the login page's pictures; its family is its own id.
 export const MEDIA_COLLECTIONS = [
@@ -338,6 +342,16 @@ export async function trackMediaRefs({ db, now = Date.now, legacyPerDay = LEGACY
   // The write only says which files to look at; what each one's state should
   // be comes from the document itself (reconcileRef says why).
   const { added, removed, removedFamily } = refChanges(collection, docId, before, after)
+
+  // A family being deleted deletes its documents and its ledger entries
+  // itself (functions/familyDeletion.js), and its marker means the deletion
+  // can no longer be taken back. Letting go of each file as its document
+  // goes was thousands of transactions racing that deletion for entries it
+  // was about to remove, each starting yet another of these triggers.
+  if (!after && removedFamily) {
+    const marker = await db.collection(FAMILY_DELETIONS).doc(removedFamily).get()
+    if (marker.exists) return stats
+  }
 
   const reconcile = (id) => reconcileRef(db, now, id, collection, docId, removedFamily, legacyPerDay)
   // The ledger's own files together, in as few transactions as fit

@@ -386,3 +386,20 @@ describe('several files of one document', () => {
   })
 })
 
+describe('a family being deleted', () => {
+  it('leaves the ledger to the deletion when its documents go', async () => {
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    db.docs.set('familyDeletions/fam-1', { startedAt: new Date(NOW) })
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: null })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+
+  it('still lets go of a deleted document\'s files in a family that stays', async () => {
+    const db = ledger([['a', { state: 'attached', refs: ['memories/m1'] }]])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: memory({ images: [pid('a')] }), after: null })
+    expect(stats.detached).toBe(1)
+    expect(entry(db, 'a')).toMatchObject({ state: 'detached', refs: [] })
+  })
+})
+
