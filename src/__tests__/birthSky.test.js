@@ -117,6 +117,14 @@ describe('places', () => {
     expect(searchPlaces(rows, 'li').map((p) => p.name)).toEqual(['Linz', 'Lienz', 'Klingenbach'])
   })
 
+  it('answers from the list it is given, also after searching another', () => {
+    // Names are normalised once per list and kept; a second list is its own.
+    expect(searchPlaces(rows, 'vie').map((p) => p.name)).toEqual(['Vienna'])
+    const other = [['Vielsalm', 'BE', 50.28, 5.92]]
+    expect(searchPlaces(other, 'vie').map((p) => p.name)).toEqual(['Vielsalm'])
+    expect(searchPlaces(rows, 'vie').map((p) => p.name)).toEqual(['Vienna'])
+  })
+
   it('needs at least two characters', () => {
     expect(searchPlaces(rows, 'l')).toEqual([])
   })

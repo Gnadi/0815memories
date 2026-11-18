@@ -49,6 +49,20 @@ export function normalizeForSearch(text) {
     .trim()
 }
 
+// The place list's names, normalised once per list. Normalising all ~49,000 on
+// every key cost 100–200 ms a key on a phone; the list itself is loaded once a
+// session, so its names are worked out once as well.
+const normalisedNames = new WeakMap()
+
+function namesOf(rows) {
+  let names = normalisedNames.get(rows)
+  if (!names) {
+    names = rows.map((row) => normalizeForSearch(row[0]))
+    normalisedNames.set(rows, names)
+  }
+  return names
+}
+
 /**
  * Up to `limit` places matching `query`: names that start with it first, then
  * names that contain it; within each group bigger places first (the list is
@@ -59,8 +73,10 @@ export function searchPlaces(rows, query, limit = 8) {
   if (q.length < 2) return []
   const starts = []
   const contains = []
-  for (const row of rows) {
-    const name = normalizeForSearch(row[0])
+  const names = namesOf(rows)
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    const name = names[i]
     if (name.startsWith(q)) {
       starts.push(row)
       if (starts.length >= limit) break
