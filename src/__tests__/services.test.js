@@ -22,7 +22,7 @@ import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscri
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
-import { addJournal, subscribeJournals, updateJournal } from '../services/journals'
+import { addJournal, getJournal, getJournalSummary, subscribeJournals, updateJournal } from '../services/journals'
 import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
@@ -360,6 +360,24 @@ describe('kids and journals', () => {
     expect(updated).not.toHaveProperty('contentRich')
     expect(updated.content).not.toContain('Emma')
     expect(updated).toMatchObject({ contentFormat: 'markdown', familyId: FAMILY, childId: 'kid-a' })
+  })
+
+  it('journals: a child is summed up by count and latest date, and one entry read alone', async () => {
+    const date = (iso) => Timestamp.fromDate(new Date(iso))
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Older', date: date('2024-07-01') })
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Newer', date: date('2024-10-18') })
+    await addJournal(FAMILY, 'kid-b', key, { content: 'Other child', date: date('2025-01-01') })
+
+    const summary = await getJournalSummary(FAMILY, 'kid-a')
+    expect(summary.count).toBe(2)
+    expect(summary.latest.date.toDate()).toEqual(new Date('2024-10-18'))
+    await expect(getJournalSummary(FAMILY, 'kid-c')).resolves.toEqual({ count: 0, latest: null })
+
+    const raw = await stored('journals')
+    const newer = raw.find((d) => d.childId === 'kid-a' && d.date.toDate().getMonth() === 9)
+    await expect(getJournal(FAMILY, 'kid-a', key, newer.id)).resolves.toMatchObject({ content: 'Newer' })
+    // The entry is the child's the page names, or none at all.
+    await expect(getJournal(FAMILY, 'kid-b', key, newer.id)).resolves.toBeNull()
   })
 
   it('journals: an entry without a document is stored without one', async () => {

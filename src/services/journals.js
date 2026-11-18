@@ -7,6 +7,9 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getCountFromServer,
+  getDocs,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -16,7 +19,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptFields, encryptFields } from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
-import { subscribeDecrypted } from './decrypted'
+import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const JOURNALS = 'journals'
@@ -54,29 +57,47 @@ export async function decryptJournal(key, data) {
   return result
 }
 
+const childEntries = (familyId, childId) =>
+  query(
+    collection(db, JOURNALS),
+    where('familyId', '==', familyId),
+    where('childId', '==', childId),
+    orderBy('date', 'desc'),
+  )
+
 /** One child's entries. */
 export function subscribeJournals(familyId, childId, key, onData, onError) {
   return subscribeDecrypted(
-    query(
-      collection(db, JOURNALS),
-      where('familyId', '==', familyId),
-      where('childId', '==', childId),
-      orderBy('date', 'desc'),
-    ),
+    childEntries(familyId, childId),
     (docs) => Promise.all(docs.map((d) => decryptJournal(key, d))),
     onData,
     onError,
   )
 }
 
-/** Every child's entries. */
-export function subscribeAllJournals(familyId, key, onData, onError) {
-  return subscribeDecrypted(
-    query(collection(db, JOURNALS), where('familyId', '==', familyId), orderBy('date', 'desc')),
-    (docs) => Promise.all(docs.map((d) => decryptJournal(key, d))),
-    onData,
-    onError,
-  )
+/**
+ * How many entries a child has, and the date of the latest — what the journal
+ * overview shows. Neither needs a word of the entries themselves: the count is
+ * counted by the server, and `date` is stored readable, so nothing here is
+ * downloaded in full or decrypted. The overview used to read and decrypt every
+ * entry of every child for these two numbers.
+ *
+ * @returns {Promise<{ count: number, latest: { date: unknown } | null }>}
+ */
+export async function getJournalSummary(familyId, childId) {
+  const entries = childEntries(familyId, childId)
+  const [counted, newest] = await Promise.all([
+    getCountFromServer(entries),
+    getDocs(query(entries, limit(1))),
+  ])
+  const [first] = newest.docs
+  return { count: counted.data().count, latest: first ? { date: first.data().date } : null }
+}
+
+/** One entry of `childId`, decrypted, or null when there is none. */
+export async function getJournal(familyId, childId, key, id) {
+  const entry = await getFamilyDocument(JOURNALS, id, familyId, (data) => decryptJournal(key, data))
+  return entry?.childId === childId ? entry : null
 }
 
 /** `contentRich` of null is left out: a new entry without a document has none. */

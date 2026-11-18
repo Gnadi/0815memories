@@ -7,7 +7,7 @@ import { EMOTIONS } from '../constants/emotions'
 import VoiceMemoRecorder from '../components/admin/VoiceMemoRecorder'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
-import { useJournals } from '../hooks/useJournals'
+import { useJournal, useJournalWriter } from '../hooks/useJournals'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
@@ -84,10 +84,10 @@ export default function JournalEntryPage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids } = useKids(familyId, encryptionKey)
-  const { journals, addJournal, updateJournal } = useJournals(familyId, childId, encryptionKey)
+  const { entry } = useJournal(familyId, childId, entryId, encryptionKey)
+  const { addJournal, updateJournal } = useJournalWriter(familyId, childId, encryptionKey)
 
   const kid = kids.find((k) => k.id === childId)
-  const entry = entryId ? journals.find((j) => j.id === entryId) : null
 
   const [form, setForm] = useState(() => ({
     title: '',
@@ -143,8 +143,8 @@ export default function JournalEntryPage() {
     )
     setVoiceMemos(entry.voiceMemos || [])
     setLoaded(true)
-    // Only when another entry arrives: the snapshot listener delivers this one
-    // again on every change, and that must not wipe what is being typed.
+    // Only when another entry arrives: what is being typed must never be
+    // wiped by the same entry arriving again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, setImages, setVideos])
 

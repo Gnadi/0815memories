@@ -4,32 +4,24 @@ import { useTranslation } from 'react-i18next'
 import { PenLine, Plus, Baby } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
-import { useAllJournals } from '../hooks/useJournals'
+import { useJournalSummaries } from '../hooks/useJournals'
 import KidJournalCard from '../components/journal/KidJournalCard'
 import AddKidModal from '../components/admin/AddKidModal'
 import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
-import { entryDate } from '../utils/journalContent'
 
 export default function KidsJournalPage() {
   const { t } = useTranslation('journal')
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids, loading, addKid, updateKid, deleteKid } = useKids(familyId, encryptionKey)
-  const { journals } = useAllJournals(familyId, encryptionKey)
+  const statsByKid = useJournalSummaries(familyId, kids.map((kid) => kid.id))
   const [showAddKid, setShowAddKid] = useState(false)
   const [editingKid, setEditingKid] = useState(null)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')
   }, [isAdmin, navigate])
-
-  // Entries arrive newest first, so a child's first one seen is their latest.
-  const statsByKid = journals.reduce((acc, j) => {
-    const stats = acc[j.childId] || (acc[j.childId] = { count: 0, last: entryDate(j) })
-    stats.count += 1
-    return acc
-  }, {})
 
   if (!isAdmin) return null
 

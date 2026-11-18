@@ -5,7 +5,7 @@ import { ArrowLeft, Mic, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../constants/emotions'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
-import { useJournals } from '../hooks/useJournals'
+import { useJournal, useJournalWriter } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
 import EncryptedAudio from '../components/media/EncryptedAudio'
@@ -21,10 +21,10 @@ export default function JournalDetailPage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids } = useKids(familyId, encryptionKey)
-  const { journals, loading, deleteJournal } = useJournals(familyId, childId, encryptionKey)
+  const { entry, loading } = useJournal(familyId, childId, entryId, encryptionKey)
+  const { deleteJournal } = useJournalWriter(familyId, childId, encryptionKey)
 
   const kid = kids.find((k) => k.id === childId)
-  const entry = journals.find((j) => j.id === entryId)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')

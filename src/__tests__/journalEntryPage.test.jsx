@@ -15,9 +15,10 @@ let mockJournals = []
 const mockAddJournal = vi.fn()
 const mockUpdateJournal = vi.fn()
 vi.mock('../hooks/useJournals', () => ({
-  useJournals: () => ({
-    journals: mockJournals, loading: false, addJournal: mockAddJournal, updateJournal: mockUpdateJournal,
+  useJournal: (familyId, childId, entryId) => ({
+    entry: mockJournals.find((j) => j.id === entryId) ?? null, loading: false,
   }),
+  useJournalWriter: () => ({ addJournal: mockAddJournal, updateJournal: mockUpdateJournal }),
 }))
 
 let mockParams = {}

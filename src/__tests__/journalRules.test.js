@@ -9,7 +9,9 @@
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { deleteField, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore'
+import {
+  collection, deleteField, doc, getCountFromServer, getDoc, getDocs, limit, orderBy, query, setDoc, Timestamp, updateDoc, where,
+} from 'firebase/firestore'
 import { readFileSync } from 'node:fs'
 import { CIPHERTEXT, sealed } from './fakeCiphertext'
 
@@ -85,6 +87,22 @@ describe.skipIf(!EMULATOR)('journals', () => {
     await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'legacy'), {
       contentFormat: 'markdown', contentRich: deleteField(),
     }))
+  })
+
+  // The journal overview counts a child's entries and reads the latest one's
+  // date (services/journals.js getJournalSummary), instead of every entry.
+  const childEntries = (db) => query(
+    collection(db, 'journals'),
+    where('familyId', '==', FAMILY),
+    where('childId', '==', 'kid-1'),
+    orderBy('date', 'desc'),
+  )
+
+  it('can be counted and their latest found by an admin, by nobody else', async () => {
+    await assertSucceeds(getCountFromServer(childEntries(asAdmin())))
+    await assertSucceeds(getDocs(query(childEntries(asAdmin()), limit(1))))
+    await assertFails(getCountFromServer(childEntries(asViewer())))
+    await assertFails(getDocs(query(childEntries(asViewer()), limit(1))))
   })
 
   it('stay with the admins', async () => {
