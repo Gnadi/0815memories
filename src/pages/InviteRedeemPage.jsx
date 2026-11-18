@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
+import { readInviteToken } from '../utils/inviteToken'
 import { useAuth } from '../context/AuthContext'
 import { getFamilyPublic } from '../services/family'
 import { getInvite, redeemInvite } from '../services/invites'
@@ -19,8 +20,17 @@ export default function InviteRedeemPage() {
     signup, checkEmailVerified, setActiveFamilyId,
   } = useAuth()
 
+  const location = useLocation()
   const familyId = searchParams.get('family')
-  const token = searchParams.get('token')
+  const { token, fromQuery } = readInviteToken(searchParams, location.hash)
+
+  // A link from before the token moved to the fragment: move it there, so it
+  // leaves the address that requests, the history and same-origin referrers
+  // carry, while a reload of this page still finds it.
+  useEffect(() => {
+    if (!fromQuery || !familyId || !token) return
+    navigate(`/invite?family=${encodeURIComponent(familyId)}#token=${encodeURIComponent(token)}`, { replace: true })
+  }, [fromQuery, familyId, token, navigate])
 
   const [validating, setValidating] = useState(true)
   const [inviteValid, setInviteValid] = useState(false)

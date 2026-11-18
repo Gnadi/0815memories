@@ -44,9 +44,12 @@ vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (dat
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }))
 
+// The link as buildInviteUrl makes it: the token in the fragment.
+const link = { search: 'family=fam-1', hash: '#token=tok-1' }
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useSearchParams: () => [new URLSearchParams('family=fam-1&token=tok-1')],
+  useSearchParams: () => [new URLSearchParams(link.search)],
+  useLocation: () => ({ hash: link.hash }),
 }))
 
 vi.mock('firebase/auth', () => ({ signOut: vi.fn(async () => {}) }))
@@ -154,6 +157,13 @@ describe('InviteRedeemPage', () => {
     for (const button of screen.getAllByRole('button', { name: /join family/i })) {
       expect(button).toBeDisabled()
     }
+  })
+
+  it('moves the token of a link from before into the fragment', async () => {
+    Object.assign(link, { search: 'family=fam-1&token=tok-1', hash: '' })
+    render(<InviteRedeemPage />)
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/invite?family=fam-1#token=tok-1', { replace: true }))
+    Object.assign(link, { search: 'family=fam-1', hash: '#token=tok-1' })
   })
 
   // Firebase's signOut alone left the device subscribed to the family's
