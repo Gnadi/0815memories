@@ -18,7 +18,7 @@ vi.mock('../utils/decryptPool', () => ({
   decryptBlobOffThread: vi.fn(async () => new Blob([new Uint8Array(16)], { type: 'image/jpeg' })),
 }))
 
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import useDecryptedMedia, {
   prefetchDecryptedMedia,
   clearDecryptedMediaCache,
@@ -157,3 +157,65 @@ describe('the two decrypt lanes', () => {
 function wantOnScreen(u) {
   return renderHook(() => useDecryptedMedia(u, 'image/*'))
 }
+
+describe('a photo scrolled past before it loaded', () => {
+  // Photos stay mounted when they are scrolled past, so on a grid of two
+  // hundred moments every tile the thumb flew over used to queue ahead of the
+  // ones it stopped at.
+  let observers
+
+  beforeEach(() => {
+    observers = new Map()
+    globalThis.IntersectionObserver = class {
+      constructor(callback) {
+        this.callback = callback
+      }
+      observe(node) {
+        observers.set(node, this)
+      }
+      disconnect() {}
+      unobserve() {}
+    }
+  })
+
+  afterEach(() => {
+    delete globalThis.IntersectionObserver
+  })
+
+  function lazyTile(u) {
+    const node = document.createElement('div')
+    const hook = renderHook(() => useDecryptedMedia(u, 'image/*', { lazy: true }))
+    act(() => hook.result.current.ref(node))
+    const scroll = (near) => act(() => observers.get(node).callback([{ isIntersecting: near, target: node }]))
+    return { hook, scroll }
+  }
+
+  it('waits behind the photos still on screen, and still loads after them', async () => {
+    for (let i = 0; i < 6; i++) prefetchDecryptedMedia(url(i), KEY, 'image/*')
+    await settle()
+
+    const passed = lazyTile(url('passed'))
+    const stopped = lazyTile(url('stopped'))
+    passed.scroll(true)
+    stopped.scroll(true)
+    await settle()
+    expect(__queueDepths().foreground).toBe(2)
+
+    // The thumb flies on; the first tile leaves the screen still loading.
+    passed.scroll(false)
+    await settle()
+    expect(__queueDepths()).toMatchObject({ foreground: 1, prefetch: 1 })
+
+    gate(url(0)).release()
+    await settle()
+    await settle()
+    const fetched = globalThis.fetch.mock.calls.map(([u]) => u)
+    expect(fetched).toContain(url('stopped'))
+    expect(fetched).not.toContain(url('passed'))
+
+    // Back on screen, it is wanted again.
+    passed.scroll(true)
+    await settle()
+    expect(__queueDepths()).toMatchObject({ foreground: 1, prefetch: 0 })
+  })
+})
