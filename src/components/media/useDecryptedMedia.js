@@ -14,6 +14,10 @@ const cache = new Map()
 const inflight = new Map()
 
 let cachedBytes = 0
+// Raised by every clearDecryptedMediaCache(). A job remembers the value it
+// started under and stores its result only while that value still holds, so
+// what was decrypting when a session ended cannot refill the emptied cache.
+let generation = 0
 // Decrypted originals are large. Without a ceiling a long scroll pins every
 // full-resolution photo in memory for the whole session, which on mobile ends
 // in a tab discard — the page reloads and every image flashes back in.
@@ -45,14 +49,16 @@ export function clearDecryptedMediaCache() {
   cache.clear()
   inflight.clear()
   cachedBytes = 0
+  generation++
   // Queued jobs too. They were written to run against the family key of the
   // session being torn down, and nothing was left that wanted them — the
   // components that asked have unmounted. Both callers already handle a
   // rejection: the hook via its catch, prefetch by swallowing.
   //
-  // Jobs already in flight are not interrupted; there is no abort signal
-  // threaded through decryptToObjectUrl. They will finish and repopulate the
-  // cache this call just emptied, which is worth closing separately.
+  // Jobs already in flight are not interrupted — there is no abort signal
+  // threaded through decryptToObjectUrl — but the generation raised above makes
+  // them discard their result instead of storing it, and they reject like the
+  // queued ones.
   const abandoned = [...foreground.splice(0), ...prefetch.splice(0)]
   for (const job of abandoned) job.reject(new Error('Decrypt cancelled: session ended'))
 }
@@ -157,7 +163,11 @@ async function fetchCiphertext(encryptedUrl, { revalidate = false } = {}) {
   return response.arrayBuffer()
 }
 
-async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
+function assertCurrent(startedIn) {
+  if (startedIn !== generation) throw new Error('Decrypt cancelled: session ended')
+}
+
+async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType, startedIn) {
   let decrypted
   try {
     const encryptedBuffer = await fetchCiphertext(encryptedUrl)
@@ -174,6 +184,7 @@ async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
     const retryBuffer = await fetchCiphertext(encryptedUrl, { revalidate: true })
     decrypted = await decryptBlob(encryptionKey, retryBuffer, mimeType)
   }
+  assertCurrent(startedIn)
 
   // Blob.slice() is by reference, so re-typing the blob costs no extra copy.
   const header = new Uint8Array(await decrypted.slice(0, 16).arrayBuffer())
@@ -182,6 +193,9 @@ async function decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType) {
     ? new Blob([decrypted], { type: sniffed })
     : decrypted
 
+  // Checked again after the last await, so nothing between here and the store
+  // can interleave with a clear. No object URL exists yet to be revoked.
+  assertCurrent(startedIn)
   const url = URL.createObjectURL(blob)
   storeInCache(encryptedUrl, url, blob.size, blob)
   return url
@@ -193,15 +207,22 @@ function loadDecrypted(encryptedUrl, encryptionKey, mimeType, { background = fal
 
   let promise = inflight.get(encryptedUrl)
   if (!promise) {
+    const startedIn = generation
     promise = schedule(
-      () => decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType),
+      () => decryptToObjectUrl(encryptedUrl, encryptionKey, mimeType, startedIn),
       { background, key: encryptedUrl },
     )
     inflight.set(encryptedUrl, promise)
     // .finally() derives a new promise, and a derived promise that rejects with
     // nobody attached is an unhandled rejection. The real callers handle their
     // own copy; this branch exists only to tidy the map, so it swallows.
-    promise.finally(() => inflight.delete(encryptedUrl)).catch(() => {})
+    //
+    // Only its own entry: after a clear, a newer request may already have put
+    // its promise under this URL.
+    const forget = () => {
+      if (inflight.get(encryptedUrl) === promise) inflight.delete(encryptedUrl)
+    }
+    promise.then(forget, forget)
   } else if (!background) {
     // Already queued as a prefetch and now genuinely wanted: jump the lane.
     promoteToForeground(encryptedUrl)

@@ -119,8 +119,11 @@ describe('createVideoPoster', () => {
   const clip = () => new Blob([new Uint8Array(1024)], { type: 'video/mp4' })
 
   beforeEach(() => {
-    URL.createObjectURL ??= () => 'blob:clip'
-    URL.revokeObjectURL ??= () => {}
+    // Stubbed even where the environment has one: Vitest 4 wraps jsdom's and
+    // reads jsdom internals that jsdom 31 no longer has, and the test needs
+    // no real blob URL.
+    stub(URL, 'createObjectURL', { value: () => 'blob:clip', writable: true })
+    stub(URL, 'revokeObjectURL', { value: () => {}, writable: true })
     // jsdom has no media loading, and says so on every clean-up.
     stub(HTMLMediaElement.prototype, 'load', { value() {} })
   })

@@ -7,9 +7,9 @@
  * it, a partial write that did not touch it, and a document naming another
  * family's file, which must change nothing at all.
  */
-import { describe, it, expect } from 'vitest'
-import { MEDIA_ASSETS } from '../../functions/mediaSigning.js'
-import { ledgerIdOf, parseLegacyRef, refChanges, isOverCap, refsOf, trackMediaRefs, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
+import { describe, it, expect, vi } from 'vitest'
+import { MEDIA_ASSETS, MEDIA_RATES } from '../../functions/mediaSigning.js'
+import { ledgerIdOf, parseLegacyRef, refChanges, isOverCap, refsOf, trackMediaRefs, LEGACY_REFS_PER_DAY, MAX_MEDIA_REFS } from '../../functions/mediaRefs.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-23T10:00:00Z')
@@ -30,10 +30,10 @@ const store = (db, { collection, docId, after }) => {
   if (after) db.docs.set(`${collection}/${docId}`, { ...after })
   else db.docs.delete(`${collection}/${docId}`)
 }
-const process = (db, write) => trackMediaRefs({ db, now: () => NOW }, write)
-const run = (db, write) => {
+const process = (db, write, deps = {}) => trackMediaRefs({ db, now: () => NOW, ...deps }, write)
+const run = (db, write, deps) => {
   store(db, write)
-  return process(db, write)
+  return process(db, write, deps)
 }
 const memory = (mediaRefs, extra = {}) => ({ familyId: 'fam-1', mediaRefs, ...extra })
 
@@ -193,11 +193,12 @@ describe('trackMediaRefs', () => {
 })
 
 describe('files from before the ledger', () => {
-  const LEGACY = 'legacy:raw/kaydo/encrypted/abc123.dat'
-  const LEGACY_ID = 'legacy~raw~kaydo%2Fencrypted%2Fabc123.dat'
+  const OLD = 'abcdefghij0123456789'
+  const LEGACY = `legacy:raw/kaydo/encrypted/${OLD}.dat`
+  const LEGACY_ID = `legacy~raw~kaydo%2Fencrypted%2F${OLD}.dat`
 
   it('reads their references, and keeps their ids free of slashes', () => {
-    expect(parseLegacyRef(LEGACY)).toEqual({ resourceType: 'raw', publicId: 'kaydo/encrypted/abc123.dat' })
+    expect(parseLegacyRef(LEGACY)).toEqual({ resourceType: 'raw', publicId: `kaydo/encrypted/${OLD}.dat` })
     expect(ledgerIdOf(LEGACY)).toBe(LEGACY_ID)
     expect(ledgerIdOf('legacy:raw/elsewhere/a.dat')).toBe(null)
     expect(ledgerIdOf('legacy:pdf/kaydo/a')).toBe(null)
@@ -210,7 +211,7 @@ describe('files from before the ledger', () => {
     expect(stats.attached).toBe(1)
     expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toEqual({
       familyId: 'fam-1',
-      publicId: 'kaydo/encrypted/abc123.dat',
+      publicId: `kaydo/encrypted/${OLD}.dat`,
       resourceType: 'raw',
       kind: 'legacy',
       legacy: true,
@@ -218,6 +219,113 @@ describe('files from before the ledger', () => {
       refs: ['memories/m1'],
       createdAt: new Date(NOW),
       detachedAt: null,
+    })
+  })
+
+  it('does not let a legacy reference claim a file the server signed', async () => {
+    const signed = `kaydo/fam-2/${'a'.repeat(32)}`
+    for (const publicId of [signed, `kaydo/public/fam-2/${'b'.repeat(32)}`]) {
+      const ref = `legacy:image/${publicId}`
+      expect(parseLegacyRef(ref)).toBe(null)
+      expect(ledgerIdOf(ref)).toBe(null)
+      expect(refsOf(memory({ images: [ref] }))).toEqual(new Set())
+    }
+    const db = ledger([])
+    const stats = await run(db, {
+      collection: 'memories',
+      docId: 'm1',
+      before: null,
+      after: memory({ images: [`legacy:image/${signed}`] }),
+    })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(Object.keys(db.collectionData(MEDIA_ASSETS) ?? {})).toEqual([])
+  })
+
+  it('accepts the shapes old uploads had, and nothing a family could make up', () => {
+    // Cloudinary's own ids in each of the shared folders, and a raw file's extension.
+    for (const ref of [
+      `legacy:image/kaydo/${OLD}`,
+      `legacy:video/kaydo/videos/${OLD}`,
+      `legacy:video/kaydo/audio/${OLD}`,
+      `legacy:raw/kaydo/encrypted/${OLD}`,
+      LEGACY,
+      // The folder per family the signer used for the last two weeks before the ledger.
+      `legacy:raw/kaydo/f/fam-2/encrypted/${OLD}.dat`,
+      `legacy:video/kaydo/f/fam-2/videos/${OLD}`,
+      `legacy:video/kaydo/f/fam-2/audio/${OLD}`,
+      `legacy:image/kaydo/f/fam-2/public/${OLD}`,
+    ]) expect(parseLegacyRef(ref)).not.toBe(null)
+
+    for (const ref of [
+      'legacy:raw/kaydo/encrypted/abc123.dat', // far too short for an id Cloudinary chose
+      `legacy:raw/kaydo/other/${OLD}`, // not one of the shared folders
+      `legacy:raw/kaydo/encrypted/sub/${OLD}`,
+      `legacy:raw/kaydo/fam-2/${'a'.repeat(31)}`, // a family's folder
+      `legacy:raw/kaydo/${OLD}/${OLD}`,
+      `legacy:raw/kaydo/encrypted/${OLD}.dat.exe.dat.x.y`,
+      `legacy:raw/kaydo/encrypted/${OLD}../x`,
+      `legacy:raw/kaydo/../kaydo/${OLD}`,
+      `legacy:raw/elsewhere/${OLD}`,
+      `legacy:raw/kaydo/f/fam-2/other/${OLD}`, // not one of the kinds the signer used
+      `legacy:raw/kaydo/f/fam-2/${OLD}`,
+      `legacy:raw/kaydo/f/../encrypted/${OLD}`,
+    ]) expect(parseLegacyRef(ref), ref).toBe(null)
+  })
+
+  it('opens no entry for invented references, however many a document names', async () => {
+    // Before: any syntactically valid `kaydo/...` path got a never-deleted entry.
+    const invented = Array.from({ length: 50 }, (_, i) => `legacy:raw/kaydo/anything/goes/${i}.dat`)
+    const db = ledger([])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: invented }) })
+    expect(stats).toEqual({ attached: 0, detached: 0, ignored: 0 })
+    expect(Object.keys(db.collectionData(MEDIA_ASSETS) ?? {})).toEqual([])
+  })
+
+  describe('the daily limit', () => {
+    const olds = (n, from = 0) => Array.from({ length: n }, (_, i) => `legacy:image/kaydo/${String(from + i).padStart(20, '0')}`)
+    const day = (db) => db.collectionData(MEDIA_RATES)['legacy~fam-1']
+
+    it('opens entries up to the limit, then none, and says so once', async () => {
+      const db = ledger([])
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const first = await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: olds(3) }) }, { legacyPerDay: 3 })
+      expect(first.attached).toBe(3)
+      const second = await run(db, { collection: 'memories', docId: 'm2', before: null, after: memory({ images: olds(5, 3) }) }, { legacyPerDay: 3 })
+      expect(second).toEqual({ attached: 0, detached: 0, ignored: 5 })
+      expect(Object.keys(db.collectionData(MEDIA_ASSETS))).toHaveLength(3)
+      expect(day(db)).toMatchObject({ day: '2026-10-23', count: 3, warned: true })
+      expect(warn).toHaveBeenCalledTimes(1)
+      warn.mockRestore()
+    })
+
+    it('counts per family and starts again the next day', async () => {
+      const db = ledger([])
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: olds(2) }) }, { legacyPerDay: 2 })
+      const other = await run(db, { collection: 'memories', docId: 'm9', before: null, after: memory({ images: olds(2, 10) }, { familyId: 'fam-2' }) }, { legacyPerDay: 2 })
+      expect(other.attached).toBe(2)
+
+      const write = { collection: 'memories', docId: 'm3', before: null, after: memory({ images: olds(1, 20) }) }
+      store(db, write)
+      const tomorrow = await trackMediaRefs({ db, now: () => NOW + 24 * 60 * 60 * 1000, legacyPerDay: 2 }, write)
+      expect(tomorrow.attached).toBe(1)
+      expect(day(db)).toMatchObject({ day: '2026-10-24', count: 1, warned: false })
+      warn.mockRestore()
+    })
+
+    it('lets an entry that already exists be attached to another document without counting it', async () => {
+      const db = ledger([])
+      await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: olds(1) }) }, { legacyPerDay: 1 })
+      const again = await run(db, { collection: 'memories', docId: 'm2', before: null, after: memory({ images: olds(1) }) }, { legacyPerDay: 1 })
+      expect(again.attached).toBe(1)
+      expect(day(db).count).toBe(1)
+    })
+
+    it('lets the backfill of a large family through at the default', async () => {
+      const db = ledger([])
+      const stats = await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: olds(MAX_MEDIA_REFS) }) })
+      expect(stats.attached).toBe(MAX_MEDIA_REFS)
+      expect(LEGACY_REFS_PER_DAY).toBeGreaterThanOrEqual(10 * MAX_MEDIA_REFS)
     })
   })
 
@@ -234,5 +342,30 @@ describe('files from before the ledger', () => {
     const stats = await run(db, { collection: 'memories', docId: 'mine', before: null, after: memory({ images: [LEGACY] }, { familyId: 'fam-2' }) })
     expect(stats.ignored).toBe(1)
     expect(db.collectionData(MEDIA_ASSETS)[LEGACY_ID]).toMatchObject({ familyId: 'fam-1', refs: ['memories/theirs'] })
+  })
+})
+
+describe('files the clean-up has reserved', () => {
+  const held = memory({ images: [pid('a')] })
+
+  it('cancels a reservation when a document attaches the file', async () => {
+    const db = ledger([['a', { state: 'deleting', deletingSince: new Date(NOW - 1000), deletingFrom: 'detached', detachedAt: new Date(NOW - 99999) }]])
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: null, after: held })
+    expect(stats.attached).toBe(1)
+    expect(entry(db, 'a')).toMatchObject({ state: 'attached', refs: ['memories/m1'], detachedAt: null, deletingSince: null, deletingFrom: null })
+  })
+
+  it('leaves a reservation standing when a document lets go of a file it never held', async () => {
+    const db = ledger([['a', { state: 'deleting', deletingSince: new Date(NOW - 1000), deletingFrom: 'detached' }]])
+    await run(db, { collection: 'memories', docId: 'm1', before: held, after: memory({ images: [] }) })
+    expect(entry(db, 'a')).toMatchObject({ state: 'deleting', refs: [] })
+  })
+
+  it('only records a reference to a file being destroyed or lost, and leaves its state to the clean-up', async () => {
+    for (const state of ['destroying', 'lost']) {
+      const db = ledger([['a', { state }]])
+      await run(db, { collection: 'memories', docId: 'm1', before: null, after: held })
+      expect(entry(db, 'a')).toMatchObject({ state, refs: ['memories/m1'] })
+    }
   })
 })

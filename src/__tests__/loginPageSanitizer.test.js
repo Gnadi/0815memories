@@ -102,6 +102,32 @@ describe('sanitizeLoginCss', () => {
     expect(out).toContain('.a{color:red}')
   })
 
+  it('strips @import written with CSS escapes', () => {
+    for (const css of [
+      '@\\69mport url("https://evil.example/x.css"); .a{color:red}',
+      '@im\\70ort url("https://evil.example/x.css"); .a{color:red}',
+      '@\\000069 mport "https://evil.example/x.css"; .a{color:red}',
+      '@i\\mport "https://evil.example/x.css"; .a{color:red}',
+      '@IMPORT "https://evil.example/x.css"; .a{color:red}',
+    ]) {
+      const out = sanitizeLoginCss(css)
+      expect(out).not.toContain('evil.example')
+      expect(out.trim()).toBe('.a{color:red}')
+    }
+  })
+
+  it('strips an @import that sits after another at-rule or reassembles itself', () => {
+    expect(sanitizeLoginCss('@media print{.a{color:red}}@import "https://evil.example/x.css";'))
+      .not.toContain('evil.example')
+    expect(sanitizeLoginCss('@imp@import "https://evil.example/a.css";ort "https://evil.example/b.css";'))
+      .not.toMatch(/@import/i)
+  })
+
+  it('leaves ordinary CSS, including escapes and other at-rules, unchanged', () => {
+    const css = '.md\\:flex{display:flex}@media (min-width:600px){.a{color:red}}@font-face{font-family:x}.b::after{content:"\\201C"}@keyframes k{from{opacity:0}to{opacity:1}}'
+    expect(sanitizeLoginCss(css)).toBe(css)
+  })
+
   it('neutralizes expression() and javascript:', () => {
     const out = sanitizeLoginCss('.a{width:expression(alert(1));background:url(javascript:alert(2))}')
     expect(out).not.toContain('expression(')

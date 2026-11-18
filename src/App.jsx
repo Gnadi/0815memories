@@ -15,6 +15,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import RouteErrorScreen from './components/RouteErrorScreen'
 
 import { getSubdomainSlug } from './utils/familySlug'
+import { filterAnalyticsEvent } from './utils/analyticsFilter'
 import { FEATURE_PAGES } from './seoRoutes'
 import { hasStoredSession } from './utils/authStorage'
 import { uncoverPage } from './utils/prehydrationCover'
@@ -45,6 +46,8 @@ const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
 const AppNotifications = lazy(() => import('./components/AppNotifications'))
 // The bar is for admins only, and brings the scrapbook layout presets with it.
 const AdminMobileBottomNav = lazy(() => import('./components/layout/AdminMobileBottomNav'))
+// Encrypts moments from before their text was encrypted; admins only as well.
+const MomentTextEncryption = lazy(() => import('./components/admin/MomentTextEncryption'))
 
 // Lazy loaded — protected pages, only needed after authentication
 const LegalPage = lazyPage(() => import('./pages/LegalPage'))
@@ -216,7 +219,8 @@ function RevealPage() {
 // Vercel's analytics and speed insights scripts are only served on Vercel
 // deployments; on localhost, the preview server, or any other host they 404
 // and log console errors. Gate them to real hosts so they stay silent locally
-// (and in Lighthouse runs) while still reporting from production.
+// (and in Lighthouse runs) while still reporting from production. Even there,
+// filterAnalyticsEvent lets only the public pages through.
 function SiteAnalytics() {
   // Decided once at first render. On the server (pre-render) there is no window,
   // so it stays off; <Analytics /> and <SpeedInsights /> emit no DOM either way,
@@ -229,8 +233,8 @@ function SiteAnalytics() {
   })
   return enabled ? (
     <>
-      <Analytics />
-      <SpeedInsights />
+      <Analytics beforeSend={filterAnalyticsEvent} />
+      <SpeedInsights beforeSend={filterAnalyticsEvent} />
     </>
   ) : null
 }
@@ -253,14 +257,21 @@ function HtmlLangSync() {
   return null
 }
 
-// Rendered for admins only: nobody else sees the bar, so nobody else downloads it.
+// Rendered for admins only: nobody else sees the bar or needs the moment
+// encryption, so nobody else downloads them.
 function AdminNavSlot() {
   const { isAdmin } = useAuth()
   if (!isAdmin) return null
   return (
-    <Suspense fallback={null}>
-      <AdminMobileBottomNav />
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        <AdminMobileBottomNav />
+      </Suspense>
+      {/* Its own boundary, so the bar does not wait for it. */}
+      <Suspense fallback={null}>
+        <MomentTextEncryption />
+      </Suspense>
+    </>
   )
 }
 

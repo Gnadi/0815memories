@@ -30,6 +30,10 @@ const FAMILY = 'family-1'
 const OWNER = 'uid-owner'
 const NEWBIE = 'uid-newbie'
 const TOKEN = 'invite-token-1'
+// Ids of invites minted through the rules, which insist on a token-sized one.
+const KEPT = 'kept'.padEnd(43, 'k')
+const OLD_EPOCH = 'old-epoch'.padEnd(43, 'o')
+const NEW_EPOCH = 'new-epoch'.padEnd(43, 'n')
 const DAY = 24 * 60 * 60 * 1000
 
 let testEnv
@@ -99,7 +103,7 @@ describe.skipIf(!EMULATOR)('joining and leaving a family', () => {
   it('shuts a removed admin out at once, whatever their token still says', async () => {
     await redeem()
     // A second link, minted while they were in: they could have copied it.
-    await assertSucceeds(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', 'kept'), {
+    await assertSucceeds(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', KEPT), {
       createdBy: OWNER,
       used: false,
       redeemedBy: null,
@@ -114,10 +118,10 @@ describe.skipIf(!EMULATOR)('joining and leaving a family', () => {
     await assertFails(getDoc(doc(stale, 'families', FAMILY)))
     await assertFails(getDocs(collection(stale, 'families', FAMILY, 'invites')))
     // The pending link went with them, and their own spent one is no way back.
-    expect((await adminDb.doc(`families/${FAMILY}/invites/kept`).get()).exists).toBe(false)
+    expect((await adminDb.doc(`families/${FAMILY}/invites/${KEPT}`).get()).exists).toBe(false)
     expect((await adminDb.doc(`families/${FAMILY}/admins/${NEWBIE}`).get()).exists).toBe(false)
     await expect(redeem()).rejects.toMatchObject({ code: 'failed-precondition' })
-    await expect(redeem('kept')).rejects.toMatchObject({ code: 'failed-precondition' })
+    await expect(redeem(KEPT)).rejects.toMatchObject({ code: 'failed-precondition' })
   })
 
   it('lets an invite minted after a removal work, and one from before it not', async () => {
@@ -131,9 +135,9 @@ describe.skipIf(!EMULATOR)('joining and leaving a family', () => {
       expiresAt: Timestamp.fromMillis(Date.now() + DAY),
     })
     // The rules let an admin mint only for the epoch the removal left.
-    await assertFails(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', 'old-epoch'), invite(0)))
-    await assertSucceeds(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', 'new-epoch'), invite(1)))
-    await redeem('new-epoch')
+    await assertFails(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', OLD_EPOCH), invite(0)))
+    await assertSucceeds(setDoc(doc(as(OWNER), 'families', FAMILY, 'invites', NEW_EPOCH), invite(1)))
+    await redeem(NEW_EPOCH)
     expect(await adminUids()).toEqual([OWNER, NEWBIE])
   })
 

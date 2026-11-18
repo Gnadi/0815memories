@@ -25,6 +25,7 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 import { defineBoolean, defineInt, defineSecret, defineString } from 'firebase-functions/params'
 import { getAuth } from 'firebase-admin/auth'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'node:crypto'
 import { initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
@@ -33,17 +34,18 @@ import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
+import { DEFAULT_PRINT_RESERVATIONS_PER_WINDOW, reservePrintUpload as reserveUpload, ReservationError } from './printReservations.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
-import { MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
+import { LEGACY_REFS_PER_DAY, MEDIA_COLLECTIONS, trackMediaRefs } from './mediaRefs.js'
 import { cloudinaryDestroyer, purgeMedia } from './mediaPurge.js'
 import { cloudinaryLister, inventoryLegacyMedia } from './mediaInventory.js'
-import { publicSlugFor, releaseFamilySlug } from './slugs.js'
+import { mirrorFamily } from './slugs.js'
 import { givenUp } from './retries.js'
-import { MembershipError, redeemInvite, removeAdmin } from './membership.js'
+import { MembershipError, deleteFcmTokens, deleteMyAccount as deleteAccount, redeemInvite, removeAdmin, requireRecentLogin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
-import { checkViewerLogin } from './viewerLogin.js'
+import { PasswordChangeError, checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -227,6 +229,32 @@ export const purgePrintFiles = onSchedule(
   },
 )
 
+const PRINT_UPLOADS_PER_30_DAYS = defineInt('PRINT_UPLOADS_PER_30_DAYS', {
+  default: DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
+  description: 'Print files one family may upload in 30 days (each one is up to 300 MB of the shared bucket)',
+})
+
+/**
+ * Leave to upload one print file — see functions/printReservations.js. Without
+ * the reservation it returns, storage.rules refuse the upload. Admin only.
+ */
+export const reservePrintUpload = onCall(
+  { enforceAppCheck: ENFORCE_APP_CHECK },
+  async (request) => {
+    try {
+      return await reserveUpload(
+        { db: getFirestore(), limit: PRINT_UPLOADS_PER_30_DAYS.value(), randomId: randomUUID },
+        request.auth?.uid,
+        request.data,
+      )
+    } catch (error) {
+      if (error instanceof ReservationError) throw new HttpsError(error.code, error.message)
+      console.error('[print] reservation failed', error)
+      throw new HttpsError('internal', 'Could not reserve the print upload')
+    }
+  },
+)
+
 // The merchant API key from Peecho's dashboard (Settings > API), held in
 // Secret Manager: `firebase functions:secrets:set PEECHO_API_KEY`.
 const PEECHO_API_KEY = defineSecret('PEECHO_API_KEY')
@@ -312,6 +340,13 @@ function abandoned(name, event) {
   return true
 }
 
+// How many files from before the ledger one family can add to it a day; the
+// reason for the default is in functions/mediaRefs.js.
+const MEDIA_LEGACY_REFS_PER_DAY = defineInt('MEDIA_LEGACY_REFS_PER_DAY', {
+  default: LEGACY_REFS_PER_DAY,
+  description: 'New ledger entries for files from before the ledger, per family and day',
+})
+
 /**
  * Sign Cloudinary uploads for an admin, and record each file in the
  * `mediaAssets` ledger before it exists.
@@ -359,7 +394,7 @@ export const trackMediaReferences = onDocumentWritten({ document: '{collection}/
   const after = event.data?.after?.exists ? event.data.after.data() : null
   if (JSON.stringify(before?.mediaRefs ?? null) === JSON.stringify(after?.mediaRefs ?? null)) return
 
-  const stats = await trackMediaRefs({ db: getFirestore() }, { collection, docId, before, after })
+  const stats = await trackMediaRefs({ db: getFirestore(), legacyPerDay: MEDIA_LEGACY_REFS_PER_DAY.value() }, { collection, docId, before, after })
   if (stats.attached || stats.detached || stats.ignored) {
     console.log('[media] references', loggable(`${collection}/${docId}`), JSON.stringify(stats))
   }
@@ -467,22 +502,28 @@ export const reportLegacyMedia = onSchedule(
 // Deleting a family — see functions/familyDeletion.js
 // ---------------------------------------------------------------------------
 
-const deletionCall = (action) =>
+const deletionCall = (action, event, { fresh = false } = {}) =>
   onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
     try {
-      return await action({ db: getFirestore() }, request.auth?.uid, request.data)
+      // Before anything is read: asking for a deletion needs a recent password.
+      if (fresh) requireRecentLogin(request.auth?.token)
+      const result = await action({ db: getFirestore() }, request.auth?.uid, request.data)
+      // Only a call that was allowed gets here: the family and the owner are
+      // known to be real. No address, no ip.
+      console.log(`[deletion] ${event} family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)}`)
+      return result
     } catch (error) {
-      if (error instanceof DeletionError) throw new HttpsError(error.code, error.message)
+      if (error instanceof DeletionError || error instanceof MembershipError) throw new HttpsError(error.code, error.message)
       console.error('[deletion] call failed', error)
       throw new HttpsError('internal', 'Could not change the deletion')
     }
   })
 
 /** Schedule the caller's family for deletion. Owner only. */
-export const requestFamilyDeletion = deletionCall(requestDeletion)
+export const requestFamilyDeletion = deletionCall(requestDeletion, 'requested', { fresh: true })
 
 /** Take a scheduled deletion back, until it has begun. Owner only. */
-export const cancelFamilyDeletion = deletionCall(cancelDeletion)
+export const cancelFamilyDeletion = deletionCall(cancelDeletion, 'cancelled')
 
 /**
  * Once a day: delete the families whose date has come, and carry on with the
@@ -561,34 +602,10 @@ const PUBLIC_FAMILY_FIELDS = [
 
 export const mirrorFamilyPublic = onDocumentWritten({ document: 'families/{familyId}', retry: true }, async (event) => {
   if (abandoned('mirror', event)) return
-  const { familyId } = event.params
-  const db = getFirestore()
-  const before = event.data?.before?.exists ? event.data.before.data() : null
-  const after = event.data?.after
-  const publicRef = db.doc(`familyPublic/${familyId}`)
-
-  if (!after?.exists) {
-    await publicRef.delete().catch(() => {})
-    await releaseFamilySlug(db, familyId, before?.familySlug).catch(() => {})
-    return
-  }
-
-  const data = after.data() || {}
-  const mirror = {}
-  for (const field of PUBLIC_FAMILY_FIELDS) {
-    if (data[field] !== undefined) mirror[field] = data[field]
-  }
-
-  // The address is the one public field that has to be unique, and the family
-  // document cannot promise that — any signed-in client can write any slug to
-  // it. So the mirror carries only a slug this family holds in the registry.
-  const slug = await publicSlugFor(db, familyId, data.familySlug, before?.familySlug)
-  if (slug) mirror.familySlug = slug
-  else delete mirror.familySlug
-
-  // set() without merge, so a field cleared on the private document is cleared
-  // here too rather than lingering in public forever.
-  await publicRef.set(mirror)
+  // Only the id is taken from the event. Events can arrive late and out of
+  // order, and a retry can replay one for up to an hour, so what is mirrored is
+  // the family document as it is now (functions/slugs.js).
+  await mirrorFamily(getFirestore(), event.params.familyId, PUBLIC_FAMILY_FIELDS)
 })
 
 // ── 2. Admin claims ─────────────────────────────────────────────────────────
@@ -615,9 +632,11 @@ export const syncAdminClaims = onDocumentWritten({ document: 'families/{familyId
 
 // ── 2b. Joining and leaving ─────────────────────────────────────────────────
 
-const membershipCall = (action) =>
+const membershipCall = (action, { fresh = false } = {}) =>
   onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
     try {
+      // The calls that cannot be undone need a password typed a moment ago.
+      if (fresh) requireRecentLogin(request.auth?.token)
       return await action(request)
     } catch (error) {
       if (error instanceof MembershipError) throw new HttpsError(error.code, error.message)
@@ -631,8 +650,8 @@ const membershipCall = (action) =>
  * Who is asking, and whether their address is confirmed, is read from the
  * verified ID token, never from what the browser sent.
  */
-export const redeemFamilyInvite = membershipCall((request) =>
-  redeemInvite(
+export const redeemFamilyInvite = membershipCall(async (request) => {
+  const result = await redeemInvite(
     { db: getFirestore() },
     {
       uid: request.auth?.uid,
@@ -641,13 +660,34 @@ export const redeemFamilyInvite = membershipCall((request) =>
       role: request.auth?.token?.role,
     },
     request.data,
-  ),
-)
+  )
+  console.log(`[membership] invite redeemed family=${loggable(request.data?.familyId)} uid=${loggable(request.auth?.uid)}`)
+  return result
+})
 
 /** Remove an admin from a family, with every pending invite. */
-export const removeFamilyAdmin = membershipCall((request) =>
-  removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data),
-)
+export const removeFamilyAdmin = membershipCall(async (request) => {
+  const result = await removeAdmin({ db: getFirestore() }, request.auth?.uid, request.data)
+  console.log(
+    `[membership] admin removed family=${loggable(request.data?.familyId)} by=${loggable(request.auth?.uid)} target=${loggable(request.data?.uid)}`,
+  )
+  return result
+}, { fresh: true })
+
+/**
+ * Delete the caller's own account, for an admin who owns no family. The
+ * function wiring only supplies who is asking, from the verified token, and
+ * the Auth call; the rules are in functions/membership.js. The log line has
+ * the uid and not the address.
+ */
+export const deleteMyAccount = membershipCall(async (request) => {
+  const result = await deleteAccount(
+    { db: getFirestore(), deleteUser: (uid) => getAuth().deleteUser(uid) },
+    { uid: request.auth?.uid, role: request.auth?.token?.role },
+  )
+  console.log(`[membership] account deleted uid=${loggable(request.auth?.uid)}`)
+  return result
+}, { fresh: true })
 
 // ── 3. Viewer login ─────────────────────────────────────────────────────────
 
@@ -659,7 +699,7 @@ export const removeFamilyAdmin = membershipCall((request) =>
  * must not be distinguishable, or this endpoint becomes a way to enumerate
  * which families exist.
  *
- * `rawRequest.ip` is only a hint: the functions framework trusts
+ * The caller's address is not used: the functions framework trusts
  * X-Forwarded-For, so the caller chooses it. The limits that hold are the
  * family's (for devices that have never signed in) and the device's own.
  */
@@ -675,18 +715,23 @@ export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async 
       //
       // `sv` is the family's viewer session version. The rules compare it with
       // the family document, so a token minted before a password change stops
-      // working at once instead of living out its hour.
-      mintToken: async (familyId) => {
-        const snap = await getFirestore().doc(`families/${familyId}`).get()
-        const sv = snap.data()?.viewerSessionVersion || 0
-        return getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv })
+      // working at once instead of living out its hour. It comes from
+      // checkViewerLogin, which read it together with the hash it compared;
+      // reading it here would be a second look, after a password change could
+      // have happened.
+      mintToken: (familyId, sv) =>
+        getAuth().createCustomToken(`viewer:${familyId}`, { familyId, role: 'viewer', sv }),
+      // The family id and what happened, never the password, a token or the ip.
+      log: ({ familyId, outcome, device }) => {
+        const line = `[viewerLogin] family=${loggable(familyId)} outcome=${outcome} device=${device}`
+        if (outcome === 'ok') console.log(line)
+        else console.warn(line)
       },
     },
     {
       familyId: request.data?.familyId,
       password: request.data?.password,
       deviceToken: request.data?.deviceToken,
-      ip: request.rawRequest?.ip,
     },
   )
 
@@ -723,20 +768,35 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
     throw new HttpsError('permission-denied', 'Not an admin of this family')
   }
 
+  const db = getFirestore()
   const hash = await bcrypt.hash(password, 10)
-  await getFirestore().doc(`families/${familyId}/secrets/auth`).set({
-    sharedPassword: hash,
-    updatedAt: new Date(),
-  })
-
+  // Hash and version bump in one write: a login that checked the old password
+  // must not be able to pick up the new version (see viewerLogin.js).
   // Everyone who logged in with the old password loses their session. That is
   // the point of changing it. Revoking refresh tokens stops renewals; the
   // version bump is what ends ID tokens already issued, which the rules compare
   // with the token's `sv` claim.
-  await getFirestore()
-    .doc(`families/${familyId}`)
-    .update({ viewerSessionVersion: FieldValue.increment(1) })
+  // The admin check above came before the hash; replaceSharedPassword checks
+  // again where it writes, so a removal in between wins.
+  try {
+    await replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, hash, uid)
+  } catch (error) {
+    if (error instanceof PasswordChangeError) throw new HttpsError(error.code, error.message)
+    throw error
+  }
   await getAuth().revokeRefreshTokens(`viewer:${familyId}`).catch(() => {})
+
+  // Housekeeping, and none of it is what ends the old sessions: the device
+  // tokens are bound to the old version and the push registrations only carry
+  // metadata, so a failure here is logged and does not fail the change.
+  const devices = await forgetViewerDevices(db, familyId).catch((error) => {
+    console.error(`[password] family=${loggable(familyId)} could not forget the viewer devices`, error)
+    return 'failed'
+  })
+  await deleteFcmTokens(db, familyId, `viewer:${familyId}`).catch((error) => {
+    console.error(`[password] family=${loggable(familyId)} could not delete the viewer push tokens`, error)
+  })
+  console.log(`[password] shared password changed family=${loggable(familyId)} by=${loggable(uid)} devices=${devices}`)
 
   return { ok: true }
 })

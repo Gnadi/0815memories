@@ -115,12 +115,12 @@ describe.skipIf(!EMULATOR)('media references', () => {
   })
 
   it('takes the whole map the backfill writes, and counts a file from before the ledger', async () => {
-    const legacyUrl = 'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/old1.dat'
+    const legacyUrl = 'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/encrypted/oldfile0123456789ab.dat'
     await db.doc('memories/old').set({ familyId: FAMILY, title: sealed('Old'), images: [legacyUrl] })
 
     const { mediaRefs } = mediaRefsForCreate({ images: [legacyUrl] })
     await write('memories', 'old', (ref) => updateDoc(ref, { mediaRefs }))
-    const entry = await read(`${MEDIA_ASSETS}/legacy~raw~kaydo%2Fencrypted%2Fold1.dat`)
+    const entry = await read(`${MEDIA_ASSETS}/legacy~raw~kaydo%2Fencrypted%2Foldfile0123456789ab.dat`)
     expect(entry).toMatchObject({ familyId: FAMILY, legacy: true, state: 'attached', refs: ['memories/old'] })
 
     await write('families', FAMILY, (ref) => updateDoc(ref, { mediaRefs: {}, mediaIndexedAt: serverTimestamp() }))

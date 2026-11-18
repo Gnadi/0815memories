@@ -89,8 +89,11 @@ function useMomentsSubscription(familyId, encryptionKey, pageSize) {
  * Moment writes without a subscription — the counterpart of useMemoryWriter,
  * for surfaces that can post a moment without showing the moments row.
  */
-export function useMomentWriter(familyId) {
-  return { addMoment: (moment) => addMoment(familyId, moment) }
+export function useMomentWriter(familyId, encryptionKey) {
+  return {
+    addMoment: (moment) => addMoment(familyId, encryptionKey, moment),
+    updateMoment: (id, updates) => updateMoment(encryptionKey, id, updates),
+  }
 }
 
 /**
@@ -98,14 +101,14 @@ export function useMomentWriter(familyId) {
  */
 export function useEntryConverter(familyId, encryptionKey) {
   return {
-    convertMemoryToMoment: (memoryId, moment, date) => convertMemoryToMoment(familyId, memoryId, moment, date),
+    convertMemoryToMoment: (memoryId, moment, date) => convertMemoryToMoment(familyId, encryptionKey, memoryId, moment, date),
     convertMomentToMemory: (momentId, memory) => convertMomentToMemory(familyId, encryptionKey, momentId, memory),
   }
 }
 
 export function useMoments(familyId, encryptionKey, pageSize = DEFAULT_MOMENTS_LIMIT) {
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
-  const { addMoment } = useMomentWriter(familyId)
+  const { addMoment, updateMoment } = useMomentWriter(familyId, encryptionKey)
 
   return { moments, loading, error, addMoment, updateMoment, deleteMoment }
 }
@@ -114,6 +117,7 @@ const DEFAULT_ALL_MOMENTS_LIMIT = 200
 
 export function useAllMoments(familyId, encryptionKey, pageSize = DEFAULT_ALL_MOMENTS_LIMIT) {
   const { moments, loading, error } = useMomentsSubscription(familyId, encryptionKey, pageSize)
+  const { updateMoment } = useMomentWriter(familyId, encryptionKey)
 
   return { moments, loading, error, updateMoment, deleteMoment }
 }

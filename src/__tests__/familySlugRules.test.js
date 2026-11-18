@@ -13,12 +13,12 @@
  * (Skipped by default — `npm test` stays emulator-free.)
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
-import { claimFamilySlug, publicSlugFor, SLUGS } from '../../functions/slugs.js'
+import { claimFamilySlug, mirrorFamily, publicSlugFor, RESERVED_SLUGS, SLUGS } from '../../functions/slugs.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
 const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
@@ -80,6 +80,29 @@ describe.skipIf(!EMULATOR)('family slugs', () => {
       expect(await holderOf('the-millers')).toBe('fam-legacy')
     })
 
+    it('gives no reserved address to a new claimant', async () => {
+      for (const slug of RESERVED_SLUGS) expect(await claimFamilySlug(db, 'fam-a', slug)).toBe(false)
+      expect(await holderOf('login')).toBe(null)
+      expect(await publicSlugFor(db, 'fam-a', 'admin', undefined)).toBe(null)
+      expect(await holderOf('admin')).toBe(null)
+    })
+
+    it('lets a family that already holds a reserved address keep it', async () => {
+      // In the registry, from before the list existed…
+      await db.collection(SLUGS).doc('support').set({ familyId: 'fam-a' })
+      expect(await claimFamilySlug(db, 'fam-a', 'support')).toBe(true)
+      expect(await publicSlugFor(db, 'fam-a', 'support', 'support')).toBe('support')
+      expect(await claimFamilySlug(db, 'fam-b', 'support')).toBe(false)
+      // …or only in the family's own public mirror, until its next write.
+      await db.doc('familyPublic/fam-legacy').set({ familySlug: 'help' })
+      expect(await claimFamilySlug(db, '0000', 'help')).toBe(false)
+      expect(await claimFamilySlug(db, 'fam-legacy', 'help')).toBe(true)
+      expect(await holderOf('help')).toBe('fam-legacy')
+      // Giving one up is always possible.
+      expect(await publicSlugFor(db, 'fam-a', 'the-millers', 'support')).toBe('the-millers')
+      expect(await holderOf('support')).toBe(null)
+    })
+
     it('refuses anything generateSlug() would not have produced', async () => {
       expect(await claimFamilySlug(db, 'fam-a', '__reserved__')).toBe(false)
       expect(await claimFamilySlug(db, 'fam-a', 'a/b')).toBe(false)
@@ -114,10 +137,72 @@ describe.skipIf(!EMULATOR)('family slugs', () => {
     })
   })
 
-  it('is out of reach for clients', async () => {
+  describe('the lookup the login page makes', () => {
+    beforeEach(async () => {
+      await claimFamilySlug(db, 'fam-a', 'the-millers')
+      await claimFamilySlug(db, 'fam-b', 'the-smiths')
+      await db.doc('familyPublic/fam-a').set({ familySlug: 'the-millers', familyName: 'The Millers' })
+      await db.doc('familyPublic/fam-b').set({ familySlug: 'the-smiths', familyName: 'The Smiths' })
+    })
+
+    it('finds a family by address without an account: registry first, then its public copy', async () => {
+      const anon = testEnv.unauthenticatedContext().firestore()
+      const claim = await assertSucceeds(getDoc(doc(anon, SLUGS, 'the-millers')))
+      expect(claim.data().familyId).toBe('fam-a')
+      const found = await assertSucceeds(getDoc(doc(anon, 'familyPublic', claim.data().familyId)))
+      expect(found.data().familyName).toBe('The Millers')
+    })
+
+    it('cannot list the families of the project', async () => {
+      const anon = testEnv.unauthenticatedContext().firestore()
+      await assertFails(getDocs(collection(anon, 'familyPublic')))
+      await assertFails(getDocs(query(collection(anon, 'familyPublic'), where('familySlug', '==', 'the-millers'))))
+      await assertFails(getDocs(collection(anon, SLUGS)))
+      // Signing in does not change that.
+      const member = testEnv.authenticatedContext('uid-a', { familyId: 'fam-a', role: 'admin' }).firestore()
+      await assertFails(getDocs(collection(member, 'familyPublic')))
+      await assertFails(getDocs(collection(member, SLUGS)))
+    })
+  })
+
+  describe('mirroring from the current family document', () => {
+    const FIELDS = ['familySlug', 'familyName', 'loginHeaderImage']
+
+    it('does not restore a removed image, and registers the address once', async () => {
+      await db.doc('families/fam-a').set({ familyName: 'Millers', familySlug: 'the-millers' })
+      await db.doc('familyPublic/fam-a').set({ familyName: 'Millers', loginHeaderImage: 'old' })
+      expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('mirrored')
+      expect((await db.doc('familyPublic/fam-a').get()).data()).toEqual({ familyName: 'Millers', familySlug: 'the-millers' })
+      expect(await holderOf('the-millers')).toBe('fam-a')
+    })
+
+    it('removes the mirror and the address of a deleted family, and keeps it removed on a retry', async () => {
+      await claimFamilySlug(db, 'fam-a', 'the-millers')
+      await db.doc('familyPublic/fam-a').set({ familySlug: 'the-millers' })
+      await claimFamilySlug(db, 'fam-b', 'the-smiths')
+      for (let run = 0; run < 2; run++) {
+        expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('removed')
+        expect((await db.doc('familyPublic/fam-a').get()).exists).toBe(false)
+        expect(await holderOf('the-millers')).toBe(null)
+      }
+      expect(await holderOf('the-smiths')).toBe('fam-b')
+    })
+
+    it('does not mirror a family whose deletion has begun', async () => {
+      await db.doc('families/fam-a').set({ familySlug: 'the-millers' })
+      await db.doc('familyDeletions/fam-a').set({ ownerUid: 'uid-a' })
+      expect(await mirrorFamily(db, 'fam-a', FIELDS)).toBe('deleting')
+      expect((await db.doc('familyPublic/fam-a').get()).exists).toBe(false)
+      expect(await holderOf('the-millers')).toBe(null)
+    })
+  })
+
+  it('is read-only for clients', async () => {
     await claimFamilySlug(db, 'fam-a', 'the-millers')
     const client = testEnv.authenticatedContext('uid-a', { familyId: 'fam-a', role: 'admin' }).firestore()
-    await assertFails(getDoc(doc(client, SLUGS, 'the-millers')))
+    await assertSucceeds(getDoc(doc(client, SLUGS, 'the-millers')))
     await assertFails(setDoc(doc(client, SLUGS, 'the-smiths'), { familyId: 'fam-a' }))
+    await assertFails(setDoc(doc(client, SLUGS, 'the-millers'), { familyId: 'fam-z' }))
+    await assertFails(setDoc(doc(client, 'familyPublic', 'fam-a'), { familySlug: 'the-millers', familyName: 'Hijacked' }))
   })
 })

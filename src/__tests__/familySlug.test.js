@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { generateSlug, getSubdomainSlug } from '../utils/familySlug'
+import { generateSlug, getSubdomainSlug, RESERVED_SLUGS, isReservedSlug } from '../utils/familySlug'
+import { RESERVED_SLUGS as FUNCTIONS_RESERVED_SLUGS } from '../../functions/slugs.js'
 
 // familySlug pulls `db` from ../config/firebase, which eagerly tries to call
 // initializeApp. The pure helpers exercised here don't touch Firestore, but we
@@ -79,5 +80,18 @@ describe('getSubdomainSlug', () => {
   it('keeps multi-segment subdomains intact', () => {
     setHostname('beta.the-millers.familyheart.com')
     expect(getSubdomainSlug()).toBe('beta.the-millers')
+  })
+})
+
+describe('reserved slugs', () => {
+  it('are the same list in the client and in the functions', () => {
+    expect([...RESERVED_SLUGS].sort()).toEqual([...FUNCTIONS_RESERVED_SLUGS].sort())
+  })
+
+  it('cover the names that pass for the service itself', () => {
+    for (const name of ['www', 'api', 'admin', 'login', 'support', 'kaydo', 'cdn']) {
+      expect(isReservedSlug(name)).toBe(true)
+    }
+    expect(isReservedSlug('the-millers')).toBe(false)
   })
 })

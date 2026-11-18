@@ -14,6 +14,7 @@ import OptimizePhotosPanel from './OptimizePhotosPanel'
 import MediaIndexPanel from './MediaIndexPanel'
 import ManageAdminsPanel from './ManageAdminsPanel'
 import DeleteFamilyPanel from './DeleteFamilyPanel'
+import DeleteAccountPanel from './DeleteAccountPanel'
 
 export default function SettingsPanel() {
   const { familyId, isDemo } = useAuth()
@@ -389,6 +390,7 @@ export default function SettingsPanel() {
 
       {/* Last, and below the backup: what it deletes cannot be brought back. */}
       <DeleteFamilyPanel />
+      <DeleteAccountPanel />
     </div>
   )
 }

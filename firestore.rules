@@ -137,6 +137,22 @@ service cloud.firestore {
             && (!('style' in d.loginCard) || d.loginCard.style in ['light', 'dark', 'glass'])));
     }
 
+    // Type and size limits for the fields the mirrorFamilyPublic function copies
+    // into the world-readable familyPublic. Without them an admin could make
+    // the document that every login-page visitor downloads as large as a
+    // document may be. There is deliberately no list of allowed keys: the
+    // family document grows with the app, and the protected fields above each
+    // have a check of their own. A new family must have a name; an existing
+    // one without it may still save, or a family from before this check could
+    // change nothing at all.
+    function familyShapeOk(nameRequired) {
+      let d = request.resource.data;
+      return (('familyName' in d) ? (d.familyName is string && d.familyName.size() <= 200) : !nameRequired)
+        && (!('familySlug' in d) || (d.familySlug is string && d.familySlug.size() <= 100))
+        && (!('loginHeaderImage' in d) || d.loginHeaderImage == null
+            || (d.loginHeaderImage is string && d.loginHeaderImage.size() <= 2048));
+    }
+
     // The invite epoch counts admin removals, and only the removal itself
     // raises it (functions/membership.js). An invite carries the epoch it was
     // minted under and is redeemable only while the family is still on it, so
@@ -209,9 +225,11 @@ service cloud.firestore {
                     && request.resource.data.adminUids == [request.auth.uid]
                     && hasEncryptionKey()
                     && !('deletion' in request.resource.data)
+                    && familyShapeOk(true)
                     && loginCustomOk();
       allow update: if request.auth != null
                     && request.resource.data.adminUid == resource.data.adminUid
+                    && familyShapeOk(false)
                     && loginCustomOk()
                     && keepsEncryptionKey()
                     && deletionUnchanged()
@@ -237,16 +255,22 @@ service cloud.firestore {
     // authenticated, and nothing else. Written only by the mirrorFamilyPublic
     // trigger from a fixed allowlist, so a field added to `families` later
     // cannot surface here by accident.
+    //
+    // Readable by id, never listable: a list would hand anyone without an
+    // account the name and address of every family in the project. The login
+    // page finds the id through familySlugs below.
     match /familyPublic/{familyId} {
-      allow read: if true;
-      allow write: if false;
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // Who owns which family address (`<slug>.kaydo.app`). Kept by the same
-    // trigger through the Admin SDK — see functions/slugs.js. Clients only ever
-    // see the result, as familyPublic.familySlug.
+    // trigger through the Admin SDK — see functions/slugs.js. An address is
+    // public by nature (it is a hostname), so looking one up by name is open;
+    // the registry cannot be enumerated.
     match /familySlugs/{slug} {
-      allow read, write: if false;
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // Every file uploaded to Cloudinary: which family and admin it belongs to,
@@ -282,6 +306,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The id is the credential, so the rules insist on what generateInviteToken
+    // (src/utils/inviteToken.js) produces: 32 random bytes as 43 URL-safe
+    // characters. Without that, an admin session could leave behind an invite
+    // called `a` that anyone can guess; the lifetime cap (the client asks for
+    // seven days) keeps one from outliving the admin who made it.
+    function inviteIdWellFormed(slotId) {
+      return slotId.size() >= 32 && slotId.size() <= 128 && slotId.matches('^[A-Za-z0-9_-]+$');
+    }
+
     // Invites subcollection — one-time tokens that grant family-admin status
     // when redeemed. Possessing the slotId (doc ID) is the credential.
     //
@@ -303,6 +336,11 @@ service cloud.firestore {
                     && request.resource.data.used == false
                     && request.resource.data.redeemedBy == null
                     && request.resource.data.expiresAt is timestamp
+                    && inviteIdWellFormed(slotId)
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.expiresAt <= request.time + duration.value(14, 'd')
+                    && request.resource.data.keys().hasOnly(['createdBy', 'used', 'redeemedBy', 'redeemedAt',
+                                                             'epoch', 'createdAt', 'expiresAt'])
                     && request.resource.data.get('epoch', 0)
                         == get(/databases/$(database)/documents/families/$(familyId)).data.get('inviteEpoch', 0);
       // Redeeming is the redeemFamilyInvite function's, in the transaction
@@ -377,6 +415,26 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // A moment's text, marked as encrypted (`textEncrypted`) and ciphertext
+    // (src/services/moments.js).
+    function momentTextOk() {
+      let d = request.resource.data;
+      return d.get('textEncrypted', false) == true
+        && encryptedOk(d, 'caption')
+        && encryptedOk(d, 'location')
+        && encryptedOk(d, 'category')
+        && encryptedOk(d, 'label');
+    }
+
+    // A moment from before its text was encrypted, which stays that way until
+    // an admin's browser encrypts it (src/services/momentEncryption.js). Until
+    // then an app loaded before the change may still edit it. Once a moment is
+    // marked, nothing takes the mark away again.
+    function momentStillInClear() {
+      return resource.data.get('textEncrypted', false) != true
+        && request.resource.data.get('textEncrypted', false) != true;
+    }
+
     // Moments — same rules as memories
     match /moments/{momentId} {
       // Same as memories: listed by familyId, so the filter the client already
@@ -385,11 +443,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && momentTextOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && (momentTextOk() || momentStillInClear());
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);
@@ -798,10 +858,25 @@ service cloud.firestore {
         && encryptedOk(d, 'quizReactions') && encryptedOk(d, 'keepsakes');
     }
 
+    // Does this document name the chapter it belongs to, with that chapter's
+    // family and couple? Entries and letters are addressed by the chapter id,
+    // so without this any admin of any family could occupy the ids of another
+    // couple's chapter, or point the reveal rules at a chapter that is not
+    // there (see callerHandedIn).
+    function belongsToChapter(chapterId) {
+      let path = /databases/$(database)/documents/ourYearChapters/$(chapterId);
+      let d = request.resource.data;
+      return exists(path)
+        && get(path).data.familyId == d.familyId
+        && get(path).data.participantUids == d.participantUids;
+    }
+
     // Is there a letter for this chapter that is sealed and not yet due?
-    function letterIsSealed(chapterId) {
+    // A letter of another family under the same id does not count.
+    function letterIsSealed(chapterId, familyId) {
       let path = /databases/$(database)/documents/ourYearLetters/$(chapterId);
       return exists(path)
+        && get(path).data.familyId == familyId
         && get(path).data.get('sealedAt', null) != null
         && request.time < get(path).data.openAt;
     }
@@ -844,7 +919,7 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.get('participantUids', [])
                     && isFamilyAdmin(resource.data.familyId)
-                    && !letterIsSealed(chapterId);
+                    && !letterIsSealed(chapterId, resource.data.familyId);
     }
 
     // Has the caller handed in their own answers to the same part of the same
@@ -890,15 +965,21 @@ service cloud.firestore {
                             && (resource.data.get('authorUid', '') == request.auth.uid
                                 || resource.data.get('revealed', false) == true)));
       // A new entry starts unrevealed, and may be handed in only with its
-      // answers. The document id is not bound to the author here: the rules
-      // that matter (callerHandedIn, the reveal) look the canonical id up
-      // themselves, so an entry stored under any other id opens nothing.
+      // answers. Its id must be the canonical one (entryId() in
+      // src/services/ourYear.js) and its chapter a real one of this family and
+      // couple: callerHandedIn trusts the document under that id, so a
+      // hand-in invented under it for a chapter that does not exist would
+      // unlock the partner's answers, and could be deleted again at will (see
+      // the delete rule).
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
                     && request.resource.data.get('authorUid', '') == request.auth.uid
+                    && request.resource.data.kind in ['reflection', 'quiz']
+                    && entryId == request.resource.data.chapterId + '_' + request.resource.data.kind + '_' + request.auth.uid
+                    && belongsToChapter(request.resource.data.chapterId)
                     && request.resource.data.get('revealed', false) != true
                     && handedInOnlyWithAnswers()
                     && entryEncryptedOk();
@@ -971,6 +1052,7 @@ service cloud.firestore {
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
                     && request.auth.uid in request.resource.data.participantUids
+                    && belongsToChapter(chapterId)
                     && request.resource.data.get('sealedAt', null) == null
                     && letterSectionsEncryptedOk();
       allow update: if request.auth != null
@@ -991,7 +1073,13 @@ service cloud.firestore {
                         || request.time >= resource.data.openAt);
     }
 
-    function tokenWellFormed() {
+    // The id must be the token's SHA-256 in lowercase hex, as notifications.js
+    // derives it: a member cannot fill the collection with documents under ids
+    // of their choosing. `lang` is the device's interface language, so it is
+    // one of the app's languages (SUPPORTED_LANGUAGES in src/i18n/index.js; a
+    // test keeps the two lists equal). The functions send English or German
+    // and fall back to German for the others (normalizeLang in functions/push.js).
+    function tokenWellFormed(tokenId) {
       let d = request.resource.data;
       return request.auth != null
         && d.keys().hasOnly(['familyId', 'token', 'lang', 'uid', 'updatedAt'])
@@ -999,7 +1087,9 @@ service cloud.firestore {
         && d.uid == request.auth.uid
         && d.token is string
         && d.token.size() > 0
-        && d.token.size() < 4096;
+        && d.token.size() < 4096
+        && tokenId == hashing.sha256(d.token).toHexString().lower()
+        && d.get('lang', 'de') in ['en', 'de', 'ar', 'fr'];
     }
 
     // FCM push tokens — one document per device, its id the SHA-256 of the token.
@@ -1016,11 +1106,11 @@ service cloud.firestore {
       // The fields src/services/pushTokens.js writes, and nothing else. `uid`
       // is the signed-in caller, which the triggers use to skip the device that
       // created a memory.
-      allow create: if tokenWellFormed()
+      allow create: if tokenWellFormed(tokenId)
                     && isFamilyMember(request.resource.data.familyId);
       // An existing document is only touched by its own family, and does not
       // move to another one.
-      allow update: if tokenWellFormed()
+      allow update: if tokenWellFormed(tokenId)
                     && isFamilyMember(resource.data.familyId)
                     && request.resource.data.familyId == resource.data.familyId;
       // A device unsubscribing on logout. Scoped to the family, so no one can
@@ -1049,6 +1139,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Leave to upload a print file, issued by reservePrintUpload and checked by
+    // storage.rules (functions/printReservations.js). A client that could write
+    // one could lift its own upload quota.
+    match /printReservations/{printId} {
+      allow read, write: if false;
+    }
+
     // Feedback about the app itself — write-only, for every family member.
     //
     // Three things make this collection different from the rest of the app:
@@ -1071,7 +1168,7 @@ service cloud.firestore {
       let d = request.resource.data;
       return d.keys().hasOnly(['familyId', 'uid', 'role', 'message', 'category',
                                'rating', 'contact', 'path', 'language',
-                               'userAgent', 'status', 'createdAt'])
+                               'userAgent', 'status', 'createdAt', 'expireAt'])
         && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
         && d.category in ['bug', 'idea', 'praise', 'other']
         && (d.rating == null || (d.rating is int && d.rating >= 1 && d.rating <= 5))
@@ -1083,6 +1180,12 @@ service cloud.firestore {
         // may only ever open one at the start of that process.
         && d.status == 'new'
         && d.createdAt == request.time
+        // The date a TTL policy deletes the note on, 12 months out. The client
+        // computes it, so the rules only hold it to a window around that: a
+        // note must not be able to name a date that never comes.
+        && d.expireAt is timestamp
+        && d.expireAt >= request.time + duration.value(363, 'd')
+        && d.expireAt <= request.time + duration.value(367, 'd')
         && d.uid == request.auth.uid
         && d.role in ['admin', 'viewer']
         // A viewer cannot sign their feedback as an admin. The reverse is not

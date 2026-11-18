@@ -58,6 +58,7 @@ const SIGNED_OUT = {
   loginAsViewer: noFirebase,
   loginAsAdmin: noFirebase,
   sendAdminPasswordReset: noFirebase,
+  reauthenticate: noFirebase,
   signup: noFirebase,
   emailVerified: false,
   sendVerificationEmail: noFirebase,

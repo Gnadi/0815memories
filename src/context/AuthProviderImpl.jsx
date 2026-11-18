@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   onAuthStateChanged, signInWithEmailAndPassword,
   signOut, setPersistence, browserLocalPersistence, browserSessionPersistence,
   signInWithCustomToken, sendPasswordResetEmail, sendEmailVerification,
+  EmailAuthProvider, reauthenticateWithCredential,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, db, functions, resetFirestore } from '../config/firebase'
@@ -12,7 +13,7 @@ import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encrypt
 import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import {
-  readStored, writeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
+  readStored, writeStored, removeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
   isSessionOnly, moveStoredSession,
 } from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
@@ -67,12 +68,28 @@ export function AuthProvider({ children }) {
   const [stayLoggedIn, setStayLoggedInState] = useState(() => !isSessionOnly())
   const [loading, setLoading] = useState(true)
   const firebaseReady = !!(auth && db)
+  // Whose session this provider holds: the uid of the last auth event, or null
+  // before the first one and after a sign-out. A different uid in the next
+  // event is a change of person, whichever tab caused it.
+  const sessionUidRef = useRef(null)
+  const firstAuthEventRef = useRef(true)
+  // Raised whenever a session is torn down. A lookup that began under an
+  // earlier value belongs to a person who is gone and must not apply its answer.
+  const sessionEpochRef = useRef(0)
 
   // Defined before the effects that depend on it: the dependency array is read
   // during render, so a `const` declared further down would be in its TDZ.
   const resolveFamilyId = useCallback(async (uid, preferredId = null) => {
+    const epoch = sessionEpochRef.current
     const families = await findAdminFamilies(uid)
-    if (families.length === 0) return null
+    if (epoch !== sessionEpochRef.current) return null
+    if (families.length === 0) {
+      // Not "keep what was there": what was there may be another person's
+      // family, and nothing here says this one belongs to them.
+      setFamilyId(null)
+      removeStored('fh_familyId')
+      return null
+    }
     // Someone can be an admin of more than one family. Which one the session
     // bound to used to be whichever document Firestore listed first — which
     // could differ from the family the token's claim names, and so from what
@@ -95,12 +112,15 @@ export function AuthProvider({ children }) {
       setRole(null)
       return null
     }
+    const epoch = sessionEpochRef.current
     let claims = null
     try {
       claims = (await firebaseUser.getIdTokenResult(force)).claims ?? {}
     } catch (err) {
       devWarn('Could not read auth claims:', err)
     }
+    // The session ended while the token was being read.
+    if (epoch !== sessionEpochRef.current) return null
     if (!claims) {
       // Fail closed. An unreadable token means the role is unknown, and unknown
       // must not resolve to 'admin' — that is the direction that hands a viewer
@@ -137,6 +157,32 @@ export function AuthProvider({ children }) {
     encryptionKey, keyLoading, keyError, memoryCardStyle, adoptKey, forgetKey,
   } = useFamilyKey(familyId, user, refreshClaims)
 
+  // Everything the session held, dropped — for the logout and for an auth event
+  // that ends the session or changes the person (another tab signing out and in
+  // as someone else). Does not sign out: Firebase has already done that, or the
+  // caller does it. Stays one function so that the two paths cannot drift apart.
+  const endSession = useCallback(async () => {
+    sessionEpochRef.current++
+    setRole(null)
+    setFamilyId(null)
+    forgetKey()
+    // Decrypted media outlives the session otherwise: the object URLs stay
+    // resolvable for as long as the tab is open.
+    clearDecryptedMediaCache()
+    clearDecryptedTextCache()
+    // The workers hold the family key; tearing them down drops it with the session.
+    terminateDecryptPool()
+    clearStoredSession()
+    setStayLoggedInState(true)
+    // Firestore keeps documents in memory past their listeners (config/firebase);
+    // the family document among them carries the key. A fresh instance holds none.
+    try {
+      await resetFirestore()
+    } catch (err) {
+      devWarn('Could not reset Firestore after the session ended:', err)
+    }
+  }, [forgetKey])
+
   useEffect(() => {
     if (DEMO) {
       // The demo family (demo/index.js): an admin session made up in the
@@ -167,14 +213,36 @@ export function AuthProvider({ children }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const previousUid = sessionUidRef.current
+      const nextUid = firebaseUser?.uid ?? null
+      const firstEvent = firstAuthEventRef.current
+      firstAuthEventRef.current = false
+      sessionUidRef.current = nextUid
+
+      // Firebase keeps the tabs of one origin in step, so another tab can sign
+      // this one out or in as somebody else without this tab doing anything.
+      // The first event after a page load is not that: it restores the session
+      // that is already stored, and clearing it would log everybody out on
+      // every reload. What it can still find is a stored family with no one
+      // signed in behind it.
+      const personChanged = previousUid !== null && previousUid !== nextUid
+      const strayStorage = firstEvent && !firebaseUser && !!readStored('fh_familyId')
+      const ending = personChanged || strayStorage
+      const teardown = ending ? endSession() : null
+
       setUser(firebaseUser)
       setEmailVerified(!!firebaseUser?.emailVerified)
       try {
+        await teardown
+        const epoch = sessionEpochRef.current
         const claimFamily = await applyClaims(firebaseUser)
+        if (epoch !== sessionEpochRef.current) return
         // An admin whose claim has not landed yet has no familyId in their
         // token: syncAdminClaims writes it after the write that made them an
-        // admin. The adminUids lookup is the fallback for exactly them.
-        if (firebaseUser && !claimFamily && !readStored('fh_familyId')) {
+        // admin. The adminUids lookup is the fallback for exactly them. It runs
+        // even when a family is stored: that value may be somebody else's, and
+        // only the lookup says whether it is this person's.
+        if (firebaseUser && !claimFamily) {
           await resolveFamilyId(firebaseUser.uid)
         }
       } catch (err) {
@@ -188,7 +256,7 @@ export function AuthProvider({ children }) {
     })
 
     return unsubscribe
-  }, [resolveFamilyId, applyClaims])
+  }, [resolveFamilyId, applyClaims, endSession])
 
   // Explicitly bind the session to a family without going through a lookup.
   // Used right after invite redemption, where the new admin's UID has just been
@@ -309,6 +377,19 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Asks Firebase to check the password again before something that cannot be
+  // taken back: a session left open on a shared device should not be enough
+  // to remove an admin or delete a family or an account. A wrong password
+  // rejects with auth/wrong-password or auth/invalid-credential.
+  const reauthenticate = useCallback(async (password) => {
+    const current = auth?.currentUser
+    if (!current?.email) throw new Error('Not signed in with a password')
+    await reauthenticateWithCredential(current, EmailAuthProvider.credential(current.email, password))
+    // The server reads auth_time from the token it is sent; reauthenticating
+    // renews it only once the token is refreshed.
+    await current.getIdToken(true)
+  }, [])
+
   // Creating an admin account is two steps with the mailbox in between.
   //
   // A password reset goes to the address the account was registered with, so
@@ -422,7 +503,16 @@ export function AuthProvider({ children }) {
     await removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err))
 
     if (user && auth) {
-      await signOut(auth)
+      // The auth event this sign-out causes is this tab's own doing and is
+      // cleaned up below; without this it would run the same cleanup twice.
+      const uid = sessionUidRef.current
+      sessionUidRef.current = null
+      try {
+        await signOut(auth)
+      } catch (err) {
+        sessionUidRef.current = uid
+        throw err
+      }
       // The SDK's persistence mode is sticky for the life of the page, and the
       // storage side is about to be reset to "remembered" by clearStoredSession.
       // Without this, a session-only login followed by a logout and then any
@@ -435,21 +525,8 @@ export function AuthProvider({ children }) {
         if (import.meta.env.DEV) console.warn('Could not reset auth persistence:', err)
       }
     }
-    setRole(null)
-    setFamilyId(null)
-    forgetKey()
-    // Decrypted media outlives the session otherwise: the object URLs stay
-    // resolvable for as long as the tab is open.
-    clearDecryptedMediaCache()
-    clearDecryptedTextCache()
-    // The workers hold the family key; tearing them down drops it with the session.
-    terminateDecryptPool()
-    clearStoredSession()
-    setStayLoggedInState(true)
-    // Firestore keeps documents in memory past their listeners (config/firebase);
-    // the family document among them carries the key. A fresh instance holds none.
-    await resetFirestore()
-  }, [user, forgetKey])
+    await endSession()
+  }, [user, endSession])
 
   // A viewer holds a Firebase session too now, so presence of `user` no longer
   // says anything about privilege — only the role claim does.
@@ -475,6 +552,7 @@ export function AuthProvider({ children }) {
     loginAsViewer,
     loginAsAdmin,
     sendAdminPasswordReset,
+    reauthenticate,
     signup,
     emailVerified,
     sendVerificationEmail,
@@ -488,7 +566,7 @@ export function AuthProvider({ children }) {
   }), [
     user, isViewer, isAdmin, isAuthenticated, familyId, encryptionKey,
     memoryCardStyle, loading, keyLoading, keyError, firebaseReady,
-    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, signup, emailVerified,
+    loginAsViewer, loginAsAdmin, sendAdminPasswordReset, reauthenticate, signup, emailVerified,
     sendVerificationEmail, checkEmailVerified, createOwnFamily, discardNewAccount,
     logout, setActiveFamilyId,
     stayLoggedIn, setStayLoggedIn,

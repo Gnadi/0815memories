@@ -14,7 +14,7 @@ const getDoc = vi.fn()
 const zipFiles = {}
 
 vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ name })),
+  collection: vi.fn((_db, ...path) => ({ name: path.join('/') })),
   doc: vi.fn((_db, name, id) => ({ name, id })),
   query: vi.fn((ref, ...c) => ({ ref, c })),
   where: vi.fn((field, op, value) => ({ field, op, value })),
@@ -79,10 +79,10 @@ function snap(docs) {
 
 /** Answer each collection query by name, in the order runNasExport asks. */
 function respond({ collections = {}, capsuleContents = {}, letters = {} } = {}) {
-  getDocs.mockImplementation(async (q) => snap(collections[q.ref.name] ?? []))
+  getDocs.mockImplementation(async (q) => snap(collections[(q.ref ?? q).name] ?? []))
   getDoc.mockImplementation(async (ref) => {
     if (ref.name === 'families') {
-      return { exists: () => true, data: () => ({ familyName: 'Test', encryptionKeyJwk: 'SECRET' }) }
+      return { exists: () => true, data: () => ({ familyName: 'Test', encryptionKeyJwk: 'SECRET', sharedPassword: 'PWHASH', adminUid: 'uid-a' }) }
     }
     if (ref.name === 'blackboxContent') {
       const content = capsuleContents[ref.id]
@@ -324,6 +324,63 @@ describe('Our Year, which belongs to two people rather than the family', () => {
   })
 })
 
+describe('the best-of and the member list', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) }))
+    respond({
+      collections: {
+        bestOf: [{
+          id: `${FAMILY}_2026-09`, familyId: FAMILY, month: '2026-09', version: 1,
+          doc: 'enc:' + JSON.stringify({ slides: [{ type: 'photo', media: { url: 'https://cdn/bo.enc' } }] }),
+        }],
+        [`families/${FAMILY}/admins`]: [
+          { id: 'uid-a', email: 'a@example.com', viaInvite: 'INVITE-TOKEN-A', addedAt: { toDate: () => new Date('2026-01-02T00:00:00Z') } },
+          { id: 'uid-b', email: 'b@example.com', viaInvite: 'INVITE-TOKEN-B', addedAt: { toDate: () => new Date('2026-03-04T00:00:00Z') } },
+        ],
+      },
+    })
+  })
+
+  it('writes the best-of decrypted through its service', async () => {
+    await run()
+    const [month] = data('bestOf.json')
+    expect(month.month).toBe('2026-09')
+    expect(month.doc.slides).toHaveLength(1)
+  })
+
+  it('asks for every month, newest first, not the app\'s two years', async () => {
+    await run()
+    const q = getDocs.mock.calls.map(([x]) => x).find((x) => x.ref.name === 'bestOf')
+    expect(q.c).toEqual(expect.arrayContaining([{ field: 'familyId', op: '==', value: FAMILY }]))
+  })
+
+  it('does not download the best-of photos a second time', async () => {
+    await run()
+    expect(globalThis.fetch.mock.calls.map(([u]) => u)).not.toContain('https://cdn/bo.enc')
+  })
+
+  it('writes members.json with role, owner, email and date added', async () => {
+    await run()
+    expect(data('members.json')).toEqual([
+      { uid: 'uid-a', role: 'admin', owner: true, email: 'a@example.com', addedAt: '2026-01-02T00:00:00.000Z' },
+      { uid: 'uid-b', role: 'admin', owner: false, email: 'b@example.com', addedAt: '2026-03-04T00:00:00.000Z' },
+    ])
+  })
+
+  it('counts both in the manifest', async () => {
+    await run()
+    expect(manifest().counts).toMatchObject({ bestOf: 1, members: 2 })
+  })
+
+  it('leaves no key, password hash or invite token anywhere in the archive', async () => {
+    await run()
+    const everything = Object.values(zipFiles).filter((v) => typeof v === 'string').join('\n')
+    for (const secret of ['SECRET', 'PWHASH', 'INVITE-TOKEN-A', 'INVITE-TOKEN-B', 'viaInvite', 'encryptionKeyJwk', 'sharedPassword']) {
+      expect(everything).not.toContain(secret)
+    }
+  })
+})
+
 describe('what must never be in the archive', () => {
   it('still strips the family encryption key', async () => {
     respond({ collections: {} })
@@ -359,6 +416,25 @@ describe('decrypted the way the app decrypts', () => {
     })
   })
 
+  it("exports a moment's text readable, and a moment from before as it was", async () => {
+    respond({
+      collections: {
+        moments: [
+          {
+            id: 'm-new', familyId: FAMILY, textEncrypted: true,
+            caption: 'enc:Picnic', location: 'enc:Lake', category: 'enc:Family', label: 'enc:',
+          },
+          { id: 'm-old', familyId: FAMILY, caption: 'Beach day', location: 'Monterey' },
+        ],
+      },
+    })
+    await run()
+
+    const [marked, older] = data('moments.json')
+    expect(marked).toMatchObject({ caption: 'Picnic', location: 'Lake', category: 'Family', label: '' })
+    expect(older).toMatchObject({ caption: 'Beach day', location: 'Monterey' })
+  })
+
   it("exports Our Year's occasion readable", async () => {
     respond({
       collections: {
@@ -374,5 +450,43 @@ describe('decrypted the way the app decrypts', () => {
 
     const [ritual] = json(Object.keys(zipFiles).find((k) => k.endsWith('our-year/rituals.json')))
     expect(ritual).toMatchObject({ occasionLabel: 'The day we met', partners: [{ name: 'Lena' }] })
+  })
+})
+
+describe('a stored field named id', () => {
+  // The document ID ends up in the archive path of its media. A stored `id`
+  // used to replace the real one, and `../` in it left the export folder.
+  beforeEach(() => {
+    respond({
+      collections: {
+        memories: [{ id: 'm1', familyId: FAMILY, title: 'Beach', images: ['https://cdn/a.enc'] }],
+      },
+    })
+    // The service reads the real ID from the snapshot, the stored one from data().
+    getDocs.mockImplementation(async (q) => {
+      const name = (q.ref ?? q).name
+      if (name !== 'memories') return snap([])
+      return {
+        docs: [{
+          id: 'real1',
+          data: () => ({ id: '../../evil', familyId: FAMILY, title: 'Beach', images: ['https://cdn/a.enc'] }),
+        }],
+        empty: false,
+      }
+    })
+    globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x']) }))
+  })
+
+  it('keeps the real document ID in the data file', async () => {
+    await run()
+    expect(data('memories.json')[0].id).toBe('real1')
+  })
+
+  it('writes media only under media/', async () => {
+    await run()
+    const mediaPaths = Object.keys(zipFiles).filter((k) => k.includes('/media/'))
+    expect(mediaPaths).toHaveLength(1)
+    expect(mediaPaths[0]).toMatch(/\/media\/memories\/real1\/image-0\.enc$/)
+    for (const path of Object.keys(zipFiles)) expect(path).not.toContain('..')
   })
 })

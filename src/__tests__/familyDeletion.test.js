@@ -168,7 +168,7 @@ describe('deleteFamily', () => {
 
   it('keeps the family document and the ledger entry while Cloudinary refuses, and finishes on the next run', async () => {
     const db = seeded()
-    const refusing = deps(db, { destroy: vi.fn(async (type, ids) => (type === 'raw' ? new Set() : new Set(ids))) })
+    const refusing = deps(db, { destroy: vi.fn(async (type, ids) => (type === 'raw' ? new Set(ids.filter((id) => id !== `kaydo/fam-1/${hex('a')}`)) : new Set(ids))) })
     const first = await deleteFamily(refusing, 'fam-1')
     expect(first).toMatchObject({ outcome: 'incomplete', filesRefused: 1 })
     expect(db.docs.has('families/fam-1')).toBe(true)
@@ -181,6 +181,59 @@ describe('deleteFamily', () => {
     expect(second).toMatchObject({ outcome: 'deleted' })
     expect(db.docs.has('families/fam-1')).toBe(false)
     expect(db.docs.has(`${FAMILY_DELETIONS}/fam-1`)).toBe(false)
+  })
+
+  it('keeps the ledger entry while a file under another resource type survives, and finishes later', async () => {
+    // One signature could store a raw, an image and a video under one id. Once
+    // the entry is gone nothing says whose the other two are.
+    const db = seeded()
+    const failing = deps(db, {
+      destroy: vi.fn(async (type, ids) => {
+        if (type === 'video') throw new Error('503')
+        return new Set(ids)
+      }),
+    })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const first = await deleteFamily(failing, 'fam-1')
+    error.mockRestore()
+    expect(first).toMatchObject({ outcome: 'incomplete', filesRefused: 2 })
+    expect(db.docs.has('mediaAssets/' + hex('a'))).toBe(true)
+    expect(db.docs.has('families/fam-1')).toBe(true)
+
+    expect(await deleteFamily(deps(db), 'fam-1')).toMatchObject({ outcome: 'deleted' })
+    expect(db.docs.has('mediaAssets/' + hex('a'))).toBe(false)
+  })
+
+  it('counts "not found" under the other resource types as gone', async () => {
+    const db = seeded()
+    const d = deps(db, { destroy: vi.fn(async (_type, ids) => new Set(ids)) })
+    expect(await deleteFamily(d, 'fam-1')).toMatchObject({ outcome: 'deleted', filesRefused: 0 })
+    expect(d.destroy).toHaveBeenCalledWith('image', [`kaydo/fam-1/${hex('a')}`])
+  })
+
+  it('keeps a pending entry younger than a signature stays valid, and takes it on a later run', async () => {
+    // A signature issued just before the date can still be used for an hour; a
+    // file stored after its entry is gone could never be traced to the family.
+    const db = seeded()
+    db.docs.set('mediaAssets/' + hex('c'), {
+      familyId: 'fam-1',
+      publicId: `kaydo/fam-1/${hex('c')}`,
+      resourceType: 'raw',
+      state: 'pending',
+      refs: [],
+      createdAt: new Date(NOW - 10 * 60 * 1000),
+    })
+    const d = deps(db)
+    const first = await deleteFamily(d, 'fam-1')
+    expect(first).toMatchObject({ outcome: 'incomplete', filesPending: 1 })
+    expect(db.docs.has('mediaAssets/' + hex('c'))).toBe(true)
+    expect(d.destroy.mock.calls.flatMap(([, ids]) => ids)).not.toContain(`kaydo/fam-1/${hex('c')}`)
+    expect(db.docs.has('families/fam-1')).toBe(true)
+
+    const later = deps(db, { now: () => NOW + 2 * 60 * 60 * 1000 })
+    expect(await deleteFamily(later, 'fam-1')).toMatchObject({ outcome: 'deleted' })
+    expect(later.destroy.mock.calls.flatMap(([, ids]) => ids)).toContain(`kaydo/fam-1/${hex('c')}`)
+    expect(db.docs.has('mediaAssets/' + hex('c'))).toBe(false)
   })
 
   it('waits with the files when Cloudinary is not configured', async () => {
@@ -235,6 +288,40 @@ describe('deleteFamily', () => {
     expect(stats).toMatchObject({ outcome: 'deleted', legacyFilesKept: 1 })
     expect(d.destroy.mock.calls.flatMap(([, ids]) => ids)).not.toContain('kaydo/old/x')
     expect(db.docs.has('mediaAssets/legacy~raw~x')).toBe(false)
+  })
+
+  it('deletes entries the daily clean-up has reserved, begun to destroy or given up on, once each', async () => {
+    const db = seeded()
+    db.docs.set(...asset('d', { state: 'deleting', refs: [], deletingSince: new Date(NOW - 20 * 60 * 60 * 1000), deletingFrom: 'detached' }))
+    db.docs.set(...asset('e', { state: 'destroying', refs: [] }))
+    // Its file is already gone from Cloudinary, which reports it as not found.
+    db.docs.set(...asset('f', { state: 'lost', refs: ['memories/m1'], lostAt: new Date(NOW - DAY) }))
+    const d = deps(db)
+    const stats = await deleteFamily(d, 'fam-1')
+    expect(stats).toMatchObject({ outcome: 'deleted', files: 5, filesRefused: 0, filesPending: 0 })
+    const destroyed = d.destroy.mock.calls.filter(([type]) => type === 'raw').flatMap(([, ids]) => ids)
+    for (const c of ['d', 'e', 'f']) {
+      expect(destroyed.filter((id) => id === `kaydo/fam-1/${hex(c)}`)).toHaveLength(1)
+      expect(db.docs.has('mediaAssets/' + hex(c))).toBe(false)
+    }
+    expect(db.docs.has('mediaAssets/' + hex('9'))).toBe(true)
+  })
+
+  it('keeps such an entry while Cloudinary has not confirmed its file gone', async () => {
+    const db = seeded()
+    db.docs.set(...asset('e', { state: 'destroying', refs: [] }))
+    const refusing = deps(db, { destroy: vi.fn(async (type, ids) => new Set(type === 'raw' ? ids.filter((id) => id !== `kaydo/fam-1/${hex('e')}`) : ids)) })
+    expect(await deleteFamily(refusing, 'fam-1')).toMatchObject({ outcome: 'incomplete', filesRefused: 1 })
+    expect(db.docs.has('mediaAssets/' + hex('e'))).toBe(true)
+  })
+
+  it('deletes the counter of legacy entries the trigger keeps for the family', async () => {
+    const db = seeded()
+    db.docs.set('mediaRates/legacy~fam-1', { day: '2026-11-09', count: 3, warned: false })
+    db.docs.set('mediaRates/legacy~fam-2', { day: '2026-11-09', count: 3, warned: false })
+    await deleteFamily(deps(db), 'fam-1')
+    expect(db.docs.has('mediaRates/legacy~fam-1')).toBe(false)
+    expect(db.docs.has('mediaRates/legacy~fam-2')).toBe(true)
   })
 
   it('carries on when the accounts are already gone', async () => {

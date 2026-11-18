@@ -44,7 +44,8 @@
 
 ## Security & encryption
 
-- Photos, videos, voice memos, journal entries, recipes, scrapbooks and Vault content are encrypted **client-side** with **AES-256-GCM** (Web Crypto API) before upload — see `src/utils/encryption.js` and `src/utils/encryptedUpload.js`
+- Photos, videos, voice memos, the text of memories and moments, journal entries, recipes, scrapbooks and Vault content are encrypted **client-side** with **AES-256-GCM** (Web Crypto API) before upload — see `src/utils/encryption.js` and `src/utils/encryptedUpload.js`
+- Moments are the newest of these: until November 2026 their caption, location, category and label were stored in clear. An admin's browser encrypts the older ones the next time it opens the app, and `firestore.rules` refuses a new moment that is not encrypted — see *Encryption* in `docs/architecture.md`
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Because of that, uploads are bound by Cloudinary's **raw** file-size cap (10 MB on the free plan), not the far higher video cap. Files above the cap are rejected before upload with a message naming the size and the limit; raise `VITE_CLOUDINARY_MAX_UPLOAD_BYTES` after upgrading the plan
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated
@@ -279,6 +280,39 @@ with:
 An alert on `severity>=ERROR` for the functions catches these and every
 uncaught failure as well, at the price of more noise.
 
+The functions also log what tests or changes a family's access, one line
+each and never with a password, a token, an email address or an IP:
+`[viewerLogin] family=… outcome=ok|denied|blocked device=new|known`,
+`[password] shared password changed`, `[membership] invite redeemed`,
+`[membership] admin removed` and `[deletion] requested` or `cancelled`. A
+log-based metric on `outcome=denied` shows a password being guessed.
+
+### Records that expire
+
+The counters that throttle the viewer login (`rateLimits`), the remembered
+viewer devices (`viewerDevices`), feedback notes (`feedback`) and invite links
+(`invites`) carry a date after which they are of no use: `expireAt` (a day and
+180 days after last use, and 12 months after a note was sent) and, on an
+invite, its own `expiresAt` (at most 14 days after it was made). Firestore
+deletes a document at that date once a TTL policy names the field, which is
+switched on once per project:
+
+```bash
+gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=feedback --enable-ttl
+gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl
+```
+
+Until then the field does nothing and the collections only grow. Feedback sent
+before the field existed has none and stays until someone deletes it. The
+`invites` policy needs no code behind it: nothing reads an invite once it has
+expired. A redeemed invite stays only as the `viaInvite` token on the admin's
+entry, which nothing looks up, and a link opened after its invite was
+deleted says it is invalid rather than expired. Deletion runs within a day or
+so of the date, so an expired invite is still refused by `redeemFamilyInvite`
+in the meantime.
+
 ## Firestore rules & indexes
 
 `firestore.rules` and `firestore.indexes.json` are deployed by GitHub Actions
@@ -294,6 +328,13 @@ Actions):
 | --- | --- | --- |
 | `FIREBASE_SERVICE_ACCOUNT` | Secret | The complete JSON key of a Google Cloud service account for the Firebase project |
 | `FIREBASE_PROJECT_ID` | Variable | The Firebase project id to deploy to |
+
+Keep the secret in an environment, not among the repository's secrets: create
+`production` under Settings → Environments, limit its *Deployment branches* to
+`main`, and add `FIREBASE_SERVICE_ACCOUNT` there. Both deploy jobs name that
+environment. A repository secret is handed to a workflow on any branch, and
+the check for `main` in the workflow file can be edited on that branch; the
+environment's branch rule is enforced by GitHub.
 
 The service account needs three roles:
 
@@ -336,8 +377,14 @@ scrapbook editor, **Print** opens a dialog that:
    captured at 300 dpi (`src/utils/printBook.js`). The editor's 4:3 page is
    centred on the print format, and its background fills the difference: 8.5 mm
    either side on A4 landscape. Nothing is cropped.
-3. Uploads the PDF and a cover picture to Firebase Storage
-   (`src/utils/printUpload.js`).
+3. Asks the `reservePrintUpload` Cloud Function for leave to upload
+   (`functions/printReservations.js`), then uploads the PDF and a cover picture
+   to Firebase Storage (`src/utils/printUpload.js`). `storage.rules` accept a
+   file only in a folder the function has reserved for that family, for one
+   hour. A family gets 5 reservations in any 30 days (the `PRINT_UPLOADS_PER_30_DAYS`
+   parameter), whether or not they were used, which is what keeps one account
+   from filling the shared bucket; a retry after a failed upload takes another.
+   Admins only, and not while the family is being deleted.
 4. Calls the `createPrintCheckout` Cloud Function (`functions/peechoCheckout.js`).
    It checks that the caller is an admin of the family and that the file is in
    Storage, then creates a Peecho *product listing* for it through Peecho's API

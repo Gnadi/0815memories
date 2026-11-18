@@ -240,6 +240,31 @@ describe('signUpload for several files', () => {
   })
 })
 
+describe('signUpload for a family that is being deleted', () => {
+  const asked = (d) => signUpload(d, ADMIN, { familyId: FAMILY }).catch((e) => e)
+
+  it('refuses once the deletion date has come, and records nothing', async () => {
+    const d = deps({ family: { adminUids: [ADMIN], deletion: { deleteAfter: new Date(NOW - 1000) } } })
+    const error = await asked(d)
+    expect(error.code).toBe('failed-precondition')
+    expect(ledger(d)).toEqual({})
+    expect(d.db.collectionData(MEDIA_USAGE)).toEqual({})
+  })
+
+  it('refuses once the deletion has begun, even though the date is gone from the document', async () => {
+    const d = deps({ seed: { [`familyDeletions/${FAMILY}`]: { ownerUid: ADMIN } } })
+    expect((await asked(d)).code).toBe('failed-precondition')
+    expect(ledger(d)).toEqual({})
+  })
+
+  it('still signs while the deletion is only scheduled, or was taken back', async () => {
+    for (const deletion of [{ deleteAfter: new Date(NOW + 86400000) }, null]) {
+      const d = deps({ family: { adminUids: [ADMIN], deletion } })
+      expect((await asked(d)).publicId).toBe('kaydo/fam-1/abc123')
+    }
+  })
+})
+
 describe('checkQuota', () => {
   const limits = { uploadsPerHour: 2, familyBytes: 100, maxFileBytes: 10 }
 

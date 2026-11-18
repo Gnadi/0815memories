@@ -13,11 +13,11 @@ import { MEDIA_ASSETS, MEDIA_USAGE } from '../../functions/mediaSigning.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-10-26T05:15:00Z')
-const CLAIMED = 'legacy~raw~kaydo%2Fencrypted%2Fold1.dat'
+const CLAIMED = 'legacy~raw~kaydo%2Fencrypted%2Foldfile0123456789ab.dat'
 
 function setup() {
   return fakeAdminFirestore({
-    [`${MEDIA_ASSETS}/${CLAIMED}`]: { familyId: 'fam-1', publicId: 'kaydo/encrypted/old1.dat', resourceType: 'raw', legacy: true, state: 'attached', refs: ['memories/m1'] },
+    [`${MEDIA_ASSETS}/${CLAIMED}`]: { familyId: 'fam-1', publicId: 'kaydo/encrypted/oldfile0123456789ab.dat', resourceType: 'raw', legacy: true, state: 'attached', refs: ['memories/m1'] },
     [`${MEDIA_USAGE}/fam-1`]: { bytes: 100, files: 1 },
     'families/fam-1': { mediaIndexedAt: new Date(NOW - 1000) },
     'families/fam-2': { familyName: 'Not yet' },
@@ -26,9 +26,9 @@ function setup() {
 
 // Two pages of raw files, one image page, no videos.
 const pages = {
-  'raw:': { resources: [{ public_id: 'kaydo/encrypted/old1.dat', bytes: 40 }, { public_id: 'kaydo/encrypted/lost.dat', bytes: 7 }], next: 'p2' },
+  'raw:': { resources: [{ public_id: 'kaydo/encrypted/oldfile0123456789ab.dat', bytes: 40 }, { public_id: 'kaydo/encrypted/lostfile0123456789.dat', bytes: 7 }], next: 'p2' },
   'raw:p2': { resources: [{ public_id: `kaydo/fam-1/${'a'.repeat(32)}`, bytes: 999 }] },
-  'image:': { resources: [{ public_id: 'kaydo/header', bytes: 3 }] },
+  'image:': { resources: [{ public_id: 'kaydo/header0123456789abcd', bytes: 3 }] },
   'video:': { resources: [] },
 }
 const list = vi.fn(async (type, cursor) => pages[`${type}:${cursor ?? ''}`])
@@ -47,7 +47,7 @@ describe('inventoryLegacyMedia', () => {
       newlyCounted: 1,
       unclaimed: 2,
       unclaimedBytes: 10,
-      unclaimedSample: ['raw/kaydo/encrypted/lost.dat', 'image/kaydo/header'],
+      unclaimedSample: ['raw/kaydo/encrypted/lostfile0123456789.dat', 'image/kaydo/header0123456789abcd'],
       familiesNotIndexed: 1,
     })
     expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2, unsized: 0 })
@@ -58,6 +58,21 @@ describe('inventoryLegacyMedia', () => {
     const again = await inventoryLegacyMedia({ db, list, now: () => NOW })
     expect(again.newlyCounted).toBe(0)
     expect(db.collectionData(MEDIA_USAGE)['fam-1']).toEqual({ bytes: 140, files: 2, unsized: 0 })
+  })
+
+  it('reports a file whose id no old upload had apart from the unclaimed ones', async () => {
+    // Nobody can claim it, so being unclaimed proves nothing about it.
+    const odd = vi.fn(async (type) => ({
+      resources: type === 'raw' ? [{ public_id: 'kaydo/encrypted/odd', bytes: 5 }] : [],
+    }))
+    const report = await inventoryLegacyMedia({ db: setup(), list: odd, now: () => NOW })
+    expect(report).toMatchObject({
+      files: 1,
+      unclaimed: 0,
+      unrecognized: 1,
+      unrecognizedBytes: 5,
+      unrecognizedSample: ['raw/kaydo/encrypted/odd'],
+    })
   })
 
   it('deletes nothing', async () => {

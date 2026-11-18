@@ -15,14 +15,21 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { initializeTestEnvironment, assertFails } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import {
   checkViewerLogin,
   DEVICES,
   MAX_FAILURES,
+  MAX_ATTEMPTS_PER_DAY,
+  ATTEMPT_BUDGET_WINDOW_MS,
   MAX_BLOCK_MS,
   FAILURE_WINDOW_MS,
+  RATE_LIMIT_TTL_MS,
+  DEVICE_TTL_MS,
+  forgetViewerDevices,
+  replaceSharedPassword,
 } from '../../functions/viewerLogin.js'
 
 // Set by `firebase emulators:exec`; absent during a plain `npm test`.
@@ -31,6 +38,8 @@ const EMULATOR = globalThis.process?.env?.FIRESTORE_EMULATOR_HOST
 const FAMILY = 'family-1'
 const OTHER_FAMILY = 'family-2'
 const RIGHT = 'correct horse'
+const NEW_PASSWORD = 'battery staple'
+const reversed = (password) => [...password].reverse().join('')
 
 let testEnv
 let adminApp
@@ -38,6 +47,19 @@ let db
 let deps
 
 const login = (input) => checkViewerLogin(deps, { familyId: FAMILY, ip: '203.0.113.7', ...input })
+
+const budgetOfDevice = (token) =>
+  db.doc(`rateLimits/viewerDeviceBudget__${createHash('sha256').update(token).digest('hex')}`)
+const counterOf = (familyId = FAMILY) => db.doc(`rateLimits/viewerLogin__${familyId}`)
+const budgetOf = (familyId = FAMILY) => db.doc(`rateLimits/viewerLoginBudget__${familyId}`)
+
+/** Fills a budget up to its daily limit, as if the attempts had just been made. */
+const exhaust = (ref, at) =>
+  ref.set({
+    attempts: Array.from({ length: MAX_ATTEMPTS_PER_DAY }, () => at),
+    updatedAt: new Date(at),
+    expireAt: new Date(at + ATTEMPT_BUDGET_WINDOW_MS),
+  })
 
 /** A stranger's guesses, each from a different claimed IP — X-Forwarded-For is theirs to set. */
 async function lockOutFamily(familyId = FAMILY) {
@@ -75,6 +97,7 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
       mintToken: vi.fn(async (familyId) => `custom-token-for-${familyId}`),
     }
     for (const familyId of [FAMILY, OTHER_FAMILY]) {
+      await db.doc(`families/${familyId}`).set({ adminUid: 'owner', adminUids: ['owner'], viewerSessionVersion: 0 })
       await db.doc(`families/${familyId}/secrets/auth`).set({
         sharedPassword: [...RIGHT].reverse().join(''),
       })
@@ -149,7 +172,7 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
     for (let i = 0; i < 20 && !blockLengths.includes(MAX_BLOCK_MS); i++) {
       // Waiting out the block exactly is the fastest a guesser can go.
       expect(await login({ password: `guess-${i}`, ip: '198.51.100.1' })).toEqual({ outcome: 'denied' })
-      const record = await db.doc(`rateLimits/${(await db.collection('rateLimits').get()).docs[0].id}`).get()
+      const record = await counterOf().get()
       const until = record.data().blockedUntil
       if (until) {
         blockLengths.push(until.toMillis() - t)
@@ -179,11 +202,92 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
   it('accepts the right password after failures, and clears the record', async () => {
     for (let i = 0; i < MAX_FAILURES - 1; i++) await login({ password: `guess-${i}` })
     expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
-    expect((await db.collection('rateLimits').get()).size).toBe(0)
+    expect((await counterOf().get()).exists).toBe(false)
     // A full allowance is available again.
     for (let i = 0; i < MAX_FAILURES; i++) {
       expect(await login({ password: `guess-${i}` })).toEqual({ outcome: 'denied' })
     }
+  })
+
+  it('refuses attempts of any outcome once the daily budget is used, without running bcrypt', async () => {
+    const t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    // 99 of the day's attempts are made; the last one is the allowance.
+    await budgetOf().set({
+      attempts: Array.from({ length: MAX_ATTEMPTS_PER_DAY - 1 }, () => t - 60 * 60 * 1000),
+      updatedAt: new Date(t),
+      expireAt: new Date(t + RATE_LIMIT_TTL_MS),
+    })
+    expect(await login({ password: 'wrong' })).toEqual({ outcome: 'denied' })
+    deps.compare.mockClear()
+
+    expect(await login({ password: 'wrong again' })).toEqual({ outcome: 'blocked' })
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect(deps.mintToken).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(0)
+    // Refused attempts are not recorded, so the budget does not grow.
+    expect((await budgetOf().get()).data().attempts).toHaveLength(MAX_ATTEMPTS_PER_DAY)
+  })
+
+  it('counts successful logins against the budget too, and keeps the budget after one', async () => {
+    for (let i = 0; i < MAX_ATTEMPTS_PER_DAY; i++) {
+      expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
+    }
+    expect((await budgetOf().get()).data().attempts).toHaveLength(MAX_ATTEMPTS_PER_DAY)
+    deps.compare.mockClear()
+
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(MAX_ATTEMPTS_PER_DAY)
+    // Another family has a budget of its own.
+    expect(await login({ familyId: OTHER_FAMILY, password: RIGHT })).toMatchObject({ outcome: 'ok' })
+  }, 60_000)
+
+  it('lets the budget roll: attempts older than a day stop counting', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    await exhaust(budgetOf(), t)
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+
+    t += ATTEMPT_BUDGET_WINDOW_MS - 1
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    t += 1
+    expect(await login({ password: RIGHT })).toMatchObject({ outcome: 'ok' })
+    // Only the attempt just made is left in the record.
+    expect((await budgetOf().get()).data().attempts).toEqual([t])
+  })
+
+  it('gives a known device a budget of its own', async () => {
+    const t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    const { deviceToken } = await login({ password: RIGHT })
+    const { deviceToken: otherDevice } = await login({ password: RIGHT })
+
+    // The family's budget used up: new devices wait, known ones carry on.
+    await exhaust(budgetOf(), t)
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'blocked' })
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+
+    // A known device's own budget used up: only that device waits.
+    expect((await budgetOfDevice(deviceToken).get()).exists).toBe(true)
+    await exhaust(budgetOfDevice(deviceToken), t)
+    deps.compare.mockClear()
+    expect(await login({ password: RIGHT, deviceToken })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).not.toHaveBeenCalled()
+    expect(await login({ password: RIGHT, deviceToken: otherDevice })).toMatchObject({ outcome: 'ok' })
+    expect(await login({ familyId: OTHER_FAMILY, password: RIGHT })).toMatchObject({ outcome: 'ok' })
+  })
+
+  it('keeps no record per caller address', async () => {
+    await login({ password: 'wrong', ip: '198.51.100.77' })
+    await login({ password: RIGHT, ip: '198.51.100.78' })
+    const records = (await db.collection('rateLimits').get()).docs
+    for (const record of records) {
+      expect(record.id).not.toMatch(/ip/i)
+      expect(JSON.stringify(record.data())).not.toContain('198.51.100')
+    }
+    expect(records.map((r) => r.id).sort()).toEqual([`viewerLoginBudget__${FAMILY}`])
   })
 
   it('does not let a token from one family exempt a device in another', async () => {
@@ -205,6 +309,155 @@ describe.skipIf(!EMULATOR)('viewer login', () => {
       expect(await login({ familyId, password: RIGHT })).toEqual({ outcome: 'denied' })
     }
     expect(deps.compare).not.toHaveBeenCalled()
+  })
+
+  // A password change as setSharedPassword makes it.
+  const changePassword = (password, familyId = FAMILY, uid = 'owner') =>
+    replaceSharedPassword({ db, increment: (n) => FieldValue.increment(n) }, familyId, reversed(password), uid)
+
+  it('refuses a login whose password changed while it was being compared', async () => {
+    // The race: the old hash is read, then bcrypt runs, and the admin's change
+    // lands before the token is minted. The token must not get the new version.
+    deps.compare = vi.fn(async (password, hash) => {
+      await changePassword(NEW_PASSWORD)
+      return reversed(password) === hash
+    })
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'denied' })
+    expect(deps.mintToken).not.toHaveBeenCalled()
+    expect((await db.collection(DEVICES).get()).size).toBe(0)
+  })
+
+  it('mints the token with the version that was current at the comparison', async () => {
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 3 })
+    const { deviceToken } = await login({ password: RIGHT })
+    expect(deps.mintToken).toHaveBeenCalledWith(FAMILY, 3)
+    await login({ password: RIGHT, deviceToken })
+    expect(deps.mintToken).toHaveBeenLastCalledWith(FAMILY, 3)
+  })
+
+  describe('changing the password as an admin who may be removed', () => {
+    const stored = async () => (await db.doc(`families/${FAMILY}/secrets/auth`).get()).data().sharedPassword
+    const version = async () => (await db.doc(`families/${FAMILY}`).get()).data().viewerSessionVersion
+
+    it('writes nothing when the admin was removed after the check and before the write', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      // What setSharedPassword does: the check passes, then bcrypt takes its
+      // time, and the removal lands before the write.
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner'] })
+
+      await expect(changePassword(NEW_PASSWORD, FAMILY, 'co-admin')).rejects.toMatchObject({ code: 'permission-denied' })
+      expect(await stored()).toBe(reversed(RIGHT))
+      expect(await version()).toBe(0)
+    })
+
+    it('refuses a removal that lands inside the write, too', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      // Both run at once: whichever commits second sees the other's result.
+      const removal = db.doc(`families/${FAMILY}`).update({ adminUids: ['owner'] })
+      const change = changePassword(NEW_PASSWORD, FAMILY, 'co-admin').then(() => 'changed', (error) => error.code)
+      await removal
+      const outcome = await change
+      if (outcome === 'changed') {
+        // The change committed first, which was legitimate: the admin still was one.
+        expect(await version()).toBe(1)
+      } else {
+        expect(outcome).toBe('permission-denied')
+        expect(await stored()).toBe(reversed(RIGHT))
+        expect(await version()).toBe(0)
+      }
+    })
+
+    it('still changes the password for an admin, and for a family that is gone it refuses', async () => {
+      await db.doc(`families/${FAMILY}`).update({ adminUids: ['owner', 'co-admin'] })
+      await changePassword(NEW_PASSWORD, FAMILY, 'co-admin')
+      expect(await stored()).toBe(reversed(NEW_PASSWORD))
+      expect(await version()).toBe(1)
+
+      await expect(changePassword(NEW_PASSWORD, 'no-such-family')).rejects.toMatchObject({ code: 'permission-denied' })
+      await expect(changePassword(NEW_PASSWORD, FAMILY, null)).rejects.toMatchObject({ code: 'permission-denied' })
+    })
+  })
+
+  it('writes the hash and the version bump together', async () => {
+    await changePassword(NEW_PASSWORD)
+    expect((await db.doc(`families/${FAMILY}/secrets/auth`).get()).data().sharedPassword).toBe(reversed(NEW_PASSWORD))
+    expect((await db.doc(`families/${FAMILY}`).get()).data().viewerSessionVersion).toBe(1)
+    // The old password is out, the new one in, and the token carries version 1.
+    expect(await login({ password: RIGHT })).toEqual({ outcome: 'denied' })
+    expect(await login({ password: NEW_PASSWORD })).toMatchObject({ outcome: 'ok' })
+    expect(deps.mintToken).toHaveBeenCalledWith(FAMILY, 1)
+  })
+
+  it('forgets the devices of a family, and only of that family', async () => {
+    for (let i = 0; i < 3; i++) await login({ password: RIGHT })
+    await login({ familyId: OTHER_FAMILY, password: RIGHT })
+    // More than one page of them.
+    for (let start = 0; start < 450; start += 225) {
+      const batch = db.batch()
+      for (let i = start; i < start + 225; i++) batch.set(db.collection(DEVICES).doc(`bulk-${i}`), { familyId: FAMILY })
+      await batch.commit()
+    }
+    expect(await forgetViewerDevices(db, FAMILY)).toBe(453)
+    const left = await db.collection(DEVICES).get()
+    expect(left.docs.map((d) => d.data().familyId)).toEqual([OTHER_FAMILY])
+  }, 30_000)
+
+  it('gives a device no exemption once the password has changed, even if it was not deleted', async () => {
+    const { deviceToken } = await login({ password: RIGHT })
+    await changePassword(NEW_PASSWORD)
+    deps.compare.mockClear()
+    // Deleting the device is skipped on purpose: the version has to be enough.
+    await lockOutFamily()
+    expect(await login({ password: NEW_PASSWORD, deviceToken })).toEqual({ outcome: 'blocked' })
+    expect(deps.compare).toHaveBeenCalledTimes(MAX_FAILURES)
+  })
+
+  it('stamps a device with the family version, and reads one without as version 0', async () => {
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 2 })
+    const { deviceToken } = await login({ password: RIGHT })
+    const [stored] = (await db.collection(DEVICES).get()).docs
+    expect(stored.data().sv).toBe(2)
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+
+    // A device from before the field: known while the family is at version 0 only.
+    await stored.ref.update({ sv: FieldValue.delete() })
+    await lockOutFamily()
+    expect(await login({ password: RIGHT, deviceToken })).toEqual({ outcome: 'blocked' })
+    await db.doc(`families/${FAMILY}`).update({ viewerSessionVersion: 0 })
+    expect(await login({ password: RIGHT, deviceToken })).toMatchObject({ outcome: 'ok' })
+  })
+
+  it('sets an expiry on counters and devices, and renews the device\'s when it is used', async () => {
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    deps.now = () => t
+    await login({ password: 'wrong' })
+    expect((await counterOf().get()).data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
+    expect((await budgetOf().get()).data().expireAt.toMillis()).toBe(t + RATE_LIMIT_TTL_MS)
+
+    const { deviceToken } = await login({ password: RIGHT })
+    const [device] = (await db.collection(DEVICES).get()).docs
+    expect(device.data().expireAt.toMillis()).toBe(t + DEVICE_TTL_MS)
+
+    t += 30 * 24 * 60 * 60 * 1000
+    await login({ password: RIGHT, deviceToken })
+    expect((await device.ref.get()).data().expireAt.toMillis()).toBe(t + DEVICE_TTL_MS)
+  })
+
+  it('reports each login with its outcome and kind of device, and nothing secret', async () => {
+    const log = vi.fn()
+    deps.log = log
+    const { deviceToken } = await login({ password: RIGHT })
+    await login({ password: RIGHT, deviceToken })
+    await login({ password: 'wrong', ip: '198.51.100.77' })
+    await lockOutFamily()
+    expect(log.mock.calls.map(([event]) => `${event.outcome}/${event.device}`).slice(0, 3)).toEqual([
+      'ok/new',
+      'ok/known',
+      'denied/new',
+    ])
+    expect(log.mock.calls.at(-1)[0]).toEqual({ familyId: FAMILY, outcome: 'blocked', device: 'new' })
+    const everything = JSON.stringify(log.mock.calls)
+    for (const secret of [RIGHT, 'wrong', deviceToken, '198.51.100.77']) expect(everything).not.toContain(secret)
   })
 
   it('keeps the device registry out of reach of clients', async () => {

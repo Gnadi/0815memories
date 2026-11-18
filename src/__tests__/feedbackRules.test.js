@@ -25,6 +25,8 @@ const VIEWER = 'uid-viewer'
 
 let testEnv
 
+const daysFromNow = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+
 const note = (overrides = {}) => ({
   familyId: FAMILY,
   uid: ADMIN,
@@ -38,6 +40,7 @@ const note = (overrides = {}) => ({
   userAgent: 'test-agent',
   status: 'new',
   createdAt: serverTimestamp(),
+  expireAt: daysFromNow(365),
   ...overrides,
 })
 
@@ -62,7 +65,7 @@ describe.skipIf(!EMULATOR)('Feedback security rules', () => {
       const db = context.firestore()
       await setDoc(doc(db, 'families', FAMILY), { adminUid: ADMIN, adminUids: [ADMIN], familyName: 'One' })
       await setDoc(doc(db, 'families', OTHER_FAMILY), { adminUid: OTHER_ADMIN, adminUids: [OTHER_ADMIN], familyName: 'Two' })
-      await setDoc(doc(db, 'feedback', 'existing'), { ...note(), createdAt: new Date() })
+      await setDoc(doc(db, 'feedback', 'existing'), { ...note(), createdAt: new Date(), expireAt: daysFromNow(365) })
     })
   })
 
@@ -133,5 +136,19 @@ describe.skipIf(!EMULATOR)('Feedback security rules', () => {
   it('refuses a document carrying fields the form never sends', async () => {
     await assertFails(setDoc(doc(asAdmin(), 'feedback', 'smuggled'), note({ payload: 'x'.repeat(5000) })))
     await assertFails(setDoc(doc(asAdmin(), 'feedback', 'no-agent'), { ...note(), userAgent: 'u'.repeat(400) }))
+  })
+
+  // Plaintext is not kept for ever: a TTL policy deletes a note on its expireAt,
+  // so the date has to be the retention period and no other.
+  it('requires an expiry date about 12 months out', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'feedback', 'early-ok'), note({ expireAt: daysFromNow(364) })))
+    await assertSucceeds(setDoc(doc(asAdmin(), 'feedback', 'late-ok'), note({ expireAt: daysFromNow(366) })))
+    const without = note()
+    delete without.expireAt
+    await assertFails(setDoc(doc(asAdmin(), 'feedback', 'no-expiry'), without))
+    await assertFails(setDoc(doc(asAdmin(), 'feedback', 'forever'), note({ expireAt: daysFromNow(3650) })))
+    await assertFails(setDoc(doc(asAdmin(), 'feedback', 'too-soon'), note({ expireAt: daysFromNow(30) })))
+    await assertFails(setDoc(doc(asAdmin(), 'feedback', 'already-gone'), note({ expireAt: new Date(0) })))
+    await assertFails(setDoc(doc(asAdmin(), 'feedback', 'not-a-date'), note({ expireAt: 'never' })))
   })
 })
