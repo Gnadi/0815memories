@@ -190,12 +190,15 @@ export default function MemoryHero({ images, imageUrl, thumbs, thumbsTiny, categ
           {/* The thumbnail the hero was just showing is already decrypted, so
               it is on screen at once, and the original fades in over it. On
               its own the original showed a placeholder square until it had
-              loaded, a flash on every opening and every arrow. */}
+              loaded, a flash on every opening and every arrow. `cut`: photos
+              of different shapes do not cover each other here, so a fade
+              between two of them showed both. */}
           <CrossfadeImage
             src={allImages[index]}
             thumbSrc={heroThumbs[index] || ''}
             tinyPreview={tinyPreviewAt({ images: allImages, thumbsTiny }, index)}
             fit="object-contain"
+            cut
             className="absolute inset-0"
           />
           {/* A tap on the photo itself keeps the lightbox open, as before; one

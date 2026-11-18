@@ -116,6 +116,28 @@ describe('switching photos', () => {
     expect(layers()).toEqual(['blob:b-thumb 1'])
   })
 
+  it('with `cut`, swaps one photo for the next in a single frame instead of showing both', async () => {
+    // object-contain in the memory lightbox: photos of different shapes do not
+    // cover each other, so a fade between them showed both at once.
+    const { rerender } = await showA({ cut: true, fit: 'object-contain' })
+
+    land('b-thumb', { url: 'blob:b-thumb' })
+    rerender(<CrossfadeImage src="b" thumbSrc="b-thumb" cut fit="object-contain" />)
+    expect(layers()).toEqual(['blob:a-thumb 1', 'blob:b-thumb 0'])
+
+    await decoded('blob:b-thumb')
+    expect(layers()).toEqual(['blob:b-thumb 1'])
+    expect(document.querySelector('img').className).not.toContain('transition-opacity')
+
+    // Within the photo, the original still fades in over its thumbnail.
+    h.display.set('b', 'b#display')
+    land('b#display', { url: 'blob:b-display' })
+    rerender(<CrossfadeImage src="b" thumbSrc="b-thumb" cut fit="object-contain" />)
+    await decoded('blob:b-display')
+    expect(layers()).toEqual(['blob:b-thumb 1', 'blob:b-display 1'])
+    expect(document.querySelectorAll('img')[1].className).toContain('transition-opacity')
+  })
+
   it('shows the blur-up while the thumbnail is on its way, and the thumbnail over it once it lands', async () => {
     const { rerender } = await showA()
 
