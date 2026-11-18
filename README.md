@@ -44,7 +44,8 @@
 
 ## Security & encryption
 
-- Photos, videos, voice memos, journal entries, recipes, scrapbooks and Vault content are encrypted **client-side** with **AES-256-GCM** (Web Crypto API) before upload — see `src/utils/encryption.js` and `src/utils/encryptedUpload.js`
+- Photos, videos, voice memos, the text of memories and moments, journal entries, recipes, scrapbooks and Vault content are encrypted **client-side** with **AES-256-GCM** (Web Crypto API) before upload — see `src/utils/encryption.js` and `src/utils/encryptedUpload.js`
+- Moments are the newest of these: until November 2026 their caption, location, category and label were stored in clear. An admin's browser encrypts the older ones the next time it opens the app, and `firestore.rules` refuses a new moment that is not encrypted — see *Encryption* in `docs/architecture.md`
 - Media is stored as raw ciphertext (Cloudinary `raw` resources); the server never receives a renderable image
 - Because of that, uploads are bound by Cloudinary's **raw** file-size cap (10 MB on the free plan), not the far higher video cap. Files above the cap are rejected before upload with a message naming the size and the limit; raise `VITE_CLOUDINARY_MAX_UPLOAD_BYTES` after upgrading the plan
 - Images deliberately left unencrypted: only the public login-page design assets, which must render before anyone is authenticated

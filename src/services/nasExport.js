@@ -10,6 +10,7 @@ import {
 import { db } from '../config/firebase'
 import { decryptBlob } from '../utils/encryption'
 import { decryptMemoryDoc } from './memories'
+import { decryptMomentText } from './moments'
 import { decryptKid } from './kids'
 import { decryptJournal } from './journals'
 import { decryptBoxContent, decryptBoxMetadata } from './blackbox'
@@ -218,6 +219,7 @@ async function downloadMedia(mediaEntries, onProgress, signal, encKey, concurren
 // occasion, went into the archive as ciphertext.
 const DECRYPTORS = {
   memories: decryptMemoryDoc,
+  moments: decryptMomentText,
   journals: decryptJournal,
   children: decryptKid,
   blackbox: decryptBoxMetadata,
@@ -394,10 +396,11 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
 
   // Decrypt text fields
   const [
-    decMemories, decJournals, decChildren, capsuleMetadata, decRecipes,
+    decMemories, decMoments, decJournals, decChildren, capsuleMetadata, decRecipes,
     decScrapbooks, decCollages, decHighlights, decBestOf, ourYear,
   ] = await Promise.all([
     decryptCollectionData(memories, 'memories', encryptionKey),
+    decryptCollectionData(moments, 'moments', encryptionKey),
     decryptCollectionData(journals, 'journals', encryptionKey),
     decryptCollectionData(children, 'children', encryptionKey),
     decryptCollectionData(blackbox, 'blackbox', encryptionKey),
@@ -408,7 +411,6 @@ export async function runNasExport({ familyId, familyName, uid, encryptionKey, o
     decryptCollectionData(bestOf, 'bestOf', encryptionKey),
     fetchOurYear(familyId, uid, encryptionKey),
   ])
-  const decMoments = moments // moments have no encrypted text fields
   const decBlackbox = await attachCapsuleContents(capsuleMetadata, encryptionKey)
 
   // Sanitize family doc (strip sensitive fields)

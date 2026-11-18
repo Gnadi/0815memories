@@ -101,7 +101,8 @@ describe('useMoments', () => {
     const { result } = renderHook(() => useMoments('fam-1', key))
     await emit(snapshot({ id: 'm1', caption: 'Beach day', images: [IMAGE] }))
 
-    // Moments keep their text in clear; the decrypt pass must not disturb it.
+    // A moment from before its text was encrypted carries no mark, and the
+    // decrypt pass must not disturb it (momentText.test.js has the marked ones).
     expect(result.current.moments[0]).toEqual({ id: 'm1', caption: 'Beach day', images: [IMAGE] })
   })
 

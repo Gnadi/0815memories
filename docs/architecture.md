@@ -115,6 +115,18 @@ encrypt is refused instead of stored readable. The field lists there mirror
 the services, and `src/__tests__/encryptedFieldsRules.test.js` checks each one;
 a newly encrypted field goes into all three.
 
+Moments were the exception until November 2026: their caption, location,
+category and label were stored in clear. A moment written since carries
+`textEncrypted: true`, and only a moment with that mark is decrypted. The older
+ones are encrypted in an admin's browser the next time one opens the app
+(`src/services/momentEncryption.js`, started by
+`components/admin/MomentTextEncryption.jsx`), each in a transaction that reads
+the moment again and checks that the ciphertext decrypts to the original before
+writing it. The rules refuse a new moment in clear and take the mark from
+nobody, but still let an unmarked moment be edited as it is, so that an app
+loaded before the change keeps working. Once every family's moments carry the
+mark, that last allowance can go.
+
 ## Data model
 
 Every top-level collection holds documents for all families, each with a

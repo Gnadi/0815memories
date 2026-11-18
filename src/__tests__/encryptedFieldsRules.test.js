@@ -34,6 +34,9 @@ const future = () => new Date(Date.now() + 365 * 24 * 3600 * 1000)
 // which of its fields are encrypted.
 const COLLECTIONS = {
   memories: { base: () => ({ familyId: FAMILY }), fields: ['title', 'content', 'quote', 'location', 'authorName', 'category', 'contentRich'] },
+  // Marked as encrypted, as src/services/moments.js marks every moment it
+  // writes; momentTextRules.test.js covers the moments from before the mark.
+  moments: { base: () => ({ familyId: FAMILY, textEncrypted: true }), fields: ['caption', 'location', 'category', 'label'] },
   children: { base: () => ({ familyId: FAMILY }), fields: ['name', 'birthTime', 'birthPlace'] },
   journals: { base: () => ({ familyId: FAMILY }), fields: ['content', 'contentRich'] },
   recipes: {

@@ -416,6 +416,25 @@ describe('decrypted the way the app decrypts', () => {
     })
   })
 
+  it("exports a moment's text readable, and a moment from before as it was", async () => {
+    respond({
+      collections: {
+        moments: [
+          {
+            id: 'm-new', familyId: FAMILY, textEncrypted: true,
+            caption: 'enc:Picnic', location: 'enc:Lake', category: 'enc:Family', label: 'enc:',
+          },
+          { id: 'm-old', familyId: FAMILY, caption: 'Beach day', location: 'Monterey' },
+        ],
+      },
+    })
+    await run()
+
+    const [marked, older] = data('moments.json')
+    expect(marked).toMatchObject({ caption: 'Picnic', location: 'Lake', category: 'Family', label: '' })
+    expect(older).toMatchObject({ caption: 'Beach day', location: 'Monterey' })
+  })
+
   it("exports Our Year's occasion readable", async () => {
     respond({
       collections: {
