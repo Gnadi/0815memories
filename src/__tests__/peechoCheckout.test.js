@@ -14,7 +14,9 @@ import {
   CHECKOUT_VALID_DAYS,
   PEECHO_TEST,
   firebaseDownloadUrl,
+  MAX_CHECKOUTS_PER_PRINT,
 } from '../../functions/peechoCheckout.js'
+import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 import { PRINT_FILE_RETENTION_DAYS } from '../../functions/printFiles.js'
 
 const FAMILY = 'fam-1'
@@ -42,13 +44,7 @@ function deps({ adminUids = [ADMIN], files = ['book.pdf', 'cover.jpg'], response
     json: async () => ({ secure_publication_id: 'dec27b95-d22d', token: '4b3345f7-bf70' }),
   })
   return {
-    db: {
-      doc: (path) => ({
-        get: async () => (path === `families/${FAMILY}`
-          ? { exists: true, data: () => ({ adminUids }) }
-          : { exists: false, data: () => null }),
-      }),
-    },
+    db: fakeAdminFirestore({ [`families/${FAMILY}`]: { adminUids } }),
     bucket: { file: (path) => ({ path, exists: async () => [existing.has(path)] }) },
     downloadUrl: async (file) => `https://storage.example/${encodeURIComponent(file.path)}?token=dl`,
     fetch,
@@ -123,6 +119,15 @@ describe('createCheckout', () => {
     expect(error).toBeInstanceOf(CheckoutError)
     expect(error.code).toBe('unavailable')
     expect(error.message).not.toMatch(/merchantApiKey/)
+  })
+
+  // Each checkout is a listing made with the merchant key; one print file
+  // could be listed again on every call.
+  it('lists one print file a few times, then no more, without asking Peecho', async () => {
+    const d = deps()
+    for (let i = 0; i < MAX_CHECKOUTS_PER_PRINT; i++) await createCheckout(d, ADMIN, payload())
+    await expect(createCheckout(d, ADMIN, payload())).rejects.toMatchObject({ code: 'resource-exhausted' })
+    expect(d.fetch).toHaveBeenCalledTimes(MAX_CHECKOUTS_PER_PRINT)
   })
 
   it('is unavailable without an API key', async () => {

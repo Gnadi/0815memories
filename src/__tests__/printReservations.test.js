@@ -25,8 +25,8 @@ const family = (extra = {}) => ({ [`families/${FAMILY}`]: { adminUids: [ADMIN], 
 const reservation = (ageDays, familyId = FAMILY) => ({ familyId, createdBy: ADMIN, createdAt: new Date(NOW - ageDays * DAY), expireAt: new Date(NOW - ageDays * DAY + RESERVATION_VALID_MS) })
 
 let counter = 0
-function reserve(db, { uid = ADMIN, data = { familyId: FAMILY }, limit } = {}) {
-  return reservePrintUpload({ db, now: () => NOW, limit, randomId: () => `id-${++counter}` }, uid ?? undefined, data)
+function reserve(db, { uid = ADMIN, data = { familyId: FAMILY }, limit, accountLimit } = {}) {
+  return reservePrintUpload({ db, now: () => NOW, limit, accountLimit, randomId: () => `id-${++counter}` }, uid ?? undefined, data)
 }
 const codeOf = (promise) => promise.then(() => null, (error) => (error instanceof ReservationError ? error.code : error))
 
@@ -73,6 +73,16 @@ describe('reservePrintUpload', () => {
     const db = fakeAdminFirestore({ ...family(), 'printReservations/old-1': reservation(2), 'printReservations/old-2': reservation(20) })
     expect(await codeOf(reserve(db, { limit: 2 }))).toBe('resource-exhausted')
     expect(await codeOf(reserve(db, { limit: 3 }))).toBeNull()
+  })
+
+  // Any confirmed account can found families. With a limit per family only,
+  // one account multiplied its upload volume by founding more of them.
+  it('also counts what the same account reserved in its other families', async () => {
+    const seed = { ...family() }
+    for (let i = 0; i < 3; i++) seed[`printReservations/elsewhere-${i}`] = { ...reservation(1, `fam-${i + 2}`), createdBy: ADMIN }
+    const db = fakeAdminFirestore(seed)
+    expect(await codeOf(reserve(db, { accountLimit: 3 }))).toBe('resource-exhausted')
+    expect(await codeOf(reserve(db, { accountLimit: 4 }))).toBeNull()
   })
 
   it('counts only its own family, and lets the window roll on', async () => {

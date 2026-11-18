@@ -34,7 +34,12 @@ import { adminUidsOf, syncClaimsForFamily } from './adminClaims.js'
 import { anniversaryWindow, countAnniversaryMemories } from './anniversary.js'
 import { bestOfCopy, bestOfUrl, countMonthMedia, familiesWithBestOf, previousMonthWindow } from './bestOf.js'
 import { purgeExpiredPrintFiles } from './printFiles.js'
-import { DEFAULT_PRINT_RESERVATIONS_PER_WINDOW, reservePrintUpload as reserveUpload, ReservationError } from './printReservations.js'
+import {
+  DEFAULT_PRINT_RESERVATIONS_PER_ACCOUNT,
+  DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
+  reservePrintUpload as reserveUpload,
+  ReservationError,
+} from './printReservations.js'
 import { createCheckout, CheckoutError, PEECHO_PROD, firebaseDownloadUrl } from './peechoCheckout.js'
 import { signUpload as signMediaUpload, SigningError } from './mediaSigning.js'
 import { cloudinarySizer, syncMediaSizes } from './mediaSizes.js'
@@ -244,6 +249,10 @@ const PRINT_UPLOADS_PER_30_DAYS = defineInt('PRINT_UPLOADS_PER_30_DAYS', {
   default: DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
   description: 'Print files one family may upload in 30 days (each one is up to 300 MB of the shared bucket)',
 })
+const PRINT_UPLOADS_PER_ACCOUNT_30_DAYS = defineInt('PRINT_UPLOADS_PER_ACCOUNT_30_DAYS', {
+  default: DEFAULT_PRINT_RESERVATIONS_PER_ACCOUNT,
+  description: 'Print files one account may upload in 30 days, across all families it is an admin of',
+})
 
 /**
  * Leave to upload one print file — see functions/printReservations.js. Without
@@ -254,7 +263,12 @@ export const reservePrintUpload = onCall(
   async (request) => {
     try {
       return await reserveUpload(
-        { db: getFirestore(), limit: PRINT_UPLOADS_PER_30_DAYS.value(), randomId: randomUUID },
+        {
+          db: getFirestore(),
+          limit: PRINT_UPLOADS_PER_30_DAYS.value(),
+          accountLimit: PRINT_UPLOADS_PER_ACCOUNT_30_DAYS.value(),
+          randomId: randomUUID,
+        },
         request.auth?.uid,
         request.data,
       )

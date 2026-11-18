@@ -27,6 +27,12 @@ export const RESERVATION_VALID_MS = 60 * 60 * 1000
 
 /** Reservations a family may take in any PRINT_QUOTA_WINDOW_DAYS: several books, and a few retries. */
 export const DEFAULT_PRINT_RESERVATIONS_PER_WINDOW = 5
+/**
+ * Reservations one account may take in the same window, across every family it
+ * is an admin of. Any confirmed account can found families, so a limit per
+ * family alone let one account multiply its upload volume by founding more.
+ */
+export const DEFAULT_PRINT_RESERVATIONS_PER_ACCOUNT = 10
 export const PRINT_QUOTA_WINDOW_DAYS = 30
 
 // The marker collection of functions/familyDeletion.js, which imports
@@ -64,7 +70,8 @@ function isBeingDeleted(familyData, marker, at) {
  *
  * @param {object} deps
  * @param {import('firebase-admin/firestore').Firestore} deps.db
- * @param {number} [deps.limit]       reservations per PRINT_QUOTA_WINDOW_DAYS
+ * @param {number} [deps.limit]       reservations per family per PRINT_QUOTA_WINDOW_DAYS
+ * @param {number} [deps.accountLimit]  reservations per account per PRINT_QUOTA_WINDOW_DAYS
  * @param {() => number} [deps.now]
  * @param {() => string} deps.randomId  a random UUID
  * @param {string|undefined} uid      the caller
@@ -72,7 +79,13 @@ function isBeingDeleted(familyData, marker, at) {
  * @returns {Promise<{ printId: string, expiresAt: string }>}
  */
 export async function reservePrintUpload(deps, uid, data) {
-  const { db, limit = DEFAULT_PRINT_RESERVATIONS_PER_WINDOW, now = Date.now, randomId } = deps
+  const {
+    db,
+    limit = DEFAULT_PRINT_RESERVATIONS_PER_WINDOW,
+    accountLimit = DEFAULT_PRINT_RESERVATIONS_PER_ACCOUNT,
+    now = Date.now,
+    randomId,
+  } = deps
   if (!uid) throw new ReservationError('unauthenticated', 'Sign in first')
 
   const familyId = typeof data?.familyId === 'string' ? data.familyId : ''
@@ -86,10 +99,13 @@ export async function reservePrintUpload(deps, uid, data) {
   const printId = randomId()
   const reservationRef = db.collection(PRINT_RESERVATIONS).doc(printId)
   const mine = db.collection(PRINT_RESERVATIONS).where('familyId', '==', familyId)
+  const byCaller = db.collection(PRINT_RESERVATIONS).where('createdBy', '==', uid)
 
   // One transaction, so two tabs asking at once cannot both take the last place.
   return db.runTransaction(async (tx) => {
-    const [family, marker, existing] = await Promise.all([tx.get(familyRef), tx.get(markerRef), tx.get(mine)])
+    const [family, marker, existing, callers] = await Promise.all([
+      tx.get(familyRef), tx.get(markerRef), tx.get(mine), tx.get(byCaller),
+    ])
     if (!family.exists || !adminUidsOf(family.data()).includes(uid)) {
       throw new ReservationError('permission-denied', 'Only family admins can upload a print file')
     }
@@ -103,6 +119,9 @@ export async function reservePrintUpload(deps, uid, data) {
     const recent = existing.docs.filter((snap) => millisOf(snap.data().createdAt) >= cutoff)
     if (recent.length >= limit) {
       throw new ReservationError('resource-exhausted', 'This family has used its print uploads for now')
+    }
+    if (callers.docs.filter((snap) => millisOf(snap.data().createdAt) >= cutoff).length >= accountLimit) {
+      throw new ReservationError('resource-exhausted', 'This account has used its print uploads for now')
     }
     // Older ones have counted for the whole window and are of no use any more.
     for (const snap of existing.docs) {

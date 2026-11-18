@@ -32,13 +32,22 @@ if (CHECKOUT_VALID_DAYS >= PRINT_FILE_RETENTION_DAYS) {
   throw new Error('A checkout must expire before its print file is deleted')
 }
 
+/**
+ * Checkouts one print file may have. A few, for a reader who lets the first
+ * link lapse or changes the currency; not one per click, since each is a
+ * listing in the merchant account made by the function's key.
+ */
+export const MAX_CHECKOUTS_PER_PRINT = 5
+/** One document per print file, counting its checkouts. Admin SDK only. */
+export const PRINT_CHECKOUTS = 'printCheckouts'
+
 const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
 const PRINT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const CURRENCY = /^[A-Z]{3}$/
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export class CheckoutError extends Error {
-  /** @param {'invalid-argument'|'permission-denied'|'not-found'|'unavailable'} code */
+  /** @param {'invalid-argument'|'permission-denied'|'not-found'|'unavailable'|'resource-exhausted'} code */
   constructor(code, message) {
     super(message)
     this.code = code
@@ -143,6 +152,22 @@ export async function createCheckout(deps, uid, data) {
   if (!pdfExists) throw new CheckoutError('not-found', 'Print file not found')
   const cover = bucket.file(`${folder}/cover.jpg`)
   const [coverExists] = await cover.exists()
+
+  // Counted before Peecho is asked, so a burst of calls cannot all get through.
+  const counter = db.doc(`${PRINT_CHECKOUTS}/${request.printId}`)
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(counter)
+    const count = snap.exists ? Number(snap.data().count) || 0 : 0
+    if (count >= MAX_CHECKOUTS_PER_PRINT) {
+      throw new CheckoutError('resource-exhausted', 'This print file has had its checkouts')
+    }
+    tx.set(counter, {
+      familyId: request.familyId,
+      count: count + 1,
+      // For a TTL policy on the collection: the file it counts is gone by then.
+      expireAt: new Date(now() + PRINT_FILE_RETENTION_DAYS * DAY_MS),
+    })
+  })
 
   const expires = new Date(now() + CHECKOUT_VALID_DAYS * DAY_MS)
   const body = {

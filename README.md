@@ -290,8 +290,9 @@ log-based metric on `outcome=denied` shows a password being guessed.
 ### Records that expire
 
 The counters that throttle the viewer login (`rateLimits`), the remembered
-viewer devices (`viewerDevices`), feedback notes (`feedback`) and invite links
-(`invites`) carry a date after which they are of no use: `expireAt` (a day and
+viewer devices (`viewerDevices`), feedback notes (`feedback`), the checkout
+count of a print file (`printCheckouts`, until its file is deleted) and invite
+links (`invites`) carry a date after which they are of no use: `expireAt` (a day and
 180 days after last use, and 12 months after a note was sent) and, on an
 invite, its own `expiresAt` (at most 14 days after it was made). Firestore
 deletes a document at that date once a TTL policy names the field, which is
@@ -301,6 +302,7 @@ switched on once per project:
 gcloud firestore fields ttls update expireAt --collection-group=rateLimits --enable-ttl
 gcloud firestore fields ttls update expireAt --collection-group=viewerDevices --enable-ttl
 gcloud firestore fields ttls update expireAt --collection-group=feedback --enable-ttl
+gcloud firestore fields ttls update expireAt --collection-group=printCheckouts --enable-ttl
 gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl
 ```
 
