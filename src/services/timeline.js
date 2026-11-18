@@ -87,20 +87,22 @@ const yearOf = (snapshot) => snapshot.docs[0].data().date.toDate().getFullYear()
 
 /** Every year this family has a memory in, newest first. */
 export async function fetchTimelineYears(database, familyId) {
-  const newest = await getDocs(query(...familyMemories(database, familyId), orderBy('date', 'desc'), limit(1)))
-  if (newest.empty) return []
-  const last = yearOf(newest)
-
+  // The newest and the oldest memory together: asked one after the other they
+  // were two round trips before the counting could start.
+  //
   // The oldest memory keeps the counting to years that can have any. It is
   // unknown only while the (familyId, date ASC) index is still building after a
   // deploy; the walk below then finds the older years by itself.
-  let first = null
-  try {
-    const oldest = await getDocs(query(...familyMemories(database, familyId), orderBy('date', 'asc'), limit(1)))
-    first = yearOf(oldest)
-  } catch (err) {
-    devWarn('Oldest memory lookup failed; walking back year by year instead:', err?.code)
-  }
+  const [newest, oldest] = await Promise.all([
+    getDocs(query(...familyMemories(database, familyId), orderBy('date', 'desc'), limit(1))),
+    getDocs(query(...familyMemories(database, familyId), orderBy('date', 'asc'), limit(1))).catch((err) => {
+      devWarn('Oldest memory lookup failed; walking back year by year instead:', err?.code)
+      return null
+    }),
+  ])
+  if (newest.empty) return []
+  const last = yearOf(newest)
+  const first = oldest && !oldest.empty ? yearOf(oldest) : null
 
   const floor = Math.max(first ?? -Infinity, last - COUNTED_YEARS + 1)
   const counted = []

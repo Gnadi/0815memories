@@ -8,7 +8,7 @@
    against the emulator; this checks the cost, on a small in-memory stand-in. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const h = vi.hoisted(() => ({ dates: [], counts: 0, reads: 0, ascFails: false }))
+const h = vi.hoisted(() => ({ dates: [], counts: 0, reads: 0, ascFails: false, open: 0, mostOpen: 0 }))
 
 vi.mock('../config/firebase', () => ({ db: {} }))
 vi.mock('../services/memories', () => ({ decryptMemory: async (_key, data) => data }))
@@ -39,6 +39,9 @@ vi.mock('firebase/firestore', () => {
         throw Object.assign(new Error('The query requires an index'), { code: 'failed-precondition' })
       }
       h.reads++
+      h.mostOpen = Math.max(h.mostOpen, ++h.open)
+      await Promise.resolve()
+      h.open--
       const rows = run(parts)
       return { empty: rows.length === 0, docs: rows.map((row) => ({ data: () => row })) }
     },
@@ -62,9 +65,17 @@ beforeEach(() => {
   h.counts = 0
   h.reads = 0
   h.ascFails = false
+  h.open = 0
+  h.mostOpen = 0
 })
 
 describe('fetchTimelineYears', () => {
+  it('asks for the newest and the oldest memory at once', async () => {
+    h.dates = [on(2025), on(2020)]
+    await fetchTimelineYears({}, 'fam')
+    expect(h.mostOpen).toBe(2)
+  })
+
   it('counts no more than COUNTED_YEARS years, and walks the rest a read at a time', async () => {
     h.dates = [on(2025), on(2024), on(202)]
 
