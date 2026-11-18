@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../utils/encryption', () => ({
-  encryptBlob: vi.fn(async () => new ArrayBuffer(8)),
+  encryptBlobToBlob: vi.fn(async () => new Blob([new ArrayBuffer(8)])),
   encryptText: vi.fn(async (_key, text) => `encrypted:${text}`),
 }))
+const createThumbnail = vi.hoisted(() => vi.fn())
 vi.mock('../utils/imageThumbnail', () => ({
-  createThumbnail: vi.fn(),
-  // The blur-up preview is encrypted onto the document rather than uploaded, so
-  // it must never add to the upload count asserted below.
-  createTinyPreview: vi.fn(async () => 'data:image/webp;base64,AAA'),
+  // Both from one decode; the thumbnail as each test sets it. The blur-up
+  // preview is encrypted onto the document rather than uploaded, so it must
+  // never add to the upload count asserted below.
+  createDerivatives: vi.fn(async (blob) => ({ thumb: await createThumbnail(blob), tiny: 'data:image/webp;base64,AAA' })),
 }))
 // Signing is covered by uploadSignature.test.js; here every fetch is an upload.
 vi.mock('../utils/uploadSignature', () => ({
@@ -20,8 +21,7 @@ vi.mock('../utils/uploadSignature', () => ({
   signedUploadForm: () => new FormData(),
 }))
 
-import { createThumbnail } from '../utils/imageThumbnail'
-import { encryptBlob } from '../utils/encryption'
+import { encryptBlobToBlob as encryptBlob } from '../utils/encryption'
 import { encryptAndUpload, encryptAndUploadWithThumb, UPLOAD_TOO_LARGE } from '../utils/encryptedUpload'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -97,6 +97,33 @@ describe('encryptAndUpload', () => {
     })
 
     await expect(encryptAndUpload(file(1024), { fake: 'key' })).rejects.toThrow('Invalid signature')
+  })
+})
+
+describe('how many files at once', () => {
+  it('works on three at a time, and starts the next as one finishes', async () => {
+    // Each holds its plaintext, ciphertext and decoded bitmap: a choice of
+    // twenty photos at once could run a phone out of memory.
+    let open = 0
+    let most = 0
+    globalThis.fetch = vi.fn(async () => {
+      most = Math.max(most, ++open)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      open--
+      return { ok: true, json: async () => ({ secure_url: 'https://cdn/x.enc', public_id: 'x' }) }
+    })
+    const results = await Promise.all(Array.from({ length: 8 }, () => encryptAndUpload(file(1024), { fake: 'key' })))
+    expect(results).toHaveLength(8)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(8)
+    expect(most).toBe(3)
+  })
+
+  it('frees the slot of a file that failed', async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 500, headers: { get: () => null }, json: async () => ({}) }))
+    const failed = await Promise.allSettled(Array.from({ length: 4 }, () => encryptAndUpload(file(1024), { fake: 'key' })))
+    expect(failed.every((r) => r.status === 'rejected')).toBe(true)
+    globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ secure_url: 'https://cdn/y.enc', public_id: 'y' }) }))
+    await expect(encryptAndUpload(file(1024), { fake: 'key' })).resolves.toEqual({ url: 'https://cdn/y.enc', publicId: 'y' })
   })
 })
 

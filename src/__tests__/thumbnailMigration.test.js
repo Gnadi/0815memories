@@ -18,12 +18,19 @@ vi.mock('../utils/encryption', () => ({
   decryptBlob: vi.fn(async () => new Blob(['original'])),
   encryptText: vi.fn(async (_k, text) => `enc:${text}`),
 }))
-vi.mock('../utils/imageThumbnail', () => ({ createThumbnail: vi.fn(), createTinyPreview: vi.fn() }))
+const { createThumbnail, createTinyPreview } = vi.hoisted(() => ({ createThumbnail: vi.fn(), createTinyPreview: vi.fn() }))
+// One decode feeds both; each derivative is set by the test as before.
+vi.mock('../utils/imageThumbnail', () => ({
+  createDerivatives: vi.fn(async (blob) => {
+    const [thumb, tiny] = await Promise.allSettled([createThumbnail(blob), createTinyPreview(blob)])
+    if (thumb.status === 'rejected' && tiny.status === 'rejected') throw thumb.reason
+    return { thumb: thumb.value ?? null, tiny: tiny.value ?? null }
+  }),
+}))
 vi.mock('../utils/encryptedUpload', () => ({ encryptAndUpload: vi.fn() }))
 vi.mock('../utils/devLog', () => ({ devError: vi.fn(), devWarn: vi.fn() }))
 
 import { getDocs } from 'firebase/firestore'
-import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import {
   scanThumbnailStatus,

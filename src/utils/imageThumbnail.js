@@ -67,20 +67,16 @@ export async function createThumbnail(file, options = {}) {
     // original, because what it removes is a round trip rather than bytes.
     minSourceBytes = MIN_SOURCE_BYTES,
     allowUpscaleSkip = true,
+    // An already decoded bitmap of `file` (decodeImage), shared by several
+    // derivatives. It belongs to the caller, who closes it.
+    bitmap: shared = null,
   } = options
 
   if (!file || typeof file.type !== 'string' || !file.type.startsWith('image/')) return null
   if (file.size <= minSourceBytes) return null
-  if (typeof createImageBitmap !== 'function') return null
 
-  let bitmap
-  try {
-    // imageOrientation applies the EXIF rotation, so portrait phone photos do
-    // not come back sideways.
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  } catch {
-    return null
-  }
+  const bitmap = shared ?? await decodeImage(file)
+  if (!bitmap) return null
 
   try {
     const edge = typeof maxEdge === 'function' ? maxEdge(bitmap.width, bitmap.height) : maxEdge
@@ -107,6 +103,43 @@ export async function createThumbnail(file, options = {}) {
   } catch {
     return null
   } finally {
+    if (!shared) bitmap.close?.()
+  }
+}
+
+/**
+ * `file` decoded, upright, or null when it is not an image this browser can
+ * decode. A 12 MP photo decodes to about 48 MB, so a caller making several
+ * derivatives decodes it once and passes it to each (createDerivatives).
+ */
+export async function decodeImage(file) {
+  if (!file || typeof file.type !== 'string' || !file.type.startsWith('image/')) return null
+  if (typeof createImageBitmap !== 'function') return null
+  try {
+    // imageOrientation applies the EXIF rotation, so portrait phone photos do
+    // not come back sideways.
+    return await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The thumbnail and the blur-up preview of one photo, from one decode. Making
+ * them one after the other decoded the full photo twice.
+ *
+ * @returns {Promise<{ thumb: Blob|null, tiny: string|null }>}
+ */
+export async function createDerivatives(file) {
+  const bitmap = await decodeImage(file)
+  if (!bitmap) return { thumb: null, tiny: null }
+  try {
+    const [thumb, tiny] = await Promise.all([
+      createThumbnail(file, { bitmap }),
+      createTinyPreview(file, { bitmap }),
+    ])
+    return { thumb, tiny }
+  } finally {
     bitmap.close?.()
   }
 }
@@ -126,8 +159,9 @@ export async function createThumbnail(file, options = {}) {
  *
  * @returns {Promise<string|null>} null when a preview cannot be made
  */
-export async function createTinyPreview(file) {
+export async function createTinyPreview(file, { bitmap } = {}) {
   const blob = await createThumbnail(file, {
+    bitmap,
     maxEdge: TINY_PREVIEW_MAX_EDGE,
     quality: TINY_PREVIEW_QUALITY,
     // Every photo gets one, and a source already under 20px still gets one at

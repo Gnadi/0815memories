@@ -11,7 +11,7 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptBlob, encryptText } from '../utils/encryption'
-import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
+import { createDerivatives } from '../utils/imageThumbnail'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import { needsThumbs, needsTinyPreviews } from '../utils/mediaThumbs'
 import { devError } from '../utils/devLog'
@@ -147,34 +147,31 @@ async function buildDerivatives(images, encryptionKey, { wantThumbs, wantTiny })
       return err instanceof TransientError ? null : { thumb: '', tiny: '' }
     }
 
-    // Separately, so one derivative failing does not cost the other. They
-    // share only the download.
+    // Both from one decode of the original. A picture the browser cannot
+    // decode yields neither, now and next time, so it is recorded as done.
+    let made = { thumb: null, tiny: null }
+    try {
+      made = await createDerivatives(original)
+    } catch (err) {
+      devError('Thumbnail migration failed for an image:', err)
+    }
+
     let thumb = ''
-    if (wantThumbs) {
-      let thumbBlob = null
+    if (wantThumbs && made.thumb) {
       try {
-        thumbBlob = await createThumbnail(original)
+        thumb = (await encryptAndUpload(made.thumb, encryptionKey)).url
       } catch (err) {
-        // The browser cannot decode it; it will not next time either.
-        devError('Thumbnail migration failed for an image:', err)
-      }
-      if (thumbBlob) {
-        try {
-          thumb = (await encryptAndUpload(thumbBlob, encryptionKey)).url
-        } catch (err) {
-          devError('Thumbnail upload failed; the document is left for the next run:', err)
-          return null
-        }
+        devError('Thumbnail upload failed; the document is left for the next run:', err)
+        return null
       }
     }
 
     let tiny = ''
-    if (wantTiny) {
+    if (wantTiny && made.tiny) {
       try {
-        const dataUrl = await createTinyPreview(original)
         // Encrypted as text and returned to the caller: unlike the thumbnail,
         // this one is stored on the document rather than uploaded.
-        if (dataUrl) tiny = await encryptText(encryptionKey, dataUrl)
+        tiny = await encryptText(encryptionKey, made.tiny)
       } catch (err) {
         devError('Preview migration failed for an image:', err)
       }
