@@ -39,6 +39,8 @@ export const REAUTH_REQUIRED_MESSAGE = 'Confirm your password again'
 
 // A page of push registrations to delete at once.
 const TOKEN_PAGE = 400
+// A page of retired invites to delete at once.
+const INVITE_PAGE = 400
 
 const adminUidsOf = (data) => (Array.isArray(data?.adminUids) ? data.adminUids : [])
 
@@ -146,8 +148,14 @@ export async function deleteFcmTokens(db, familyId, uid) {
  *
  * Every pending invite goes with them, not only the ones they made: all
  * admins can list and copy all pending links, so the removed admin may hold
- * any of them. The epoch is raised as well, which retires a link this
- * transaction did not see.
+ * any of them. Raising the family's invite epoch is what retires them:
+ * redeemInvite refuses a link of an older epoch, wherever it is.
+ *
+ * The transaction holds only the family document and the admin's entry.
+ * It used to delete every pending invite as well, and any admin may mint as
+ * many as they like, so an admin who saw their removal coming could make the
+ * transaction too large for Firestore and stay in. The invites, already dead,
+ * are cleared afterwards; if that fails, the removal stands.
  *
  * @param {{ db: any }} deps
  * @param {string|undefined} uid  the caller, from the verified ID token
@@ -172,14 +180,17 @@ export async function removeAdmin({ db }, uid, data) {
     if (target === family.adminUid) throw new MembershipError('failed-precondition', 'The owner cannot be removed')
     if (!admins.includes(target)) throw new MembershipError('failed-precondition', 'Not an admin of this family')
 
-    const pending = await tx.get(invites.where('used', '==', false))
-    for (const invite of pending.docs) tx.delete(invite.ref)
+    const epoch = (family.inviteEpoch ?? 0) + 1
     tx.delete(db.doc(`families/${familyId}/admins/${target}`))
     tx.update(familyRef, {
       adminUids: admins.filter((admin) => admin !== target),
-      inviteEpoch: (family.inviteEpoch ?? 0) + 1,
+      inviteEpoch: epoch,
     })
-    return { ok: true }
+    return { epoch }
+  })
+
+  await deleteStaleInvites(invites, result.epoch).catch((error) => {
+    console.error(`[membership] family=${familyId} could not delete the invites retired by a removal`, error)
   })
 
   // After the transaction, and not part of it: the removal stands even if this
@@ -187,7 +198,28 @@ export async function removeAdmin({ db }, uid, data) {
   await deleteFcmTokens(db, familyId, target).catch((error) => {
     console.error(`[membership] family=${familyId} could not delete the push tokens of ${target}`, error)
   })
-  return result
+  return { ok: true }
+}
+
+/**
+ * Delete the pending invites of an epoch older than `epoch`. They can no longer
+ * be redeemed; this only keeps them out of the settings and the database.
+ * Invites of the current epoch, minted after the removal, stay. A page that
+ * holds no stale invite ends the sweep: whatever is left is dead all the same.
+ *
+ * @param {any} invites  the family's invites collection
+ * @param {number} epoch  the family's invite epoch after the removal
+ * @returns {Promise<number>} how many invites were deleted
+ */
+export async function deleteStaleInvites(invites, epoch) {
+  let deleted = 0
+  for (;;) {
+    const page = await invites.where('used', '==', false).limit(INVITE_PAGE).get()
+    const stale = page.docs.filter((snap) => (snap.data().epoch ?? 0) < epoch)
+    if (stale.length === 0) return deleted
+    await Promise.all(stale.map((snap) => snap.ref.delete()))
+    deleted += stale.length
+  }
 }
 
 /**

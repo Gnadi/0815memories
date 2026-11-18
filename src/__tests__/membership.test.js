@@ -7,7 +7,7 @@
  * removed admin again; the owner always stays.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { deleteFcmTokens, deleteMyAccount, FRESH_LOGIN_SECONDS, redeemInvite, removeAdmin, requireRecentLogin } from '../../functions/membership.js'
+import { deleteFcmTokens, deleteMyAccount, deleteStaleInvites, FRESH_LOGIN_SECONDS, redeemInvite, removeAdmin, requireRecentLogin } from '../../functions/membership.js'
 import { fakeAdminFirestore } from './fakeAdminFirestore.js'
 
 const NOW = Date.parse('2026-11-10T10:00:00Z')
@@ -135,6 +135,49 @@ describe('removeAdmin', () => {
     error.mockRestore()
   })
 
+  // An admin may mint any number of invites. When the removal deleted them in
+  // its own transaction, enough of them made it too large to commit, and the
+  // admin stayed in.
+  it('keeps the invites out of the transaction, so their number cannot block a removal', async () => {
+    const many = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`stash-${i}`, invite({ createdBy: ADMIN })]))
+    const db = seeded({ invites: many })
+    const runTransaction = db.runTransaction.bind(db)
+    let invitesTouched = 0
+    db.runTransaction = (fn) => runTransaction((tx) => fn({
+      ...tx,
+      // The only query a removal ever ran in its transaction was the invites'.
+      get: (ref) => {
+        if (typeof ref.path !== 'string' || ref.path.includes('/invites/')) invitesTouched += 1
+        return tx.get(ref)
+      },
+      delete: (ref) => {
+        if (String(ref.path).includes('/invites/')) invitesTouched += 1
+        return tx.delete(ref)
+      },
+    }))
+    await remove(db, OWNER, ADMIN)
+    expect(invitesTouched).toBe(0)
+    expect(family(db)).toMatchObject({ adminUids: [OWNER], inviteEpoch: 1 })
+    expect(Object.keys(db.collectionData('families/fam-1/invites'))).toEqual([])
+  })
+
+  it('still removes the admin when the retired invites cannot be deleted', async () => {
+    const db = seeded()
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const collection = db.collection
+    db.collection = (name) => {
+      const ref = collection(name)
+      if (!name.endsWith('/invites')) return ref
+      return { ...ref, where: () => ({ limit: () => ({ get: async () => { throw new Error('unavailable') } }) }) }
+    }
+    await remove(db, OWNER, ADMIN)
+    expect(family(db)).toMatchObject({ adminUids: [OWNER], inviteEpoch: 1 })
+    expect(error).toHaveBeenCalled()
+    error.mockRestore()
+    // Left behind, the old link is dead all the same.
+    await expect(redeem(db)).rejects.toMatchObject({ code: 'failed-precondition' })
+  })
+
   it('never removes the owner, whoever asks', async () => {
     const db = seeded()
     await expect(remove(db, ADMIN, OWNER)).rejects.toMatchObject({ code: 'failed-precondition' })
@@ -166,6 +209,19 @@ describe('removeAdmin', () => {
     db.docs.set('families/fam-1/invites/kept', invite({ epoch: 0 }))
     await expect(redeem(db, newbie(), { familyId: 'fam-1', token: 'kept' })).rejects.toMatchObject({ code: 'failed-precondition' })
     expect(family(db).adminUids).toEqual([OWNER])
+  })
+})
+
+describe('deleteStaleInvites', () => {
+  it('clears the invites of older epochs and keeps the ones minted since, and spent ones', async () => {
+    const db = seeded({ invites: {
+      legacy: invite(),
+      old: invite({ epoch: 2 }),
+      fresh: invite({ epoch: 3 }),
+      spent: invite({ used: true, epoch: 1 }),
+    } })
+    expect(await deleteStaleInvites(db.collection('families/fam-1/invites'), 3)).toBe(2)
+    expect(Object.keys(db.collectionData('families/fam-1/invites')).sort()).toEqual(['fresh', 'spent'])
   })
 })
 
