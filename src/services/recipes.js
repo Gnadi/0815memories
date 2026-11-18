@@ -180,6 +180,7 @@ export async function setRecipeViewerVisible(familyId, rootId, visible) {
   forksSnap.docs.forEach((d) => batch.update(d.ref, { viewerVisible: visible }))
   batch.update(doc(db, RECIPES, rootId), { viewerVisible: visible })
   await batch.commit()
+  await sweepForks(familyId, rootId, (d) => (d.data().viewerVisible === visible ? null : { viewerVisible: visible }))
 }
 
 /** A family recipe, with every version grown from it. */
@@ -189,4 +190,25 @@ export async function deleteRecipe(familyId, id) {
   forksSnap.docs.forEach((d) => batch.delete(d.ref))
   batch.delete(doc(db, RECIPES, id))
   await batch.commit()
+  await sweepForks(familyId, id, () => 'delete')
+}
+
+// A version another admin saved between the query and the batch above is not
+// in the batch: it took the root's flag as it stood then, and would keep a
+// recipe shared after it was unshared, or outlive its deleted root. Once the
+// root is written, the rules give every new version the root's new flag and
+// refuse one under a deleted root, so a second look after the commit finds
+// every version the batch missed, and none can appear later.
+async function sweepForks(familyId, rootId, change) {
+  const snap = await getDocs(forksOf(familyId, rootId))
+  const batch = writeBatch(db)
+  let writes = 0
+  for (const d of snap.docs) {
+    const update = change(d)
+    if (update === 'delete') batch.delete(d.ref)
+    else if (update) batch.update(d.ref, update)
+    else continue
+    writes++
+  }
+  if (writes > 0) await batch.commit()
 }

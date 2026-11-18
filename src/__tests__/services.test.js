@@ -18,7 +18,7 @@ import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
 import { generateEncryptionKey, clearDecryptedTextCache, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
-import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
+import { addRecipe, deleteRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
@@ -316,6 +316,41 @@ describe('recipes shared with the viewers', () => {
 
     await setRecipeViewerVisible(FAMILY, root, false)
     expect(await flags(versions)).toEqual([false, false, false])
+  })
+
+  // Another admin saves a version while the first batch is in flight: it is
+  // not in the batch, and carries the root's flag from before the batch.
+  const withVersionSavedMeanwhile = (root, flag) => {
+    const writeBatch = fs.writeBatch.bind(fs)
+    let first = true
+    fs.writeBatch = (...a) => {
+      const batch = writeBatch(...a)
+      if (!first) return batch
+      first = false
+      const commit = batch.commit.bind(batch)
+      batch.commit = async () => {
+        await fs.setDoc(fs.doc(null, 'recipes', 'meanwhile'), {
+          familyId: FAMILY, title: 'x', parentId: root, rootId: root, viewerVisible: flag,
+        })
+        return commit()
+      }
+      return batch
+    }
+  }
+
+  it('unshares a version saved while the sharing was being taken back', async () => {
+    const { root } = await lineage()
+    await setRecipeViewerVisible(FAMILY, root, true)
+    withVersionSavedMeanwhile(root, true)
+    await setRecipeViewerVisible(FAMILY, root, false)
+    expect(await flags(['meanwhile'])).toEqual([false])
+  })
+
+  it('deletes a version saved while its recipe was being deleted', async () => {
+    const { root } = await lineage()
+    withVersionSavedMeanwhile(root, false)
+    await deleteRecipe(FAMILY, root)
+    expect((await fs.getDoc(fs.doc(null, 'recipes', 'meanwhile'))).exists()).toBe(false)
   })
 
   it('lists a viewer the shared recipes only, with all of their forks counted', async () => {
