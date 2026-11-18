@@ -415,6 +415,26 @@ service cloud.firestore {
                     && isFamilyAdmin(resource.data.familyId);
     }
 
+    // A moment's text, marked as encrypted (`textEncrypted`) and ciphertext
+    // (src/services/moments.js).
+    function momentTextOk() {
+      let d = request.resource.data;
+      return d.get('textEncrypted', false) == true
+        && encryptedOk(d, 'caption')
+        && encryptedOk(d, 'location')
+        && encryptedOk(d, 'category')
+        && encryptedOk(d, 'label');
+    }
+
+    // A moment from before its text was encrypted, which stays that way until
+    // an admin's browser encrypts it (src/services/momentEncryption.js). Until
+    // then an app loaded before the change may still edit it. Once a moment is
+    // marked, nothing takes the mark away again.
+    function momentStillInClear() {
+      return resource.data.get('textEncrypted', false) != true
+        && request.resource.data.get('textEncrypted', false) != true;
+    }
+
     // Moments — same rules as memories
     match /moments/{momentId} {
       // Same as memories: listed by familyId, so the filter the client already
@@ -423,11 +443,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
-                    && isFamilyAdmin(request.resource.data.familyId);
+                    && isFamilyAdmin(request.resource.data.familyId)
+                    && momentTextOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
-                    && familyUnchanged();
+                    && familyUnchanged()
+                    && (momentTextOk() || momentStillInClear());
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);

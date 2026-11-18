@@ -1,8 +1,13 @@
 /**
  * Moments: the quick entries next to the memories.
  *
- * They keep their text in clear: caption, category, location and label are not
- * encrypted, and services/nasExport.js says so in a line of its own.
+ * Their text — caption, location, category and label — is encrypted like a
+ * memory's. It was not until November 2026, so a moment written before then
+ * may still hold it in clear. `textEncrypted: true` tells the two apart: only a
+ * moment that carries it is decrypted, and every write sets it. The ones
+ * without it are encrypted in an admin's browser the next time one opens the
+ * app (services/momentEncryption.js), and firestore.rules refuses a new
+ * moment, or a change to an encrypted one, that is not ciphertext.
  */
 import {
   addDoc,
@@ -17,26 +22,55 @@ import {
   where,
 } from '../config/firestore'
 import { auth, db } from '../config/firebase'
-import { decryptStringArray } from '../utils/encryption'
+import { decryptFields, decryptStringArray, encryptFields } from '../utils/encryption'
 import { subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
 
 const MOMENTS = 'moments'
 
+/** The text fields of a moment, all encrypted. */
+export const MOMENT_TEXT_FIELDS = ['caption', 'location', 'category', 'label']
+
 /**
- * `thumbsTiny` is the exception, and it went unnoticed because it is not
- * written here. The shared upload path (utils/encryptedUpload.js) and the
- * shared thumbnail backfill (services/thumbnailMigration.js) both encrypt it for
- * moments exactly as they do for memories. Nothing decrypted it again, so every
- * moment card handed ~1 KB of ciphertext to an `<img src>`: no blur-up, and a
- * relative-URL request per card.
+ * Encrypt a moment's text and mark it as encrypted.
  *
- * The same field, the same call, the same reasoning as decryptMemory — ~700
- * bytes each, and it replaces a spinner with the photo's own colours.
+ * The mark is set only on a write that carries all four fields, as the moment
+ * form always does: one that carried only some would leave the others in clear
+ * on a moment from before, which the reader would then try to decrypt. A write
+ * without any of them changes neither the text nor the mark. Exported for the
+ * migration, which encrypts the text a moment already has.
+ */
+export async function encryptMomentText(key, moment) {
+  const present = MOMENT_TEXT_FIELDS.filter((field) => field in moment)
+  if (present.length === 0) return moment
+  if (present.length < MOMENT_TEXT_FIELDS.length) {
+    throw new Error(`A moment's text is written as a whole: ${MOMENT_TEXT_FIELDS.join(', ')}`)
+  }
+  const encrypted = await encryptFields(key, moment, MOMENT_TEXT_FIELDS)
+  return { ...encrypted, textEncrypted: true }
+}
+
+/**
+ * The text of a moment as stored: decrypted when it is marked as encrypted,
+ * as it is otherwise. The export reads this; the feed reads decryptMoment.
+ */
+export async function decryptMomentText(key, data) {
+  if (!key || data.textEncrypted !== true) return data
+  return decryptFields(key, data, MOMENT_TEXT_FIELDS)
+}
+
+/**
+ * A moment for the feed: its text, and `thumbsTiny`, the blur-up previews.
+ * Those are written by the shared upload path (utils/encryptedUpload.js) and
+ * the shared thumbnail backfill (services/thumbnailMigration.js), both of
+ * which encrypt them for moments exactly as for memories. ~700 bytes each, and
+ * they replace a spinner with the photo's own colours.
  */
 export async function decryptMoment(key, data) {
-  if (!key || !Array.isArray(data.thumbsTiny)) return data
-  return { ...data, thumbsTiny: await decryptStringArray(key, data.thumbsTiny) }
+  if (!key) return data
+  const result = await decryptMomentText(key, data)
+  if (!Array.isArray(result.thumbsTiny)) return result
+  return { ...result, thumbsTiny: await decryptStringArray(key, result.thumbsTiny) }
 }
 
 /** The family's latest moments, newest first. */
@@ -49,9 +83,10 @@ export function subscribeMoments(familyId, key, { pageSize }, onData, onError) {
   )
 }
 
-export async function addMoment(familyId, moment) {
+export async function addMoment(familyId, key, moment) {
+  const encrypted = await encryptMomentText(key, moment)
   await addDoc(collection(db, MOMENTS), {
-    ...moment,
+    ...encrypted,
     ...mediaRefsForCreate(moment),
     familyId,
     createdByUid: auth?.currentUser?.uid || null,
@@ -59,8 +94,9 @@ export async function addMoment(familyId, moment) {
   })
 }
 
-export async function updateMoment(id, updates) {
-  await updateDoc(doc(db, MOMENTS, id), { ...updates, ...mediaRefsForUpdate(updates) })
+export async function updateMoment(key, id, updates) {
+  const encrypted = await encryptMomentText(key, updates)
+  await updateDoc(doc(db, MOMENTS, id), { ...encrypted, ...mediaRefsForUpdate(updates) })
 }
 
 export async function deleteMoment(id) {

@@ -19,7 +19,7 @@ import PostMomentModal from './PostMomentModal'
 export default function PostEntryModal({ type, entry, onClose, onSave, onConverted, ...rest }) {
   const { familyId, encryptionKey } = useAuth()
   const { addMemory } = useMemoryWriter(familyId, encryptionKey)
-  const { addMoment } = useMomentWriter(familyId)
+  const { addMoment } = useMomentWriter(familyId, encryptionKey)
   const { convertMemoryToMoment, convertMomentToMemory } = useEntryConverter(familyId, encryptionKey)
 
   // The type on screen, and the form handed over by the last switch.

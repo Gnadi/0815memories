@@ -46,6 +46,8 @@ const InviteRedeemPage = lazy(() => import('./pages/InviteRedeemPage'))
 const AppNotifications = lazy(() => import('./components/AppNotifications'))
 // The bar is for admins only, and brings the scrapbook layout presets with it.
 const AdminMobileBottomNav = lazy(() => import('./components/layout/AdminMobileBottomNav'))
+// Encrypts moments from before their text was encrypted; admins only as well.
+const MomentTextEncryption = lazy(() => import('./components/admin/MomentTextEncryption'))
 
 // Lazy loaded — protected pages, only needed after authentication
 const LegalPage = lazyPage(() => import('./pages/LegalPage'))
@@ -255,14 +257,21 @@ function HtmlLangSync() {
   return null
 }
 
-// Rendered for admins only: nobody else sees the bar, so nobody else downloads it.
+// Rendered for admins only: nobody else sees the bar or needs the moment
+// encryption, so nobody else downloads them.
 function AdminNavSlot() {
   const { isAdmin } = useAuth()
   if (!isAdmin) return null
   return (
-    <Suspense fallback={null}>
-      <AdminMobileBottomNav />
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        <AdminMobileBottomNav />
+      </Suspense>
+      {/* Its own boundary, so the bar does not wait for it. */}
+      <Suspense fallback={null}>
+        <MomentTextEncryption />
+      </Suspense>
+    </>
   )
 }
 
