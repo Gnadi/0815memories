@@ -369,3 +369,20 @@ describe('files the clean-up has reserved', () => {
     }
   })
 })
+
+describe('several files of one document', () => {
+  it('are settled in one transaction', async () => {
+    // A transaction per file read the whole document again for each, up to a
+    // megabyte apiece, and fifty of them queued on each other's locks.
+    const files = ['a', 'b', 'c', 'd']
+    const db = ledger(files.map((c) => [c, {}]))
+    const transactions = vi.spyOn(db, 'runTransaction')
+
+    const stats = await run(db, { collection: 'memories', docId: 'm1', before: null, after: memory({ images: files.map((c) => pid(c)) }) })
+
+    expect(stats).toEqual({ attached: 4, detached: 0, ignored: 0 })
+    expect(transactions).toHaveBeenCalledTimes(1)
+    for (const c of files) expect(entry(db, c)).toMatchObject({ state: 'attached', refs: ['memories/m1'] })
+  })
+})
+
