@@ -23,6 +23,9 @@ import { useFamilyKey } from './useFamilyKey'
 import { AuthContext } from './AuthContext'
 import { signupAccount } from './signupAccount'
 
+// How long a logout waits for this device's push registration to be deleted.
+const PUSH_REMOVAL_WAIT_MS = 3000
+
 // Read once per page load, as everything else of the demo reads it: entering
 // and leaving it are hard navigations (demo/demoMode.js).
 const DEMO = isDemoMode()
@@ -499,8 +502,15 @@ export function AuthProvider({ children }) {
     }
 
     // Before signing out, while the rules still accept the write: a shared
-    // device should stop receiving this family's notifications.
-    await removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err))
+    // device should stop receiving this family's notifications. But not for
+    // long. Offline, Firestore holds the delete until the server confirms it,
+    // and a logout that waited for that left the session, the key and the
+    // decrypted caches in place on a device somebody was about to hand on.
+    // Clearing those matters more than the notifications.
+    await Promise.race([
+      removeFCMToken().catch((err) => devWarn('FCM token removal failed:', err)),
+      new Promise((resolve) => setTimeout(resolve, PUSH_REMOVAL_WAIT_MS)),
+    ])
 
     if (user && auth) {
       // The auth event this sign-out causes is this tab's own doing and is
