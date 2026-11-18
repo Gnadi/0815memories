@@ -80,9 +80,21 @@ export async function scanThumbnailStatus(familyId, collections = MIGRATABLE_COL
   return { total, pending }
 }
 
+// A download that may work next time: the network, or a server error. A 4xx
+// means the file is not there to read, and asking again would not change that.
+class TransientError extends Error {}
+
 async function decryptOriginal(imageUrl, encryptionKey) {
-  const response = await fetch(imageUrl)
-  if (!response.ok) throw new Error(`Fetch failed (${response.status})`)
+  let response
+  try {
+    response = await fetch(imageUrl)
+  } catch (err) {
+    throw new TransientError(err?.message || 'Network error')
+  }
+  if (!response.ok) {
+    const message = `Fetch failed (${response.status})`
+    throw response.status >= 500 ? new TransientError(message) : new Error(message)
+  }
   const buffer = await response.arrayBuffer()
   // Deliberately not going through the shared media cache: pushing hundreds of
   // full-resolution originals through it would evict everything the UI is
@@ -90,54 +102,87 @@ async function decryptOriginal(imageUrl, encryptionKey) {
   return decryptBlob(encryptionKey, buffer, 'image/jpeg')
 }
 
+// Images of one document worked on at once. Each holds a full-resolution
+// original and its decoded bitmap, tens of megabytes on a phone, so a
+// twenty-photo memory all at once could run a phone out of memory.
+const IMAGES_AT_ONCE = 3
+
+async function mapAtMost(items, limitAtOnce, fn) {
+  const results = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await fn(items[index], index)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limitAtOnce, items.length) }, worker))
+  return results
+}
+
 /**
  * Build the `thumbs` array for one document. Positional: entry i belongs to
  * images[i], '' when that image has no thumbnail.
  *
- * An image that yields nothing — already small, not a still image, download
- * failed — records ''. Combined with the all-empty case below that means a
- * document is only ever visited once, instead of being re-downloaded on every
- * future run.
+ * An image that yields nothing for good — already small, not a still image, no
+ * longer on Cloudinary — records ''. Combined with the all-empty case below
+ * that means a document is only ever visited once, instead of being
+ * re-downloaded on every future run.
+ *
+ * A failure that may pass — no network, a server error, an upload that did not
+ * go through — returns null instead, and the document is left for the next
+ * run. Recording '' for those marked the photo as done for good, and it loaded
+ * its full original everywhere from then on. Uploads already made for the
+ * document's other photos are left unattached, and the clean-up of abandoned
+ * uploads removes them.
  */
 async function buildDerivatives(images, encryptionKey, { wantThumbs, wantTiny }) {
-  const results = await Promise.all(
-    images.map(async (imageUrl) => {
-      let original
+  const results = await mapAtMost(images, IMAGES_AT_ONCE, async (imageUrl) => {
+    let original
+    try {
+      // One download and one decrypt, feeding both derivatives.
+      original = await decryptOriginal(imageUrl, encryptionKey)
+    } catch (err) {
+      devError('Thumbnail migration could not read an image:', err)
+      return err instanceof TransientError ? null : { thumb: '', tiny: '' }
+    }
+
+    // Separately, so one derivative failing does not cost the other. They
+    // share only the download.
+    let thumb = ''
+    if (wantThumbs) {
+      let thumbBlob = null
       try {
-        // One download and one decrypt, feeding both derivatives.
-        original = await decryptOriginal(imageUrl, encryptionKey)
+        thumbBlob = await createThumbnail(original)
       } catch (err) {
-        devError('Thumbnail migration could not read an image:', err)
-        return { thumb: '', tiny: '' }
+        // The browser cannot decode it; it will not next time either.
+        devError('Thumbnail migration failed for an image:', err)
       }
-
-      // Separately, so one derivative failing does not cost the other. They
-      // share only the download.
-      let thumb = ''
-      if (wantThumbs) {
+      if (thumbBlob) {
         try {
-          const thumbBlob = await createThumbnail(original)
-          if (thumbBlob) thumb = (await encryptAndUpload(thumbBlob, encryptionKey)).url
+          thumb = (await encryptAndUpload(thumbBlob, encryptionKey)).url
         } catch (err) {
-          devError('Thumbnail migration failed for an image:', err)
+          devError('Thumbnail upload failed; the document is left for the next run:', err)
+          return null
         }
       }
+    }
 
-      let tiny = ''
-      if (wantTiny) {
-        try {
-          const dataUrl = await createTinyPreview(original)
-          // Encrypted as text and returned to the caller: unlike the thumbnail,
-          // this one is stored on the document rather than uploaded.
-          if (dataUrl) tiny = await encryptText(encryptionKey, dataUrl)
-        } catch (err) {
-          devError('Preview migration failed for an image:', err)
-        }
+    let tiny = ''
+    if (wantTiny) {
+      try {
+        const dataUrl = await createTinyPreview(original)
+        // Encrypted as text and returned to the caller: unlike the thumbnail,
+        // this one is stored on the document rather than uploaded.
+        if (dataUrl) tiny = await encryptText(encryptionKey, dataUrl)
+      } catch (err) {
+        devError('Preview migration failed for an image:', err)
       }
+    }
 
-      return { thumb, tiny }
-    })
-  )
+    return { thumb, tiny }
+  })
+  if (results.some((result) => result === null)) return null
   // null, not a row of empty strings, for a derivative that was never attempted
   // — commitThumbs writes only what is actually here. An attempted-but-empty
   // entry still writes '', which is what marks a document as considered so the
@@ -205,6 +250,9 @@ export async function migrateDocument(item, encryptionKey) {
     wantThumbs: item.wantThumbs ?? true,
     wantTiny: item.wantTiny ?? true,
   })
+  // Something may work next time; nothing is written, so the next scan picks
+  // the document up again.
+  if (!derivatives) return false
   return commitThumbs(item.collectionName, item.id, item.images, derivatives)
 }
 
@@ -212,9 +260,9 @@ export async function migrateDocument(item, encryptionKey) {
  * Walk a list of pending documents, one at a time.
  *
  * Serial by design: progress stays truthful, cancelling is immediate, and a
- * phone doing this over mobile data is not asked to hold several
- * full-resolution photos in memory at once. Images *within* a document run in
- * parallel, which is where the useful concurrency is.
+ * phone doing this over mobile data is not asked to hold many full-resolution
+ * photos in memory at once. Images *within* a document run a few at a time,
+ * which is where the useful concurrency is.
  *
  * @param {Array} items          from scanThumbnailStatus().pending
  * @param {CryptoKey} encryptionKey
