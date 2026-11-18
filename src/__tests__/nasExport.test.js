@@ -7,7 +7,7 @@
    These cover what now comes out, and — just as important — what deliberately
    does not: a capsule or a letter still sealed must not leave through the export
    door that firestore.rules just closed on the console. */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const getDocs = vi.fn()
 const getDoc = vi.fn()
@@ -488,5 +488,44 @@ describe('a stored field named id', () => {
     expect(mediaPaths).toHaveLength(1)
     expect(mediaPaths[0]).toMatch(/\/media\/memories\/real1\/image-0\.enc$/)
     for (const path of Object.keys(zipFiles)) expect(path).not.toContain('..')
+  })
+})
+
+// The app recommends this archive as the last copy before a family is deleted.
+// A file stored encrypted that did not decrypt used to go in as ciphertext and
+// count as backed up, with nothing in the manifest to say it was unusable.
+describe('a media file that does not decrypt', () => {
+  const ENCRYPTED = 'https://res.cloudinary.com/demo/raw/upload/v1/kaydo/f/fam1/encrypted/broken'
+  const LEGACY = 'https://res.cloudinary.com/demo/image/upload/v1/kaydo/old-photo.jpg'
+
+  beforeEach(async () => {
+    const { decryptBlob } = await import('../utils/encryption')
+    decryptBlob.mockImplementation(async () => { throw new Error('OperationError') })
+    respond({
+      collections: {
+        memories: [{ id: 'm1', familyId: FAMILY, title: 'Lake', images: [ENCRYPTED, LEGACY] }],
+      },
+    })
+    globalThis.fetch = vi.fn(async () => ({ ok: true, blob: async () => new Blob(['bytes']) }))
+  })
+
+  afterEach(async () => {
+    const { decryptBlob } = await import('../utils/encryption')
+    decryptBlob.mockImplementation(async () => new Blob(['plain']))
+  })
+
+  it('is listed as failed when it was stored encrypted, not counted as exported', async () => {
+    await run()
+    expect(manifest().counts.failedDownloads).toBe(1)
+    expect(manifest().failedDownloads).toEqual([
+      expect.objectContaining({ url: ENCRYPTED, error: 'Could not be decrypted' }),
+    ])
+    expect(Object.keys(zipFiles).filter((k) => k.includes('media/memories/m1/image-0'))).toEqual([])
+  })
+
+  it('is kept as it is when it was stored before encryption', async () => {
+    await run()
+    expect(manifest().counts.mediaFiles).toBe(1)
+    expect(Object.keys(zipFiles).some((k) => k.includes('media/memories/m1/image-1'))).toBe(true)
   })
 })

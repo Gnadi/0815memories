@@ -9,6 +9,7 @@ import {
 } from '../config/firestore'
 import { db } from '../config/firebase'
 import { decryptBlob } from '../utils/encryption'
+import { isCiphertextUrl } from '../components/media/useDecryptedMedia'
 import { decryptMemoryDoc } from './memories'
 import { decryptMomentText } from './moments'
 import { decryptKid } from './kids'
@@ -185,7 +186,13 @@ async function downloadMedia(mediaEntries, onProgress, signal, encKey, concurren
           const buffer = await blob.arrayBuffer()
           blob = await decryptBlob(encKey, buffer, blob.type || 'application/octet-stream')
         } catch {
-          // If decryption fails, file may not be encrypted - use as-is
+          // A file from before encryption, or the login art, is stored as it
+          // is and goes into the archive as it is. A file stored as ciphertext
+          // that does not decrypt (damaged, or under another key) is a failed
+          // download: written as it came, it was counted as backed up while
+          // nobody could ever open it, in the archive the app recommends as the
+          // last copy before a family is deleted.
+          if (isCiphertextUrl(entry.url)) throw new Error('Could not be decrypted')
         }
       }
       results.push({ zipPath: entry.zipPath, blob })
