@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../utils/encryption', () => ({
-  encryptBlob: vi.fn(async () => new ArrayBuffer(8)),
+  encryptBlobToBlob: vi.fn(async () => new Blob([new ArrayBuffer(8)])),
   encryptText: vi.fn(async (_key, text) => `encrypted:${text}`),
 }))
+const createThumbnail = vi.hoisted(() => vi.fn())
 vi.mock('../utils/imageThumbnail', () => ({
-  createThumbnail: vi.fn(),
-  // The blur-up preview is encrypted onto the document rather than uploaded, so
-  // it must never add to the upload count asserted below.
-  createTinyPreview: vi.fn(async () => 'data:image/webp;base64,AAA'),
+  // Both from one decode; the thumbnail as each test sets it. The blur-up
+  // preview is encrypted onto the document rather than uploaded, so it must
+  // never add to the upload count asserted below.
+  createDerivatives: vi.fn(async (blob) => ({ thumb: await createThumbnail(blob), tiny: 'data:image/webp;base64,AAA' })),
 }))
 // Signing is covered by uploadSignature.test.js; here every fetch is an upload.
 vi.mock('../utils/uploadSignature', () => ({
@@ -20,8 +21,7 @@ vi.mock('../utils/uploadSignature', () => ({
   signedUploadForm: () => new FormData(),
 }))
 
-import { createThumbnail } from '../utils/imageThumbnail'
-import { encryptBlob } from '../utils/encryption'
+import { encryptBlobToBlob as encryptBlob } from '../utils/encryption'
 import { encryptAndUpload, encryptAndUploadWithThumb, UPLOAD_TOO_LARGE } from '../utils/encryptedUpload'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -100,6 +100,33 @@ describe('encryptAndUpload', () => {
   })
 })
 
+describe('how many files at once', () => {
+  it('works on three at a time, and starts the next as one finishes', async () => {
+    // Each holds its plaintext, ciphertext and decoded bitmap: a choice of
+    // twenty photos at once could run a phone out of memory.
+    let open = 0
+    let most = 0
+    globalThis.fetch = vi.fn(async () => {
+      most = Math.max(most, ++open)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      open--
+      return { ok: true, json: async () => ({ secure_url: 'https://cdn/x.enc', public_id: 'x' }) }
+    })
+    const results = await Promise.all(Array.from({ length: 8 }, () => encryptAndUpload(file(1024), { fake: 'key' })))
+    expect(results).toHaveLength(8)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(8)
+    expect(most).toBe(3)
+  })
+
+  it('frees the slot of a file that failed', async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 500, headers: { get: () => null }, json: async () => ({}) }))
+    const failed = await Promise.allSettled(Array.from({ length: 4 }, () => encryptAndUpload(file(1024), { fake: 'key' })))
+    expect(failed.every((r) => r.status === 'rejected')).toBe(true)
+    globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ secure_url: 'https://cdn/y.enc', public_id: 'y' }) }))
+    await expect(encryptAndUpload(file(1024), { fake: 'key' })).resolves.toEqual({ url: 'https://cdn/y.enc', publicId: 'y' })
+  })
+})
+
 describe('encryptAndUploadWithThumb', () => {
   it('uploads the original and a separately encrypted thumbnail', async () => {
     createThumbnail.mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }))
@@ -136,21 +163,39 @@ describe('encryptAndUploadWithThumb', () => {
     expect(result.thumbUrl).toBe('')
   })
 
-  it('uploads the original before attempting the thumbnail', async () => {
-    // Ordering matters: the original must be safely stored even if the tab is
-    // closed while the derivative is still encoding.
-    const order = []
-    createThumbnail.mockImplementation(async () => {
-      order.push('thumbnail')
-      return new Blob(['thumb'], { type: 'image/webp' })
-    })
+  it('makes and uploads the thumbnail without waiting for the original', async () => {
+    // Nothing is kept until the form is saved, and the form waits for both, so
+    // doing them one after the other only added the thumbnail's time.
+    let releaseOriginal
+    const originalHeld = new Promise((resolve) => { releaseOriginal = resolve })
+    createThumbnail.mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }))
     const originalFetch = globalThis.fetch
+    let uploads = 0
     globalThis.fetch = vi.fn(async (url, init) => {
-      if (init?.method === 'POST') order.push('upload')
+      if (++uploads === 1) await originalHeld
       return originalFetch(url, init)
     })
 
-    await encryptAndUploadWithThumb(file(), { fake: 'key' })
-    expect(order).toEqual(['upload', 'thumbnail', 'upload'])
+    const done = encryptAndUploadWithThumb(file(), { fake: 'key' })
+    await vi.waitFor(() => expect(uploads).toBe(2))
+    releaseOriginal()
+
+    const result = await done
+    expect(result.url).toBeTruthy()
+    expect(result.thumbUrl).toBeTruthy()
+  })
+
+  it('fails when the original fails, whatever became of the thumbnail', async () => {
+    createThumbnail.mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }))
+    globalThis.fetch = vi.fn(async () => {
+      const n = ++uploadCount
+      // The original asks first, so it is the first upload.
+      if (n === 1) {
+        return { ok: false, status: 500, headers: { get: () => null }, json: async () => ({}) }
+      }
+      return { ok: true, json: async () => ({ secure_url: `https://cdn/asset-${n}.enc`, public_id: `pub-${n}` }) }
+    })
+
+    await expect(encryptAndUploadWithThumb(file(), { fake: 'key' })).rejects.toThrow('Upload failed (500)')
   })
 })

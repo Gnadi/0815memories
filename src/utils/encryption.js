@@ -197,6 +197,18 @@ export async function encryptBlob(key, blob) {
   return encryptBuffer(key, arrayBuffer)
 }
 
+/**
+ * encryptBlob, as a Blob ready to upload. The IV and the ciphertext become its
+ * two parts rather than being copied into one buffer first: for a 10 MB video
+ * that copy was another 10 MB held at the peak of an upload.
+ */
+export async function encryptBlobToBlob(key, blob, type = 'application/octet-stream') {
+  if (!key) throw missingKeyError()
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+  const ciphertext = await crypto.subtle.encrypt({ name: ALGO, iv }, key, await blob.arrayBuffer())
+  return new Blob([iv, ciphertext], { type })
+}
+
 export async function decryptBlob(key, encryptedArrayBuffer, mimeType = 'application/octet-stream') {
   const decrypted = await decryptBuffer(key, encryptedArrayBuffer)
   return new Blob([decrypted], { type: mimeType })

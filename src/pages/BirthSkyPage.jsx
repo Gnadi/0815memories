@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import useSettledText from '../hooks/useSettledText'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, FileDown, Send, Loader2, Check, Lock } from 'lucide-react'
@@ -104,7 +105,9 @@ export default function BirthSkyPage() {
     return computeSky({ date, lat: place.lat, lon: place.lon, ...catalog })
   }, [catalog, dateStr, place, birthTime])
 
-  const posterOptions = useMemo(() => {
+  // The poster's options for a given title and dedication. The exports take
+  // what is in the form; the preview takes the text once typing has paused.
+  const optionsFor = (title, dedication) => {
     if (!form || !dateStr) return null
     return {
       sky,
@@ -117,21 +120,36 @@ export default function BirthSkyPage() {
       caption: buildCaption({
         t,
         lang,
-        title: form.title,
+        title,
         dateStr,
         timeStr: form.birthTime,
         place: form.birthPlace,
         sky,
-        dedication: form.dedication,
+        dedication,
       }),
     }
-  }, [sky, form, dateStr, lang, t])
+  }
+
+  // Drawing the preview takes 100–200 ms on a phone, and it ran for every key
+  // typed into the title or dedication. Their text reaches the preview once
+  // typing pauses; style, place and time still redraw at once.
+  const previewTitle = useSettledText(form?.title)
+  const previewDedication = useSettledText(form?.dedication)
+  const previewKey = form && dateStr
+    ? JSON.stringify([form.skyStyle, form.birthTime, form.birthPlace, previewTitle, previewDedication, dateStr, lang])
+    : null
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d')
-    if (!ctx || !posterOptions || !fontsReady) return
-    drawSkyPoster(ctx, { ...posterOptions, width: PREVIEW_WIDTH })
-  }, [posterOptions, fontsReady])
+    const options = optionsFor(previewTitle, previewDedication)
+    if (!ctx || !options || !fontsReady) return
+    drawSkyPoster(ctx, { ...options, width: PREVIEW_WIDTH })
+    // optionsFor reads the form; previewKey stands for every part of it the
+    // preview shows, so the canvas is drawn when one changes and not otherwise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewKey, sky, t, fontsReady])
+
+  const posterOptions = () => optionsFor(form?.title, form?.dedication)
 
   const dirty =
     kid &&
@@ -180,7 +198,7 @@ export default function BirthSkyPage() {
 
   const handlePng = () =>
     run('png', async () => {
-      const canvas = renderSkyPosterCanvas(A4_WIDTH, posterOptions)
+      const canvas = renderSkyPosterCanvas(A4_WIDTH, posterOptions())
       downloadBlob(await canvasToBlob(canvas, 'image/png'), `${fileBase}.png`)
     })
 
@@ -188,7 +206,7 @@ export default function BirthSkyPage() {
     run(format, async () => {
       const { jsPDF } = await import('jspdf')
       const width = format === 'a3' ? A3_WIDTH : A4_WIDTH
-      const canvas = renderSkyPosterCanvas(width, posterOptions)
+      const canvas = renderSkyPosterCanvas(width, posterOptions())
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format })
       const pageW = pdf.internal.pageSize.getWidth()
       const pageH = pdf.internal.pageSize.getHeight()
@@ -198,7 +216,7 @@ export default function BirthSkyPage() {
 
   const handlePost = () =>
     run('post', async () => {
-      const canvas = renderSkyPosterCanvas(FEED_WIDTH, posterOptions)
+      const canvas = renderSkyPosterCanvas(FEED_WIDTH, posterOptions())
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92)
       const file = new File([blob], 'sky-of-birth.jpg', { type: 'image/jpeg' })
       const { url, thumbUrl } = await encryptAndUploadWithThumb(file, encryptionKey)

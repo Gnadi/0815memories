@@ -120,6 +120,38 @@ function promoteToForeground(encryptedUrl) {
   foreground.unshift(job)
 }
 
+/**
+ * Move a queued on-screen job back to the front of the prefetch lane once
+ * nothing on screen waits for it. A photo stays mounted when it is scrolled
+ * past, so on a grid of two hundred moments every tile the thumb flew over
+ * used to queue ahead of the ones it stopped at. It still loads, after them.
+ */
+function demoteToPrefetch(encryptedUrl) {
+  const index = foreground.findIndex((job) => job.key === encryptedUrl)
+  if (index === -1) return
+  const [job] = foreground.splice(index, 1)
+  prefetch.unshift(job)
+}
+
+// How many mounted components have each still-loading photo near the screen.
+// Shared, because one photo can be on a page twice (the feed and AlbumGlimpse).
+const wanted = new Map()
+
+function want(encryptedUrl) {
+  wanted.set(encryptedUrl, (wanted.get(encryptedUrl) ?? 0) + 1)
+  promoteToForeground(encryptedUrl)
+}
+
+function unwant(encryptedUrl) {
+  const left = (wanted.get(encryptedUrl) ?? 1) - 1
+  if (left > 0) {
+    wanted.set(encryptedUrl, left)
+    return
+  }
+  wanted.delete(encryptedUrl)
+  demoteToPrefetch(encryptedUrl)
+}
+
 // ── MIME sniffing ───────────────────────────────────────────────────
 // Callers pass a category hint like 'image/*', which is not a real MIME type
 // and leaves the browser to content-sniff the blob. Reading the magic bytes of
@@ -377,6 +409,9 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
   // Gate starts open when nothing has to be fetched, so an already-decrypted or
   // direct URL never waits on an IntersectionObserver callback.
   const [visible, setVisible] = useState(() => !lazy || !!resolveImmediate(encryptedUrl, encryptionKey, keyLoading))
+  // Whether the element is near the screen now. `visible` only ever opens; this
+  // follows the scrolling, so a photo scrolled past gives up its turn.
+  const [onScreen, setOnScreen] = useState(!lazy)
 
   // Re-resolve synchronously when the inputs change (slider navigation, key
   // arrival) instead of waiting for an effect — same reasoning as on mount.
@@ -440,15 +475,16 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
     if (!node || !lazy) return
     if (typeof IntersectionObserver === 'undefined') {
       setVisible(true)
+      setOnScreen(true)
       return
     }
+    // Kept observing after the first sighting: leaving the screen while still
+    // loading moves the photo behind the ones on screen (`onScreen` below).
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisible(true)
-          observer.disconnect()
-          observerRef.current = null
-        }
+        const near = entries.some((entry) => entry.isIntersecting)
+        setOnScreen(near)
+        if (near) setVisible(true)
       },
       { rootMargin: '400px' }
     )
@@ -496,6 +532,15 @@ export default function useDecryptedMedia(encryptedUrl, mimeType = 'application/
       cancelled = true
     }
   }, [encryptedUrl, encryptionKey, mimeType, visible])
+
+  // While it loads and is near the screen, this photo is wanted; scrolled
+  // away or unmounted before it arrived, it waits behind the ones that are.
+  const waiting = !!encryptedUrl && !isDirectUrl(encryptedUrl) && visible && onScreen && !decryptedUrl && !error
+  useEffect(() => {
+    if (!waiting) return
+    want(encryptedUrl)
+    return () => unwant(encryptedUrl)
+  }, [waiting, encryptedUrl])
 
   // `error` ends the wait. Without it a failed ciphertext decrypt — which no
   // longer falls back to the raw URL — would shimmer forever.

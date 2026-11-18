@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin, Loader2 } from 'lucide-react'
 import { loadPlaces, searchPlaces, makeBirthPlace, countryName } from '../../utils/sky/skyData'
@@ -34,7 +34,10 @@ export default function PlacePicker({ value, onChange }) {
       .finally(() => setLoading(false))
   }
 
-  const results = useMemo(() => (places ? searchPlaces(places, query) : []), [places, query])
+  // Searched at a lower priority than the typing, so the field keeps up with
+  // the keys and the list follows.
+  const searched = useDeferredValue(query)
+  const results = useMemo(() => (places ? searchPlaces(places, searched) : []), [places, searched])
 
   const pick = (place) => {
     onChange(makeBirthPlace(place))

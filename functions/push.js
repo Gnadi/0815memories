@@ -79,3 +79,35 @@ export const MULTICAST_CHUNK = 500
 
 export const chunk = (items, size) =>
   Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size))
+
+/**
+ * Run `fn` for every family, `limit` at a time, and say how many failed. The
+ * scheduled pushes went to one family after another inside a five-minute
+ * limit, and one family's error stopped the rest from hearing anything.
+ *
+ * @template T
+ * @param {T[]} items
+ * @param {number} limit
+ * @param {(item: T) => Promise<unknown>} fn
+ * @param {(item: T, error: unknown) => void} [onError]
+ * @returns {Promise<{ done: number, failed: number }>}
+ */
+export async function forEachAtMost(items, limit, fn, onError) {
+  const result = { done: 0, failed: 0 }
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const item = items[next++]
+      try {
+        await fn(item)
+        result.done++
+      } catch (error) {
+        result.failed++
+        onError?.(item, error)
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return result
+}
+

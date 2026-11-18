@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import CrossfadeImage from '../media/CrossfadeImage'
 import { prefetchDecryptedMedia } from '../media/useDecryptedMedia'
-import { thumbsFor } from '../../utils/mediaThumbs'
+import { thumbsFor, tinyPreviewAt } from '../../utils/mediaThumbs'
 import { useAuth } from '../../context/AuthContext'
 
 // A pinch to zoom is two fingers moving apart, which on the first finger's
@@ -35,7 +36,7 @@ function useSwipe(onPrev, onNext) {
   }
 }
 
-export default function MemoryHero({ images, imageUrl, thumbs, category }) {
+export default function MemoryHero({ images, imageUrl, thumbs, thumbsTiny, category }) {
   const { t } = useTranslation('memory')
   const { encryptionKey } = useAuth()
   // Memoised because the prefetch effect below depends on it: a fresh array
@@ -59,10 +60,15 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
   useEffect(() => {
     if (!encryptionKey || allImages.length < 2) return
     for (const offset of [1, -1]) {
-      const neighbour = allImages[(index + offset + allImages.length) % allImages.length]
+      // What the hero will show there: the thumb where there is one. Warming
+      // the original instead fetched up to two full-size photos per page that
+      // only the lightbox needs, and left the next arrow press to load its
+      // thumb from cold.
+      const at = (index + offset + allImages.length) % allImages.length
+      const neighbour = heroThumbs[at] || allImages[at]
       if (neighbour) prefetchDecryptedMedia(neighbour, encryptionKey, 'image/*')
     }
-  }, [index, allImages, encryptionKey])
+  }, [index, allImages, heroThumbs, encryptionKey])
 
   const heroSwipe = useSwipe(prev, next)
   const lightboxSwipe = useSwipe(prev, next)
@@ -102,6 +108,7 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
             <EncryptedImage
               src={allImages[index]}
               thumbSrc={heroThumbs[index]}
+              tinyPreview={tinyPreviewAt({ images: allImages, thumbsTiny }, index)}
               alt=""
               className="w-full h-full object-cover"
               onClick={() => setFullscreen(true)}
@@ -180,12 +187,23 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
             </span>
           )}
 
-          <EncryptedImage
+          {/* The thumbnail the hero was just showing is already decrypted, so
+              it is on screen at once, and the original fades in over it. On
+              its own the original showed a placeholder square until it had
+              loaded, a flash on every opening and every arrow. `cut`: photos
+              of different shapes do not cover each other here, so a fade
+              between two of them showed both. */}
+          <CrossfadeImage
             src={allImages[index]}
-            alt=""
-            className="max-w-full max-h-full object-contain select-none"
-            onClick={(e) => e.stopPropagation()}
+            thumbSrc={heroThumbs[index] || ''}
+            tinyPreview={tinyPreviewAt({ images: allImages, thumbsTiny }, index)}
+            fit="object-contain"
+            cut
+            className="absolute inset-0"
           />
+          {/* A tap on the photo itself keeps the lightbox open, as before; one
+              on the black around it closes it. */}
+          <div className="absolute inset-0" onClick={keepOpenOnPhoto} />
 
           {allImages.length > 1 && (
             <>
@@ -217,6 +235,22 @@ export default function MemoryHero({ images, imageUrl, thumbs, category }) {
       )}
     </>
   )
+}
+
+// Whether a tap landed on the photo shown with object-contain in the lightbox,
+// rather than on the black bars around it: the topmost picture's own size,
+// fitted into the frame, is where the photo is.
+function keepOpenOnPhoto(e) {
+  const frame = e.currentTarget.getBoundingClientRect()
+  const pictures = e.currentTarget.parentElement?.querySelectorAll('img') ?? []
+  const shown = [...pictures].reverse().find((img) => img.naturalWidth && img.style.opacity !== '0')
+  if (!shown) return
+  const scale = Math.min(frame.width / shown.naturalWidth, frame.height / shown.naturalHeight)
+  const width = shown.naturalWidth * scale
+  const height = shown.naturalHeight * scale
+  const x = e.clientX - frame.left - (frame.width - width) / 2
+  const y = e.clientY - frame.top - (frame.height - height) / 2
+  if (x >= 0 && x <= width && y >= 0 && y <= height) e.stopPropagation()
 }
 
 function HeroPlaceholder() {

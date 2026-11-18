@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { User, BookOpen, Sparkles, ChevronRight, Pencil, PenLine, Trash2 } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
+import { formatDateIn } from '../../utils/dateFormat'
 
 const ICON_BUTTON = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors'
 
@@ -10,9 +11,9 @@ export default function KidJournalCard({ kid, journalCount, lastEntryDate, onVie
   const validBirth = !Number.isNaN(birthdate.getTime())
   const age = validBirth ? Math.floor((new Date() - birthdate) / (365.25 * 24 * 60 * 60 * 1000)) : -1
   const formattedBirth = validBirth
-    ? birthdate.toLocaleDateString(i18n.language, { month: 'long', day: 'numeric', year: 'numeric' })
+    ? formatDateIn(birthdate, i18n.language, { month: 'long', day: 'numeric', year: 'numeric' })
     : ''
-  const formattedLast = lastEntryDate?.toLocaleDateString(i18n.language, { month: 'long', day: 'numeric', year: 'numeric' })
+  const formattedLast = lastEntryDate && formatDateIn(lastEntryDate, i18n.language, { month: 'long', day: 'numeric', year: 'numeric' })
 
   return (
     <div className="bg-warm-white rounded-2xl shadow-sm border border-cream-dark flex flex-col overflow-hidden">

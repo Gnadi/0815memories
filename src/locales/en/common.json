@@ -122,5 +122,8 @@
       "denied": "Microphone access was denied. Allow it in your browser settings to dictate.",
       "unavailable": "Dictation is not available right now."
     }
+  },
+  "media": {
+    "playVideo": "Play video"
   }
 }

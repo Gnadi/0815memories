@@ -7,6 +7,7 @@ import Sidebar from '../components/layout/Sidebar'
 import MobileHeader from '../components/layout/MobileHeader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../utils/mediaThumbs'
+import { formatDateIn } from '../utils/dateFormat'
 
 const SEASONS = [
   { name: 'Winter', icon: Snowflake, months: [12, 1, 2] },
@@ -31,8 +32,7 @@ function toDate(ts) {
 }
 
 function formatOverlayDate(date) {
-  return date
-    .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return formatDateIn(date, 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     .toUpperCase()
 }
 

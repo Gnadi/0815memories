@@ -51,6 +51,7 @@ import {
   MULTICAST_CHUNK,
   anniversaryCopy,
   chunk,
+  forEachAtMost,
   groupTokensByLang,
   isDeadToken,
 } from './push.js'
@@ -165,6 +166,17 @@ export const notifyOnMoment = onDocumentCreated('moments/{momentId}', (event) =>
 
 // ── "Three years ago today" ─────────────────────────────────────────────────
 
+// Families pushed to at once by the scheduled notifications. One after the
+// other, a send of a few hundred milliseconds each fit about a thousand
+// families into the five minutes; ten at a time is well inside what FCM and
+// one instance take.
+const FAMILIES_AT_ONCE = 10
+
+const pushFailed = (job) => (item, error) => {
+  const familyId = Array.isArray(item) ? item[0] : item
+  console.error(`[${job}] push failed for a family:`, loggable(familyId), error)
+}
+
 /**
  * Replaces the client-side daily check, which only ran when an admin happened
  * to open the app and needed a lock on the family document to keep two devices
@@ -178,14 +190,13 @@ export const dailyAnniversaryCheck = onSchedule(
     const window = anniversaryWindow(new Date(), ANNIVERSARY_TIMEZONE)
     const counts = await countAnniversaryMemories(getFirestore(), window)
 
-    for (const [familyId, count] of counts) {
-      await sendToFamily(familyId, (lang) => ({
+    const { failed } = await forEachAtMost([...counts], FAMILIES_AT_ONCE, ([familyId, count]) =>
+      sendToFamily(familyId, (lang) => ({
         ...anniversaryCopy(lang, count, window.year),
         url: '/timeline?filter=onthisday',
-      }))
-    }
+      })), pushFailed('anniversary'))
 
-    console.log(`[anniversary] year=${window.year} notified=${counts.size}`)
+    console.log(`[anniversary] year=${window.year} notified=${counts.size - failed} failed=${failed}`)
   },
 )
 
@@ -204,11 +215,11 @@ export const monthlyBestOfCheck = onSchedule(
     const window = previousMonthWindow(new Date(), ANNIVERSARY_TIMEZONE)
     const families = familiesWithBestOf(await countMonthMedia(getFirestore(), window))
 
-    for (const familyId of families) {
-      await sendToFamily(familyId, (lang) => ({ ...bestOfCopy(lang, window), url: bestOfUrl(window.key) }))
-    }
+    const { failed } = await forEachAtMost(families, FAMILIES_AT_ONCE, (familyId) =>
+      sendToFamily(familyId, (lang) => ({ ...bestOfCopy(lang, window), url: bestOfUrl(window.key) })),
+    pushFailed('bestOf'))
 
-    console.log(`[bestOf] month=${window.key} notified=${families.length}`)
+    console.log(`[bestOf] month=${window.key} notified=${families.length - failed} failed=${failed}`)
   },
 )
 
@@ -348,7 +359,7 @@ const MEDIA_LEGACY_REFS_PER_DAY = defineInt('MEDIA_LEGACY_REFS_PER_DAY', {
 })
 
 /**
- * Sign one Cloudinary upload for an admin, and record the file in the
+ * Sign Cloudinary uploads for an admin, and record each file in the
  * `mediaAssets` ledger before it exists.
  */
 export const signUpload = onCall(
@@ -703,7 +714,17 @@ export const deleteMyAccount = membershipCall(async (request) => {
  * X-Forwarded-For, so the caller chooses it. The limits that hold are the
  * family's (for devices that have never signed in) and the device's own.
  */
-export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+// Signing in is the first thing every viewer does, and a cold instance adds
+// about half a second of loading, the Firestore channel and the token signing
+// before bcrypt even starts. An instance kept warm removes that, at roughly
+// 10 USD a month each, so none is by default: costs stay low, and setting this
+// to 1 buys the faster sign-in without a change of code.
+const VIEWER_LOGIN_MIN_INSTANCES = defineInt('VIEWER_LOGIN_MIN_INSTANCES', {
+  default: 0,
+  description: 'Instances of viewerLogin kept warm, so a viewer does not wait for a cold start',
+})
+
+export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, minInstances: VIEWER_LOGIN_MIN_INSTANCES }, async (request) => {
   const result = await checkViewerLogin(
     {
       db: getFirestore(),

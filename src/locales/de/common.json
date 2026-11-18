@@ -122,5 +122,8 @@
       "denied": "Der Mikrofonzugriff wurde verweigert. Erlaube ihn in den Browser-Einstellungen, um zu diktieren.",
       "unavailable": "Diktieren ist gerade nicht verfügbar."
     }
+  },
+  "media": {
+    "playVideo": "Video abspielen"
   }
 }

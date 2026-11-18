@@ -274,14 +274,22 @@ export async function checkViewerLogin(deps, input) {
   // with ABORTED. That only happens under a burst of attempts, so it is
   // answered like a block: the comparison is not run, and the caller gets a
   // clear answer instead of an internal error.
+  //
+  // The hash is read meanwhile — the only place it lives. Reading it is cheap
+  // and decides nothing; what must wait for the reservation is the comparison,
+  // and it still does. Read one after the other, the two were two round trips
+  // on every sign-in.
+  const secretRead = db.doc(`families/${familyId}/secrets/auth`).get()
   const reserved = await reserveAttempt(db, keys, budgetKeys, now()).catch((err) => {
     if (err?.code === 10 || err?.code === 'aborted') return false
     throw err
   })
-  if (!reserved) return report({ outcome: 'blocked' }, device)
+  if (!reserved) {
+    secretRead.catch(() => {})
+    return report({ outcome: 'blocked' }, device)
+  }
 
-  // The only place a hash lives.
-  const secretSnap = await db.doc(`families/${familyId}/secrets/auth`).get()
+  const secretSnap = await secretRead
   const hash = secretSnap.exists ? secretSnap.data().sharedPassword : null
 
   if (!hash || !(await compare(password, hash))) return report({ outcome: 'denied' }, device)
@@ -291,27 +299,36 @@ export async function checkViewerLogin(deps, input) {
   const session = await sessionOf(db, familyId, hash)
   if (!session) return report({ outcome: 'denied' }, device)
 
-  await Promise.all(keys.map((key) => clearFailures(db, key)))
-  const token = await mintToken(familyId, session.sv)
+  // The password was right. Clearing the failures, minting the token and
+  // remembering the device do not depend on each other, so they go together
+  // rather than as three round trips in a row.
+  const at = now()
+  const cleared = Promise.all(keys.map((key) => clearFailures(db, key)))
 
   if (deviceHash) {
-    const at = now()
-    await db
-      .collection(DEVICES)
-      .doc(deviceHash)
-      .update({ lastUsedAt: new Date(at), expireAt: new Date(at + DEVICE_TTL_MS) })
-      .catch(() => {})
+    const [token] = await Promise.all([
+      mintToken(familyId, session.sv),
+      cleared,
+      db
+        .collection(DEVICES)
+        .doc(deviceHash)
+        .update({ lastUsedAt: new Date(at), expireAt: new Date(at + DEVICE_TTL_MS) })
+        .catch(() => {}),
+    ])
     return report({ outcome: 'ok', token }, device)
   }
 
   const deviceToken = randomBytes(32).toString('base64url')
-  const at = now()
-  await db.collection(DEVICES).doc(sha256(deviceToken)).set({
-    familyId,
-    sv: session.sv,
-    createdAt: new Date(at),
-    lastUsedAt: new Date(at),
-    expireAt: new Date(at + DEVICE_TTL_MS),
-  })
+  const [token] = await Promise.all([
+    mintToken(familyId, session.sv),
+    cleared,
+    db.collection(DEVICES).doc(sha256(deviceToken)).set({
+      familyId,
+      sv: session.sv,
+      createdAt: new Date(at),
+      lastUsedAt: new Date(at),
+      expireAt: new Date(at + DEVICE_TTL_MS),
+    }),
+  ])
   return report({ outcome: 'ok', token, deviceToken }, device)
 }

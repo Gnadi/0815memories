@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createThumbnail, createVideoPoster, THUMBNAIL_MAX_EDGE } from '../utils/imageThumbnail'
+import { createDerivatives, createThumbnail, createVideoPoster, THUMBNAIL_MAX_EDGE } from '../utils/imageThumbnail'
 
 // A blob big enough to clear the "not worth downscaling" size floor.
 function imageBlob(bytes = 4 * 1024 * 1024, type = 'image/jpeg') {
@@ -44,6 +44,25 @@ beforeEach(() => {
 afterEach(() => {
   delete globalThis.createImageBitmap
   delete globalThis.OffscreenCanvas
+})
+
+describe('createDerivatives', () => {
+  it('makes the thumbnail and the blur-up preview from one decode, and closes it', async () => {
+    // A 12 MP photo decodes to about 48 MB; making the two one after the other
+    // decoded it twice.
+    const close = vi.fn()
+    globalThis.createImageBitmap = vi.fn(async () => ({ width: 4032, height: 3024, close }))
+    const { thumb, tiny } = await createDerivatives(imageBlob())
+    expect(thumb).toBeInstanceOf(Blob)
+    expect(tiny).toMatch(/^data:image\/webp;base64,/)
+    expect(globalThis.createImageBitmap).toHaveBeenCalledTimes(1)
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('makes neither from what the browser cannot decode', async () => {
+    globalThis.createImageBitmap = vi.fn(async () => { throw new Error('HEIC') })
+    await expect(createDerivatives(imageBlob(4 * 1024 * 1024, 'image/heic'))).resolves.toEqual({ thumb: null, tiny: null })
+  })
 })
 
 describe('createThumbnail', () => {

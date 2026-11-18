@@ -90,6 +90,19 @@ export function subscribeBestOfs(familyId, key, onData, onError) {
   )
 }
 
+/**
+ * One month's saved best-of as it changes, or null while none is made: what
+ * the moments row needs, which is one document, not the whole list.
+ */
+export function subscribeBestOf(familyId, key, month, onData, onError) {
+  return subscribeDecrypted(
+    bestOfMonthQuery(db, familyId, month),
+    async (docs) => (docs.length ? decryptBestOf(key, docs[0]) : null),
+    onData,
+    onError,
+  )
+}
+
 /** The saved best-of of `month`, decrypted, or null when none has been made. */
 export async function getBestOf(familyId, key, month) {
   const snapshot = await getDocs(bestOfMonthQuery(db, familyId, month))

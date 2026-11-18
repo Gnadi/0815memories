@@ -1,4 +1,5 @@
 import i18n from '../i18n'
+import { formatDateIn, relativeTimeFormat } from './dateFormat'
 
 /**
  * Returns true if `date` falls on the same month and day as `referenceDate`
@@ -20,7 +21,7 @@ const currentLocale = () => i18n.language || 'en'
 export function formatDate(date) {
   if (!date) return ''
   const d = date.toDate ? date.toDate() : new Date(date)
-  return d.toLocaleDateString(currentLocale(), {
+  return formatDateIn(d, currentLocale(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -37,7 +38,7 @@ const calendarDaysAgo = (d, now) => {
 
 // numeric: 'auto' gives "today"/"yesterday" ("heute"/"gestern") for free, so
 // the words come from the browser's locale data and need no locale strings.
-const relativeFormat = () => new Intl.RelativeTimeFormat(currentLocale(), { numeric: 'auto' })
+const relativeFormat = () => relativeTimeFormat(currentLocale(), { numeric: 'auto' })
 
 // The formatter writes "today" and "heute" in lower case; these labels stand
 // on their own, so they start with a capital like the words they replace.

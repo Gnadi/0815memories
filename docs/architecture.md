@@ -177,7 +177,7 @@ the top of `functions/index.js`.
 | `dailyAnniversaryCheck` | schedule, 08:00 Europe/Berlin | anniversary push |
 | `monthlyBestOfCheck` | schedule, the 1st, 18:00 Europe/Berlin | "best of last month" push |
 | `reservePrintUpload` | callable, admins | reserves a `printId` for one print-file upload, which `storage.rules` require; at most 5 per family in 30 days; refuses a family whose deletion is due or has begun |
-| `signUpload` | callable, admins | signs one Cloudinary upload, records it in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
+| `signUpload` | callable, admins | signs Cloudinary uploads, up to 20 per call, records each in `mediaAssets`, applies the upload limits; refuses a family whose deletion is due or has begun |
 | `trackMediaReferences` | any top-level document written | attaches files to the documents whose `mediaRefs` name them |
 | `purgeUnusedMedia` | schedule, 04:15 Europe/Berlin | looks up the sizes of new files, then deletes files no document has used for 30 days, or abandoned for 7, in two steps a night apart: the first run only reserves a file (`deleting`), a later one destroys it (a dry run until switched on) |
 | `reportLegacyMedia` | schedule, Mondays 05:15 Europe/Berlin | inventory of files from before the ledger: counts claimed ones, reports the rest, deletes none of them. Does delete files stored as another kind than their upload was signed for (below) |
@@ -286,9 +286,12 @@ Build and delivery details that affect many changes:
   language needs an address of its own. Anything on the public routes must
   render in Node, without `window`. The signed-in app is client-only and
   lazy-loaded.
-- **The shell is kept small.** Only the startup code is precached by the
-  service worker (`scripts/shellPrecache.mjs`); pages and the signed-in
-  translations load on demand. CI reports the shell's size on every PR.
+- **The shell is kept small.** Only the startup code and `index.html` are
+  precached by the service worker (`scripts/shellPrecache.mjs`); pages and the
+  signed-in translations load on demand. The HTML carries no module preloads,
+  so the landing page paints first; a lazy page's own imports are preloaded
+  together with it (`build.modulePreload` in `vite.config.js`). CI reports the
+  shell's size on every PR.
 - **Hosting** is Vercel (`vercel.json`): the SPA rewrite, cache headers,
   security headers. Everything server-side is a Cloud Function.
 

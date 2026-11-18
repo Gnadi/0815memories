@@ -1,5 +1,5 @@
 import { Video } from 'lucide-react'
-import EncryptedVideo from '../media/EncryptedVideo'
+import VideoOnTap from '../media/VideoOnTap'
 
 export default function MemoryVideoPlayer({ videos }) {
   if (!videos?.length) return null
@@ -15,10 +15,9 @@ export default function MemoryVideoPlayer({ videos }) {
           {video.title && (
             <p className="text-sm font-medium text-bark-light">{video.title}</p>
           )}
-          <EncryptedVideo
+          <VideoOnTap
             src={video.url}
-            controls
-            playsInline
+            title={video.title}
             className="w-full rounded-2xl bg-black max-h-[480px]"
           />
         </div>

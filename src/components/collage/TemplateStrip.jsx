@@ -45,6 +45,7 @@ export default function TemplateStrip({ activeTemplateId, photos = [], onSelect 
             <CollagePreview
               doc={doc}
               preferThumbs
+              lazy
               fit="box"
               className={`rounded-xl overflow-hidden border-2 ${active ? 'border-kaydo ring-2 ring-kaydo' : 'border-cream-dark'}`}
               style={{ aspectRatio: String(aspectRatioOf(doc)), height: '100%', width: 'auto' }}

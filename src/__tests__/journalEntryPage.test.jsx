@@ -15,9 +15,10 @@ let mockJournals = []
 const mockAddJournal = vi.fn()
 const mockUpdateJournal = vi.fn()
 vi.mock('../hooks/useJournals', () => ({
-  useJournals: () => ({
-    journals: mockJournals, loading: false, addJournal: mockAddJournal, updateJournal: mockUpdateJournal,
+  useJournal: (familyId, childId, entryId) => ({
+    entry: mockJournals.find((j) => j.id === entryId) ?? null, loading: false,
   }),
+  useJournalWriter: () => ({ addJournal: mockAddJournal, updateJournal: mockUpdateJournal }),
 }))
 
 let mockParams = {}
@@ -128,5 +129,26 @@ describe('an entry from before the editor', () => {
       voiceMemos: [{ url: 'https://example.test/v', title: 'Hello' }],
     })
     expect(data.date.toDate().toISOString()).toBe('2024-10-18T00:00:00.000Z')
+  })
+
+  it('keeps the thumbnails of its photos, in step with them', async () => {
+    // The list card and the entry's grid show these instead of the originals.
+    mockParams = { childId: 'kid1', entryId: 'e2' }
+    mockJournals = [{
+      ...legacyEntry,
+      id: 'e2',
+      photos: ['https://example.test/a', 'https://example.test/b'],
+      photoThumbs: ['https://example.test/a-t', ''],
+    }]
+    const user = userEvent.setup()
+    render(<JournalEntryPage />)
+    await screen.findByTestId('rich-editor')
+    await user.click(screen.getAllByRole('button', { name: 'Update' })[0])
+
+    await waitFor(() => expect(mockUpdateJournal).toHaveBeenCalled())
+    expect(mockUpdateJournal.mock.calls[0][1]).toMatchObject({
+      photos: ['https://example.test/a', 'https://example.test/b'],
+      photoThumbs: ['https://example.test/a-t', ''],
+    })
   })
 })

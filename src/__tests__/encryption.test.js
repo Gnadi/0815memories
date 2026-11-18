@@ -16,6 +16,7 @@ import {
   encryptJSON,
   decryptJSON,
   encryptBlob,
+  encryptBlobToBlob,
   decryptBlob,
   MISSING_KEY,
   DECRYPT_FAILED,
@@ -226,5 +227,17 @@ describe('encryption helpers', () => {
     const decryptedBlob = await decryptBlob(key, encrypted, 'application/octet-stream')
     const bytes = new Uint8Array(await decryptedBlob.arrayBuffer())
     expect(Array.from(bytes)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('encrypts to a Blob that decryptBlob reads, the same layout as encryptBlob', async () => {
+    const { key } = await generateEncryptionKey()
+    const source = new Blob([new Uint8Array([1, 2, 3, 4, 5])])
+    const encrypted = await encryptBlobToBlob(key, source)
+    expect(encrypted.type).toBe('application/octet-stream')
+    // IV, then ciphertext and tag: 12 + 5 + 16 bytes.
+    expect(encrypted.size).toBe(33)
+    const decryptedBlob = await decryptBlob(key, await encrypted.arrayBuffer())
+    expect(Array.from(new Uint8Array(await decryptedBlob.arrayBuffer()))).toEqual([1, 2, 3, 4, 5])
+    await expect(encryptBlobToBlob(null, source)).rejects.toMatchObject({ code: MISSING_KEY })
   })
 })

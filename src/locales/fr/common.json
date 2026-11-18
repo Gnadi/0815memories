@@ -122,5 +122,8 @@
       "denied": "L'accès au micro a été refusé. Autorisez-le dans les paramètres de votre navigateur pour dicter.",
       "unavailable": "La dictée n'est pas disponible pour le moment."
     }
+  },
+  "media": {
+    "playVideo": "Lire la vidéo"
   }
 }

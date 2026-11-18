@@ -16,18 +16,18 @@ vi.mock('firebase/functions', () => ({ httpsCallable: (_functions, name) => (dat
 
 import { installDemoDatabase } from '../config/firestore'
 import { createDemoDatabase } from '../demo/demoDatabase'
-import { generateEncryptionKey, clearDecryptedTextCache } from '../utils/encryption'
+import { generateEncryptionKey, clearDecryptedTextCache, encryptText } from '../utils/encryption'
 import { getFamilyDocument, subscribeDecrypted, subscribeDecryptedDocument } from '../services/decrypted'
 import { addRecipe, getRecipe, getRecipeLineage, setRecipeViewerVisible, subscribeRecipes, updateRecipe } from '../services/recipes'
 import { addScrapbook, getScrapbook, subscribeScrapbooks } from '../services/scrapbooks'
 import { addMemory, getMemory } from '../services/memories'
 import { addKid, subscribeKids, updateKid } from '../services/kids'
-import { addJournal, subscribeJournals, updateJournal } from '../services/journals'
+import { addJournal, getJournal, getJournalSummary, subscribeJournals, updateJournal } from '../services/journals'
 import { Timestamp } from '../config/firestore'
 import { findAdminFamilies, isSlugAvailable, resolveFamilyBySlug } from '../services/family'
 import { createInvite, removeAdmin, subscribeOpenInvites } from '../services/admins'
 import { redeemInvite } from '../services/invites'
-import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOfs } from '../services/bestOf'
+import { getBestOf, getMonthEntries, saveBestOf, subscribeBestOf, subscribeBestOfs } from '../services/bestOf'
 
 // jsdom has no working crypto.subtle — graft Node's on, as encryption.test.js does.
 beforeAll(() => {
@@ -249,6 +249,15 @@ describe('one decryption for the list and the page', () => {
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
   })
+
+  it("memories: the page gets the photos' blur-up previews decrypted", async () => {
+    const tiny = 'data:image/webp;base64,AAA'
+    await addMemory(FAMILY, key, { title: 'Lake day', images: ['a.enc'] })
+    const [{ id }] = (await fs.getDocs(fs.collection(null, 'memories'))).docs
+    await fs.updateDoc(fs.doc(null, 'memories', id), { thumbsTiny: [await encryptText(key, tiny)] })
+
+    await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ thumbsTiny: [tiny] })
+  })
 })
 
 /* Sharing a recipe with the viewers. firestore.rules holds each fork to its
@@ -362,6 +371,24 @@ describe('kids and journals', () => {
     expect(updated).toMatchObject({ contentFormat: 'markdown', familyId: FAMILY, childId: 'kid-a' })
   })
 
+  it('journals: a child is summed up by count and latest date, and one entry read alone', async () => {
+    const date = (iso) => Timestamp.fromDate(new Date(iso))
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Older', date: date('2024-07-01') })
+    await addJournal(FAMILY, 'kid-a', key, { content: 'Newer', date: date('2024-10-18') })
+    await addJournal(FAMILY, 'kid-b', key, { content: 'Other child', date: date('2025-01-01') })
+
+    const summary = await getJournalSummary(FAMILY, 'kid-a')
+    expect(summary.count).toBe(2)
+    expect(summary.latest.date.toDate()).toEqual(new Date('2024-10-18'))
+    await expect(getJournalSummary(FAMILY, 'kid-c')).resolves.toEqual({ count: 0, latest: null })
+
+    const raw = await stored('journals')
+    const newer = raw.find((d) => d.childId === 'kid-a' && d.date.toDate().getMonth() === 9)
+    await expect(getJournal(FAMILY, 'kid-a', key, newer.id)).resolves.toMatchObject({ content: 'Newer' })
+    // The entry is the child's the page names, or none at all.
+    await expect(getJournal(FAMILY, 'kid-b', key, newer.id)).resolves.toBeNull()
+  })
+
   it('journals: an entry without a document is stored without one', async () => {
     await addJournal(FAMILY, 'kid-a', key, { content: '', contentFormat: 'rich', contentRich: null })
     const [raw] = await stored('journals')
@@ -401,6 +428,17 @@ describe('best-of', () => {
     const list = await firstDelivery((onData, onError) => subscribeBestOfs(FAMILY, key, onData, onError))
     expect(list.map((b) => b.month)).toEqual(['2026-09', '2026-08'])
     expect(list[0].doc.slides[0].place).toBe('Zell am See')
+  })
+
+  it('follows one month, and says so when it has none', async () => {
+    await saveBestOf(FAMILY, key, bestOf('2026-08'))
+    await saveBestOf(FAMILY, key, bestOf('2026-09'))
+
+    const one = await firstDelivery((onData, onError) => subscribeBestOf(FAMILY, key, '2026-08', onData, onError))
+    expect(one.month).toBe('2026-08')
+    expect(one.doc.slides[0].place).toBe('Zell am See')
+    const none = await firstDelivery((onData, onError) => subscribeBestOf(FAMILY, key, '2026-07', onData, onError))
+    expect(none).toBeNull()
   })
 
   it("reads one month's memories and moments, decrypted, and nothing around it", async () => {

@@ -18,12 +18,19 @@ vi.mock('../utils/encryption', () => ({
   decryptBlob: vi.fn(async () => new Blob(['original'])),
   encryptText: vi.fn(async (_k, text) => `enc:${text}`),
 }))
-vi.mock('../utils/imageThumbnail', () => ({ createThumbnail: vi.fn(), createTinyPreview: vi.fn() }))
+const { createThumbnail, createTinyPreview } = vi.hoisted(() => ({ createThumbnail: vi.fn(), createTinyPreview: vi.fn() }))
+// One decode feeds both; each derivative is set by the test as before.
+vi.mock('../utils/imageThumbnail', () => ({
+  createDerivatives: vi.fn(async (blob) => {
+    const [thumb, tiny] = await Promise.allSettled([createThumbnail(blob), createTinyPreview(blob)])
+    if (thumb.status === 'rejected' && tiny.status === 'rejected') throw thumb.reason
+    return { thumb: thumb.value ?? null, tiny: tiny.value ?? null }
+  }),
+}))
 vi.mock('../utils/encryptedUpload', () => ({ encryptAndUpload: vi.fn() }))
 vi.mock('../utils/devLog', () => ({ devError: vi.fn(), devWarn: vi.fn() }))
 
 import { getDocs } from 'firebase/firestore'
-import { createThumbnail, createTinyPreview } from '../utils/imageThumbnail'
 import { encryptAndUpload } from '../utils/encryptedUpload'
 import {
   scanThumbnailStatus,
@@ -175,6 +182,42 @@ describe('migrateDocument', () => {
 
     // Marked as considered, so a rescan does not queue it forever.
     expect(written.thumbs).toEqual([''])
+  })
+
+  it.each([
+    ['no network', async () => { throw new TypeError('Failed to fetch') }],
+    ['a server error', async () => ({ ok: false, status: 503 })],
+  ])('writes nothing after %s, so the next run tries again', async (_name, failing) => {
+    // An empty slot here marked the photo as done for good, and it loaded its
+    // full original everywhere from then on.
+    globalThis.fetch = vi.fn(failing)
+    const result = await migrateDocument({ collectionName: 'memories', id: 'm1', images: ['a.enc'] }, KEY)
+    expect(result).toBe(false)
+    expect(runTransaction).not.toHaveBeenCalled()
+  })
+
+  it('writes nothing when a thumbnail upload fails', async () => {
+    encryptAndUpload.mockRejectedValue(new Error('Upload failed (500)'))
+    const result = await migrateDocument({ collectionName: 'memories', id: 'm1', images: ['a.enc', 'b.enc'] }, KEY)
+    expect(result).toBe(false)
+    expect(runTransaction).not.toHaveBeenCalled()
+  })
+
+  it('works on a few images of a document at a time', async () => {
+    let open = 0
+    let most = 0
+    globalThis.fetch = vi.fn(async () => {
+      most = Math.max(most, ++open)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      open--
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }
+    })
+    runTransaction.mockImplementation(async (_db, fn) =>
+      fn({ get: async () => ({ exists: () => false }), update: vi.fn() }))
+    const images = Array.from({ length: 10 }, (_, i) => `${i}.enc`)
+    await migrateDocument({ collectionName: 'memories', id: 'm1', images }, KEY)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(10)
+    expect(most).toBe(3)
   })
 })
 

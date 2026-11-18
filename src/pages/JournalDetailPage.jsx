@@ -5,12 +5,13 @@ import { ArrowLeft, Mic, Pencil, Trash2 } from 'lucide-react'
 import { EMOTIONS } from '../constants/emotions'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
-import { useJournals } from '../hooks/useJournals'
+import { useJournal, useJournalWriter } from '../hooks/useJournals'
 import EncryptedImage from '../components/media/EncryptedImage'
-import EncryptedVideo from '../components/media/EncryptedVideo'
+import VideoOnTap from '../components/media/VideoOnTap'
 import EncryptedAudio from '../components/media/EncryptedAudio'
 import JournalContent from '../components/journal/JournalContent'
 import { entryDate } from '../utils/journalContent'
+import { photoThumbsFor } from '../utils/mediaThumbs'
 
 const HEADER_BUTTON = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0'
 
@@ -21,10 +22,10 @@ export default function JournalDetailPage() {
   const { isAdmin, familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const { kids } = useKids(familyId, encryptionKey)
-  const { journals, loading, deleteJournal } = useJournals(familyId, childId, encryptionKey)
+  const { entry, loading } = useJournal(familyId, childId, entryId, encryptionKey)
+  const { deleteJournal } = useJournalWriter(familyId, childId, encryptionKey)
 
   const kid = kids.find((k) => k.id === childId)
-  const entry = journals.find((j) => j.id === entryId)
 
   useEffect(() => {
     if (!isAdmin) navigate('/home')
@@ -120,6 +121,7 @@ export default function JournalDetailPage() {
                 <EncryptedImage
                   key={i}
                   src={url}
+                  thumbSrc={photoThumbsFor(entry.photos, entry.photoThumbs)[i] || undefined}
                   alt=""
                   className={`rounded-2xl object-cover w-full ${entry.photos.length === 1 ? 'max-h-[70vh]' : 'aspect-square'}`}
                 />
@@ -131,7 +133,7 @@ export default function JournalDetailPage() {
             <div className="mt-6 space-y-4">
               {entry.videos.map((v, i) => (
                 <figure key={i}>
-                  <EncryptedVideo src={v.url} controls playsInline className="w-full rounded-2xl bg-black max-h-[70vh]" />
+                  <VideoOnTap src={v.url} title={v.title} className="w-full rounded-2xl bg-black max-h-[70vh]" />
                   {v.title && <figcaption className="text-sm text-bark-muted mt-1.5">{v.title}</figcaption>}
                 </figure>
               ))}

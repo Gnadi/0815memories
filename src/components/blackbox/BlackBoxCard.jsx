@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Lock, Unlock, Trash2, MoreVertical, Calendar, Star, BookOpen, RefreshCw } from 'lucide-react'
 import { isUnlocked, daysUntilUnlock, LEGACY_GRACE_MONTHS } from '../../hooks/useBlackBox'
 import EncryptedImage from '../media/EncryptedImage'
-import EncryptedVideo from '../media/EncryptedVideo'
+import VideoOnTap from '../media/VideoOnTap'
 import EncryptedAudio from '../media/EncryptedAudio'
+import { formatDateIn } from '../../utils/dateFormat'
+import { photoThumbsFor } from '../../utils/mediaThumbs'
 
 // A legacy capsule this close to opening is worth mentioning on the card.
 const CHECK_IN_NUDGE_DAYS = 60
@@ -51,7 +53,7 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
     // it is both honest and more useful than a euphemism.
     if (!box.unlockDate) return t('card.unknownDate')
     const d = box.unlockDate.toDate ? box.unlockDate.toDate() : new Date(box.unlockDate)
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    return formatDateIn(d, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
   function getTriggerDescription(box) {
@@ -191,7 +193,7 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
               {content?.photos?.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {content.photos.map((url, i) => (
-                    <EncryptedImage key={i} src={url} alt="" className="w-24 h-24 rounded-xl object-cover" />
+                    <EncryptedImage key={i} src={url} thumbSrc={photoThumbsFor(content.photos, content.photoThumbs)[i] || undefined} alt="" className="w-24 h-24 rounded-xl object-cover" />
                   ))}
                 </div>
               )}
@@ -201,11 +203,10 @@ export default function BlackBoxCard({ box, kidName, onDelete, onFetchContent, o
               {content?.videos?.length > 0 && (
                 <div className="space-y-2 mt-2">
                   {content.videos.map((v, i) => (
-                    <EncryptedVideo
+                    <VideoOnTap
                       key={v.publicId || i}
                       src={v.url}
-                      controls
-                      playsInline
+                      title={v.title}
                       className="w-full rounded-xl bg-black max-h-64"
                     />
                   ))}

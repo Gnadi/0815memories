@@ -22,6 +22,10 @@
  */
 import { MEDIA_ASSETS, MEDIA_RATES } from './mediaSigning.js'
 
+// functions/familyDeletion.js; named here too, since that module imports
+// half the functions and this one is loaded by every write.
+const FAMILY_DELETIONS = 'familyDeletions'
+
 // The collections whose documents can carry `mediaRefs`. The family document
 // holds the login page's pictures; its family is its own id.
 export const MEDIA_COLLECTIONS = [
@@ -154,6 +158,60 @@ export function refChanges(collection, docId, before, after) {
 }
 
 /**
+ * The ledger entry of one file, brought in line with the document as it is
+ * now (`attach`). Writes only; everything it needs was read before. Shared by
+ * reconcileRef and reconcileRefs, so a file is decided the same way whichever
+ * of the two looks at it.
+ *
+ * @returns {'attached'|'detached'|'kept'|'ignored'}
+ */
+function settle(tx, ref, entry, mediaRef, path, attach, familyId, now) {
+  if (!entry && attach && !parseLegacyRef(mediaRef)) {
+    // Every file signUpload signs gets an entry, and only the clean-up
+    // removes one, so this is a document holding a file that has been
+    // deleted — or an id that never was this app's. Worth seeing either way.
+    console.warn('[media] a document names a file the ledger does not know:', path, ledgerIdOf(mediaRef))
+  }
+  if (!entry || !familyId || entry.familyId !== familyId || refOfEntry(entry) !== mediaRef) return 'ignored'
+
+  const refs = new Set(Array.isArray(entry.refs) ? entry.refs : [])
+  if (attach) refs.add(path)
+  else refs.delete(path)
+
+  // Past the point of no return (functions/mediaPurge.js): the file is being
+  // or has been destroyed and cannot be saved. Only the reference is
+  // recorded, so the clean-up sees the conflict and reports it.
+  if (entry.state === 'destroying' || entry.state === 'lost') {
+    tx.update(ref, { refs: [...refs].sort() })
+    return attach ? 'attached' : 'detached'
+  }
+  if (refs.size > 0) {
+    // A reference cancels a reservation in this same transaction. The
+    // clean-up moves `deleting` to `destroying` in a transaction on this
+    // entry too, so exactly one of the two wins. The reservation's fields
+    // are nulled, not removed: this module has no FieldValue.delete.
+    const cancel = entry.state === 'deleting' ? { deletingSince: null, deletingFrom: null } : {}
+    tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null, ...cancel })
+    return attach ? 'attached' : 'kept'
+  }
+  // A file no document ever held stays pending: it was abandoned, not let go.
+  if (entry.state === 'pending') return 'ignored'
+  // Already let go by an earlier run for the same document: keep the date
+  // the grace period counts from.
+  // A reservation stays one: the file was let go, and the clean-up decides.
+  if (entry.state === 'detached' || entry.state === 'unused' || entry.state === 'deleting') return 'detached'
+  // `detachedFrom` lets the clean-up look at that document once more before
+  // it deletes anything (functions/mediaPurge.js).
+  tx.update(ref, {
+    refs: [],
+    state: entry.legacy ? 'unused' : 'detached',
+    detachedAt: new Date(now()),
+    detachedFrom: path,
+  })
+  return 'detached'
+}
+
+/**
  * Attach or let go of one file for one document, in a transaction, so two
  * documents changing the same file at once cannot lose a reference.
  *
@@ -223,50 +281,47 @@ export async function reconcileRef(db, now, mediaRef, collection, docId, written
       })
       return 'attached'
     }
-    if (!entry && attach && !legacy) {
-      // Every file signUpload signs gets an entry, and only the clean-up
-      // removes one, so this is a document holding a file that has been
-      // deleted — or an id that never was this app's. Worth seeing either way.
-      console.warn('[media] a document names a file the ledger does not know:', path, ledgerIdOf(mediaRef))
-    }
-    if (!entry || !familyId || entry.familyId !== familyId || refOfEntry(entry) !== mediaRef) return 'ignored'
-
-    const refs = new Set(Array.isArray(entry.refs) ? entry.refs : [])
-    if (attach) refs.add(path)
-    else refs.delete(path)
-
-    // Past the point of no return (functions/mediaPurge.js): the file is being
-    // or has been destroyed and cannot be saved. Only the reference is
-    // recorded, so the clean-up sees the conflict and reports it.
-    if (entry.state === 'destroying' || entry.state === 'lost') {
-      tx.update(ref, { refs: [...refs].sort() })
-      return attach ? 'attached' : 'detached'
-    }
-    if (refs.size > 0) {
-      // A reference cancels a reservation in this same transaction. The
-      // clean-up moves `deleting` to `destroying` in a transaction on this
-      // entry too, so exactly one of the two wins. The reservation's fields
-      // are nulled, not removed: this module has no FieldValue.delete.
-      const cancel = entry.state === 'deleting' ? { deletingSince: null, deletingFrom: null } : {}
-      tx.update(ref, { refs: [...refs].sort(), state: 'attached', detachedAt: null, ...cancel })
-      return attach ? 'attached' : 'kept'
-    }
-    // A file no document ever held stays pending: it was abandoned, not let go.
-    if (entry.state === 'pending') return 'ignored'
-    // Already let go by an earlier run for the same document: keep the date
-    // the grace period counts from.
-    // A reservation stays one: the file was let go, and the clean-up decides.
-    if (entry.state === 'detached' || entry.state === 'unused' || entry.state === 'deleting') return 'detached'
-    // `detachedFrom` lets the clean-up look at that document once more before
-    // it deletes anything (functions/mediaPurge.js).
-    tx.update(ref, {
-      refs: [],
-      state: entry.legacy ? 'unused' : 'detached',
-      detachedAt: new Date(now()),
-      detachedFrom: path,
-    })
-    return 'detached'
+    return settle(tx, ref, entry, mediaRef, path, attach, familyId, now)
   })
+}
+
+// Files settled in one transaction. Each is a read and at most one write, and
+// a transaction takes 500 writes; a document holds up to MAX_MEDIA_REFS files,
+// and a write can let go of as many as it adds.
+const REFS_PER_TRANSACTION = 200
+
+/**
+ * reconcileRef for several files of one document at once, for files from the
+ * ledger's time (not `legacy` ones, whose shared day counter wants one
+ * transaction each). One transaction reads the document once and every
+ * entry, and writes them: a transaction per file read the whole document
+ * again for each, up to a megabyte apiece, and fifty of them on one document
+ * queued on each other's locks.
+ *
+ * @returns {Promise<Array<'attached'|'detached'|'kept'|'ignored'>>} in the order of `mediaRefs`
+ */
+export async function reconcileRefs(db, now, mediaRefs, collection, docId, writtenFamily = null) {
+  const path = `${collection}/${docId}`
+  const source = db.collection(collection).doc(docId)
+  const results = []
+  for (let i = 0; i < mediaRefs.length; i += REFS_PER_TRANSACTION) {
+    const batch = mediaRefs.slice(i, i + REFS_PER_TRANSACTION)
+    const refs = batch.map((mediaRef) => db.collection(MEDIA_ASSETS).doc(ledgerIdOf(mediaRef)))
+    results.push(...await db.runTransaction(async (tx) => {
+      // Every read before the first write, as a transaction requires.
+      const [sourceSnap, ...snaps] = await Promise.all([tx.get(source), ...refs.map((ref) => tx.get(ref))])
+      const current = sourceSnap.exists ? sourceSnap.data() : null
+      const holds = refsOf(current)
+      const docFamily = familyOf(collection, docId, current)
+      return batch.map((mediaRef, j) => {
+        const attach = holds.has(mediaRef)
+        const familyId = docFamily ?? (attach ? null : writtenFamily)
+        const entry = snaps[j].exists ? snaps[j].data() : null
+        return settle(tx, refs[j], entry, mediaRef, path, attach, familyId, now)
+      })
+    }))
+  }
+  return results
 }
 
 /**
@@ -288,14 +343,25 @@ export async function trackMediaRefs({ db, now = Date.now, legacyPerDay = LEGACY
   // be comes from the document itself (reconcileRef says why).
   const { added, removed, removedFamily } = refChanges(collection, docId, before, after)
 
+  // A family being deleted deletes its documents and its ledger entries
+  // itself (functions/familyDeletion.js), and its marker means the deletion
+  // can no longer be taken back. Letting go of each file as its document
+  // goes was thousands of transactions racing that deletion for entries it
+  // was about to remove, each starting yet another of these triggers.
+  if (!after && removedFamily) {
+    const marker = await db.collection(FAMILY_DELETIONS).doc(removedFamily).get()
+    if (marker.exists) return stats
+  }
+
   const reconcile = (id) => reconcileRef(db, now, id, collection, docId, removedFamily, legacyPerDay)
-  // Files from before the ledger share one counter per family, which every
-  // new entry updates in its own transaction: one after the other, so a
-  // backfilled document with many of them does not make its transactions
-  // fight over that counter.
+  // The ledger's own files together, in as few transactions as fit
+  // (reconcileRefs). Files from before the ledger share one counter per
+  // family, which every new entry updates in its own transaction: one after
+  // the other, so a backfilled document with many of them does not make its
+  // transactions fight over that counter.
   const [old, fresh] = [[], []]
   for (const id of [...added, ...removed]) (parseLegacyRef(id) ? old : fresh).push(id)
-  const results = await Promise.all(fresh.map(reconcile))
+  const results = fresh.length ? await reconcileRefs(db, now, fresh, collection, docId, removedFamily) : []
   for (const id of old) results.push(await reconcile(id))
   for (const result of results) {
     if (result === 'attached') stats.attached++

@@ -24,6 +24,14 @@ export function thumbsFor(doc) {
   return thumbs
 }
 
+/**
+ * The same, for a list of photos under another name than `images` (a journal
+ * entry's or a time capsule's `photos`, with `photoThumbs`).
+ */
+export function photoThumbsFor(photos, photoThumbs) {
+  return thumbsFor({ images: photos, thumbs: photoThumbs })
+}
+
 /** Thumbnail URL for images[index], or '' to fall back to the original. */
 export function thumbAt(doc, index = 0) {
   return thumbsFor(doc)[index] || ''

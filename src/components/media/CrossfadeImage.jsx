@@ -26,7 +26,7 @@ export const ORIGINAL_DWELL_MS = 300
  * changes drops its old picture before the new one is decoded, and on a dark
  * story background that gap is a black frame on every switch.
  */
-const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, focus, onDecoded }) {
+const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, focus, instant, onDecoded }) {
   const imgRef = useRef(null)
 
   // Hold the decrypted blob for as long as this layer shows it. The hook that
@@ -59,7 +59,7 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, f
       aria-hidden={alt ? undefined : 'true'}
       draggable={false}
       decoding="async"
-      className={`absolute inset-0 w-full h-full ${fit} pointer-events-none select-none transition-opacity duration-200 ease-out motion-reduce:transition-none`}
+      className={`absolute inset-0 w-full h-full ${fit} pointer-events-none select-none ${instant ? '' : 'transition-opacity duration-200 ease-out motion-reduce:transition-none'}`}
       // scale hides the blur's soft edges, which would otherwise show as a pale
       // border around the frame.
       style={{
@@ -101,6 +101,11 @@ const Layer = memo(function Layer({ id, source, url, ready, blurred, alt, fit, f
  * clip being played) without reaching anything outside it. `onShown(src)` fires
  * once the slide's first picture has fully faded in, when nothing beneath it
  * can be seen any more.
+ *
+ * `cut` replaces one photo with the next in a single frame instead of fading
+ * between them; within a photo (blur-up, thumbnail, original) it still fades.
+ * For `object-contain`, where photos of different shapes do not cover each
+ * other and a fade showed both at once (the memory lightbox).
  */
 function CrossfadeImage({
   src = '',
@@ -111,6 +116,7 @@ function CrossfadeImage({
   fit = 'object-cover',
   focus,
   className = '',
+  cut = false,
   onSettled,
   onShown,
   children,
@@ -238,20 +244,27 @@ function CrossfadeImage({
   return (
     <div ref={frameRef} className={`isolate overflow-hidden ${className}`}>
       {children}
-      {layers.map((layer) => (
-        <Layer
-          key={layer.id}
-          id={layer.id}
-          source={layer.source}
-          url={layer.url}
-          ready={layer.ready}
-          blurred={layer.quality === TINY}
-          alt={layer === speaking ? alt : ''}
-          fit={fit}
-          focus={focus}
-          onDecoded={markDecoded}
-        />
-      ))}
+      {layers.map((layer) => {
+        // With `cut`, another photo goes the moment this slide's first one can
+        // be painted, and that one appears at once rather than fading in.
+        if (cut && layer.slide !== src && shownForSlide.length > 0) return null
+        const firstOfSlide = layers.find((l) => l.slide === layer.slide) === layer
+        return (
+          <Layer
+            key={layer.id}
+            id={layer.id}
+            source={layer.source}
+            url={layer.url}
+            ready={layer.ready}
+            blurred={layer.quality === TINY}
+            alt={layer === speaking ? alt : ''}
+            fit={fit}
+            focus={focus}
+            instant={cut && firstOfSlide}
+            onDecoded={markDecoded}
+          />
+        )
+      })}
       {/* The wait state, for a slide with nothing to show yet: the last photo
           dims and the decrypt spinner appears — but only after a delay, so a
           switch that is quick shows neither. */}

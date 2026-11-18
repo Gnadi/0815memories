@@ -27,11 +27,20 @@ export default defineConfig({
   },
   build: {
     // The pre-rendered landing page ("/") paints from HTML + CSS alone. Vite's
-    // automatic <link rel="modulepreload"> hints would otherwise fetch the whole
-    // app JS graph (~300 KB) at high priority, starving the render-blocking CSS
-    // on a throttled connection and pushing out First Contentful Paint. The app
-    // JS still loads to hydrate — just after the first paint, not before it.
-    modulePreload: false,
+    // automatic <link rel="modulepreload"> hints in the HTML would fetch the
+    // whole app JS graph (~300 KB) at high priority ahead of it; measured with
+    // them, its largest paint came 380 ms later on a throttled phone. So the
+    // HTML gets none, and the app JS loads to hydrate after the first paint.
+    //
+    // A dynamic import is another matter. Without the list of what the chunk
+    // imports, each level of a lazy page's imports was found only once the level
+    // above had arrived: three more round trips after HomePage's own. With the
+    // list, they load side by side — the first photo on /home came about 350 ms
+    // sooner on the same throttled phone.
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies: (_filename, deps, { hostType }) => (hostType === 'html' ? [] : deps),
+    },
   },
   plugins: [
     react(),
