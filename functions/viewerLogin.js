@@ -52,6 +52,14 @@ export const DEVICE_TTL_MS = 180 * 24 * 60 * 60 * 1000
 // A page of devices to delete at once; a batch holds at most 500 writes.
 const DEVICE_PAGE = 400
 
+/**
+ * bcrypt reads at most 72 bytes of a password and ignores the rest silently.
+ * A longer shared password whose change lay past that point left the old one
+ * working, so the change is refused instead. Counted in UTF-8 bytes, which is
+ * what bcrypt counts: an umlaut is two.
+ */
+export const MAX_SHARED_PASSWORD_BYTES = 72
+
 /** Hashes of device tokens, each bound to one family. Admin SDK only. */
 export const DEVICES = 'viewerDevices'
 

@@ -50,7 +50,9 @@ import { mirrorFamily } from './slugs.js'
 import { givenUp } from './retries.js'
 import { MembershipError, deleteFcmTokens, deleteMyAccount as deleteAccount, redeemInvite, removeAdmin, requireRecentLogin } from './membership.js'
 import { cancelDeletion, deleteFamily, DeletionError, familiesToDelete, requestDeletion } from './familyDeletion.js'
-import { PasswordChangeError, checkViewerLogin, forgetViewerDevices, replaceSharedPassword } from './viewerLogin.js'
+import {
+  MAX_SHARED_PASSWORD_BYTES, PasswordChangeError, checkViewerLogin, forgetViewerDevices, replaceSharedPassword,
+} from './viewerLogin.js'
 import {
   COPY,
   MULTICAST_CHUNK,
@@ -799,6 +801,9 @@ export const setSharedPassword = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, 
   // guessing is throttled, not stopped. Existing passwords keep working.
   if (password.length < MIN_SHARED_PASSWORD_LENGTH) {
     throw new HttpsError('invalid-argument', 'Password is too short')
+  }
+  if (Buffer.byteLength(password, 'utf8') > MAX_SHARED_PASSWORD_BYTES) {
+    throw new HttpsError('invalid-argument', 'Password is too long')
   }
 
   const familySnap = await getFirestore().doc(`families/${familyId}`).get()

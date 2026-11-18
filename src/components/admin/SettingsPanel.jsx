@@ -5,6 +5,7 @@ import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
 import { appCheckReady } from '../../config/appCheck'
+import { sharedPasswordTooLong } from '../../utils/passwordPolicy'
 import { useAuth } from '../../context/AuthContext'
 import { Settings, Save, Copy, Check, Link, Image as ImageIcon, HardDrive, Camera, Palette } from 'lucide-react'
 import { generateSlug } from '../../utils/familySlug'
@@ -59,6 +60,10 @@ export default function SettingsPanel() {
     // Mirrors setSharedPassword in functions/index.js.
     if (!newPassword || newPassword.length < 8) {
       setMessage(t('password.tooShort'))
+      return
+    }
+    if (sharedPasswordTooLong(newPassword)) {
+      setMessage(t('password.tooLong'))
       return
     }
     if (!familyId) {
