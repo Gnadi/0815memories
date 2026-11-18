@@ -188,7 +188,7 @@
     "vaultZone": {
       "badge": "Tresor-Privatsphäre",
       "title": "Tresor & Briefe",
-      "desc": "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden, und nur die Admins der Familie können sie öffnen. Auf unseren Servern kommt nur Chiffretext an.",
+      "desc": "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256 direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden, und nur die Admins der Familie können sie öffnen. Texte, Titel und Anhänge kommen auf unseren Servern nur als Chiffretext an.",
       "bullets": [
         "AES-256-GCM — verschlüsselt auf deinem Gerät",
         "Nur für die Admins der Familie lesbar — Mitleser sehen den Feed",

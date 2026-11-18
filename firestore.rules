@@ -507,6 +507,18 @@ service cloud.firestore {
         && (!('contentFormat' in d) || d.contentFormat in ['rich', 'markdown']);
     }
 
+    // An entry's title and volume are the parent's words as much as its text,
+    // and were stored readable until the security review of 2026-11-18. A new
+    // entry carries them as ciphertext; an existing one may keep its old
+    // readable values until they are written again, so an edit of anything
+    // else (a photo, the text) still goes through.
+    function journalLabelsOk() {
+      let d = request.resource.data;
+      let changed = resource == null ? d.keys() : d.diff(resource.data).affectedKeys();
+      return (!changed.hasAny(['title']) || encryptedOk(d, 'title'))
+        && (!changed.hasAny(['volume']) || encryptedOk(d, 'volume'));
+    }
+
     // Journals — admin only (private letters to children)
     match /journals/{journalId} {
       allow read: if request.auth != null
@@ -516,12 +528,14 @@ service cloud.firestore {
                     && request.resource.data.familyId != null
                     && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
                     && isFamilyAdmin(request.resource.data.familyId)
-                    && journalContentOk();
+                    && journalContentOk()
+                    && journalLabelsOk();
       allow update: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId)
                     && familyUnchanged()
-                    && journalContentOk();
+                    && journalContentOk()
+                    && journalLabelsOk();
       allow delete: if request.auth != null
                     && resource.data.familyId != null
                     && isFamilyAdmin(resource.data.familyId);

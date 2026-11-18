@@ -97,7 +97,7 @@
         {
           "heading": "Encrypted, and for the admins only",
           "paragraphs": [
-            "Vault capsules, your children's journals and letters are encrypted with AES-256-GCM in your browser before they are uploaded. What reaches our servers is ciphertext.",
+            "Vault capsules, your children's journals and letters are encrypted with AES-256-GCM in your browser before they are uploaded: their text, titles and attachments reach our servers only as ciphertext. Only an entry's date and chosen mood stay readable.",
             "Only the family's admins can open them. The inner circle, who view the family feed with the shared password, never see the Vault or the journals."
           ]
         },

@@ -229,6 +229,19 @@ describe('one decryption for the list and the page', () => {
     })
   })
 
+  it("recipes: a version's changes are stored encrypted, and old readable ones still show", async () => {
+    const changes = [{ type: 'Swap', ingredient: 'Butter', description: 'Margarine since Dad\'s heart attack' }]
+    const { id } = await addRecipe(FAMILY, key, { title: 'Strudel', author: 'Mum', forkReason: 'Lighter', changes })
+
+    const stored = (await fs.getDoc(fs.doc(null, 'recipes', id))).data()
+    expect(typeof stored.changes).toBe('string')
+    expect(stored.changes).not.toContain('heart')
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({ changes })
+
+    await fs.updateDoc(fs.doc(null, 'recipes', id), { changes })
+    await expect(getRecipe(FAMILY, key, id)).resolves.toMatchObject({ changes })
+  })
+
   it('scrapbooks: the list leaves the pages encrypted, the editor gets them', async () => {
     const pages = [{ id: 'p1', elements: [] }, { id: 'p2', elements: [] }]
     const id = await addScrapbook(FAMILY, key, { title: 'Summer 2025', pages })
@@ -248,6 +261,23 @@ describe('one decryption for the list and the page', () => {
 
     await expect(getMemory(FAMILY, key, id)).resolves.toMatchObject({ id, title: 'Lake day', contentRich: rich })
     await expect(getMemory(OTHER, key, id)).resolves.toBeNull()
+  })
+
+  it('memories: the captions of videos and voice notes are stored encrypted', async () => {
+    await addMemory(FAMILY, key, {
+      title: 'Lake day',
+      videos: [{ url: 'https://example.test/v.bin', publicId: 'v1', title: 'Opa swimming' }],
+      voiceMemos: [{ url: 'https://example.test/a.bin', publicId: 'a1', title: 'oma-last-birthday', duration: 9 }],
+    })
+    const [snap] = (await fs.getDocs(fs.collection(null, 'memories'))).docs
+    const raw = snap.data()
+    expect(JSON.stringify(raw)).not.toMatch(/Opa swimming|oma-last-birthday/)
+    // functions/bestOf.js counts the videos by their addresses.
+    expect(raw.videos[0].url).toBe('https://example.test/v.bin')
+
+    const memory = await getMemory(FAMILY, key, snap.id)
+    expect(memory.videos[0].title).toBe('Opa swimming')
+    expect(memory.voiceMemos[0]).toMatchObject({ title: 'oma-last-birthday', duration: 9 })
   })
 
   it("memories: the page gets the photos' blur-up previews decrypted", async () => {
@@ -348,6 +378,48 @@ describe('kids and journals', () => {
     const entries = await firstDelivery((onData, onError) =>
       subscribeJournals(FAMILY, 'kid-a', key, onData, onError))
     expect(entries).toEqual([expect.objectContaining({ childId: 'kid-a', title: 'First tooth', content: 'At dinner' })])
+  })
+
+  // A title alone can name a diagnosis; the features page promises that only
+  // ciphertext reaches the server. Title, volume and the captions of attached
+  // media used to be stored readable.
+  it('journals: title, volume and media captions are stored encrypted', async () => {
+    const date = Timestamp.fromDate(new Date('2024-10-18'))
+    await addJournal(FAMILY, 'kid-a', key, {
+      title: 'The diagnosis',
+      volume: 'Hospital weeks',
+      content: 'Dear Emma',
+      date,
+      videos: [{ url: 'https://example.test/v.bin', publicId: 'v1', title: 'Ward 3' }],
+      voiceMemos: [{ url: 'https://example.test/a.bin', publicId: 'a1', title: 'call-with-dr-huber', duration: 12 }],
+    })
+
+    const [raw] = await stored('journals')
+    expect(JSON.stringify(raw)).not.toMatch(/diagnosis|Hospital|Ward 3|huber/)
+    // The media addresses stay readable: the server and the export use them.
+    expect(raw.videos[0]).toMatchObject({ url: 'https://example.test/v.bin', publicId: 'v1' })
+    expect(raw.voiceMemos[0]).toMatchObject({ publicId: 'a1', duration: 12 })
+
+    const entry = await getJournal(FAMILY, 'kid-a', key, raw.id)
+    expect(entry).toMatchObject({ title: 'The diagnosis', volume: 'Hospital weeks', content: 'Dear Emma' })
+    expect(entry.videos[0].title).toBe('Ward 3')
+    expect(entry.voiceMemos[0].title).toBe('call-with-dr-huber')
+  })
+
+  it('journals: an entry from before keeps its readable title and captions', async () => {
+    await fs.setDoc(fs.doc(null, 'journals', 'old'), {
+      familyId: FAMILY,
+      childId: 'kid-a',
+      title: 'First day at school',
+      volume: 'Year one',
+      content: await encryptText(key, 'Dear Leo'),
+      date: Timestamp.fromDate(new Date('2023-09-11')),
+      videos: [{ url: 'https://example.test/v.bin', title: 'The gate' }],
+    })
+    const entry = await getJournal(FAMILY, 'kid-a', key, 'old')
+    expect(entry).toMatchObject({ title: 'First day at school', volume: 'Year one', content: 'Dear Leo' })
+    expect(entry.videos[0].title).toBe('The gate')
+    expect(entry).not.toHaveProperty('unreadableFields')
   })
 
   it('journals: the rich text is stored encrypted, and a switch to Markdown deletes it', async () => {

@@ -188,7 +188,7 @@
     "vaultZone": {
       "badge": "Vault-grade privacy",
       "title": "Vault & Letters",
-      "desc": "Vault capsules, your children's journals and letters are encrypted with AES-256 in your browser before they're uploaded, and only the family's admins can open them. What reaches our servers is ciphertext.",
+      "desc": "Vault capsules, your children's journals and letters are encrypted with AES-256 in your browser before they're uploaded, and only the family's admins can open them. Their text, titles and attachments reach our servers only as ciphertext.",
       "bullets": [
         "AES-256-GCM, encrypted on your device",
         "Readable by the family's admins only — viewers see the feed",

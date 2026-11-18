@@ -51,12 +51,18 @@ async function encryptRecipe(key, data) {
   if (Array.isArray(result.ingredients)) {
     result.ingredients = await encryptJSON(key, result.ingredients)
   }
+  // A version's changes describe in free text what was done differently.
+  // Stored as a readable list until the security review of 2026-11-18; a list
+  // is not a string, so decryptJSONFields passes those through as they are.
+  if (Array.isArray(result.changes)) {
+    result.changes = await encryptJSON(key, result.changes)
+  }
   return result
 }
 
 export async function decryptRecipe(key, data) {
   if (!key) return data
-  const result = await decryptJSONFields(key, await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS), ['ingredients'])
+  const result = await decryptJSONFields(key, await decryptFields(key, data, ENCRYPTED_TEXT_FIELDS), ['ingredients', 'changes'])
   if (result.instructionsRich != null) result.instructionsRich = parseRichDoc(result.instructionsRich)
   return result
 }

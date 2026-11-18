@@ -89,6 +89,21 @@ describe.skipIf(!EMULATOR)('journals', () => {
     }))
   })
 
+  it('are refused with a readable title or volume', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'journals', 'plain'), entry({ title: 'The diagnosis' })))
+    await assertFails(setDoc(doc(asAdmin(), 'journals', 'plain'), entry({ volume: 'Hospital weeks' })))
+    await assertSucceeds(setDoc(doc(asAdmin(), 'journals', 'sealed'), entry({ volume: sealed('Hospital weeks') })))
+    await assertFails(updateDoc(doc(asAdmin(), 'journals', 'legacy'), { title: 'The diagnosis' }))
+  })
+
+  it('from before the encrypted title can still be edited elsewhere, and then sealed', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'journals', 'readable'), entry({ title: 'First tooth', volume: 'Year one' }))
+    })
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'readable'), { content: sealed('more') }))
+    await assertSucceeds(updateDoc(doc(asAdmin(), 'journals', 'readable'), { title: sealed('First tooth') }))
+  })
+
   // The journal overview counts a child's entries and reads the latest one's
   // date (services/journals.js getJournalSummary), instead of every entry.
   const childEntries = (db) => query(

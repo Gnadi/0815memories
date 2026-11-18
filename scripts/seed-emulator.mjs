@@ -84,7 +84,7 @@ const ENCRYPTED = {
   memories: { text: ['title', 'content', 'quote', 'location', 'authorName', 'category'] },
   moments: { text: ['caption', 'location', 'category', 'label'] },
   children: { text: ['name', 'birthTime', 'birthPlace'] },
-  journals: { text: ['content'] },
+  journals: { text: ['content', 'title', 'volume'] },
   recipes: { text: ['title', 'description', 'instructions', 'instructionsRich', 'chefNote', 'forkReason', 'author'], json: ['ingredients'] },
   scrapbooks: { text: ['title'], json: ['pages'] },
   blackbox: { text: ['title'] },

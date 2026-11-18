@@ -27,6 +27,7 @@ const FAMILY = 'family-1'
 const ADMIN = 'uid-admin'
 const PARTNER = 'uid-partner'
 const CHAPTER = 'chapter-1'
+const RITUAL = 'ritual-1'
 
 const future = () => new Date(Date.now() + 365 * 24 * 3600 * 1000)
 
@@ -38,7 +39,7 @@ const COLLECTIONS = {
   // writes; momentTextRules.test.js covers the moments from before the mark.
   moments: { base: () => ({ familyId: FAMILY, textEncrypted: true }), fields: ['caption', 'location', 'category', 'label'] },
   children: { base: () => ({ familyId: FAMILY }), fields: ['name', 'birthTime', 'birthPlace'] },
-  journals: { base: () => ({ familyId: FAMILY }), fields: ['content', 'contentRich'] },
+  journals: { base: () => ({ familyId: FAMILY }), fields: ['content', 'contentRich', 'title', 'volume'] },
   recipes: {
     base: () => ({ familyId: FAMILY }),
     fields: ['title', 'description', 'instructions', 'instructionsRich', 'chefNote', 'forkReason', 'author', 'ingredients'],
@@ -48,8 +49,9 @@ const COLLECTIONS = {
   highlights: { base: () => ({ familyId: FAMILY }), fields: ['title', 'doc'] },
   blackbox: { base: () => ({ familyId: FAMILY, unlockDate: future() }), fields: ['title'] },
   ourYearRituals: { base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER] }), fields: ['occasionLabel', 'partners'] },
+  // A chapter is created only under a ritual of its couple (chapterMatchesRitual).
   ourYearChapters: {
-    base: () => ({ familyId: FAMILY, participantUids: [ADMIN, PARTNER] }),
+    base: () => ({ familyId: FAMILY, ritualId: RITUAL, participantUids: [ADMIN, PARTNER] }),
     fields: ['title', 'quizQuestions', 'quizReactions', 'keepsakes'],
   },
   // Entries and letters are created only under the id of a chapter that exists
@@ -105,8 +107,13 @@ describe.skipIf(!EMULATOR)('Encrypted fields in the security rules', () => {
         adminUids: [ADMIN, PARTNER],
         familyName: 'One',
       })
+      await setDoc(doc(context.firestore(), 'ourYearRituals', RITUAL), {
+        familyId: FAMILY,
+        participantUids: [ADMIN, PARTNER],
+      })
       await setDoc(doc(context.firestore(), 'ourYearChapters', CHAPTER), {
         familyId: FAMILY,
+        ritualId: RITUAL,
         participantUids: [ADMIN, PARTNER],
       })
     })

@@ -17,7 +17,9 @@ import {
   where,
 } from '../config/firestore'
 import { db } from '../config/firebase'
-import { decryptFields, encryptFields } from '../utils/encryption'
+import {
+  decryptFields, decryptFieldsKeepingPlaintext, decryptItemFields, encryptFields, encryptItemFields,
+} from '../utils/encryption'
 import { parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
@@ -43,17 +45,33 @@ export const CONTENT_FORMATS = ['rich', 'markdown']
 // skips a value that is not a string, and an object would be stored readable.
 export const JOURNAL_ENCRYPTED_FIELDS = ['content', 'contentRich']
 
+// Written by the parent as much as the text is, and a title alone can name a
+// diagnosis or a quarrel. They were stored readable until the security review
+// of 2026-11-18, so a value that is not ciphertext is read as the old text.
+export const JOURNAL_LABEL_FIELDS = ['title', 'volume']
+// The caption of an attached video or voice note; for an imported recording,
+// its file name. The rest of each item is the media address, which stays
+// readable for the server.
+const MEDIA_ITEM_FIELDS = ['title']
+
 async function encryptJournal(key, data) {
   const input = { ...data }
   if (input.contentRich != null && typeof input.contentRich !== 'string') {
     input.contentRich = JSON.stringify(input.contentRich)
   }
-  return encryptFields(key, input, JOURNAL_ENCRYPTED_FIELDS)
+  const result = await encryptFields(key, input, [...JOURNAL_ENCRYPTED_FIELDS, ...JOURNAL_LABEL_FIELDS])
+  if (Array.isArray(result.videos)) result.videos = await encryptItemFields(key, result.videos, MEDIA_ITEM_FIELDS)
+  if (Array.isArray(result.voiceMemos)) result.voiceMemos = await encryptItemFields(key, result.voiceMemos, MEDIA_ITEM_FIELDS)
+  return result
 }
 
 export async function decryptJournal(key, data) {
-  const result = await decryptFields(key, data, JOURNAL_ENCRYPTED_FIELDS)
+  const result = await decryptFieldsKeepingPlaintext(
+    key, await decryptFields(key, data, JOURNAL_ENCRYPTED_FIELDS), JOURNAL_LABEL_FIELDS,
+  )
   if (result.contentRich != null) result.contentRich = parseRichDoc(result.contentRich)
+  if (Array.isArray(result.videos)) result.videos = await decryptItemFields(key, result.videos, MEDIA_ITEM_FIELDS)
+  if (Array.isArray(result.voiceMemos)) result.voiceMemos = await decryptItemFields(key, result.voiceMemos, MEDIA_ITEM_FIELDS)
   return result
 }
 

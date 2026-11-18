@@ -318,6 +318,49 @@ export async function decryptJSONFields(key, obj, fields) {
   return decodeFields(key, obj, fields, decryptJSON)
 }
 
+// The shape encryptText writes: base64 of a 12-byte IV, at least one byte and
+// the 16-byte tag. Mirrors isCiphertext() in firestore.rules. Text a person
+// typed has spaces or punctuation, or is shorter, so this tells a field that
+// was stored readable before it was encrypted from one that was not.
+const CIPHERTEXT_SHAPE = /^[A-Za-z0-9+/]+={0,2}$/
+export function looksLikeCiphertext(value) {
+  return typeof value === 'string' && value.length >= 40 && value.length % 4 === 0 && CIPHERTEXT_SHAPE.test(value)
+}
+
+/**
+ * decryptFields for fields that were stored readable until they were added to
+ * a service's encrypted list. A value that is not ciphertext is passed through
+ * as the text it is, so entries written before keep showing their title;
+ * ciphertext that does not decrypt is unreadable as usual.
+ */
+export async function decryptFieldsKeepingPlaintext(key, obj, fields) {
+  if (!key || !obj) return obj
+  return decryptFields(key, obj, fields.filter((field) => looksLikeCiphertext(obj[field])))
+}
+
+/**
+ * Encrypt the named string fields of every item of a list, such as the
+ * `title` of each attached video, and leave the rest of each item as it is:
+ * the media addresses in those items are read by the server and the export.
+ */
+export async function encryptItemFields(key, items, fields) {
+  if (!Array.isArray(items)) return items
+  return Promise.all(items.map((item) =>
+    (item && typeof item === 'object' ? encryptFields(key, item, fields) : item)))
+}
+
+/** The reverse of encryptItemFields, keeping readable values from before it. */
+export async function decryptItemFields(key, items, fields) {
+  if (!key || !Array.isArray(items)) return items
+  return Promise.all(items.map(async (item) => {
+    if (!item || typeof item !== 'object') return item
+    const { unreadableFields, ...rest } = await decryptFieldsKeepingPlaintext(key, item, fields)
+    // An item has no place to say so; an empty caption is what a damaged one shows.
+    for (const field of unreadableFields ?? []) rest[field] = ''
+    return rest
+  }))
+}
+
 /** Whether decryptFields or decryptJSONFields had to give up on a field of this document. */
 export function hasUnreadableFields(obj, fields = null) {
   const unreadable = obj?.unreadableFields

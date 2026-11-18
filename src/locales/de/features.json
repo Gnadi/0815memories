@@ -97,7 +97,7 @@
         {
           "heading": "Verschlüsselt und nur für die Admins",
           "paragraphs": [
-            "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256-GCM direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden. Auf unseren Servern kommt nur Chiffretext an.",
+            "Zeitkapseln im Tresor sowie die Tagebücher und Briefe deiner Kinder werden mit AES-256-GCM direkt in deinem Browser verschlüsselt, bevor sie hochgeladen werden: Texte, Titel und Anhänge kommen auf unseren Servern nur als Chiffretext an. Lesbar bleiben nur das Datum und die gewählte Stimmung eines Eintrags.",
             "Öffnen können sie nur die Admins der Familie. Der engste Kreis, der den Familien-Feed mit dem gemeinsamen Passwort ansieht, bekommt Tresor und Tagebücher nie zu sehen."
           ]
         },

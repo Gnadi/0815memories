@@ -16,7 +16,9 @@ import {
   writeBatch,
 } from '../config/firestore'
 import { auth, db } from '../config/firebase'
-import { decryptFields, decryptStringArray, encryptFields } from '../utils/encryption'
+import {
+  decryptFields, decryptItemFields, decryptStringArray, encryptFields, encryptItemFields,
+} from '../utils/encryption'
 import { isRichDoc, parseRichDoc } from '../utils/richText'
 import { getFamilyDocument, subscribeDecrypted } from './decrypted'
 import { mediaRefsForCreate, mediaRefsForUpdate } from './mediaRefs'
@@ -43,6 +45,29 @@ export const MEMORY_TEXT_FIELDS = ['title', 'content', 'quote', 'location', 'aut
  */
 export const MEMORY_WRITE_FIELDS = [...MEMORY_TEXT_FIELDS, 'contentRich']
 
+// The caption of each attached video and voice note, which can be the file
+// name of an imported recording. Encrypted inside each item so the media
+// addresses beside it stay readable for the server (functions/bestOf.js counts
+// the videos) and the export. Captions from before are read as they are.
+const MEDIA_LISTS = ['videos', 'voiceMemos']
+const MEDIA_ITEM_FIELDS = ['title']
+
+async function encryptMediaCaptions(key, data) {
+  const result = { ...data }
+  for (const list of MEDIA_LISTS) {
+    if (Array.isArray(result[list])) result[list] = await encryptItemFields(key, result[list], MEDIA_ITEM_FIELDS)
+  }
+  return result
+}
+
+async function decryptMediaCaptions(key, data) {
+  const result = { ...data }
+  for (const list of MEDIA_LISTS) {
+    if (Array.isArray(result[list])) result[list] = await decryptItemFields(key, result[list], MEDIA_ITEM_FIELDS)
+  }
+  return result
+}
+
 /**
  * Feed decryption — text fields only.
  *
@@ -53,7 +78,7 @@ export const MEMORY_WRITE_FIELDS = [...MEMORY_TEXT_FIELDS, 'contentRich']
  */
 export async function decryptMemory(key, data) {
   if (!key) return data
-  const result = await decryptFields(key, data, MEMORY_TEXT_FIELDS)
+  const result = await decryptMediaCaptions(key, await decryptFields(key, data, MEMORY_TEXT_FIELDS))
   // The blur-up previews, which is the one thing here worth paying for on every
   // snapshot: ~700 bytes each, measured at 0.19ms, so fifty of them cost about
   // 10ms and replace fifty spinners with the photos' own colours. They are the
@@ -71,7 +96,7 @@ export async function decryptMemory(key, data) {
  */
 export async function decryptMemoryDoc(key, data) {
   if (!key) return data
-  const result = await decryptFields(key, data, MEMORY_WRITE_FIELDS)
+  const result = await decryptMediaCaptions(key, await decryptFields(key, data, MEMORY_WRITE_FIELDS))
   if (result.contentRich != null) result.contentRich = parseRichDoc(result.contentRich)
   return result
 }
@@ -100,7 +125,7 @@ export async function encryptMemoryData(key, data) {
   if (data?.contentRich != null && typeof data.contentRich !== 'string') {
     throw new Error('contentRich must be a JSON string before encryption')
   }
-  return encryptFields(key, data, MEMORY_WRITE_FIELDS)
+  return encryptMediaCaptions(key, await encryptFields(key, data, MEMORY_WRITE_FIELDS))
 }
 
 /** The family's latest memories, newest first, decrypted for the feed. */
