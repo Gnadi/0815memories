@@ -703,7 +703,16 @@ export const deleteMyAccount = membershipCall(async (request) => {
  * X-Forwarded-For, so the caller chooses it. The limits that hold are the
  * family's (for devices that have never signed in) and the device's own.
  */
-export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+// Signing in is the first thing every viewer does, and a cold instance adds
+// about half a second of loading, the Firestore channel and the token signing
+// before bcrypt even starts. One instance is kept warm for it, at roughly 10 USD
+// a month; 0 turns that off without a change of code.
+const VIEWER_LOGIN_MIN_INSTANCES = defineInt('VIEWER_LOGIN_MIN_INSTANCES', {
+  default: 1,
+  description: 'Instances of viewerLogin kept warm, so a viewer does not wait for a cold start',
+})
+
+export const viewerLogin = onCall({ enforceAppCheck: ENFORCE_APP_CHECK, minInstances: VIEWER_LOGIN_MIN_INSTANCES }, async (request) => {
   const result = await checkViewerLogin(
     {
       db: getFirestore(),
