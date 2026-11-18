@@ -716,10 +716,11 @@ export const deleteMyAccount = membershipCall(async (request) => {
  */
 // Signing in is the first thing every viewer does, and a cold instance adds
 // about half a second of loading, the Firestore channel and the token signing
-// before bcrypt even starts. One instance is kept warm for it, at roughly 10 USD
-// a month; 0 turns that off without a change of code.
+// before bcrypt even starts. An instance kept warm removes that, at roughly
+// 10 USD a month each, so none is by default: costs stay low, and setting this
+// to 1 buys the faster sign-in without a change of code.
 const VIEWER_LOGIN_MIN_INSTANCES = defineInt('VIEWER_LOGIN_MIN_INSTANCES', {
-  default: 1,
+  default: 0,
   description: 'Instances of viewerLogin kept warm, so a viewer does not wait for a cold start',
 })
 
