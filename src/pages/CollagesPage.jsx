@@ -126,7 +126,7 @@ export default function CollagesPage() {
                       ratio={aspectRatioOf(doc)}
                       className="rounded-3xl overflow-hidden shadow-[0_10px_34px_rgba(45,27,14,0.14)]"
                     >
-                      <CollagePreview doc={doc} preferThumbs fit="box" className="w-full h-full" />
+                      <CollagePreview doc={doc} preferThumbs lazy fit="box" className="w-full h-full" />
                     </GalleryStage>
                     {/* The artwork is the label; the name is still announced. */}
                     <span className="sr-only">{t(template.labelKey)}</span>
@@ -181,7 +181,7 @@ export default function CollagesPage() {
                         size="list"
                         className="rounded-2xl overflow-hidden shadow-[0_6px_20px_rgba(45,27,14,0.12)]"
                       >
-                        <CollagePreview doc={collage.doc} preferThumbs fit="box" className="w-full h-full" />
+                        <CollagePreview doc={collage.doc} preferThumbs lazy fit="box" className="w-full h-full" />
                       </GalleryStage>
                       <span className="block pt-2.5 text-sm font-medium text-bark text-center truncate">
                         {collage.title || t('defaultTitle')}
