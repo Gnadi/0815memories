@@ -134,6 +134,16 @@ describe.skipIf(!EMULATOR)('recipes', () => {
         recipe({ viewerVisible: true, parentId: 'private', rootId: 'private' })))
     })
 
+    // setRecipeViewerVisible and deleteRecipe look for stragglers once after
+    // their batch, which is only enough if no version can appear under the
+    // root's old state afterwards.
+    it('a fork of a recipe that is gone cannot be added', async () => {
+      await assertFails(setDoc(doc(asAdmin(), 'recipes', 'f4'),
+        recipe({ parentId: 'deleted', rootId: 'deleted' })))
+      await assertFails(setDoc(doc(asAdmin(), 'recipes', 'f5'),
+        recipe({ viewerVisible: true, parentId: 'deleted', rootId: 'deleted' })))
+    })
+
     it('a fork cannot be shared on its own', async () => {
       await assertFails(updateDoc(doc(asAdmin(), 'recipes', 'privateFork'), { viewerVisible: true }))
     })
