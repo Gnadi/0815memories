@@ -7,11 +7,8 @@ import { X, Minimize2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../../utils/encryptedUpload'
 import { getVideoDuration, uploadErrorMessage } from '../../hooks/useMediaUploader'
-import {
-  MAX_VIDEO_DURATION_SECONDS,
-  MAX_PLAINTEXT_BYTES,
-  formatBytes,
-} from '../../constants/media'
+import { MAX_VIDEO_DURATION_SECONDS } from '../../constants/media'
+import { fitVideoToLimit } from '../../utils/videoCompression'
 import { devError } from '../../utils/devLog'
 import { EMPTY_RICH_DOC, isRichDoc } from '../../utils/richText'
 import VoiceMemoRecorder from './VoiceMemoRecorder'
@@ -193,27 +190,21 @@ export default function RichTextEditor({
     if (inputRef?.current) inputRef.current.value = ''
     if (!file) return
 
-    // Same caps as the separate video section, checked before anything uploads.
+    // Same duration cap as the separate video section, checked before anything uploads.
     const duration = await getVideoDuration(file)
     if (duration > MAX_VIDEO_DURATION_SECONDS) {
       setError(t('richEditor.videoTooLong', { seconds: MAX_VIDEO_DURATION_SECONDS }))
       return
     }
-    if (file.size > MAX_PLAINTEXT_BYTES) {
-      setError(
-        tCommon('upload.tooLarge', {
-          size: formatBytes(file.size),
-          limit: formatBytes(MAX_PLAINTEXT_BYTES),
-        })
-      )
-      return
-    }
 
+    // A clip over the size limit is re-encoded on the device first, behind the
+    // same placeholder as the upload (utils/videoCompression.js). If that is
+    // not possible here, the upload fails with the size message as before.
     insertUploadedMedia({
       file,
       insert: (uploadId) =>
         editor.chain().focus().insertEncryptedVideo({ src: '', uploadId }).run(),
-      upload: (f) => encryptAndUpload(f, encryptionKey),
+      upload: async (f) => encryptAndUpload(await fitVideoToLimit(f), encryptionKey),
       attrsFromResult: ({ url, publicId }) => ({ src: url, publicId }),
     })
   }

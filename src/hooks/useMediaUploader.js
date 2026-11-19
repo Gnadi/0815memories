@@ -8,6 +8,7 @@ import {
 } from '../constants/media'
 import { devError } from '../utils/devLog'
 import { createVideoPoster } from '../utils/imageThumbnail'
+import { fitVideoToLimit } from '../utils/videoCompression'
 
 // Turns whatever the upload pipeline threw into something a person can act on.
 // Anything else would leave the user staring at a spinner that ends in nothing,
@@ -142,35 +143,41 @@ export function useMediaUploader(encryptionKey, {
       return null
     }
 
-    // A short clip is not automatically a small one: 13 seconds of 4K comes to
-    // tens of megabytes, well past Cloudinary's raw cap. Checked here so the
-    // message appears immediately rather than after a doomed upload.
-    if (file.size > MAX_PLAINTEXT_BYTES) {
-      setVideoError(
-        t('upload.tooLarge', {
-          size: formatBytes(file.size),
-          limit: formatBytes(MAX_PLAINTEXT_BYTES),
-        })
-      )
-      return null
-    }
-
     const preview = URL.createObjectURL(file)
     const tempId = generateId()
     setVideos((prev) => [
       ...prev,
       { id: tempId, preview, url: '', publicId: '', title: '', uploading: true },
     ])
+    // The encoder reports progress per frame; the tile only shows whole
+    // percents, so only a change of one is worth a render.
+    let shownPercent = null
+    const setProgress = (progress) => {
+      const percent = progress == null ? null : Math.floor(progress * 100)
+      if (percent === shownPercent) return
+      shownPercent = percent
+      setVideos((prev) =>
+        prev.map((v) => (v.id === tempId ? { ...v, progress: percent ?? undefined } : v))
+      )
+    }
 
     try {
+      // A short clip is not automatically a small one: 13 seconds of phone
+      // video comes to tens of megabytes, well past Cloudinary's raw cap. Such
+      // a clip is re-encoded here first; the tile shows how far that has got,
+      // since on a phone it takes a while.
+      const fitted = await fitVideoToLimit(file, { onProgress: setProgress })
+      setProgress(null)
       const [{ url, publicId }, poster] = await Promise.all([
-        encryptAndUpload(file, encryptionKey),
-        videoPosters ? uploadPoster(file, encryptionKey) : null,
+        encryptAndUpload(fitted, encryptionKey),
+        videoPosters ? uploadPoster(fitted, encryptionKey) : null,
       ])
       const posterFields = poster ? { posterUrl: poster.url, posterPublicId: poster.publicId } : {}
       setVideos((prev) =>
         prev.map((v) =>
-          v.id === tempId ? { ...v, url, publicId, ...posterFields, uploading: false } : v
+          v.id === tempId
+            ? { ...v, url, publicId, ...posterFields, uploading: false, progress: undefined }
+            : v
         )
       )
       return { id: tempId, url, publicId, ...posterFields }

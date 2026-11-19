@@ -11,6 +11,11 @@ vi.mock('../utils/encryptedUpload', () => ({
 vi.mock('../utils/imageThumbnail', () => ({
   createVideoPoster: vi.fn(),
 }))
+// Compression is tested on its own (videoCompression.test.js). Here it is a
+// pass-through by default, so only the tests about it say what it does.
+vi.mock('../utils/videoCompression', () => ({
+  fitVideoToLimit: vi.fn(),
+}))
 vi.mock('../utils/devLog', () => ({
   devError: vi.fn(),
   devWarn: vi.fn(),
@@ -18,6 +23,7 @@ vi.mock('../utils/devLog', () => ({
 
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { createVideoPoster } from '../utils/imageThumbnail'
+import { fitVideoToLimit } from '../utils/videoCompression'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -30,6 +36,8 @@ beforeEach(() => {
   encryptAndUpload.mockReset()
   encryptAndUploadWithThumb.mockReset()
   createVideoPoster.mockReset()
+  fitVideoToLimit.mockReset()
+  fitVideoToLimit.mockImplementation(async (file) => file)
   URL.createObjectURL = vi.fn(() => 'blob:fake')
   URL.revokeObjectURL = vi.fn()
 })
@@ -147,10 +155,49 @@ describe('useMediaUploader', () => {
     }
   })
 
-  it('rejects a short but oversized video before uploading, naming size and limit', async () => {
+  it('uploads the smaller copy of an oversized video, showing progress meanwhile', async () => {
     // The reported bug: a 13-second clip is well inside the duration cap and
     // still far past Cloudinary's raw-resource cap.
     const restore = stubVideoDuration(13)
+    const original = makeFile('clip.mp4', 'video/mp4', 40 * 1024 * 1024)
+    const smaller = new Blob([new Uint8Array([9])], { type: 'video/mp4' })
+    let finish
+    fitVideoToLimit.mockImplementation((file, { onProgress }) => {
+      onProgress(0.4)
+      onProgress(0.405)
+      return new Promise((resolve) => { finish = () => resolve(smaller) })
+    })
+    encryptAndUpload.mockResolvedValue({ url: 'https://cdn/v.enc', publicId: 'v1' })
+    try {
+      const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+
+      let pending
+      act(() => { pending = result.current.addVideo(original) })
+      await waitFor(() => expect(result.current.videos[0]?.progress).toBe(40))
+      expect(result.current.videos[0].uploading).toBe(true)
+
+      await act(async () => {
+        finish()
+        await pending
+      })
+
+      expect(fitVideoToLimit).toHaveBeenCalledWith(original, expect.any(Object))
+      expect(encryptAndUpload).toHaveBeenCalledWith(smaller, { fakeKey: true })
+      expect(result.current.videos[0]).toMatchObject({ url: 'https://cdn/v.enc', uploading: false })
+      expect(result.current.videos[0].progress).toBeUndefined()
+      expect(result.current.videoError).toBe('')
+    } finally {
+      restore()
+    }
+  })
+
+  it('names size and limit when an oversized video cannot be made small enough', async () => {
+    const restore = stubVideoDuration(13)
+    fitVideoToLimit.mockRejectedValue(Object.assign(new Error('too large'), {
+      code: 'upload/too-large',
+      size: MAX_PLAINTEXT_BYTES + 1,
+      limit: MAX_PLAINTEXT_BYTES,
+    }))
     try {
       const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 

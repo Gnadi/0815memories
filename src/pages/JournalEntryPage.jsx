@@ -11,6 +11,7 @@ import { useJournal, useJournalWriter } from '../hooks/useJournals'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import EncryptedImage from '../components/media/EncryptedImage'
 import EncryptedVideo from '../components/media/EncryptedVideo'
+import VideoProgress from '../components/admin/VideoProgress'
 import JournalContentField from '../components/journal/JournalContentField'
 import { devError } from '../utils/devLog'
 import { photoThumbsFor } from '../utils/mediaThumbs'
@@ -51,10 +52,11 @@ function AttachButton({ icon: Icon, label, onClick, active = false, disabled }) 
   )
 }
 
-function UploadingOverlay() {
+function UploadingOverlay({ percent }) {
   return (
-    <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+    <div className="absolute inset-0 bg-black/40 rounded-xl flex flex-col items-center justify-center gap-1">
       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <VideoProgress percent={percent} />
     </div>
   )
 }
@@ -370,7 +372,7 @@ export default function JournalEntryPage() {
                     ) : (
                       <EncryptedVideo src={v.preview} className="w-full h-full rounded-xl object-cover bg-black" controls={false} muted playsInline />
                     )}
-                    {v.uploading ? <UploadingOverlay /> : (
+                    {v.uploading ? <UploadingOverlay percent={v.progress} /> : (
                       <>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">

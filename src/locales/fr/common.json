@@ -112,7 +112,9 @@
     "tooLarge": "Ce fichier fait {{size}} — la limite est de {{limit}} par fichier. Veuillez utiliser un extrait plus court ou plus compressé.",
     "videoTooLong": "La vidéo doit durer {{seconds}} secondes au maximum.",
     "rateLimited": "Vous avez envoyé beaucoup de fichiers durant la dernière heure. Veuillez patienter un peu et réessayer.",
-    "storageFull": "L'espace de stockage de votre famille est épuisé : plus aucun envoi n'est possible pour le moment."
+    "storageFull": "L'espace de stockage de votre famille est épuisé : plus aucun envoi n'est possible pour le moment.",
+    "compressing": "Réduction de la vidéo… {{percent}} %",
+    "compressPercent": "{{percent}} %"
   },
   "dictation": {
     "start": "Dicter",
