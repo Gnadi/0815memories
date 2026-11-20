@@ -3,6 +3,7 @@
 // eslint-disable-next-line no-restricted-imports
 import { encryptBlobToBlob, encryptText } from './encryption'
 import { createDerivatives } from './imageThumbnail'
+import { fitImageToLimit } from './imageCompression'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 import { fetchUploadSignature, signedUploadForm, signedUploadUrl } from './uploadSignature'
 import { isDemoMode } from '../demo/demoMode'
@@ -71,7 +72,10 @@ async function uploadEncryptedBlob(blob, encryptionKey) {
  */
 export async function encryptAndUpload(file, encryptionKey) {
   const blob = file instanceof Blob ? file : new Blob([file])
-  return withUploadSlot(() => uploadEncryptedBlob(blob, encryptionKey))
+  // Photos over 4096 px or the size limit are scaled down first
+  // (imageCompression.js). Inside the slot, because decoding one is what
+  // takes the memory.
+  return withUploadSlot(async () => uploadEncryptedBlob(await fitImageToLimit(blob), encryptionKey))
 }
 
 // Files worked on at once. Each holds its plaintext, its ciphertext and, for a
@@ -109,8 +113,10 @@ async function withUploadSlot(task) {
  * original then fails is a file no document uses, which the clean-up removes.
  */
 export async function encryptAndUploadWithThumb(file, encryptionKey) {
-  const blob = file instanceof Blob ? file : new Blob([file])
   return withUploadSlot(async () => {
+    // The thumbnails are made from the scaled copy too: the same picture, and
+    // a quarter of the pixels to decode.
+    const blob = await fitImageToLimit(file instanceof Blob ? file : new Blob([file]))
     const original = uploadEncryptedBlob(blob, encryptionKey)
 
     // Both derivatives come from one decode of the photo (createDerivatives).

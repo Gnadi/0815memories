@@ -11,6 +11,10 @@ vi.mock('../utils/imageThumbnail', () => ({
   // never add to the upload count asserted below.
   createDerivatives: vi.fn(async (blob) => ({ thumb: await createThumbnail(blob), tiny: 'data:image/webp;base64,AAA' })),
 }))
+// Scaling photos down is covered by imageCompression.test.js; here it hands
+// every file back as it is, unless a test says otherwise.
+const fitImageToLimit = vi.hoisted(() => vi.fn())
+vi.mock('../utils/imageCompression', () => ({ fitImageToLimit }))
 // Signing is covered by uploadSignature.test.js; here every fetch is an upload.
 vi.mock('../utils/uploadSignature', () => ({
   fetchUploadSignature: vi.fn(async () => ({
@@ -31,6 +35,8 @@ beforeEach(() => {
   uploadCount = 0
   createThumbnail.mockReset()
   encryptBlob.mockClear()
+  fitImageToLimit.mockReset()
+  fitImageToLimit.mockImplementation(async (blob) => blob)
 
   globalThis.fetch = vi.fn(async () => {
     uploadCount++
@@ -124,6 +130,30 @@ describe('how many files at once', () => {
     expect(failed.every((r) => r.status === 'rejected')).toBe(true)
     globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ secure_url: 'https://cdn/y.enc', public_id: 'y' }) }))
     await expect(encryptAndUpload(file(1024), { fake: 'key' })).resolves.toEqual({ url: 'https://cdn/y.enc', publicId: 'y' })
+  })
+})
+
+describe('scaling photos down', () => {
+  it('encrypts and uploads the scaled copy rather than the photo picked', async () => {
+    const picked = file(30 * 1024 * 1024)
+    const scaled = new Blob(['small'], { type: 'image/jpeg' })
+    fitImageToLimit.mockResolvedValue(scaled)
+
+    await encryptAndUpload(picked, { fake: 'key' })
+
+    expect(fitImageToLimit).toHaveBeenCalledWith(picked)
+    expect(encryptBlob).toHaveBeenCalledWith({ fake: 'key' }, scaled)
+  })
+
+  it('makes the thumbnails from the scaled copy as well', async () => {
+    const scaled = new Blob(['small'], { type: 'image/jpeg' })
+    fitImageToLimit.mockResolvedValue(scaled)
+    createThumbnail.mockResolvedValue(null)
+
+    await encryptAndUploadWithThumb(file(30 * 1024 * 1024), { fake: 'key' })
+
+    expect(createThumbnail).toHaveBeenCalledWith(scaled)
+    expect(encryptBlob).toHaveBeenCalledWith({ fake: 'key' }, scaled)
   })
 })
 

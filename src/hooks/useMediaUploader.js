@@ -94,16 +94,9 @@ export function useMediaUploader(encryptionKey, {
     if (!file) return null
     setImageError('')
 
-    if (file.size > MAX_PLAINTEXT_BYTES) {
-      setImageError(
-        t('upload.tooLarge', {
-          size: formatBytes(file.size),
-          limit: formatBytes(MAX_PLAINTEXT_BYTES),
-        })
-      )
-      return null
-    }
-
+    // No size check here: a photo over the limit is scaled down on the way up
+    // (utils/imageCompression.js), and one that still does not fit comes back
+    // as an upload/too-large error, shown below like any other.
     const preview = URL.createObjectURL(file)
     const tempId = generateId()
     setImages((prev) => [...prev, { id: tempId, preview, url: '', uploading: true }])

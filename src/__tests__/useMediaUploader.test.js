@@ -284,16 +284,36 @@ describe('useMediaUploader', () => {
     }
   })
 
-  it('rejects an oversized image before uploading', async () => {
+  it('hands an oversized photo to the upload, which scales it down', async () => {
+    // Refused here before photos were scaled down (utils/imageCompression.js).
+    encryptAndUploadWithThumb.mockResolvedValue({ url: 'https://cdn/p.enc', publicId: 'p1' })
+    const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+    const big = makeFile('big.jpg', 'image/jpeg', MAX_PLAINTEXT_BYTES + 1)
+
+    await act(async () => {
+      await result.current.addImage(big)
+    })
+
+    expect(encryptAndUploadWithThumb).toHaveBeenCalledWith(big, { fakeKey: true })
+    expect(result.current.images[0]).toMatchObject({ url: 'https://cdn/p.enc', uploading: false })
+    expect(result.current.imageError).toBe('')
+  })
+
+  it('names size and limit when a photo cannot be made small enough', async () => {
+    encryptAndUploadWithThumb.mockRejectedValue(Object.assign(new Error('too large'), {
+      code: 'upload/too-large',
+      size: 24 * 1024 * 1024,
+      limit: MAX_PLAINTEXT_BYTES,
+    }))
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
     await act(async () => {
-      await result.current.addImage(makeFile('big.jpg', 'image/jpeg', MAX_PLAINTEXT_BYTES + 1))
+      await result.current.addImage(makeFile('big.heic', 'image/heic', 24 * 1024 * 1024))
     })
 
+    expect(result.current.imageError).toMatch(/24 MB/)
     expect(result.current.imageError).toMatch(/10 MB/)
     expect(result.current.images).toEqual([])
-    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
 
   it('moves an image to the slot of another via moveImage', () => {
