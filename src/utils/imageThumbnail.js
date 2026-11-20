@@ -41,7 +41,7 @@ function targetSize(width, height, maxEdge) {
   }
 }
 
-async function encodeCanvas(canvas, type, quality) {
+export async function encodeCanvas(canvas, type, quality) {
   if (canvas.convertToBlob) return canvas.convertToBlob({ type, quality })
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
 }

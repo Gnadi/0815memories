@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { X, Video, GripVertical } from 'lucide-react'
 import EncryptedVideo from '../media/EncryptedVideo'
 import SortableMediaGroup from './SortableMediaGroup'
+import VideoProgress from './VideoProgress'
 import { useSortableMedia } from './useSortableMedia'
 
 function VideoRow({ video, index, videos, onTitleChange, onRemove, onMove }) {
@@ -60,8 +61,9 @@ function VideoRow({ video, index, videos, onTitleChange, onRemove, onMove }) {
           </div>
         )}
         {video.uploading && (
-          <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 rounded-lg flex flex-col items-center justify-center gap-1">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <VideoProgress percent={video.progress} />
           </div>
         )}
       </div>

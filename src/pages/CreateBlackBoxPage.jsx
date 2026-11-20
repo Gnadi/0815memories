@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { useBlackBox, addMonths, LEGACY_GRACE_MONTHS } from '../hooks/useBlackBox'
 import { useKids } from '../hooks/useKids'
 import { useMediaUploader } from '../hooks/useMediaUploader'
+import VideoProgress from '../components/admin/VideoProgress'
 import { devError } from '../utils/devLog'
 import DictationField from '../components/DictationField'
 import { appendDictation } from '../hooks/useDictation'
@@ -374,8 +375,9 @@ export default function CreateBlackBoxPage() {
                           </div>
                         )}
                         {v.uploading && (
-                          <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/40 rounded-xl flex flex-col items-center justify-center gap-1">
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <VideoProgress percent={v.progress} />
                           </div>
                         )}
                         {!v.uploading && (

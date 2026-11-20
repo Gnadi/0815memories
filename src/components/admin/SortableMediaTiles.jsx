@@ -3,6 +3,7 @@ import { X, Video, Crop } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import EncryptedVideo from '../media/EncryptedVideo'
 import SortableMediaGroup from './SortableMediaGroup'
+import VideoProgress from './VideoProgress'
 import { useSortableMedia, stopDrag } from './useSortableMedia'
 import { focusStyle, parseFocus } from '../../utils/mediaFocus'
 
@@ -76,8 +77,9 @@ function MediaTile({ item, kind, index, items, onRemove, onMove, onAdjust }) {
         </div>
       )}
       {item.uploading && (
-        <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 rounded-xl flex flex-col items-center justify-center gap-1">
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <VideoProgress percent={item.progress} />
         </div>
       )}
       {kind === 'photo' && onAdjust && !item.uploading && (

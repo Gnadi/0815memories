@@ -11,6 +11,11 @@ vi.mock('../utils/encryptedUpload', () => ({
 vi.mock('../utils/imageThumbnail', () => ({
   createVideoPoster: vi.fn(),
 }))
+// Compression is tested on its own (videoCompression.test.js). Here it is a
+// pass-through by default, so only the tests about it say what it does.
+vi.mock('../utils/videoCompression', () => ({
+  fitVideoToLimit: vi.fn(),
+}))
 vi.mock('../utils/devLog', () => ({
   devError: vi.fn(),
   devWarn: vi.fn(),
@@ -18,6 +23,7 @@ vi.mock('../utils/devLog', () => ({
 
 import { encryptAndUpload, encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { createVideoPoster } from '../utils/imageThumbnail'
+import { fitVideoToLimit } from '../utils/videoCompression'
 import { useMediaUploader } from '../hooks/useMediaUploader'
 import { MAX_PLAINTEXT_BYTES } from '../constants/media'
 
@@ -30,6 +36,8 @@ beforeEach(() => {
   encryptAndUpload.mockReset()
   encryptAndUploadWithThumb.mockReset()
   createVideoPoster.mockReset()
+  fitVideoToLimit.mockReset()
+  fitVideoToLimit.mockImplementation(async (file) => file)
   URL.createObjectURL = vi.fn(() => 'blob:fake')
   URL.revokeObjectURL = vi.fn()
 })
@@ -147,10 +155,49 @@ describe('useMediaUploader', () => {
     }
   })
 
-  it('rejects a short but oversized video before uploading, naming size and limit', async () => {
+  it('uploads the smaller copy of an oversized video, showing progress meanwhile', async () => {
     // The reported bug: a 13-second clip is well inside the duration cap and
     // still far past Cloudinary's raw-resource cap.
     const restore = stubVideoDuration(13)
+    const original = makeFile('clip.mp4', 'video/mp4', 40 * 1024 * 1024)
+    const smaller = new Blob([new Uint8Array([9])], { type: 'video/mp4' })
+    let finish
+    fitVideoToLimit.mockImplementation((file, { onProgress }) => {
+      onProgress(0.4)
+      onProgress(0.405)
+      return new Promise((resolve) => { finish = () => resolve(smaller) })
+    })
+    encryptAndUpload.mockResolvedValue({ url: 'https://cdn/v.enc', publicId: 'v1' })
+    try {
+      const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+
+      let pending
+      act(() => { pending = result.current.addVideo(original) })
+      await waitFor(() => expect(result.current.videos[0]?.progress).toBe(40))
+      expect(result.current.videos[0].uploading).toBe(true)
+
+      await act(async () => {
+        finish()
+        await pending
+      })
+
+      expect(fitVideoToLimit).toHaveBeenCalledWith(original, expect.any(Object))
+      expect(encryptAndUpload).toHaveBeenCalledWith(smaller, { fakeKey: true })
+      expect(result.current.videos[0]).toMatchObject({ url: 'https://cdn/v.enc', uploading: false })
+      expect(result.current.videos[0].progress).toBeUndefined()
+      expect(result.current.videoError).toBe('')
+    } finally {
+      restore()
+    }
+  })
+
+  it('names size and limit when an oversized video cannot be made small enough', async () => {
+    const restore = stubVideoDuration(13)
+    fitVideoToLimit.mockRejectedValue(Object.assign(new Error('too large'), {
+      code: 'upload/too-large',
+      size: MAX_PLAINTEXT_BYTES + 1,
+      limit: MAX_PLAINTEXT_BYTES,
+    }))
     try {
       const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
@@ -237,16 +284,36 @@ describe('useMediaUploader', () => {
     }
   })
 
-  it('rejects an oversized image before uploading', async () => {
+  it('hands an oversized photo to the upload, which scales it down', async () => {
+    // Refused here before photos were scaled down (utils/imageCompression.js).
+    encryptAndUploadWithThumb.mockResolvedValue({ url: 'https://cdn/p.enc', publicId: 'p1' })
+    const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
+    const big = makeFile('big.jpg', 'image/jpeg', MAX_PLAINTEXT_BYTES + 1)
+
+    await act(async () => {
+      await result.current.addImage(big)
+    })
+
+    expect(encryptAndUploadWithThumb).toHaveBeenCalledWith(big, { fakeKey: true })
+    expect(result.current.images[0]).toMatchObject({ url: 'https://cdn/p.enc', uploading: false })
+    expect(result.current.imageError).toBe('')
+  })
+
+  it('names size and limit when a photo cannot be made small enough', async () => {
+    encryptAndUploadWithThumb.mockRejectedValue(Object.assign(new Error('too large'), {
+      code: 'upload/too-large',
+      size: 24 * 1024 * 1024,
+      limit: MAX_PLAINTEXT_BYTES,
+    }))
     const { result } = renderHook(() => useMediaUploader({ fakeKey: true }))
 
     await act(async () => {
-      await result.current.addImage(makeFile('big.jpg', 'image/jpeg', MAX_PLAINTEXT_BYTES + 1))
+      await result.current.addImage(makeFile('big.heic', 'image/heic', 24 * 1024 * 1024))
     })
 
+    expect(result.current.imageError).toMatch(/24 MB/)
     expect(result.current.imageError).toMatch(/10 MB/)
     expect(result.current.images).toEqual([])
-    expect(encryptAndUploadWithThumb).not.toHaveBeenCalled()
   })
 
   it('moves an image to the slot of another via moveImage', () => {
