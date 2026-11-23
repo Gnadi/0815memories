@@ -434,13 +434,16 @@ function LoginPageContent() {
           <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
         </Link>
 
-        {/* Picture: a card on a phone, the left half on a desktop. On a phone
+        {/* Picture: a card on a phone, and on a desktop the left half, as a
+            card too — inset from the edges with rounded corners and a soft
+            shadow, like a photo laid on the table. Flush against the page, the
+            picture's warmer cream met the page's at a hard seam. On a phone
             the standard picture's card is held to its banner's shape, so a
             tall screen does not crop it to a sliver of its middle; the form is
             centred in the space left over. A family's own photo fills the
             space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*var(--art-ratio))]'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*var(--art-ratio))]'}`}
           style={{ '--art-ratio': artMotif.mobile.height / artMotif.mobile.width }}
         >
           {resolvedFamilyHeaderImage
