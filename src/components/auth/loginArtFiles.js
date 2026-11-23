@@ -6,21 +6,16 @@
 // Stock photos of real families stood here briefly. Next to the cream page
 // they read as somebody else's album, which is the wrong welcome on a page
 // that greets a family by name.
-//
-// `band` is the green of the portrait's bottom band, under the page's white
-// text; the page repeats it as a gradient where a wide screen crops the band.
 export const LOGIN_ART_MOTIFS = [
   {
     id: 'momente',
     desktop: { src: '/login-art/momente-desktop.webp', width: 1122, height: 1402 },
     mobile: { src: '/login-art/momente-mobile.webp', width: 1751, height: 898 },
-    band: '#0a3e34',
   },
   {
     id: 'post-fuer-dich',
     desktop: { src: '/login-art/post-fuer-dich-desktop.webp', width: 1080, height: 1350 },
     mobile: { src: '/login-art/post-fuer-dich-mobile.webp', width: 1170, height: 585 },
-    band: '#084438',
   },
 ]
 

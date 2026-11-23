@@ -449,26 +449,6 @@ function LoginPageContent() {
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
             : <LoginArt motif={artMotif} />}
-          {/* The white text sits on a dark gradient, so it stays readable
-              whatever the family uploaded. Under the standard picture it is
-              the green of the picture's own bottom band, which a wide or short
-              screen crops away. */}
-          {resolvedFamilyHeaderImage
-            ? <div className="hidden lg:block absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
-            : (
-              <div
-                className="hidden lg:block absolute inset-x-0 bottom-0 h-1/3"
-                style={{ backgroundImage: `linear-gradient(to top, ${artMotif.band}, ${artMotif.band}cc 50%, transparent)` }}
-              />
-            )}
-          <div className="hidden lg:block absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              {t('login.asideTitle')}
-            </h2>
-            <p className="text-base drop-shadow">
-              {t('login.asideBody')}
-            </p>
-          </div>
         </div>
 
         {/* Login column */}

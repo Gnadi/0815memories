@@ -19,9 +19,9 @@ export default function LoginArt({ motif, phoneOnly = false }) {
       {!phoneOnly && (
         <source media="(min-width: 1024px)" srcSet={desktop.src} width={desktop.width} height={desktop.height} />
       )}
-      {/* A wide desktop panel crops the portrait. Taken from 30% down, the
-          faces at the top stay; what goes is mostly the green band at the
-          bottom, which the page's own green gradient stands in for. */}
+      {/* A wide desktop card crops the portrait. Taken from 30% down, the
+          faces at the top stay; what goes is mostly the plain green band at
+          the bottom. */}
       <img
         src={mobile.src}
         width={mobile.width}
