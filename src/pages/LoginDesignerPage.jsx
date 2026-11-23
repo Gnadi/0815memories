@@ -14,6 +14,7 @@ import UploadWidget from '../components/admin/UploadWidget'
 import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
 import LoginArt from '../components/auth/LoginArt'
+import { LOGIN_ART_MOTIFS } from '../components/auth/loginArtFiles'
 import LoginForm from '../components/auth/LoginForm'
 import KaydoLogo from '../components/KaydoLogo'
 import {
@@ -744,7 +745,7 @@ function PreviewPane({ mode, theme, html, css, familyName, headerImage, card, t 
               <div className="relative w-full max-w-sm rounded-2xl overflow-hidden mb-4 h-36">
                 {headerImage
                   ? <img src={headerImage} alt={t('upload.previewAlt')} className="w-full h-full object-cover" />
-                  : <LoginArt phoneOnly />}
+                  : <LoginArt motif={LOGIN_ART_MOTIFS[0]} phoneOnly />}
               </div>
             )}
             {mode === 'theme' && (

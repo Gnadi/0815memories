@@ -1,9 +1,7 @@
-import { LOGIN_ART } from './loginArtFiles'
-
 /**
- * The standard login picture (loginArtFiles.js), filling its positioned
- * parent. `phoneOnly` always shows the banner, for a phone-sized frame on a desktop
- * screen (the login designer's preview).
+ * A standard login picture, one motif of loginArtFiles.js, filling its
+ * positioned parent. `phoneOnly` always shows the banner, for a phone-sized
+ * frame on a desktop screen (the login designer's preview).
  *
  * On a short phone (an iPhone SE) the picture area shrinks to a strip, so
  * there the picture steps aside and leaves the space empty. A container query
@@ -14,8 +12,8 @@ import { LOGIN_ART } from './loginArtFiles'
  * The picture shows nobody in particular and says nothing the page does not,
  * so it is decorative (empty alt).
  */
-export default function LoginArt({ phoneOnly = false }) {
-  const { desktop, mobile } = LOGIN_ART
+export default function LoginArt({ motif, phoneOnly = false }) {
+  const { desktop, mobile } = motif
   return (
     <picture className={`absolute inset-0 ${phoneOnly ? '' : 'max-lg:[@media(max-height:620px)]:hidden'}`}>
       {!phoneOnly && (

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import i18n from '../i18n'
 
 /**
  * The login page as a keyboard, screen reader or password manager meets it.
@@ -102,6 +103,15 @@ describe('login page accessibility', () => {
     renderAt('/login?admin=1')
     expect(await screen.findByRole('button', { name: 'Forgot password?' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Forgot the key?' })).toBeNull()
+  })
+
+  it('offers text size and language before signing in', async () => {
+    renderAt('/family/the-millers')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByRole('button', { name: 'Adjust text size' })).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'de' } })
+    expect(await screen.findByRole('heading', { name: 'Willkommen bei The Millers' })).toBeInTheDocument()
+    await i18n.changeLanguage('en')
   })
 
   describe('sign-in dialog of a custom page', () => {

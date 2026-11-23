@@ -193,7 +193,8 @@ export default function LoginForm({
         ) : (
           <>
             {t('login.form.submit')}
-            <span className="text-xl" aria-hidden="true">&rarr;</span>
+            {/* Points the way of reading: mirrored right to left */}
+            <span className="text-xl inline-block rtl:-scale-x-100" aria-hidden="true">&rarr;</span>
           </>
         )}
       </button>

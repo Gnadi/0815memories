@@ -7,6 +7,9 @@ import { useAuth } from '../context/AuthContext'
 import { Link2, Shield, X } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import LoginArt from '../components/auth/LoginArt'
+import { pickLoginArt } from '../components/auth/loginArtFiles'
+import LanguageSwitcher from '../components/LanguageSwitcher'
+import TextSizeSwitcher from '../components/TextSizeSwitcher'
 import LoginForm, { SetupBanner } from '../components/auth/LoginForm'
 import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
@@ -104,6 +107,8 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false)
   // Custom pages with a minimized login box open the form as an overlay.
   const [loginOpen, setLoginOpen] = useState(false)
+  // The standard picture's motif, kept for the visit.
+  const [artMotif] = useState(() => pickLoginArt())
   const loginDialogRef = useRef(null)
   const loginOpenButtonRef = useRef(null)
   const loginDialogTitleId = useId()
@@ -376,6 +381,12 @@ function LoginPageContent() {
     <div className="relative min-h-dvh bg-cream flex flex-col" style={{ ...pageStyle, ...themeVars }}>
       {isThemed && <LoginDecorations emojis={decorationEmojis} />}
 
+      {/* Once for every screen size, beside the brand of the phone row or
+          the desktop header */}
+      <div className="absolute z-10 top-3 end-4 lg:top-3.5 lg:end-6">
+        <LoginToolbar />
+      </div>
+
       {/* Desktop header — hidden on mobile */}
       <header className="relative hidden lg:flex px-6 py-4 items-center justify-between">
         <Link to="/" aria-label={t('login.homeLink')} className="flex items-center gap-2 text-bark font-semibold text-lg" style={headingStyle}>
@@ -402,18 +413,24 @@ function LoginPageContent() {
             centred in the space left over. A family's own photo fills the
             space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*0.513)]'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*var(--art-ratio))]'}`}
+          style={{ '--art-ratio': artMotif.mobile.height / artMotif.mobile.width }}
         >
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : <LoginArt />}
+            : <LoginArt motif={artMotif} />}
           {/* The white text sits on a dark gradient, so it stays readable
               whatever the family uploaded. Under the standard picture it is
               the green of the picture's own bottom band, which a wide or short
               screen crops away. */}
           {resolvedFamilyHeaderImage
             ? <div className="hidden lg:block absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
-            : <div className="hidden lg:block absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0a3e34] via-[#0a3e34]/80 to-transparent" />}
+            : (
+              <div
+                className="hidden lg:block absolute inset-x-0 bottom-0 h-1/3"
+                style={{ backgroundImage: `linear-gradient(to top, ${artMotif.band}, ${artMotif.band}cc 50%, transparent)` }}
+              />
+            )}
           <div className="hidden lg:block absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               {t('login.asideTitle')}
@@ -484,6 +501,18 @@ function LoginPageContent() {
       </main>
 
       <AuthFooter textStyle={textStyle} />
+    </div>
+  )
+}
+
+// Text size and language, before anyone has signed in. Both are per device
+// and were only to be found inside the app, while the people most likely to
+// need larger text — grandparents typing a key — met the login page first.
+function LoginToolbar() {
+  return (
+    <div className="flex items-center gap-1">
+      <TextSizeSwitcher variant="icon" />
+      <LanguageSwitcher />
     </div>
   )
 }
