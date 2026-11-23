@@ -9,7 +9,8 @@ import { getFamilyPublic } from '../services/family'
 import { getInvite, redeemInvite } from '../services/invites'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
-import FamilyIllustration from '../components/FamilyIllustration'
+import LoginArt from '../components/auth/LoginArt'
+import { pickLoginArt } from '../components/auth/loginArtFiles'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 
 export default function InviteRedeemPage() {
@@ -37,6 +38,9 @@ export default function InviteRedeemPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // The login page's picture, one motif per visit, so joining looks like
+  // the place it leads to. It replaced the old drawn family at the table.
+  const [artMotif] = useState(() => pickLoginArt())
 
   useEffect(() => {
     if (!firebaseReady) {
@@ -233,8 +237,9 @@ export default function InviteRedeemPage() {
             <KaydoLogo size={22} />
             <span className="text-lg font-bold text-bark">Kaydo</span>
           </div>
-          <div className="rounded-2xl overflow-hidden mb-6">
-            <FamilyIllustration />
+          {/* The login page's picture, as a banner of its own shape */}
+          <div className="relative rounded-2xl overflow-hidden mb-6" style={{ aspectRatio: `${artMotif.mobile.width} / ${artMotif.mobile.height}` }}>
+            <LoginArt motif={artMotif} phoneOnly />
           </div>
           <h1 className="text-3xl font-bold text-bark text-center mb-2">
             {t('invite.joinFamily', { name: familyName })}
@@ -245,16 +250,9 @@ export default function InviteRedeemPage() {
           {stepContent()}
         </div>
 
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
-          <FamilyIllustration />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              {t('invite.asideTitle')}
-            </h2>
-            <p className="text-base opacity-90 drop-shadow">
-              {t('invite.asideBody')}
-            </p>
-          </div>
+        {/* The login page's picture card: inset, rounded, without text */}
+        <div className="hidden lg:flex lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 relative overflow-hidden rounded-[28px] shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)]">
+          <LoginArt motif={artMotif} />
         </div>
 
         <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
@@ -263,15 +261,15 @@ export default function InviteRedeemPage() {
               <KaydoLogo size={52} />
             </div>
             <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              Join {familyName}
+              {t('invite.joinFamily', { name: familyName })}
             </h1>
             <p className="text-bark-light text-center mb-8">
-              Create your account to become an admin of this family.
+              {t('invite.subtitle')}
             </p>
             {stepContent()}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
               <Shield className="w-4 h-4" />
-              Your account is bound to this family only.
+              {t('invite.boundBadge')}
             </div>
           </div>
         </div>

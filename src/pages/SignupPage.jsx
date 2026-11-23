@@ -4,7 +4,8 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
-import FamilyIllustration from '../components/FamilyIllustration'
+import LoginArt from '../components/auth/LoginArt'
+import { pickLoginArt } from '../components/auth/loginArtFiles'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 import AuthFooter from '../components/auth/AuthFooter'
 import { generateSlug } from '../utils/familySlug'
@@ -31,6 +32,9 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // The login page's picture, one motif per visit, so signing up looks like
+  // the place it leads to. It replaced the old drawn family at the table.
+  const [artMotif] = useState(() => pickLoginArt())
 
   const slugPreview = useMemo(() => generateSlug(familyName), [familyName])
 
@@ -156,9 +160,9 @@ export default function SignupPage() {
             <span className="text-lg font-bold text-bark">Kaydo</span>
           </div>
 
-          {/* Illustration card */}
-          <div className="rounded-2xl overflow-hidden mb-6">
-            <FamilyIllustration />
+          {/* The login page's picture, as a banner of its own shape */}
+          <div className="relative rounded-2xl overflow-hidden mb-6" style={{ aspectRatio: `${artMotif.mobile.width} / ${artMotif.mobile.height}` }}>
+            <LoginArt motif={artMotif} phoneOnly />
           </div>
 
           {/* Welcome heading */}
@@ -190,17 +194,9 @@ export default function SignupPage() {
         </div>
 
         {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
-        {/* Left — Illustration */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
-          <FamilyIllustration />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              {t('signup.asideTitle')}
-            </h2>
-            <p className="text-base opacity-90 drop-shadow">
-              {t('signup.asideBody')}
-            </p>
-          </div>
+        {/* The login page's picture card: inset, rounded, without text */}
+        <div className="hidden lg:flex lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 relative overflow-hidden rounded-[28px] shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)]">
+          <LoginArt motif={artMotif} />
         </div>
 
         {/* Right — Signup Form */}

@@ -60,8 +60,7 @@
   "actions": {
     "dismiss": "Schließen",
     "openMenu": "Menü öffnen",
-    "closeMenu": "Menü schließen",
-    "familyIllustrationAlt": "Illustration einer Familienzusammenkunft"
+    "closeMenu": "Menü schließen"
   },
   "unreadable": {
     "notice_one": "Ein Eintrag konnte mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Er wird ohne den betroffenen Text angezeigt.",

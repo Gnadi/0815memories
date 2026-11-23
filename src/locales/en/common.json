@@ -60,8 +60,7 @@
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu",
-    "familyIllustrationAlt": "Family gathering illustration"
+    "closeMenu": "Close menu"
   },
   "unreadable": {
     "notice_one": "One entry could not be decrypted with your family's key. It is shown without the affected text.",
