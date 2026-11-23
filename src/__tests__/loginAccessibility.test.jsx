@@ -89,6 +89,21 @@ describe('login page accessibility', () => {
     expect(key).toHaveAttribute('aria-describedby', alert.id)
   })
 
+  it('tells a family member who forgot the key whom to ask', async () => {
+    renderAt('/family/the-millers')
+    const forgot = await screen.findByRole('button', { name: 'Forgot the key?' })
+    expect(forgot).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(forgot)
+    expect(forgot).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText(/Ask whoever looks after Kaydo for your family/)).toBeInTheDocument()
+  })
+
+  it('offers admins their password reset instead', async () => {
+    renderAt('/login?admin=1')
+    expect(await screen.findByRole('button', { name: 'Forgot password?' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Forgot the key?' })).toBeNull()
+  })
+
   describe('sign-in dialog of a custom page', () => {
     beforeEach(() => {
       family.current = {

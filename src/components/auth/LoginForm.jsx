@@ -38,6 +38,10 @@ export default function LoginForm({
   // A private key is typed blind; with Caps Lock on, every attempt fails for a
   // reason nobody can see.
   const [capsLock, setCapsLock] = useState(false)
+  // A family member who forgot the shared key had no way on: only admins, who
+  // have an account, were offered "Forgot password?".
+  const [keyHintOpen, setKeyHintOpen] = useState(false)
+  const keyHintId = `${id}-key-hint`
   const trackCapsLock = (e) => setCapsLock(!!e.getModifierState?.('CapsLock'))
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
@@ -145,7 +149,24 @@ export default function LoginForm({
             {t('login.form.forgotPassword')}
           </button>
         )}
+        {!showAdminLogin && (
+          <button
+            type="button"
+            onClick={() => setKeyHintOpen(!keyHintOpen)}
+            aria-expanded={keyHintOpen}
+            aria-controls={keyHintId}
+            className={`text-sm transition-colors ${linkClass}`}
+          >
+            {t('login.form.forgotKey')}
+          </button>
+        )}
       </div>
+
+      {!showAdminLogin && keyHintOpen && (
+        <p id={keyHintId} className={`text-sm rounded-lg px-4 py-3 ${tone === 'dark' ? 'bg-white/10 text-cream' : 'bg-cream-dark text-bark-light'}`}>
+          {t('login.form.forgotKeyHint')}
+        </p>
+      )}
 
       {/* Error message */}
       {/* role="alert" so a screen reader announces it; it used to appear
