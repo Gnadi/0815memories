@@ -17,7 +17,8 @@ import RouteErrorScreen from './components/RouteErrorScreen'
 import { getSubdomainSlug } from './utils/familySlug'
 import { filterAnalyticsEvent } from './utils/analyticsFilter'
 import { FEATURE_PAGES } from './seoRoutes'
-import { hasStoredSession } from './utils/authStorage'
+import { hasStoredSession, readLastFamily } from './utils/authStorage'
+import { isInstalledApp } from './utils/platform'
 import { uncoverPage } from './utils/prehydrationCover'
 import { demoTarget, enterDemo, exitDemo } from './demo/demoMode'
 
@@ -89,7 +90,8 @@ const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 //      visit starts — a bookmark, a tapped app icon, the PWA's start_url — and
 //      showing the marketing page to someone who is already in their family
 //      reads as having been logged out, even though the session is intact.
-//   2. On a family subdomain (e.g. the-millers.kaydo.app), /login.
+//   2. On a family subdomain (e.g. the-millers.kaydo.app), or in the installed
+//      app on a device that remembers its family, /login.
 //   3. Otherwise the marketing landing page.
 //
 // Everything runs in an effect (post-mount) so the server pre-render and the
@@ -98,6 +100,14 @@ const DemoBanner = lazyPage(() => import('./demo/DemoBanner'))
 // HTML *is* the landing page, so it would still paint for the moment before
 // hydration; index.html covers it with a cream shell for exactly that window
 // (the .kaydo-restoring class, cleared below once this route has decided).
+// Point 2 above. The installed app is opened from the home screen by someone
+// who already belongs somewhere; signed out, the marketing page read to them
+// as having lost their family. In a browser tab kaydo.app stays the landing
+// page. index.html covers the landing page for the same visitors.
+function opensOnLogin() {
+  return !!getSubdomainSlug() || (isInstalledApp() && !!readLastFamily())
+}
+
 export function RootRoute({ lng }) {
   const navigate = useNavigate()
   const { isAuthenticated, loading, isDemo } = useAuth()
@@ -123,7 +133,7 @@ export function RootRoute({ lng }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus(session ? 'restoring' : 'public')
     // Nothing to wait for — send subdomain visitors on immediately, as before.
-    if (!session && getSubdomainSlug()) navigate('/login', { replace: true })
+    if (!session && opensOnLogin()) navigate('/login', { replace: true })
   }, [navigate, isDemo])
 
   useEffect(() => {
@@ -140,7 +150,7 @@ export function RootRoute({ lng }) {
     // render-time read to derive from.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus('public')
-    if (getSubdomainSlug()) navigate('/login', { replace: true })
+    if (opensOnLogin()) navigate('/login', { replace: true })
   }, [status, isAuthenticated, loading, navigate])
 
   // Safety valve, mirroring LoginPage's: if auth never settles (blocked

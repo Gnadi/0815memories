@@ -14,6 +14,7 @@ import { clearDecryptedMediaCache } from '../components/media/useDecryptedMedia'
 import { terminateDecryptPool } from '../utils/decryptPool'
 import {
   readStored, writeStored, removeStored, clearStoredSession, setSessionOnly, readViewerDevice, writeViewerDevice,
+  rememberLastFamily, forgetLastFamily,
   isSessionOnly, moveStoredSession,
 } from '../utils/authStorage'
 import { devWarn } from '../utils/devLog'
@@ -328,6 +329,8 @@ export function AuthProvider({ children }) {
     // gets it into storage before the first render.
     setFamilyId(viewerFamilyId)
     writeStored('fh_familyId', viewerFamilyId)
+    if (remember) rememberLastFamily(viewerFamilyId)
+    else forgetLastFamily()
   }, [])
 
   const loginAsAdmin = useCallback(async (email, password, { remember = true } = {}) => {

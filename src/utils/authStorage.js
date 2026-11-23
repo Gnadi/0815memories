@@ -136,3 +136,25 @@ export function readViewerDevice(familyId) {
 export function writeViewerDevice(familyId, token) {
   attempt(() => window.localStorage.setItem(viewerDeviceKey(familyId), token))
 }
+
+// ── The family this device signs in to ──────────────────────────────────────
+//
+// Remembered when a viewer signs in with "Stay logged in", and forgotten when
+// one signs in without it: an unticked box is how a shared device says so. It
+// survives logout, which is when it is needed — a /login visit that names no
+// family, or the installed app opened signed out, goes to this family's login
+// instead of asking for a link the visitor no longer has to hand. It is the
+// family's id only; its name and design are public on its login page anyway.
+const LAST_FAMILY_KEY = 'kaydo_last_family'
+
+export function readLastFamily() {
+  return attempt(() => window.localStorage.getItem(LAST_FAMILY_KEY)) || null
+}
+
+export function rememberLastFamily(familyId) {
+  attempt(() => window.localStorage.setItem(LAST_FAMILY_KEY, familyId))
+}
+
+export function forgetLastFamily() {
+  attempt(() => window.localStorage.removeItem(LAST_FAMILY_KEY))
+}

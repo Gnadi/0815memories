@@ -20,6 +20,7 @@ import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
 import useDialogFocus from '../hooks/useDialogFocus'
 import AuthFooter from '../components/auth/AuthFooter'
 import { safeNextPath } from '../utils/nextPath'
+import { readLastFamily, forgetLastFamily } from '../utils/authStorage'
 
 function toResolvedFamily(data) {
   if (!data) return null
@@ -133,12 +134,19 @@ function LoginPageContent() {
   const afterLogin = safeNextPath(searchParams.get('next')) || '/home'
 
   // Key the family is looked up by: slug (route param or subdomain) first,
-  // ?family= id as fallback. Empty on a plain /login visit.
+  // ?family= id as fallback, then the family this device signed in to last.
+  // Empty on a plain /login visit from a device that remembers none.
   // On a slug or subdomain page the family is fixed by the address; a
   // ?family= id there would only let a crafted link put another family's
   // design on this family's login page.
   const hasSlug = !!(routeSlug || getSubdomainSlug())
-  const lookupKey = routeSlug || getSubdomainSlug() || urlFamilyId || ''
+  // Read once, on the first render: storage is not there in the pre-render.
+  const [rememberedFamilyId, setRememberedFamilyId] = useState(
+    () => (hasSlug || urlFamilyId ? null : readLastFamily()),
+  )
+  const familyIdParam = urlFamilyId || rememberedFamilyId
+  const fromMemory = !hasSlug && !urlFamilyId && !!rememberedFamilyId
+  const lookupKey = routeSlug || getSubdomainSlug() || familyIdParam || ''
 
   // Family resolution state, seeded from the localStorage snapshot so the
   // custom design paints immediately on repeat visits. `resolving` is true
@@ -179,27 +187,46 @@ function LoginPageContent() {
       .finally(() => setResolving(false))
   }, [routeSlug, t])
 
-  // Load customization for families accessed via ?family= query param (no slug)
+  // Load customization for families accessed via ?family= query param, or
+  // remembered by this device (no slug)
   useEffect(() => {
-    if (!urlFamilyId || resolvedFamilyId || hasSlug) return
+    if (!familyIdParam || resolvedFamilyId || hasSlug) return
     if (!db) {
       setResolving(false)
       return
     }
-    getFamilyPublic(urlFamilyId)
+    getFamilyPublic(familyIdParam)
       .then((data) => {
         if (data) {
           const resolved = toResolvedFamily(data)
           setResolvedFamily(resolved)
-          writeCachedFamily(urlFamilyId, resolved)
+          writeCachedFamily(familyIdParam, resolved)
+        } else if (fromMemory) {
+          // The family is gone. Its login page can no longer be shown, so the
+          // device stops offering it.
+          forgetLastFamily()
+          setRememberedFamilyId(null)
+          setResolvedFamily(null)
         }
       })
       .catch(() => {})
       .finally(() => setResolving(false))
-  }, [urlFamilyId, resolvedFamilyId, hasSlug])
+  }, [familyIdParam, resolvedFamilyId, hasSlug, fromMemory])
 
-  // The effective familyId: resolved slug takes priority, then query param fallback
-  const effectiveFamilyId = resolvedFamilyId || (hasSlug ? null : urlFamilyId)
+  // The effective familyId: resolved slug takes priority, then query param or
+  // remembered family as fallback
+  const effectiveFamilyId = resolvedFamilyId || (hasSlug ? null : familyIdParam)
+
+  // "Not your family?" on a family login this device remembered: forget it
+  // and ask for a link, as on any other device.
+  const forgetFamily = fromMemory
+    ? () => {
+      forgetLastFamily()
+      setRememberedFamilyId(null)
+      setResolvedFamily(null)
+      setError('')
+    }
+    : null
 
   // Already signed in — nothing to log into. Rendered as <Navigate> rather than
   // a navigate() call in the render body, which updates router state mid-render.
@@ -270,7 +297,7 @@ function LoginPageContent() {
     const cardProps = {
       t, navigate, formProps, firebaseReady,
       familyName: resolvedFamilyName,
-      showAdminLogin, toggleAdminLogin,
+      showAdminLogin, toggleAdminLogin, forgetFamily,
       styleKey: style,
     }
     return (
@@ -466,7 +493,7 @@ function LoginPageContent() {
 
             {/* Admin toggle — the notice above carries its own */}
             {!needsFamilyLink && (
-              <div className="mt-4 text-center">
+              <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1">
                 <button
                   type="button"
                   onClick={toggleAdminLogin}
@@ -474,6 +501,15 @@ function LoginPageContent() {
                 >
                   {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
                 </button>
+                {forgetFamily && !showAdminLogin && (
+                  <button
+                    type="button"
+                    onClick={forgetFamily}
+                    className={`text-sm text-bark-muted hover:text-kaydo transition-colors ${phoneTextClass}`}
+                  >
+                    {t('login.notYourFamily')}
+                  </button>
+                )}
               </div>
             )}
 
@@ -538,7 +574,7 @@ function NoFamilyLinkNotice({ t, onAdminLogin }) {
 // admin-picked preset (CARD_STYLES); the form itself is always native UI.
 function CustomLoginCard({
   t, navigate, formProps, firebaseReady, familyName,
-  showAdminLogin, toggleAdminLogin, styleKey, onClose, titleId, autoFocusPassword = false,
+  showAdminLogin, toggleAdminLogin, forgetFamily, styleKey, onClose, titleId, autoFocusPassword = false,
 }) {
   const preset = CARD_STYLES[styleKey] || CARD_STYLES.light
   const dark = preset.tone === 'dark'
@@ -572,7 +608,7 @@ function CustomLoginCard({
 
       <LoginForm {...formProps} tone={preset.tone} autoFocusPassword={autoFocusPassword} />
 
-      <div className="mt-4 text-center">
+      <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1">
         <button
           type="button"
           onClick={toggleAdminLogin}
@@ -580,6 +616,15 @@ function CustomLoginCard({
         >
           {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
         </button>
+        {forgetFamily && !showAdminLogin && (
+          <button
+            type="button"
+            onClick={forgetFamily}
+            className={`text-sm transition-colors ${dark ? 'text-cream/70 hover:text-cream' : 'text-bark-muted hover:text-kaydo'}`}
+          >
+            {t('login.notYourFamily')}
+          </button>
+        )}
       </div>
 
       {showAdminLogin && (

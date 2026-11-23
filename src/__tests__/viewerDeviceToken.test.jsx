@@ -114,4 +114,21 @@ describe('viewer device token', () => {
 
     expect(window.localStorage.getItem(STORED)).toBe('device-abc')
   })
+
+  it('remembers the family for this device when the box is checked', async () => {
+    callable.mockResolvedValue({ data: { token: 'custom' } })
+    await act(() => auth.loginAsViewer('pw', 'family-1'))
+    await act(() => auth.logout())
+
+    // Kept through logout: that is when the login page needs it.
+    expect(window.localStorage.getItem('kaydo_last_family')).toBe('family-1')
+  })
+
+  it('forgets it when the box is cleared, as on a shared device', async () => {
+    window.localStorage.setItem('kaydo_last_family', 'family-1')
+    callable.mockResolvedValue({ data: { token: 'custom' } })
+    await act(() => auth.loginAsViewer('pw', 'family-1', { remember: false }))
+
+    expect(window.localStorage.getItem('kaydo_last_family')).toBeNull()
+  })
 })

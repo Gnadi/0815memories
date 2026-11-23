@@ -128,6 +128,42 @@ describe('what "/" shows a returning visitor', () => {
 
     expect(await screen.findByText('Frequently asked questions')).toBeInTheDocument()
   })
+
+  describe('opened as the installed app', () => {
+    const matchMedia = window.matchMedia
+    beforeEach(() => {
+      window.matchMedia = (query) => ({ matches: query === '(display-mode: standalone)' })
+    })
+    afterEach(() => {
+      window.matchMedia = matchMedia
+    })
+
+    it('goes to the login page on a device that remembers its family', async () => {
+      localStorage.setItem('kaydo_last_family', 'fam1')
+      Object.assign(auth, { isAuthenticated: false, loading: false })
+
+      renderRoot()
+
+      expect(await screen.findByText('the login page')).toBeInTheDocument()
+    })
+
+    it('shows the landing page on a device that remembers none', async () => {
+      Object.assign(auth, { isAuthenticated: false, loading: false })
+
+      renderRoot()
+
+      expect(await screen.findByText('Frequently asked questions')).toBeInTheDocument()
+    })
+  })
+
+  it('shows the landing page in a browser tab even to a device that remembers a family', async () => {
+    localStorage.setItem('kaydo_last_family', 'fam1')
+    Object.assign(auth, { isAuthenticated: false, loading: false })
+
+    renderRoot()
+
+    expect(await screen.findByText('Frequently asked questions')).toBeInTheDocument()
+  })
 })
 
 describe('the store "Stay logged in" picks', () => {
