@@ -27,7 +27,6 @@ export default function PasswordResetForm({ initialEmail = '', onBack, tone = 'l
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
-  // The login page renders a mobile and a desktop form at once.
   const emailId = useId()
 
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
