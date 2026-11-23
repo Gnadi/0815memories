@@ -13,3 +13,12 @@ export function detectPlatform() {
   if (/Android/i.test(ua)) return 'android'
   return 'other'
 }
+
+// Whether Kaydo runs as the installed app (from the home screen) rather than
+// in a browser tab. iOS Safari reports it on navigator, everyone else through
+// the display-mode media query of the manifest.
+export function isInstalledApp() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia?.('(display-mode: standalone)').matches === true ||
+    window.navigator.standalone === true
+}

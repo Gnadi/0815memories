@@ -76,5 +76,11 @@
     "bodyAdmin": "The family's owner asked for this. Everything stored here will be gone for good. Download a backup in the settings if you want to keep anything.",
     "bodyViewer": "The family's owner asked for this. Everything stored here will be gone after that day.",
     "openSettings": "Open the settings"
+  },
+  "loginPhotoHint": {
+    "title": "Give your login page a face",
+    "body": "Everyone in your family sees the login page first. A photo of your family can welcome them there, in place of the illustration.",
+    "action": "Choose a photo",
+    "notNow": "Not now"
   }
 }

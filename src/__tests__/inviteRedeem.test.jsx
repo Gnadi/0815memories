@@ -47,6 +47,7 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => session }))
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useSearchParams: () => [new URLSearchParams('family=fam-1&token=tok-1')],
+  Link: ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>,
 }))
 
 vi.mock('firebase/auth', () => ({ signOut: vi.fn(async () => {}) }))
@@ -71,18 +72,17 @@ const NEW_ACCOUNT = { uid: 'uid-new', email: 'New@Example.com ' }
 async function fillAndSubmit() {
   const user = userEvent.setup()
   render(<InviteRedeemPage />)
-  // The page lays the form out twice, for mobile and desktop; either will do.
-  await user.type((await screen.findAllByPlaceholderText('e.g., Sarah Miller'))[0], 'Sam')
-  await user.type(screen.getAllByPlaceholderText('you@example.com')[0], 'new@example.com')
-  await user.type(screen.getAllByPlaceholderText('At least 12 characters')[0], 'secret-pass-123')
-  await user.type(screen.getAllByPlaceholderText('Repeat your password')[0], 'secret-pass-123')
-  await user.click(screen.getAllByRole('button', { name: /join family/i })[0])
+  // One form for every screen size: each field exists once.
+  await user.type(await screen.findByLabelText('Your Name'), 'Sam')
+  await user.type(screen.getByLabelText('Email'), 'new@example.com')
+  await user.type(screen.getByLabelText('Password'), 'secret-pass-123')
+  await user.click(screen.getByRole('button', { name: /join family/i }))
 }
 
 async function join() {
   const user = userEvent.setup()
   render(<InviteRedeemPage />)
-  await user.click((await screen.findAllByRole('button', { name: 'Join The Millers' }))[0])
+  await user.click(await screen.findByRole('button', { name: 'Join The Millers' }))
 }
 
 describe('InviteRedeemPage', () => {
@@ -106,7 +106,7 @@ describe('InviteRedeemPage', () => {
     setSession({ user: NEW_ACCOUNT, emailVerified: false })
     render(<InviteRedeemPage />)
 
-    expect(await screen.findAllByText('Confirm your email address')).not.toHaveLength(0)
+    expect(await screen.findByText('Confirm your email address')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Join The Millers' })).toBeNull()
     expect(mockRedeem).not.toHaveBeenCalled()
   })
@@ -129,7 +129,7 @@ describe('InviteRedeemPage', () => {
     mockCheckEmailVerified.mockResolvedValue(false)
     await join()
 
-    expect(await screen.findAllByText('Your email address is not confirmed yet')).not.toHaveLength(0)
+    expect(await screen.findByText('Your email address is not confirmed yet')).toBeInTheDocument()
     expect(mockRedeem).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
   })
@@ -140,7 +140,7 @@ describe('InviteRedeemPage', () => {
     mockRedeem.mockRejectedValue(Object.assign(new Error('spent'), { code: 'functions/failed-precondition' }))
     await join()
 
-    expect(await screen.findAllByText('This invite link is invalid or has been revoked.')).not.toHaveLength(0)
+    expect(await screen.findByText('This invite link is invalid or has been revoked.')).toBeInTheDocument()
     expect(mockNavigate).not.toHaveBeenCalled()
     expect(mockSetActiveFamilyId).not.toHaveBeenCalled()
   })
@@ -149,10 +149,23 @@ describe('InviteRedeemPage', () => {
     setSession({ user: { uid: 'uid-admin', email: 'admin@example.com' }, familyId: 'fam-other', emailVerified: true })
     render(<InviteRedeemPage />)
 
-    expect(await screen.findAllByText(/You're already signed in/)).not.toHaveLength(0)
+    expect(await screen.findByText(/You're already signed in/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Join The Millers' })).toBeNull()
-    for (const button of screen.getAllByRole('button', { name: /join family/i })) {
-      expect(button).toBeDisabled()
+    expect(screen.getByRole('button', { name: /join family/i })).toBeDisabled()
+  })
+
+  it('speaks the language of the page, form and notice included', async () => {
+    const i18n = (await import('../i18n')).default
+    await i18n.changeLanguage('de')
+    try {
+      setSession()
+      render(<InviteRedeemPage />)
+      // The form was English whatever the language, although translated.
+      expect(await screen.findByLabelText('Dein Name')).toHaveAttribute('autocomplete', 'name')
+      expect(screen.getByRole('button', { name: /Familie beitreten/ })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: 'Tritt The Millers bei' })).toBeInTheDocument()
+    } finally {
+      await i18n.changeLanguage('en')
     }
   })
 })

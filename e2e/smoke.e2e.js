@@ -7,7 +7,8 @@ const ADMIN_PASSWORD = 'demo123456'
 const FAMILY_SLUG = 'the-bennetts'
 const VIEWER_PASSWORD = 'bennetts-family'
 
-// The login page renders a mobile and a desktop form; only one is visible.
+// Picks the visible match. The login page renders one form; other pages
+// still render some controls twice, for phones and desktops.
 const visible = (page, selector) => page.locator(`${selector}:visible`).first()
 
 async function signIn(page, password = ADMIN_PASSWORD) {
@@ -65,7 +66,9 @@ test('the landing page renders in German at /de', async ({ page }) => {
 
 test('a wrong password keeps the admin on the login page', async ({ page }) => {
   await signIn(page, 'not-the-password')
-  await expect(page.getByText('Could not sign in').filter({ visible: true })).toBeVisible()
+  // The emulator answers auth/wrong-password, which reads the same as an
+  // unknown address.
+  await expect(page.getByText('Invalid email or password').filter({ visible: true })).toBeVisible()
   await expect(page).toHaveURL(/\/login/)
 })
 
@@ -139,7 +142,6 @@ test('a new admin confirms the email address before the family is founded', asyn
   await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
   await visible(page, 'input[type="email"]').fill(email)
   await visible(page, `input[placeholder="At least ${MIN_PASSWORD_LENGTH} characters"]`).fill('founder-password')
-  await visible(page, 'input[placeholder="Repeat your password"]').fill('founder-password')
   await visible(page, 'button[type="submit"]').click()
 
   await expect(page.getByText('Confirm your email address').filter({ visible: true })).toBeVisible()
@@ -196,6 +198,28 @@ test('an admin signs in and every section opens', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
+// A link into the app opened while signed out goes through the login page and
+// back to where it pointed. /login names no family, so it first explains where
+// the family login is and offers the admin login.
+test('signing in from a link into the app comes back to it', async ({ page }) => {
+  const errors = collectErrors(page)
+
+  await page.goto('/recipes')
+  await expect(page).toHaveURL(/\/login\?next=%2Frecipes$/, { timeout: 20_000 })
+  await expect(page).toHaveTitle('Sign in – Kaydo')
+  await expect(page.getByText("Open your family's link")).toBeVisible()
+  await expect(page.locator('input[type="password"]')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Sign in as admin' }).click()
+  await page.getByLabel('Family Email').fill(ADMIN_EMAIL)
+  await page.getByLabel('Private Key').fill(ADMIN_PASSWORD)
+  await page.getByRole('button', { name: /Enter the Home/ }).click()
+
+  await expect(page).toHaveURL(/\/recipes$/, { timeout: 20_000 })
+  await expect(page.getByRole('heading', { name: 'The Recipe Vault' }).first()).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 // Viewers have no account: the viewerLogin Cloud Function checks the shared
 // family password and hands out a token for the family. So this runs through
 // the Functions emulator as well as Firestore and Auth.
@@ -210,7 +234,7 @@ test('a viewer enters with the family password', async ({ page }) => {
   const password = visible(page, 'input[type="password"]')
   await password.fill('not-the-password')
   await visible(page, 'button[type="submit"]').click()
-  await expect(page.getByText('Invalid password').filter({ visible: true })).toBeVisible()
+  await expect(page.getByText('Invalid private key').filter({ visible: true })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/family/${FAMILY_SLUG}$`))
 
   await password.fill(VIEWER_PASSWORD)

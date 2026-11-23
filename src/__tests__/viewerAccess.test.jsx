@@ -127,8 +127,9 @@ describe('ProtectedRoute adminOnly', () => {
         <ProtectedRoute adminOnly><Page /></ProtectedRoute>
       </MemoryRouter>,
     )
-    // Neither rendered nor redirected — a spinner, as before.
+    // Neither rendered nor redirected — the unlock screen, saying so.
     expect(screen.queryByText('the page')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('One moment, opening the door…')
   })
 })
 

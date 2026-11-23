@@ -1,10 +1,9 @@
 import { useState, useMemo, useCallback, useId } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
-import KaydoLogo from '../components/KaydoLogo'
-import FamilyIllustration from '../components/FamilyIllustration'
+import { Mail, KeyRound, Eye, EyeOff, User, Home } from 'lucide-react'
+import AuthPageLayout from '../components/auth/AuthPageLayout'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 import { generateSlug } from '../utils/familySlug'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
@@ -25,9 +24,7 @@ export default function SignupPage() {
   const [familyName, setFamilyName] = useState(() => location.state?.familyName || '')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -74,11 +71,6 @@ export default function SignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
-    if (password !== confirmPassword) {
-      setError(t('signup.errors.passwordMismatch'))
-      return
-    }
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(t('signup.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
@@ -128,133 +120,29 @@ export default function SignupPage() {
         familyName={familyName} setFamilyName={setFamilyName}
         email={email} setEmail={setEmail}
         password={password} setPassword={setPassword}
-        confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
         showPassword={showPassword} setShowPassword={setShowPassword}
-        showConfirm={showConfirm} setShowConfirm={setShowConfirm}
         error={error} loading={loading} handleSubmit={handleSubmit} slugPreview={slugPreview}
       />
     )
   }
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
-      {/* Desktop header — hidden on mobile */}
-      <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-bark font-semibold text-lg">
-          <KaydoLogo size={22} />
-          <span>Kaydo</span>
-        </div>
-      </header>
+    <AuthPageLayout title={t('signup.title')} subtitle={t('signup.subtitle')} badge={t('secureBadge')} footer>
+      {!firebaseReady && <SetupBanner />}
 
-      <main className="flex-1 flex flex-col lg:flex-row items-stretch">
-        {/* ====== MOBILE LAYOUT (< lg) ====== */}
-        <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
-          {/* Mobile brand */}
-          <div className="flex items-center gap-2 mb-4">
-            <KaydoLogo size={22} />
-            <span className="text-lg font-bold text-bark">Kaydo</span>
-          </div>
+      {stepContent()}
 
-          {/* Illustration card */}
-          <div className="rounded-2xl overflow-hidden mb-6">
-            <FamilyIllustration />
-          </div>
-
-          {/* Welcome heading */}
-          <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            {t('signup.title')}
-          </h1>
-          <p className="text-bark-light text-center mb-6">
-            {t('signup.subtitle')}
-          </p>
-
-          {!firebaseReady && <SetupBanner />}
-
-          {stepContent()}
-
-          {/* Sign in link */}
-          {step === 'account' && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-bark-light">
-                {t('signup.alreadyHaveAccount')}{' '}
-                <button
-                  onClick={() => navigate('/')}
-                  className="text-kaydo font-semibold hover:text-kaydo-dark"
-                >
-                  {t('signup.signIn')}
-                </button>
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
-        {/* Left — Illustration */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
-          <FamilyIllustration />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              {t('signup.asideTitle')}
-            </h2>
-            <p className="text-base opacity-90 drop-shadow">
-              {t('signup.asideBody')}
-            </p>
-          </div>
-        </div>
-
-        {/* Right — Signup Form */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
-          <div className="w-full max-w-md">
-            {/* Logo mark */}
-            <div className="flex justify-center mb-6">
-              <KaydoLogo size={52} />
-            </div>
-
-            <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              {t('signup.title')}
-            </h1>
-            <p className="text-bark-light text-center mb-8">
-              {t('signup.subtitle')}
-            </p>
-
-            {!firebaseReady && <SetupBanner />}
-
-            {stepContent()}
-
-            {/* Sign in link */}
-            {step === 'account' && (
-              <div className="mt-6 text-center">
-                <p className="text-sm text-bark-light">
-                  {t('signup.alreadyHaveAccount')}{' '}
-                  <button
-                    onClick={() => navigate('/')}
-                    className="text-kaydo font-semibold hover:text-kaydo-dark"
-                  >
-                    {t('signup.signIn')}
-                  </button>
-                </p>
-              </div>
-            )}
-
-            {/* Secure badge */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
-              <Shield className="w-4 h-4" />
-              {t('secureBadge')}
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer — desktop only */}
-      <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
-        <div className="flex gap-4">
-          <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.terms')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
-        </div>
-      </footer>
-    </div>
+      {/* Sign in — an account here is an admin's, so the admin login. It
+          went to "/", the landing page. */}
+      {step === 'account' && (
+        <p className="mt-6 text-center text-sm text-bark-light">
+          {t('signup.alreadyHaveAccount')}{' '}
+          <Link to="/login?admin=1" className="text-kaydo font-semibold hover:text-kaydo-dark">
+            {t('signup.signIn')}
+          </Link>
+        </p>
+      )}
+    </AuthPageLayout>
   )
 }
 
@@ -278,21 +166,30 @@ function SetupBanner() {
 function SignupForm({
   displayName, setDisplayName, familyName, setFamilyName,
   email, setEmail,
-  password, setPassword, confirmPassword, setConfirmPassword,
-  showPassword, setShowPassword, showConfirm, setShowConfirm,
+  password, setPassword,
+  showPassword, setShowPassword,
   error, loading, handleSubmit, slugPreview,
 }) {
   const { t } = useTranslation('auth')
+  const id = useId()
+  const ids = {
+    name: `${id}-name`, family: `${id}-family`, email: `${id}-email`,
+    password: `${id}-password`, error: `${id}-error`,
+  }
+  const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': ids.error } : {}
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Display Name */}
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
+        <label htmlFor={ids.name} className="block text-sm font-medium text-bark mb-1.5">
           {t('signup.form.nameLabel')}
         </label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
+            id={ids.name}
+            name="name"
+            autoComplete="name"
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
@@ -305,12 +202,15 @@ function SignupForm({
 
       {/* Family Name */}
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
+        <label htmlFor={ids.family} className="block text-sm font-medium text-bark mb-1.5">
           {t('signup.form.familyNameLabel')}
         </label>
         <div className="relative">
           <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
+            id={ids.family}
+            name="familyName"
+            autoComplete="off"
             type="text"
             value={familyName}
             onChange={(e) => setFamilyName(e.target.value)}
@@ -328,12 +228,15 @@ function SignupForm({
 
       {/* Email */}
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
+        <label htmlFor={ids.email} className="block text-sm font-medium text-bark mb-1.5">
           {t('signup.form.emailLabel')}
         </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
+            id={ids.email}
+            name="email"
+            autoComplete="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -346,12 +249,19 @@ function SignupForm({
 
       {/* Password */}
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
+        <label htmlFor={ids.password} className="block text-sm font-medium text-bark mb-1.5">
           {t('signup.form.passwordLabel')}
         </label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          {/* One field with its eye, no second one to repeat it: that made
+              the form longer than a phone's screen, and a typo is undone by
+              the password reset the confirmed address allows. */}
           <input
+            id={ids.password}
+            name="new-password"
+            autoComplete="new-password"
+            {...invalidProps}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -371,36 +281,10 @@ function SignupForm({
         </div>
       </div>
 
-      {/* Confirm Password */}
-      <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">
-          {t('signup.form.confirmPasswordLabel')}
-        </label>
-        <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-          <input
-            type={showConfirm ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder={t('signup.form.confirmPasswordPlaceholder')}
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            required
-            minLength={MIN_PASSWORD_LENGTH}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm(!showConfirm)}
-            aria-label={showConfirm ? t('hidePassword') : t('showPassword')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
-          >
-            {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
 
       {/* Error message */}
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
+        <p id={ids.error} role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
           {error}
         </p>
       )}
@@ -416,7 +300,7 @@ function SignupForm({
         ) : (
           <>
             {t('signup.form.submit')}
-            <span className="text-xl">&rarr;</span>
+            <span className="text-xl inline-block rtl:-scale-x-100" aria-hidden="true">&rarr;</span>
           </>
         )}
       </button>
@@ -428,7 +312,6 @@ function SignupForm({
 // account lands that no family lists any more, so it says how to join one.
 function FamilyStep({ familyName, setFamilyName, slugPreview, error, loading, handleSubmit }) {
   const { t } = useTranslation('auth')
-  // The page renders a mobile and a desktop layout at once.
   const nameId = useId()
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -461,7 +344,7 @@ function FamilyStep({ familyName, setFamilyName, slugPreview, error, loading, ha
       </div>
 
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
+        <p role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
           {error}
         </p>
       )}

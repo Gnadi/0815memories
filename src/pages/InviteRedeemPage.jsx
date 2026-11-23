@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
@@ -7,9 +7,9 @@ import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 import { useAuth } from '../context/AuthContext'
 import { getFamilyPublic } from '../services/family'
 import { getInvite, redeemInvite } from '../services/invites'
-import { Mail, KeyRound, Eye, EyeOff, User, Shield, Loader2 } from 'lucide-react'
+import { Mail, KeyRound, Eye, EyeOff, User, Loader2 } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
-import FamilyIllustration from '../components/FamilyIllustration'
+import AuthPageLayout from '../components/auth/AuthPageLayout'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 
 export default function InviteRedeemPage() {
@@ -32,9 +32,7 @@ export default function InviteRedeemPage() {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -109,10 +107,6 @@ export default function InviteRedeemPage() {
       setError(t('invite.errors.alreadySignedIn'))
       return
     }
-    if (password !== confirmPassword) {
-      setError(t('invite.errors.passwordMismatch'))
-      return
-    }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(t('invite.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
@@ -183,9 +177,7 @@ export default function InviteRedeemPage() {
           displayName={displayName} setDisplayName={setDisplayName}
           email={email} setEmail={setEmail}
           password={password} setPassword={setPassword}
-          confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
           showPassword={showPassword} setShowPassword={setShowPassword}
-          showConfirm={showConfirm} setShowConfirm={setShowConfirm}
           error={error} loading={loading} handleSubmit={handleSubmit}
           disabled={!!user}
         />
@@ -219,77 +211,28 @@ export default function InviteRedeemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
-      <header className="hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-bark font-semibold text-lg">
-          <KaydoLogo size={22} />
-          <span>Kaydo</span>
-        </div>
-      </header>
-
-      <main className="flex-1 flex flex-col lg:flex-row items-stretch">
-        <div className="lg:hidden flex-1 flex flex-col px-5 pt-4 pb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <KaydoLogo size={22} />
-            <span className="text-lg font-bold text-bark">Kaydo</span>
-          </div>
-          <div className="rounded-2xl overflow-hidden mb-6">
-            <FamilyIllustration />
-          </div>
-          <h1 className="text-3xl font-bold text-bark text-center mb-2">
-            {t('invite.joinFamily', { name: familyName })}
-          </h1>
-          <p className="text-bark-light text-center mb-6">
-            {t('invite.subtitle')}
-          </p>
-          {stepContent()}
-        </div>
-
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center bg-cream-dark p-12">
-          <FamilyIllustration />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
-              {t('invite.asideTitle')}
-            </h2>
-            <p className="text-base opacity-90 drop-shadow">
-              {t('invite.asideBody')}
-            </p>
-          </div>
-        </div>
-
-        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
-          <div className="w-full max-w-md">
-            <div className="flex justify-center mb-6">
-              <KaydoLogo size={52} />
-            </div>
-            <h1 className="text-4xl font-bold text-bark text-center mb-2">
-              Join {familyName}
-            </h1>
-            <p className="text-bark-light text-center mb-8">
-              Create your account to become an admin of this family.
-            </p>
-            {stepContent()}
-            <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
-              <Shield className="w-4 h-4" />
-              Your account is bound to this family only.
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+    <AuthPageLayout
+      title={t('invite.joinFamily', { name: familyName })}
+      subtitle={t('invite.subtitle')}
+      badge={t('invite.boundBadge')}
+    >
+      {stepContent()}
+    </AuthPageLayout>
   )
 }
 
+// Its text was English whatever the language, although translated.
 function AlreadySignedInBanner() {
+  const { t } = useTranslation('auth')
   return (
     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm mb-4">
-      You're already signed in. To redeem this invite as a fresh admin, please{' '}
+      {t('invite.alreadySignedIn.body')}{' '}
       <button
         type="button"
         className="underline font-semibold"
         onClick={async () => { try { await signOut(auth) } catch { /* noop */ } window.location.reload() }}
       >
-        sign out first
+        {t('invite.alreadySignedIn.signOutFirst')}
       </button>.
     </div>
   )
@@ -298,21 +241,33 @@ function AlreadySignedInBanner() {
 function RedeemForm({
   displayName, setDisplayName,
   email, setEmail,
-  password, setPassword, confirmPassword, setConfirmPassword,
-  showPassword, setShowPassword, showConfirm, setShowConfirm,
+  password, setPassword,
+  showPassword, setShowPassword,
   error, loading, handleSubmit, disabled,
 }) {
+  // Its labels, placeholders and button were English whatever the language,
+  // although the translations were there.
+  const { t } = useTranslation('auth')
+  const id = useId()
+  const ids = {
+    name: `${id}-name`, email: `${id}-email`, password: `${id}-password`,
+    error: `${id}-error`,
+  }
+  const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': ids.error } : {}
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Your Name</label>
+        <label htmlFor={ids.name} className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.nameLabel')}</label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
+            id={ids.name}
+            name="name"
+            autoComplete="name"
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g., Sarah Miller"
+            placeholder={t('invite.form.namePlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             disabled={disabled}
@@ -321,14 +276,17 @@ function RedeemForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Email</label>
+        <label htmlFor={ids.email} className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.emailLabel')}</label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
           <input
+            id={ids.email}
+            name="email"
+            autoComplete="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('invite.form.emailPlaceholder')}
             className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             disabled={disabled}
@@ -337,14 +295,21 @@ function RedeemForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Password</label>
+        <label htmlFor={ids.password} className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.passwordLabel')}</label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          {/* One field with its eye, no second one to repeat it: that made
+              the form longer than a phone's screen, and a typo is undone by
+              the password reset the confirmed address allows. */}
           <input
+            id={ids.password}
+            name="new-password"
+            autoComplete="new-password"
+            {...invalidProps}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
+            placeholder={t('invite.form.passwordPlaceholder', { min: MIN_PASSWORD_LENGTH })}
             className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
             required
             minLength={MIN_PASSWORD_LENGTH}
@@ -353,6 +318,7 @@ function RedeemForm({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -360,32 +326,9 @@ function RedeemForm({
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-bark mb-1.5">Confirm Password</label>
-        <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-          <input
-            type={showConfirm ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Repeat your password"
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            required
-            minLength={MIN_PASSWORD_LENGTH}
-            disabled={disabled}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
-          >
-            {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
 
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+        <p id={ids.error} role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
       )}
 
       <button
@@ -397,8 +340,8 @@ function RedeemForm({
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            Join family
-            <span className="text-xl">&rarr;</span>
+            {t('invite.form.submit')}
+            <span className="text-xl inline-block rtl:-scale-x-100" aria-hidden="true">&rarr;</span>
           </>
         )}
       </button>
@@ -416,7 +359,7 @@ function JoinStep({ familyName, error, loading, onJoin }) {
         <p className="text-sm text-bark-light mt-2">{t('invite.join.body', { name: familyName })}</p>
       </div>
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+        <p role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
       )}
       <button
         type="button"

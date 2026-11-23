@@ -13,7 +13,8 @@ import MobileHeader from '../components/layout/MobileHeader'
 import UploadWidget from '../components/admin/UploadWidget'
 import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
-import FamilyIllustration from '../components/FamilyIllustration'
+import LoginArt from '../components/auth/LoginArt'
+import { LOGIN_ART_MOTIFS } from '../components/auth/loginArtFiles'
 import LoginForm from '../components/auth/LoginForm'
 import KaydoLogo from '../components/KaydoLogo'
 import {
@@ -741,10 +742,10 @@ function PreviewPane({ mode, theme, html, css, familyName, headerImage, card, t 
           {mode === 'theme' && <LoginDecorations emojis={themeDecorationEmojis(theme)} />}
           <div className="relative flex flex-col items-center px-5 py-6">
             {mode === 'classic' && (
-              <div className="w-full max-w-sm rounded-2xl overflow-hidden mb-4 h-36">
+              <div className="relative w-full max-w-sm rounded-2xl overflow-hidden mb-4 h-36">
                 {headerImage
                   ? <img src={headerImage} alt={t('upload.previewAlt')} className="w-full h-full object-cover" />
-                  : <FamilyIllustration />}
+                  : <LoginArt motif={LOGIN_ART_MOTIFS[0]} phoneOnly />}
               </div>
             )}
             {mode === 'theme' && (

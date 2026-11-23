@@ -1,3 +1,4 @@
+import { useId, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
 import PasswordResetForm from './PasswordResetForm'
@@ -26,6 +27,22 @@ export default function LoginForm({
   resetOpen = false, setResetOpen,
 }) {
   const { t } = useTranslation('auth')
+  // The login designer previews this form next to the settings page's own
+  // fields, so the ids have to be unique on any page.
+  const id = useId()
+  const emailId = `${id}-email`
+  const passwordId = `${id}-password`
+  const errorId = `${id}-error`
+  const capsId = `${id}-caps`
+  const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': errorId } : {}
+  // A private key is typed blind; with Caps Lock on, every attempt fails for a
+  // reason nobody can see.
+  const [capsLock, setCapsLock] = useState(false)
+  // A family member who forgot the shared key had no way on: only admins, who
+  // have an account, were offered "Forgot password?".
+  const [keyHintOpen, setKeyHintOpen] = useState(false)
+  const keyHintId = `${id}-key-hint`
+  const trackCapsLock = (e) => setCapsLock(!!e.getModifierState?.('CapsLock'))
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
@@ -43,17 +60,26 @@ export default function LoginForm({
       {/* Admin email field */}
       {showAdminLogin && (
         <div>
-          <label className={`block text-sm font-medium ${labelClass} mb-1.5`}>
+          <label htmlFor={emailId} className={`block text-sm font-medium ${labelClass} mb-1.5`}>
             {t('login.form.familyEmailLabel')}
           </label>
           <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" aria-hidden="true" />
             <input
+              id={emailId}
+              name="email"
               type="email"
+              autoComplete="username"
+              inputMode="email"
+              enterKeyHint="next"
+              autoCapitalize="none"
+              spellCheck={false}
+              {...invalidProps}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('login.form.familyEmailPlaceholder')}
               className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
+              required
             />
           </div>
         </div>
@@ -61,13 +87,24 @@ export default function LoginForm({
 
       {/* Password field */}
       <div>
-        <label className={`block text-sm font-medium ${labelClass} mb-1.5`}>
+        <label htmlFor={passwordId} className={`block text-sm font-medium ${labelClass} mb-1.5`}>
           {t('login.form.privateKeyLabel')}
         </label>
         <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" aria-hidden="true" />
+          {/* current-password lets password managers offer the saved key. */}
           <input
+            id={passwordId}
+            name="password"
             type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            autoCapitalize="none"
+            spellCheck={false}
+            enterKeyHint="go"
+            onKeyDown={trackCapsLock}
+            onKeyUp={trackCapsLock}
+            onBlur={() => setCapsLock(false)}
+            {...invalidProps}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoFocus={autoFocusPassword}
@@ -79,11 +116,17 @@ export default function LoginForm({
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+            aria-controls={passwordId}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
           >
-            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
+        {capsLock && (
+          <p id={capsId} role="status" className={`mt-1.5 text-xs ${tone === 'dark' ? 'text-amber-200' : 'text-amber-700'}`}>
+            {t('login.form.capsLock')}
+          </p>
+        )}
       </div>
 
       {/* Stay logged in */}
@@ -106,11 +149,30 @@ export default function LoginForm({
             {t('login.form.forgotPassword')}
           </button>
         )}
+        {!showAdminLogin && (
+          <button
+            type="button"
+            onClick={() => setKeyHintOpen(!keyHintOpen)}
+            aria-expanded={keyHintOpen}
+            aria-controls={keyHintId}
+            className={`text-sm transition-colors ${linkClass}`}
+          >
+            {t('login.form.forgotKey')}
+          </button>
+        )}
       </div>
 
+      {!showAdminLogin && keyHintOpen && (
+        <p id={keyHintId} className={`text-sm rounded-lg px-4 py-3 ${tone === 'dark' ? 'bg-white/10 text-cream' : 'bg-cream-dark text-bark-light'}`}>
+          {t('login.form.forgotKeyHint')}
+        </p>
+      )}
+
       {/* Error message */}
+      {/* role="alert" so a screen reader announces it; it used to appear
+          silently below the fields. */}
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
+        <p id={errorId} role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">
           {error}
         </p>
       )}
@@ -119,14 +181,20 @@ export default function LoginForm({
       <button
         type="submit"
         disabled={loading}
+        aria-busy={loading}
         className="btn-kaydo w-full flex items-center justify-center gap-2 text-lg disabled:opacity-60"
       >
         {loading ? (
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+            {/* The spinner alone left the button without a name. */}
+            <span className="sr-only">{t('login.form.submit')}</span>
+          </>
         ) : (
           <>
             {t('login.form.submit')}
-            <span className="text-xl">&rarr;</span>
+            {/* Points the way of reading: mirrored right to left */}
+            <span className="text-xl inline-block rtl:-scale-x-100" aria-hidden="true">&rarr;</span>
           </>
         )}
       </button>

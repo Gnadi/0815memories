@@ -48,6 +48,7 @@
     "message": "Ein unerwarteter Fehler ist aufgetreten. Ein Neuladen der Seite behebt das meistens — deine Erinnerungen sind sicher.",
     "reload": "Seite neu laden"
   },
+  "unlocking": "Einen Moment, wir schließen auf…",
   "familyKey": {
     "title": "Deine Familie kann nicht geöffnet werden",
     "missing": "Diese Familie hat keinen Schlüssel, und Kaydo öffnet nur verschlüsselte Familien.",
@@ -59,8 +60,7 @@
   "actions": {
     "dismiss": "Schließen",
     "openMenu": "Menü öffnen",
-    "closeMenu": "Menü schließen",
-    "familyIllustrationAlt": "Illustration einer Familienzusammenkunft"
+    "closeMenu": "Menü schließen"
   },
   "unreadable": {
     "notice_one": "Ein Eintrag konnte mit dem Schlüssel eurer Familie nicht entschlüsselt werden. Er wird ohne den betroffenen Text angezeigt.",

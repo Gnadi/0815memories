@@ -5,6 +5,8 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 const loginAsViewer = vi.fn(async () => {})
 const subdomain = vi.hoisted(() => ({ slug: null }))
 
+// Head needs the HelmetProvider only the real app sets up.
+vi.mock('vite-react-ssg', () => ({ Head: () => null }))
 vi.mock('../config/firebase', () => ({ db: { type: 'test' }, auth: null, functions: null }))
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({

@@ -48,6 +48,7 @@
     "message": "An unexpected error occurred. Reloading the page usually fixes it — your memories are safe.",
     "reload": "Reload page"
   },
+  "unlocking": "One moment, opening the door…",
   "familyKey": {
     "title": "Your family can't be opened",
     "missing": "This family has no encryption key, and Kaydo only opens encrypted families.",
@@ -59,8 +60,7 @@
   "actions": {
     "dismiss": "Dismiss",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu",
-    "familyIllustrationAlt": "Family gathering illustration"
+    "closeMenu": "Close menu"
   },
   "unreadable": {
     "notice_one": "One entry could not be decrypted with your family's key. It is shown without the affected text.",

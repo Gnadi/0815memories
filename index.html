@@ -83,6 +83,11 @@
     <style>
       html.kaydo-restoring body { background: #FDF6EC; }
       html.kaydo-restoring #root { visibility: hidden; }
+      /* A hidden page is still laid out, so its lazy images in the first
+         screenful were fetched for a landing page nobody would see — on /login
+         and every app address. Taken out of the layout, they wait until the
+         page is shown; images the app renders meanwhile load once it is. */
+      html.kaydo-restoring #root img[loading="lazy"] { display: none; }
     </style>
     <script>
       (function () {
@@ -90,8 +95,12 @@
         var cover = location.pathname !== builtFor
         if (!cover && (builtFor === '/' || builtFor === '/de' || builtFor === '/ar' || builtFor === '/fr')) {
           try {
+            // A stored session, the demo, or the installed app on a device that
+            // remembers its family (opensOnLogin in App.jsx): all leave "/".
+            var installed = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+              window.navigator.standalone === true
             cover = !!(localStorage.getItem('fh_familyId') || sessionStorage.getItem('fh_familyId') ||
-              sessionStorage.getItem('kaydo_demo'))
+              sessionStorage.getItem('kaydo_demo') || (installed && localStorage.getItem('kaydo_last_family')))
           } catch (e) { /* storage blocked — show the page as normal */ }
         }
         if (!cover) return

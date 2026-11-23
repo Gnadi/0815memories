@@ -48,6 +48,7 @@
     "message": "Une erreur inattendue est survenue. Recharger la page la résout généralement — vos souvenirs sont en sécurité.",
     "reload": "Recharger la page"
   },
+  "unlocking": "Un instant, nous ouvrons la porte…",
   "familyKey": {
     "title": "Impossible d'ouvrir votre famille",
     "missing": "Cette famille n'a pas de clé de chiffrement, et Kaydo n'ouvre que les familles chiffrées.",
@@ -59,8 +60,7 @@
   "actions": {
     "dismiss": "Fermer",
     "openMenu": "Ouvrir le menu",
-    "closeMenu": "Fermer le menu",
-    "familyIllustrationAlt": "Illustration d'une réunion de famille"
+    "closeMenu": "Fermer le menu"
   },
   "unreadable": {
     "notice_one": "Une entrée n'a pas pu être déchiffrée avec la clé de votre famille. Elle s'affiche sans le texte concerné.",
