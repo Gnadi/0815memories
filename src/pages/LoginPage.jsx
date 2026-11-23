@@ -6,7 +6,7 @@ import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Link2, Shield, X } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
-import FamilyIllustration from '../components/FamilyIllustration'
+import LoginArt from '../components/auth/LoginArt'
 import LoginForm, { SetupBanner } from '../components/auth/LoginForm'
 import CustomLoginCanvas from '../components/CustomLoginCanvas'
 import LoginDecorations from '../components/LoginDecorations'
@@ -396,22 +396,24 @@ function LoginPageContent() {
           <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
         </Link>
 
-        {/* Photo or illustration: a card on a phone, the left half on a desktop */}
+        {/* Picture: a card on a phone, the left half on a desktop. On a phone
+            the standard picture's card is held to its banner's shape, so a
+            tall screen does not crop it to a sliver of its middle; the form is
+            centred in the space left over. A family's own photo fills the
+            space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*0.513)]'}`}
         >
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : (
-              // Out of the flow on a phone, so its own height never pushes the
-              // form down; the card shows as much of it as fits.
-              <div className="absolute inset-0 lg:static lg:w-full">
-                <FamilyIllustration />
-              </div>
-            )}
-          {/* The photo or illustration can be light, so the white text sits on a
-              dark gradient to stay readable whatever the family uploaded. */}
-          <div className="hidden lg:block absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
+            : <LoginArt />}
+          {/* The white text sits on a dark gradient, so it stays readable
+              whatever the family uploaded. Under the standard picture it is
+              the green of the picture's own bottom band, which a wide or short
+              screen crops away. */}
+          {resolvedFamilyHeaderImage
+            ? <div className="hidden lg:block absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
+            : <div className="hidden lg:block absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0a3e34] via-[#0a3e34]/80 to-transparent" />}
           <div className="hidden lg:block absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               {t('login.asideTitle')}
@@ -423,7 +425,7 @@ function LoginPageContent() {
         </div>
 
         {/* Login column */}
-        <div className="flex flex-col lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
+        <div className="flex flex-col max-lg:my-auto lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
           <div className={`w-full lg:max-w-md ${columnCardClass}`}>
             {/* Logo mark */}
             <div className="hidden lg:flex justify-center mb-6">
