@@ -24,9 +24,7 @@ export default function SignupPage() {
   const [familyName, setFamilyName] = useState(() => location.state?.familyName || '')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -73,11 +71,6 @@ export default function SignupPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
-    if (password !== confirmPassword) {
-      setError(t('signup.errors.passwordMismatch'))
-      return
-    }
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(t('signup.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
@@ -127,9 +120,7 @@ export default function SignupPage() {
         familyName={familyName} setFamilyName={setFamilyName}
         email={email} setEmail={setEmail}
         password={password} setPassword={setPassword}
-        confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
         showPassword={showPassword} setShowPassword={setShowPassword}
-        showConfirm={showConfirm} setShowConfirm={setShowConfirm}
         error={error} loading={loading} handleSubmit={handleSubmit} slugPreview={slugPreview}
       />
     )
@@ -175,15 +166,15 @@ function SetupBanner() {
 function SignupForm({
   displayName, setDisplayName, familyName, setFamilyName,
   email, setEmail,
-  password, setPassword, confirmPassword, setConfirmPassword,
-  showPassword, setShowPassword, showConfirm, setShowConfirm,
+  password, setPassword,
+  showPassword, setShowPassword,
   error, loading, handleSubmit, slugPreview,
 }) {
   const { t } = useTranslation('auth')
   const id = useId()
   const ids = {
     name: `${id}-name`, family: `${id}-family`, email: `${id}-email`,
-    password: `${id}-password`, confirm: `${id}-confirm`, error: `${id}-error`,
+    password: `${id}-password`, error: `${id}-error`,
   }
   const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': ids.error } : {}
   return (
@@ -263,10 +254,14 @@ function SignupForm({
         </label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          {/* One field with its eye, no second one to repeat it: that made
+              the form longer than a phone's screen, and a typo is undone by
+              the password reset the confirmed address allows. */}
           <input
             id={ids.password}
             name="new-password"
             autoComplete="new-password"
+            {...invalidProps}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -286,36 +281,6 @@ function SignupForm({
         </div>
       </div>
 
-      {/* Confirm Password */}
-      <div>
-        <label htmlFor={ids.confirm} className="block text-sm font-medium text-bark mb-1.5">
-          {t('signup.form.confirmPasswordLabel')}
-        </label>
-        <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-          <input
-            id={ids.confirm}
-            name="confirm-password"
-            autoComplete="new-password"
-            {...invalidProps}
-            type={showConfirm ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder={t('signup.form.confirmPasswordPlaceholder')}
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            required
-            minLength={MIN_PASSWORD_LENGTH}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm(!showConfirm)}
-            aria-label={showConfirm ? t('hidePassword') : t('showPassword')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
-          >
-            {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
 
       {/* Error message */}
       {error && (

@@ -37,6 +37,13 @@ describe('the signup page', () => {
     expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'new-password')
   })
 
+  it('asks for the password once, with a way to see it', () => {
+    const { container } = renderPage()
+    // A second field to repeat it made the form longer than a phone's screen.
+    expect(container.querySelectorAll('input[type="password"]')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Show password' })).toBeInTheDocument()
+  })
+
   it('sends someone who has an account to the admin login', () => {
     renderPage()
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login?admin=1')

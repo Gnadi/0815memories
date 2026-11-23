@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef, useCallback } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
@@ -18,6 +18,7 @@ import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
 import { getSubdomainSlug } from '../utils/familySlug'
 import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
 import useDialogFocus from '../hooks/useDialogFocus'
+import { usePictureRoom } from '../hooks/usePictureRoom'
 import AuthFooter from '../components/auth/AuthFooter'
 import { safeNextPath } from '../utils/nextPath'
 import { readLastFamily, forgetLastFamily } from '../utils/authStorage'
@@ -56,9 +57,6 @@ const ADMIN_ERROR_KEYS = {
 // fresh Firestore fetch still runs and updates the snapshot afterwards.
 // Only ever rendered through the same validated/sanitized paths as live data.
 const LOGIN_CACHE_PREFIX = 'kaydo_login_page:'
-
-// Below this many pixels high, the phone's picture is a strip, not a picture.
-const MIN_PICTURE_HEIGHT = 96
 
 function readCachedFamily(key) {
   if (!key || typeof window === 'undefined') return null
@@ -113,19 +111,9 @@ function LoginPageContent() {
   const [loginOpen, setLoginOpen] = useState(false)
   // The standard picture's motif, kept for the visit.
   const [artMotif] = useState(() => pickLoginArt())
-  // On a phone the picture gets the height the form leaves over. Below
-  // MIN_PICTURE_HEIGHT it would be a strip, so it steps aside and leaves the
-  // space empty. Measured rather than guessed from the screen's height: the
-  // form's height changes with the mode, the language and the text size.
-  const [pictureTooSmall, setPictureTooSmall] = useState(false)
-  const observePicture = useCallback((node) => {
-    if (!node || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(([entry]) => {
-      setPictureTooSmall(entry.contentRect.height < MIN_PICTURE_HEIGHT)
-    })
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
+  // On a phone the picture gets the height the form leaves over, and steps
+  // aside where that is a strip.
+  const [observePicture, pictureTooSmall] = usePictureRoom()
   const loginDialogRef = useRef(null)
   const loginOpenButtonRef = useRef(null)
   const loginDialogTitleId = useId()
@@ -456,11 +444,12 @@ function LoginPageContent() {
             shadow, like a photo laid on the table. Flush against the page, the
             picture's warmer cream met the page's at a hard seam. On a phone
             the standard picture's card is held to its banner's shape, so a
-            tall screen does not crop it to a sliver of its middle; the form is
-            centred in the space left over. A family's own photo fills the
-            space. */}
+            tall screen does not crop it to a sliver of its middle, and picture
+            and form are centred together in the space left over: centring the
+            form alone left a gap between the picture and the heading. A
+            family's own photo fills the space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl max-lg:w-full max-lg:max-w-xl max-lg:mx-auto flex-1 min-h-0 ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'} ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl max-lg:w-full max-lg:max-w-xl max-lg:mx-auto max-lg:mt-auto flex-1 min-h-0 ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'} ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
           style={{ '--art-ratio': artMotif.mobile.height / artMotif.mobile.width }}
           ref={observePicture}
         >
@@ -472,7 +461,7 @@ function LoginPageContent() {
         </div>
 
         {/* Login column */}
-        <div className="flex flex-col max-lg:my-auto max-lg:w-full max-lg:max-w-xl max-lg:mx-auto lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
+        <div className="flex flex-col max-lg:mb-auto max-lg:w-full max-lg:max-w-xl max-lg:mx-auto lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
           <div className={`w-full lg:max-w-md ${columnCardClass}`}>
             {/* Logo mark */}
             <div className="hidden lg:flex justify-center mb-6">

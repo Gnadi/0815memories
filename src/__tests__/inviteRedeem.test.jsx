@@ -76,7 +76,6 @@ async function fillAndSubmit() {
   await user.type(await screen.findByLabelText('Your Name'), 'Sam')
   await user.type(screen.getByLabelText('Email'), 'new@example.com')
   await user.type(screen.getByLabelText('Password'), 'secret-pass-123')
-  await user.type(screen.getByLabelText('Confirm Password'), 'secret-pass-123')
   await user.click(screen.getByRole('button', { name: /join family/i }))
 }
 

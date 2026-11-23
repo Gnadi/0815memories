@@ -6,6 +6,7 @@ import KaydoLogo from '../KaydoLogo'
 import LoginArt from './LoginArt'
 import { pickLoginArt } from './loginArtFiles'
 import AuthFooter from './AuthFooter'
+import { usePictureRoom } from '../../hooks/usePictureRoom'
 
 /**
  * The frame of the signup and invite pages: the login page's picture beside
@@ -23,9 +24,10 @@ export default function AuthPageLayout({ title, subtitle, badge, footer = false,
   const { t } = useTranslation('auth')
   // One motif per visit, as on the login page.
   const [motif] = useState(() => pickLoginArt())
+  const [observePicture, pictureTooSmall] = usePictureRoom()
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
+    <div className="min-h-dvh bg-cream flex flex-col">
       {/* Desktop header */}
       <header className="hidden lg:flex px-6 py-4 items-center justify-between">
         <Link to="/" aria-label={t('login.homeLink')} className="flex items-center gap-2 text-bark font-semibold text-lg">
@@ -41,18 +43,21 @@ export default function AuthPageLayout({ title, subtitle, badge, footer = false,
           <span className="text-lg font-bold text-bark">Kaydo</span>
         </Link>
 
-        {/* Picture: a banner of its own shape on a phone — these forms are
-            long, so the page scrolls rather than squeeze it — and an inset,
-            rounded card without text on a desktop. */}
+        {/* Picture: on a phone, as on the login page, it takes the height the
+            form leaves over, up to its banner's shape, and steps aside where
+            that is a strip; picture and form are centred together. The page
+            used to scroll, with the picture at full size above a long form.
+            On a desktop it is an inset, rounded card without text. */}
         <div
-          className="relative overflow-hidden rounded-2xl mb-6 w-full max-w-xl mx-auto max-lg:[aspect-ratio:var(--art-aspect)] lg:mx-0 lg:max-w-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)]"
-          style={{ '--art-aspect': `${motif.mobile.width} / ${motif.mobile.height}` }}
+          ref={observePicture}
+          className="relative overflow-hidden rounded-2xl mb-6 w-full max-w-xl mx-auto max-lg:mt-auto flex-1 min-h-0 max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))] lg:flex-none lg:mx-0 lg:max-w-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)]"
+          style={{ '--art-ratio': motif.mobile.height / motif.mobile.width }}
         >
-          <LoginArt motif={motif} />
+          {!pictureTooSmall && <LoginArt motif={motif} />}
         </div>
 
         {/* Form column */}
-        <div className="flex flex-col w-full max-w-xl mx-auto lg:max-w-none lg:mx-0 lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
+        <div className="flex flex-col w-full max-w-xl mx-auto max-lg:mb-auto lg:max-w-none lg:mx-0 lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
           <div className="w-full lg:max-w-md">
             <div className="hidden lg:flex justify-center mb-6">
               <KaydoLogo size={52} />

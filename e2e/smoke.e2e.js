@@ -142,7 +142,6 @@ test('a new admin confirms the email address before the family is founded', asyn
   await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
   await visible(page, 'input[type="email"]').fill(email)
   await visible(page, `input[placeholder="At least ${MIN_PASSWORD_LENGTH} characters"]`).fill('founder-password')
-  await visible(page, 'input[placeholder="Repeat your password"]').fill('founder-password')
   await visible(page, 'button[type="submit"]').click()
 
   await expect(page.getByText('Confirm your email address').filter({ visible: true })).toBeVisible()

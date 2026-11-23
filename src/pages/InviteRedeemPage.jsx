@@ -32,9 +32,7 @@ export default function InviteRedeemPage() {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -109,10 +107,6 @@ export default function InviteRedeemPage() {
       setError(t('invite.errors.alreadySignedIn'))
       return
     }
-    if (password !== confirmPassword) {
-      setError(t('invite.errors.passwordMismatch'))
-      return
-    }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(t('invite.errors.passwordTooShort', { min: MIN_PASSWORD_LENGTH }))
       return
@@ -183,9 +177,7 @@ export default function InviteRedeemPage() {
           displayName={displayName} setDisplayName={setDisplayName}
           email={email} setEmail={setEmail}
           password={password} setPassword={setPassword}
-          confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
           showPassword={showPassword} setShowPassword={setShowPassword}
-          showConfirm={showConfirm} setShowConfirm={setShowConfirm}
           error={error} loading={loading} handleSubmit={handleSubmit}
           disabled={!!user}
         />
@@ -249,8 +241,8 @@ function AlreadySignedInBanner() {
 function RedeemForm({
   displayName, setDisplayName,
   email, setEmail,
-  password, setPassword, confirmPassword, setConfirmPassword,
-  showPassword, setShowPassword, showConfirm, setShowConfirm,
+  password, setPassword,
+  showPassword, setShowPassword,
   error, loading, handleSubmit, disabled,
 }) {
   // Its labels, placeholders and button were English whatever the language,
@@ -259,7 +251,7 @@ function RedeemForm({
   const id = useId()
   const ids = {
     name: `${id}-name`, email: `${id}-email`, password: `${id}-password`,
-    confirm: `${id}-confirm`, error: `${id}-error`,
+    error: `${id}-error`,
   }
   const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': ids.error } : {}
   return (
@@ -306,10 +298,14 @@ function RedeemForm({
         <label htmlFor={ids.password} className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.passwordLabel')}</label>
         <div className="relative">
           <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
+          {/* One field with its eye, no second one to repeat it: that made
+              the form longer than a phone's screen, and a typo is undone by
+              the password reset the confirmed address allows. */}
           <input
             id={ids.password}
             name="new-password"
             autoComplete="new-password"
+            {...invalidProps}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -330,34 +326,6 @@ function RedeemForm({
         </div>
       </div>
 
-      <div>
-        <label htmlFor={ids.confirm} className="block text-sm font-medium text-bark mb-1.5">{t('invite.form.confirmPasswordLabel')}</label>
-        <div className="relative">
-          <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-bark-muted" />
-          <input
-            id={ids.confirm}
-            name="confirm-password"
-            autoComplete="new-password"
-            {...invalidProps}
-            type={showConfirm ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder={t('invite.form.confirmPasswordPlaceholder')}
-            className="w-full pl-12 pr-12 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
-            required
-            minLength={MIN_PASSWORD_LENGTH}
-            disabled={disabled}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirm(!showConfirm)}
-            aria-label={showConfirm ? t('hidePassword') : t('showPassword')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-bark-muted hover:text-bark"
-          >
-            {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
 
       {error && (
         <p id={ids.error} role="alert" className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
