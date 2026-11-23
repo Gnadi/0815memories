@@ -27,6 +27,21 @@ function toResolvedFamily(data) {
   }
 }
 
+// Firebase Auth errors on the admin login that may be shown as they are: they
+// say nothing about whether an account exists. Every other code, user-disabled
+// among them, reads as the generic line. A project without email enumeration
+// protection answers user-not-found and wrong-password instead of
+// invalid-credential; both read the same, so neither tells them apart.
+const ADMIN_ERROR_KEYS = {
+  'auth/invalid-credential': 'login.errors.invalidCredential',
+  'auth/user-not-found': 'login.errors.invalidCredential',
+  'auth/wrong-password': 'login.errors.invalidCredential',
+  'auth/invalid-email': 'login.errors.invalidEmail',
+  'auth/missing-email': 'login.errors.invalidEmail',
+  'auth/too-many-requests': 'login.errors.tooManyRequests',
+  'auth/network-request-failed': 'login.errors.network',
+}
+
 // Snapshot of the last successful family resolution, keyed by the slug or
 // family id used to look it up. Lets returning visitors get their custom
 // design on the first paint instead of a flash of the default page; the
@@ -180,8 +195,11 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      if (showAdminLogin && email) {
-        await loginAsAdmin(email, password, { remember: stayLoggedIn })
+      // The admin form always signs in as an admin. It used to fall through to
+      // the family login when the email was empty, which answered with "you
+      // need a family link" to someone who had only forgotten a field.
+      if (showAdminLogin) {
+        await loginAsAdmin(email.trim(), password, { remember: stayLoggedIn })
       } else {
         if (!effectiveFamilyId) {
           setError(t('login.errors.needFamilyLink'))
@@ -192,16 +210,11 @@ export default function LoginPage() {
       }
       navigate('/home')
     } catch (err) {
-      // `userFacing` marks the viewer-login messages, which are written to be
-      // safe to display. Everything else keeps the generic line: a raw Firebase
-      // Auth error would tell a stranger whether an account exists.
-      setError(
-        err.userFacing
-          ? err.message
-          : err.code === 'auth/invalid-credential'
-            ? t('login.errors.invalidCredential')
-            : t('login.errors.generic')
-      )
+      // `i18nKey` marks the viewer-login messages, which are written to be
+      // safe to display. Admin errors are shown only where ADMIN_ERROR_KEYS
+      // lists them: a raw Firebase Auth error would tell a stranger whether an
+      // account exists.
+      setError(t(err.i18nKey || ADMIN_ERROR_KEYS[err.code] || 'login.errors.generic'))
     } finally {
       setLoading(false)
     }

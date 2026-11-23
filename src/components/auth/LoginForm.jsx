@@ -54,6 +54,7 @@ export default function LoginForm({
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('login.form.familyEmailPlaceholder')}
               className="w-full pl-12 pr-4 py-3 bg-cream-dark rounded-xl border-none outline-none text-bark placeholder-bark-muted focus:ring-2 focus:ring-kaydo/30"
+              required
             />
           </div>
         </div>

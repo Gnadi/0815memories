@@ -36,10 +36,14 @@ const DEMO = isDemoMode()
  * unreachable" say anything more. LoginPage replaces every other error with a
  * generic line — which is right for Firebase Auth errors, whose raw text would
  * leak whether an account exists — so these have to be marked.
+ *
+ * They carry a key of the `auth` namespace rather than a sentence: the page
+ * translates it. They used to carry English text, which every family saw
+ * whatever the language of their page.
  */
-function userFacingError(message) {
-  const err = new Error(message)
-  err.userFacing = true
+function userFacingError(i18nKey) {
+  const err = new Error(i18nKey)
+  err.i18nKey = i18nKey
   return err
 }
 
@@ -277,8 +281,8 @@ export function AuthProvider({ children }) {
   // firestore.rules reads — which is the whole reason a viewer can now be told
   // apart from a stranger.
   const loginAsViewer = useCallback(async (password, viewerFamilyId, { remember = true } = {}) => {
-    if (!auth || !functions) throw userFacingError('Firebase not configured — add env vars and reload')
-    if (!viewerFamilyId) throw userFacingError('No family link provided')
+    if (!auth || !functions) throw userFacingError('login.errors.notConfigured')
+    if (!viewerFamilyId) throw userFacingError('login.errors.needFamilyLink')
 
     // Chosen before the sign-in: setPersistence only applies to sessions opened
     // after it resolves, and it decides where the refresh token is written.
@@ -310,14 +314,14 @@ export function AuthProvider({ children }) {
       // function raises deliberately — is reported as a wrong password.
       devWarn('Viewer login failed:', err?.code, err?.message)
       if (err?.code === 'functions/resource-exhausted') {
-        throw userFacingError('Too many attempts — please wait a moment and try again')
+        throw userFacingError('login.errors.tooManyRequests')
       }
       if (err?.code === 'functions/permission-denied') {
-        throw userFacingError('Invalid password')
+        throw userFacingError('login.errors.invalidPassword')
       }
-      throw userFacingError('Could not reach the login service — please try again')
+      throw userFacingError('login.errors.serviceUnreachable')
     }
-    if (!token) throw userFacingError('Invalid password')
+    if (!token) throw userFacingError('login.errors.invalidPassword')
 
     await signInWithCustomToken(auth, token)
     // onAuthStateChanged reads the claim and sets the family; this write just
