@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
 import PasswordResetForm from './PasswordResetForm'
@@ -33,7 +33,12 @@ export default function LoginForm({
   const emailId = `${id}-email`
   const passwordId = `${id}-password`
   const errorId = `${id}-error`
+  const capsId = `${id}-caps`
   const invalidProps = error ? { 'aria-invalid': true, 'aria-describedby': errorId } : {}
+  // A private key is typed blind; with Caps Lock on, every attempt fails for a
+  // reason nobody can see.
+  const [capsLock, setCapsLock] = useState(false)
+  const trackCapsLock = (e) => setCapsLock(!!e.getModifierState?.('CapsLock'))
   // tone='dark' is used on dark login-card presets: labels flip to light
   // colors while the inputs keep their cream background and dark text.
   const labelClass = tone === 'dark' ? 'text-cream' : 'text-bark'
@@ -62,6 +67,7 @@ export default function LoginForm({
               type="email"
               autoComplete="username"
               inputMode="email"
+              enterKeyHint="next"
               autoCapitalize="none"
               spellCheck={false}
               {...invalidProps}
@@ -90,6 +96,10 @@ export default function LoginForm({
             autoComplete="current-password"
             autoCapitalize="none"
             spellCheck={false}
+            enterKeyHint="go"
+            onKeyDown={trackCapsLock}
+            onKeyUp={trackCapsLock}
+            onBlur={() => setCapsLock(false)}
             {...invalidProps}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -108,6 +118,11 @@ export default function LoginForm({
             {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
+        {capsLock && (
+          <p id={capsId} role="status" className={`mt-1.5 text-xs ${tone === 'dark' ? 'text-amber-200' : 'text-amber-700'}`}>
+            {t('login.form.capsLock')}
+          </p>
+        )}
       </div>
 
       {/* Stay logged in */}

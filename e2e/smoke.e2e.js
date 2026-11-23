@@ -7,7 +7,8 @@ const ADMIN_PASSWORD = 'demo123456'
 const FAMILY_SLUG = 'the-bennetts'
 const VIEWER_PASSWORD = 'bennetts-family'
 
-// The login page renders a mobile and a desktop form; only one is visible.
+// Picks the visible match. The login page renders one form; other pages
+// still render some controls twice, for phones and desktops.
 const visible = (page, selector) => page.locator(`${selector}:visible`).first()
 
 async function signIn(page, password = ADMIN_PASSWORD) {
@@ -65,7 +66,9 @@ test('the landing page renders in German at /de', async ({ page }) => {
 
 test('a wrong password keeps the admin on the login page', async ({ page }) => {
   await signIn(page, 'not-the-password')
-  await expect(page.getByText('Could not sign in').filter({ visible: true })).toBeVisible()
+  // The emulator answers auth/wrong-password, which reads the same as an
+  // unknown address.
+  await expect(page.getByText('Invalid email or password').filter({ visible: true })).toBeVisible()
   await expect(page).toHaveURL(/\/login/)
 })
 
@@ -210,7 +213,7 @@ test('a viewer enters with the family password', async ({ page }) => {
   const password = visible(page, 'input[type="password"]')
   await password.fill('not-the-password')
   await visible(page, 'button[type="submit"]').click()
-  await expect(page.getByText('Invalid password').filter({ visible: true })).toBeVisible()
+  await expect(page.getByText('Invalid private key').filter({ visible: true })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/family/${FAMILY_SLUG}$`))
 
   await password.fill(VIEWER_PASSWORD)

@@ -1,9 +1,9 @@
 import { useState, useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
-import { Shield, X } from 'lucide-react'
+import { Link2, Shield, X } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import LoginForm, { SetupBanner } from '../components/auth/LoginForm'
@@ -14,6 +14,8 @@ import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
 import { getSubdomainSlug } from '../utils/familySlug'
 import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
 import useDialogFocus from '../hooks/useDialogFocus'
+import AuthFooter from '../components/auth/AuthFooter'
+import { safeNextPath } from '../utils/nextPath'
 
 function toResolvedFamily(data) {
   if (!data) return null
@@ -106,6 +108,8 @@ export default function LoginPage() {
   const { slug: routeSlug } = useParams()
   const urlFamilyId = searchParams.get('family')
   const adminParam = searchParams.get('admin')
+  // Where the visitor was going when they were sent here (ProtectedRoute).
+  const afterLogin = safeNextPath(searchParams.get('next')) || '/home'
 
   // Key the family is looked up by: slug (route param or subdomain) first,
   // ?family= id as fallback. Empty on a plain /login visit.
@@ -179,7 +183,7 @@ export default function LoginPage() {
   // Already signed in — nothing to log into. Rendered as <Navigate> rather than
   // a navigate() call in the render body, which updates router state mid-render.
   if (isAuthenticated) {
-    return <Navigate to="/home" replace />
+    return <Navigate to={afterLogin} replace />
   }
 
   // While looking up a family with nothing cached to show, render a neutral
@@ -213,7 +217,7 @@ export default function LoginPage() {
         }
         await loginAsViewer(password, effectiveFamilyId, { remember: stayLoggedIn })
       }
-      navigate('/home')
+      navigate(afterLogin, { replace: true })
     } catch (err) {
       // `i18nKey` marks the viewer-login messages, which are written to be
       // safe to display. Admin errors are shown only where ADMIN_ERROR_KEYS
@@ -344,8 +348,13 @@ export default function LoginPage() {
     ? `max-lg:bg-warm-white/90 max-lg:backdrop-blur max-lg:rounded-2xl max-lg:shadow-lg max-lg:p-5 ${accentColor ? 'max-lg:border-t-4 max-lg:border-[color:var(--login-accent)]' : ''}`
     : ''
   // Themed pages keep the phone's picture only when the family uploaded a
-  // photo; the default illustration clashes with themes.
-  const showPhonePicture = !isThemed || resolvedFamilyHeaderImage
+  // photo; the default illustration clashes with themes. The admin form
+  // leaves it no room on a phone: it shrank to a sliver, or to nothing.
+  const showPhonePicture = !showAdminLogin && (!isThemed || resolvedFamilyHeaderImage)
+  // A plain /login visit names no family, and a family member's private key
+  // means nothing without one. The field used to be shown anyway, and said
+  // so only after it was filled in and sent.
+  const needsFamilyLink = !showAdminLogin && !lookupKey
 
   return (
     <div className="relative min-h-dvh bg-cream flex flex-col" style={{ ...pageStyle, ...themeVars }}>
@@ -353,10 +362,10 @@ export default function LoginPage() {
 
       {/* Desktop header — hidden on mobile */}
       <header className="relative hidden lg:flex px-6 py-4 items-center justify-between">
-        <div className="flex items-center gap-2 text-bark font-semibold text-lg" style={headingStyle}>
+        <Link to="/" aria-label={t('login.homeLink')} className="flex items-center gap-2 text-bark font-semibold text-lg" style={headingStyle}>
           <KaydoLogo size={22} />
           <span>Kaydo</span>
-        </div>
+        </Link>
       </header>
 
       {/* On a phone the column fills at least one screen and the picture
@@ -366,10 +375,10 @@ export default function LoginPage() {
           small phones. */}
       <main className={`relative flex-1 flex flex-col lg:flex-row items-stretch px-5 pt-4 ${isThemed ? 'pb-6' : 'pb-8'} lg:p-0`}>
         {/* Phone brand */}
-        <div className="lg:hidden flex items-center gap-2 mb-4">
+        <Link to="/" aria-label={t('login.homeLink')} className="lg:hidden flex items-center gap-2 mb-4 self-start">
           <KaydoLogo size={22} />
           <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
-        </div>
+        </Link>
 
         {/* Photo or illustration: a card on a phone, the left half on a desktop */}
         <div
@@ -415,24 +424,28 @@ export default function LoginPage() {
             {!firebaseReady && <SetupBanner />}
 
             <div className={formCardClass}>
-              <LoginForm {...formProps} />
+              {needsFamilyLink
+                ? <NoFamilyLinkNotice t={t} onAdminLogin={toggleAdminLogin} />
+                : <LoginForm {...formProps} />}
             </div>
 
-            {/* Admin toggle */}
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={toggleAdminLogin}
-                className={`text-sm text-bark-muted hover:text-kaydo transition-colors ${phoneTextClass}`}
-              >
-                {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
-              </button>
-            </div>
+            {/* Admin toggle — the notice above carries its own */}
+            {!needsFamilyLink && (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={toggleAdminLogin}
+                  className={`text-sm text-bark-muted hover:text-kaydo transition-colors ${phoneTextClass}`}
+                >
+                  {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
+                </button>
+              </div>
+            )}
 
             {/* Sign up — admin login only */}
             {showAdminLogin && (
               <div className="mt-6 text-center">
-                <p className="hidden lg:block text-sm text-bark-light mb-3">{t('login.newToFamily')}</p>
+                <p className={`text-sm text-bark-light mb-3 ${phoneTextClass}`}>{t('login.noFamilyYet')}</p>
                 <button
                   type="button"
                   onClick={() => navigate('/signup')}
@@ -452,15 +465,23 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer — desktop only */}
-      <footer className="relative hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
-        <div className="flex gap-4">
-          <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.terms')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
-        </div>
-      </footer>
+      <AuthFooter textStyle={textStyle} />
+    </div>
+  )
+}
+
+// In place of the family form on a /login visit that names no family.
+function NoFamilyLinkNotice({ t, onAdminLogin }) {
+  return (
+    <div className="text-center space-y-4">
+      <div className="mx-auto w-12 h-12 rounded-full bg-cream-dark flex items-center justify-center text-kaydo">
+        <Link2 className="w-6 h-6" aria-hidden="true" />
+      </div>
+      <h2 className="text-lg font-semibold text-bark">{t('login.noFamilyLink.title')}</h2>
+      <p className="text-sm text-bark-light">{t('login.noFamilyLink.body')}</p>
+      <button type="button" onClick={onAdminLogin} className="btn-kaydo w-full">
+        {t('login.noFamilyLink.adminButton')}
+      </button>
     </div>
   )
 }

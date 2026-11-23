@@ -6,6 +6,7 @@ import { Mail, KeyRound, Eye, EyeOff, User, Shield, Home } from 'lucide-react'
 import KaydoLogo from '../components/KaydoLogo'
 import FamilyIllustration from '../components/FamilyIllustration'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
+import AuthFooter from '../components/auth/AuthFooter'
 import { generateSlug } from '../utils/familySlug'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
 
@@ -245,15 +246,7 @@ export default function SignupPage() {
         </div>
       </main>
 
-      {/* Footer — desktop only */}
-      <footer className="hidden lg:flex px-6 py-4 items-center justify-between text-xs text-bark-muted border-t border-cream-dark">
-        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
-        <div className="flex gap-4">
-          <span className="hover:text-bark cursor-pointer">{t('footer.privacy')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.terms')}</span>
-          <span className="hover:text-bark cursor-pointer">{t('footer.help')}</span>
-        </div>
-      </footer>
+      <AuthFooter />
     </div>
   )
 }
