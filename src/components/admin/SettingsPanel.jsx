@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { httpsCallable } from 'firebase/functions'
 import { devError } from '../../utils/devLog'
 import { db, functions } from '../../config/firebase'
@@ -20,6 +20,7 @@ export default function SettingsPanel() {
   const { familyId, isDemo } = useAuth()
   const { t } = useTranslation('settings')
   const navigate = useNavigate()
+  const { hash } = useLocation()
   const [newPassword, setNewPassword] = useState('')
   const [familyName, setFamilyName] = useState('')
   const [familySlug, setFamilySlug] = useState('')
@@ -52,6 +53,12 @@ export default function SettingsPanel() {
     }
     loadFamily()
   }, [familyId])
+
+  // The home page's suggestion of a login photo links here.
+  useEffect(() => {
+    if (hash !== '#login-image') return
+    document.getElementById('login-image')?.scrollIntoView({ block: 'center' })
+  }, [hash])
 
   const handleSavePassword = async (e) => {
     e.preventDefault()
@@ -196,7 +203,7 @@ export default function SettingsPanel() {
       )}
 
       {/* Login page header image */}
-      <div className="mb-6">
+      <div id="login-image" className="mb-6 scroll-mt-24">
         <label className="block text-sm font-medium text-bark mb-1.5">
           <div className="flex items-center gap-1.5">
             <ImageIcon className="w-4 h-4" />

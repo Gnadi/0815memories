@@ -76,5 +76,11 @@
     "bodyAdmin": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist dann endgültig weg. Lade in den Einstellungen ein Backup herunter, wenn du etwas behalten willst.",
     "bodyViewer": "Der Besitzer der Familie hat das veranlasst. Alles, was hier gespeichert ist, ist nach diesem Tag weg.",
     "openSettings": "Einstellungen öffnen"
+  },
+  "loginPhotoHint": {
+    "title": "Gebt eurer Anmeldeseite ein Gesicht",
+    "body": "Eure ganze Familie sieht zuerst die Anmeldeseite. Ein Foto von euch kann sie dort begrüßen – statt der Illustration.",
+    "action": "Foto auswählen",
+    "notNow": "Nicht jetzt"
   }
 }

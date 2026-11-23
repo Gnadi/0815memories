@@ -11,6 +11,7 @@ import AlbumGlimpse from '../components/home/AlbumGlimpse'
 import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import AdventHomeCard from '../components/advent/AdventHomeCard'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
+import LoginPhotoHint from '../components/home/LoginPhotoHint'
 import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
@@ -108,6 +109,7 @@ export default function HomePage() {
           <div className="mx-auto w-full max-w-[44rem]">
             <FamilyDeletionBanner />
             <VerifyEmailBanner />
+            <LoginPhotoHint />
           </div>
           <DailyMoments
             moments={moments}
