@@ -126,9 +126,16 @@ describe('the login page without a family link', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in as admin' }))
     expect(screen.getByLabelText('Family Email')).toBeInTheDocument()
-    // Back to the family login is back to the notice.
-    fireEvent.click(screen.getByRole('button', { name: 'Back to family login' }))
-    expect(screen.getByText("Open your family's link")).toBeInTheDocument()
+  })
+
+  it('keeps the admin login short where there is no family to go back to', async () => {
+    renderAt('/login?admin=1')
+    await screen.findByLabelText('Family Email')
+    // It led to the notice asking for a link, and cost a phone a line.
+    expect(screen.queryByRole('button', { name: 'Back to family login' })).toBeNull()
+    // Signing up is a link in one line, not a second big button.
+    expect(screen.getByRole('link', { name: 'Create an account' })).toHaveAttribute('href', '/signup')
+    expect(screen.queryByRole('button', { name: 'Create an account' })).toBeNull()
   })
 
   it('names itself in the tab', async () => {

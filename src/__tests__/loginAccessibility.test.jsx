@@ -114,6 +114,13 @@ describe('login page accessibility', () => {
     await i18n.changeLanguage('en')
   })
 
+  it('offers the way back to the family login on a family page', async () => {
+    renderAt('/family/the-millers')
+    fireEvent.click(await screen.findByRole('button', { name: 'Admin login' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to family login' }))
+    expect(screen.queryByLabelText('Family Email')).toBeNull()
+  })
+
   describe('sign-in dialog of a custom page', () => {
     beforeEach(() => {
       family.current = {

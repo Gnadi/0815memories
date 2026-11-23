@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useEffect, useId, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
@@ -57,6 +57,9 @@ const ADMIN_ERROR_KEYS = {
 // Only ever rendered through the same validated/sanitized paths as live data.
 const LOGIN_CACHE_PREFIX = 'kaydo_login_page:'
 
+// Below this many pixels high, the phone's picture is a strip, not a picture.
+const MIN_PICTURE_HEIGHT = 96
+
 function readCachedFamily(key) {
   if (!key || typeof window === 'undefined') return null
   try {
@@ -110,6 +113,19 @@ function LoginPageContent() {
   const [loginOpen, setLoginOpen] = useState(false)
   // The standard picture's motif, kept for the visit.
   const [artMotif] = useState(() => pickLoginArt())
+  // On a phone the picture gets the height the form leaves over. Below
+  // MIN_PICTURE_HEIGHT it would be a strip, so it steps aside and leaves the
+  // space empty. Measured rather than guessed from the screen's height: the
+  // form's height changes with the mode, the language and the text size.
+  const [pictureTooSmall, setPictureTooSmall] = useState(false)
+  const observePicture = useCallback((node) => {
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => {
+      setPictureTooSmall(entry.contentRect.height < MIN_PICTURE_HEIGHT)
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
   const loginDialogRef = useRef(null)
   const loginOpenButtonRef = useRef(null)
   const loginDialogTitleId = useId()
@@ -295,7 +311,7 @@ function LoginPageContent() {
   if (resolvedFamily?.pageMode === 'custom' && resolvedFamily.customHtml) {
     const { behavior, style } = normalizeLoginCard(resolvedFamily.card)
     const cardProps = {
-      t, navigate, formProps, firebaseReady,
+      t, formProps, firebaseReady,
       familyName: resolvedFamilyName,
       showAdminLogin, toggleAdminLogin, forgetFamily,
       styleKey: style,
@@ -400,13 +416,6 @@ function LoginPageContent() {
   const showPhonePicture = !isThemed || resolvedFamilyHeaderImage
   // Below the desktop layout, picture and form keep to a column of a phone's
   // width plus some (36rem): on a tablet they stretched across the screen.
-  // On a phone the picture usually takes the height the form leaves over. The
-  // admin form leaves none — the picture shrank to a sliver — so there it
-  // keeps its banner's size and the page scrolls a little instead. It was
-  // hidden at first, which left the admin login bare.
-  const phonePictureSize = showAdminLogin
-    ? 'max-lg:flex-none max-lg:h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'
-    : `flex-1 min-h-0 ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'}`
   // A plain /login visit names no family, and a family member's private key
   // means nothing without one. The field used to be shown anyway, and said
   // so only after it was filled in and sent.
@@ -451,12 +460,15 @@ function LoginPageContent() {
             centred in the space left over. A family's own photo fills the
             space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl max-lg:w-full max-lg:max-w-xl max-lg:mx-auto ${phonePictureSize} ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl max-lg:w-full max-lg:max-w-xl max-lg:mx-auto flex-1 min-h-0 ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'} ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
           style={{ '--art-ratio': artMotif.mobile.height / artMotif.mobile.width }}
+          ref={observePicture}
         >
-          {resolvedFamilyHeaderImage
-            ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : <LoginArt motif={artMotif} hideWhenShort={!showAdminLogin} />}
+          {pictureTooSmall
+            ? null
+            : resolvedFamilyHeaderImage
+              ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
+              : <LoginArt motif={artMotif} />}
         </div>
 
         {/* Login column */}
@@ -467,10 +479,12 @@ function LoginPageContent() {
               <KaydoLogo size={52} />
             </div>
 
-            <h1 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-2 max-lg:[color:var(--login-heading,var(--color-bark))]">
+            <h1 className={`text-3xl lg:text-4xl font-bold text-bark text-center ${showAdminLogin ? 'mb-4 lg:mb-2' : 'mb-2'} max-lg:[color:var(--login-heading,var(--color-bark))]`}>
               {welcomeHeading}
             </h1>
-            <p className={`text-bark-light text-center ${isThemed ? 'mb-4' : 'mb-6'} lg:mb-8 max-lg:[color:var(--login-text,var(--color-bark-light))] max-lg:[opacity:var(--login-text-opacity,1)]`}>
+            {/* Not on a phone's admin login: it is for the family coming home,
+                and the admin form needs the height to fit the screen. */}
+            <p className={`text-bark-light text-center ${isThemed ? 'mb-4' : 'mb-6'} ${showAdminLogin ? 'max-lg:hidden' : ''} lg:mb-8 max-lg:[color:var(--login-text,var(--color-bark-light))] max-lg:[opacity:var(--login-text-opacity,1)]`}>
               {welcomeSubtitle}
             </p>
 
@@ -482,8 +496,11 @@ function LoginPageContent() {
                 : <LoginForm {...formProps} />}
             </div>
 
-            {/* Admin toggle — the notice above carries its own */}
-            {!needsFamilyLink && (
+            {/* Admin toggle — the notice above carries its own. Back to the
+                family login only where there is a family to go back to: from
+                the landing page's "Login" it led to the notice asking for a
+                link, and cost a phone the line it needed to fit the screen. */}
+            {!needsFamilyLink && (!showAdminLogin || lookupKey) && (
               <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1">
                 <button
                   type="button"
@@ -504,18 +521,16 @@ function LoginPageContent() {
               </div>
             )}
 
-            {/* Sign up — admin login only */}
+            {/* Sign up — admin login only. One line with a link: as a second
+                full-width button it competed with "Enter the Home" and took
+                the height the admin login needs to fit a phone's screen. */}
             {showAdminLogin && (
-              <div className="mt-6 text-center">
-                <p className={`text-sm text-bark-light mb-3 ${phoneTextClass}`}>{t('login.noFamilyYet')}</p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/signup')}
-                  className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
-                >
+              <p className={`mt-4 text-center text-sm text-bark-light ${phoneTextClass}`}>
+                {t('login.noFamilyYet')}{' '}
+                <Link to="/signup" className="font-semibold text-kaydo hover:underline">
                   {t('login.createAccount')}
-                </button>
-              </div>
+                </Link>
+              </p>
             )}
 
             {/* Secure badge */}
@@ -564,7 +579,7 @@ function NoFamilyLinkNotice({ t, onAdminLogin }) {
 // visible or opened from the floating "Sign in" pill. Its look follows the
 // admin-picked preset (CARD_STYLES); the form itself is always native UI.
 function CustomLoginCard({
-  t, navigate, formProps, firebaseReady, familyName,
+  t, formProps, firebaseReady, familyName,
   showAdminLogin, toggleAdminLogin, forgetFamily, styleKey, onClose, titleId, autoFocusPassword = false,
 }) {
   const preset = CARD_STYLES[styleKey] || CARD_STYLES.light
@@ -619,17 +634,12 @@ function CustomLoginCard({
       </div>
 
       {showAdminLogin && (
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => navigate('/signup')}
-            className={`w-full py-3 border-2 rounded-full font-semibold transition-colors ${
-              dark ? 'border-white/20 text-cream hover:bg-white/10' : 'border-cream-dark text-kaydo hover:bg-cream-dark'
-            }`}
-          >
+        <p className={`mt-4 text-center text-sm ${dark ? 'text-cream/80' : 'text-bark-light'}`}>
+          {t('login.noFamilyYet')}{' '}
+          <Link to="/signup" className={`font-semibold hover:underline ${dark ? 'text-cream' : 'text-kaydo'}`}>
             {t('login.createAccount')}
-          </button>
-        </div>
+          </Link>
+        </p>
       )}
     </div>
   )

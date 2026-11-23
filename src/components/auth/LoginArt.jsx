@@ -3,20 +3,15 @@
  * positioned parent. `phoneOnly` always shows the banner, for a phone-sized
  * frame on a desktop screen (the login designer's preview).
  *
- * On a short phone (an iPhone SE) the picture area shrinks to a strip, so
- * there the picture steps aside and leaves the space empty. A container query
- * on the picture area would say it better, but Chrome measured that flex item
- * before it grew and hid the picture on every phone; the screen's height
- * decides instead. `hideWhenShort={false}` keeps it there, for a card of a
- * fixed size that the page scrolls past rather than squeezes.
+ * Whether there is room for it on a phone is the login page's to decide.
  *
  * The picture shows nobody in particular and says nothing the page does not,
  * so it is decorative (empty alt).
  */
-export default function LoginArt({ motif, phoneOnly = false, hideWhenShort = true }) {
+export default function LoginArt({ motif, phoneOnly = false }) {
   const { desktop, mobile } = motif
   return (
-    <picture className={`absolute inset-0 ${phoneOnly || !hideWhenShort ? '' : 'max-lg:[@media(max-height:620px)]:hidden'}`}>
+    <picture className="absolute inset-0">
       {!phoneOnly && (
         <source media="(min-width: 1024px)" srcSet={desktop.src} width={desktop.width} height={desktop.height} />
       )}
