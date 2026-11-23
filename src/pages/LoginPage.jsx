@@ -396,9 +396,17 @@ function LoginPageContent() {
     ? `max-lg:bg-warm-white/90 max-lg:backdrop-blur max-lg:rounded-2xl max-lg:shadow-lg max-lg:p-5 ${accentColor ? 'max-lg:border-t-4 max-lg:border-[color:var(--login-accent)]' : ''}`
     : ''
   // Themed pages keep the phone's picture only when the family uploaded a
-  // photo; the default illustration clashes with themes. The admin form
-  // leaves it no room on a phone: it shrank to a sliver, or to nothing.
-  const showPhonePicture = !showAdminLogin && (!isThemed || resolvedFamilyHeaderImage)
+  // photo; the default illustration clashes with themes.
+  const showPhonePicture = !isThemed || resolvedFamilyHeaderImage
+  // Below the desktop layout, picture and form keep to a column of a phone's
+  // width plus some (36rem): on a tablet they stretched across the screen.
+  // On a phone the picture usually takes the height the form leaves over. The
+  // admin form leaves none — the picture shrank to a sliver — so there it
+  // keeps its banner's size and the page scrolls a little instead. It was
+  // hidden at first, which left the admin login bare.
+  const phonePictureSize = showAdminLogin
+    ? 'max-lg:flex-none max-lg:h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'
+    : `flex-1 min-h-0 ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc(min(100vw-2.5rem,36rem)*var(--art-ratio))]'}`
   // A plain /login visit names no family, and a family member's private key
   // means nothing without one. The field used to be shown anyway, and said
   // so only after it was filled in and sent.
@@ -443,16 +451,16 @@ function LoginPageContent() {
             centred in the space left over. A family's own photo fills the
             space. */}
         <div
-          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'} ${resolvedFamilyHeaderImage ? '' : 'max-lg:max-h-[calc((100vw-2.5rem)*var(--art-ratio))]'}`}
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl max-lg:w-full max-lg:max-w-xl max-lg:mx-auto ${phonePictureSize} ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-[calc(50%-1.5rem)] lg:ms-6 lg:mt-2 lg:mb-6 lg:rounded-[28px] lg:shadow-[0_18px_40px_-18px_rgba(60,40,20,0.35)] items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
           style={{ '--art-ratio': artMotif.mobile.height / artMotif.mobile.width }}
         >
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : <LoginArt motif={artMotif} />}
+            : <LoginArt motif={artMotif} hideWhenShort={!showAdminLogin} />}
         </div>
 
         {/* Login column */}
-        <div className="flex flex-col max-lg:my-auto lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
+        <div className="flex flex-col max-lg:my-auto max-lg:w-full max-lg:max-w-xl max-lg:mx-auto lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
           <div className={`w-full lg:max-w-md ${columnCardClass}`}>
             {/* Logo mark */}
             <div className="hidden lg:flex justify-center mb-6">
