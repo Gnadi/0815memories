@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { db } from '../config/firebase'
@@ -13,6 +13,7 @@ import { themeToStyles, themeDecorationEmojis, themeText } from '../utils/loginT
 import { normalizeLoginCard, CARD_STYLES } from '../utils/loginCard'
 import { getSubdomainSlug } from '../utils/familySlug'
 import { getFamilyPublic, resolveFamilyBySlug } from '../services/family'
+import useDialogFocus from '../hooks/useDialogFocus'
 
 function toResolvedFamily(data) {
   if (!data) return null
@@ -85,6 +86,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   // Custom pages with a minimized login box open the form as an overlay.
   const [loginOpen, setLoginOpen] = useState(false)
+  const loginDialogRef = useRef(null)
+  const loginOpenButtonRef = useRef(null)
+  const loginDialogTitleId = useId()
+  useDialogFocus(loginDialogRef, loginOpen, loginOpenButtonRef)
 
   useEffect(() => {
     if (!loginOpen) return
@@ -249,23 +254,26 @@ export default function LoginPage() {
             above the canvas via z-10/z-20 */}
         {behavior === 'minimized' ? (
           <>
-            {!loginOpen && (
-              <div className="fixed bottom-5 inset-x-0 z-10 flex justify-center pointer-events-none px-4">
-                <button
-                  type="button"
-                  onClick={() => setLoginOpen(true)}
-                  className="pointer-events-auto flex items-center gap-2 bg-warm-white/95 backdrop-blur text-bark font-semibold rounded-full shadow-2xl px-6 py-3 hover:scale-[1.03] transition-transform"
-                >
-                  <KaydoLogo size={20} />
-                  {t('login.openLogin')}
-                </button>
-              </div>
-            )}
+            {/* Hidden rather than unmounted while the dialog is open, so focus
+                can come back to it when the dialog closes. */}
+            <div className={`fixed bottom-5 inset-x-0 z-10 justify-center pointer-events-none px-4 ${loginOpen ? 'hidden' : 'flex'}`}>
+              <button
+                ref={loginOpenButtonRef}
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                className="pointer-events-auto flex items-center gap-2 bg-warm-white/95 backdrop-blur text-bark font-semibold rounded-full shadow-2xl px-6 py-3 hover:scale-[1.03] transition-transform"
+              >
+                <KaydoLogo size={20} />
+                {t('login.openLogin')}
+              </button>
+            </div>
             {loginOpen && (
               <div
+                ref={loginDialogRef}
                 className="fixed inset-0 z-20 overflow-y-auto flex items-start sm:items-center justify-center p-4"
                 role="dialog"
                 aria-modal="true"
+                aria-labelledby={loginDialogTitleId}
               >
                 <div
                   className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -274,6 +282,7 @@ export default function LoginPage() {
                 <CustomLoginCard
                   {...cardProps}
                   onClose={() => setLoginOpen(false)}
+                  titleId={loginDialogTitleId}
                   autoFocusPassword
                 />
               </div>
@@ -285,7 +294,8 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="fixed inset-0">
+        {/* Out of reach of keyboard and screen reader while the dialog is open */}
+        <div className="fixed inset-0" inert={loginOpen || undefined}>
           <CustomLoginCanvas
             html={resolvedFamily.customHtml}
             css={resolvedFamily.customCss}
@@ -300,7 +310,6 @@ export default function LoginPage() {
   const { pageStyle, headingStyle, textStyle, accentColor } = isThemed
     ? themeToStyles(resolvedFamily.theme)
     : { pageStyle: {}, headingStyle: {}, textStyle: {}, accentColor: '' }
-  const themedCardStyle = accentColor ? { borderTop: `4px solid ${accentColor}` } : {}
   const decorationEmojis = isThemed ? themeDecorationEmojis(resolvedFamily.theme) : []
   const welcomeTitleOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeTitle') : ''
   const welcomeMessageOverride = isThemed ? themeText(resolvedFamily.theme, 'welcomeMessage') : ''
@@ -311,8 +320,35 @@ export default function LoginPage() {
       : t('login.welcomeHome'))
   const welcomeSubtitle = welcomeMessageOverride || t('login.subtitle')
 
+  // The page is one tree for every screen size. It used to be two, a phone
+  // layout and a desktop layout, each with its own form: password managers
+  // and screen readers met every field twice. What still differs is where
+  // the themed card sits — around the form alone on a phone, with the
+  // heading on the family's background, and around the whole column on a
+  // desktop — so the theme's colours travel as variables that only the
+  // phone classes read.
+  const themeVars = {}
+  if (headingStyle.color) themeVars['--login-heading'] = headingStyle.color
+  if (textStyle.color) {
+    themeVars['--login-text'] = textStyle.color
+    themeVars['--login-text-opacity'] = textStyle.opacity
+  }
+  if (accentColor) themeVars['--login-accent'] = accentColor
+  const phoneTextClass = 'max-lg:[color:var(--login-text,var(--color-bark-muted))] max-lg:[opacity:var(--login-text-opacity,1)]'
+  // Written out in full rather than assembled: Tailwind only generates the
+  // classes it finds spelled out in the source.
+  const columnCardClass = isThemed
+    ? `lg:bg-warm-white/90 lg:backdrop-blur lg:rounded-2xl lg:shadow-lg lg:p-8 ${accentColor ? 'lg:border-t-4 lg:border-[color:var(--login-accent)]' : ''}`
+    : ''
+  const formCardClass = isThemed
+    ? `max-lg:bg-warm-white/90 max-lg:backdrop-blur max-lg:rounded-2xl max-lg:shadow-lg max-lg:p-5 ${accentColor ? 'max-lg:border-t-4 max-lg:border-[color:var(--login-accent)]' : ''}`
+    : ''
+  // Themed pages keep the phone's picture only when the family uploaded a
+  // photo; the default illustration clashes with themes.
+  const showPhonePicture = !isThemed || resolvedFamilyHeaderImage
+
   return (
-    <div className="relative min-h-dvh bg-cream flex flex-col" style={pageStyle}>
+    <div className="relative min-h-dvh bg-cream flex flex-col" style={{ ...pageStyle, ...themeVars }}>
       {isThemed && <LoginDecorations emojis={decorationEmojis} />}
 
       {/* Desktop header — hidden on mobile */}
@@ -323,83 +359,35 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="relative flex-1 flex flex-col lg:flex-row items-stretch">
-        {/* ====== MOBILE LAYOUT (< lg) ====== */}
-        {/* Fills exactly one phone screen (h-dvh, no scroll). The photo/illustration
-            is the flex-grow element, so it expands to absorb any leftover vertical
-            space — no empty gap — and shrinks (min-h-0) if content ever gets tall. */}
-        <div className={`lg:hidden h-dvh flex flex-col px-5 pt-4 ${isThemed ? 'pb-6' : 'pb-8'}`}>
-          {/* Mobile brand */}
-          <div className="flex items-center gap-2 mb-4">
-            <KaydoLogo size={22} />
-            <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
-          </div>
-
-          {/* Illustration card — themed pages only keep it when the family
-              uploaded a photo; the default illustration clashes with themes */}
-          {(!isThemed || resolvedFamilyHeaderImage) && (
-            <div className={`rounded-2xl overflow-hidden flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'}`}>
-              {resolvedFamilyHeaderImage
-                ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="w-full h-full object-cover object-top" />
-                : <FamilyIllustration />}
-            </div>
-          )}
-
-          {/* Welcome heading */}
-          <h1 className="text-3xl font-bold text-bark text-center mb-2" style={headingStyle}>
-            {welcomeHeading}
-          </h1>
-          <p className={`text-bark-light text-center ${isThemed ? 'mb-4' : 'mb-6'}`} style={textStyle}>
-            {welcomeSubtitle}
-          </p>
-
-          {!firebaseReady && <SetupBanner />}
-
-          {/* Form */}
-          {isThemed
-            ? (
-              <div className="bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-5" style={themedCardStyle}>
-                <LoginForm {...formProps} />
-              </div>
-            )
-            : <LoginForm {...formProps} />}
-
-          {/* Admin toggle */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={toggleAdminLogin}
-              className="text-sm text-bark-muted hover:text-kaydo transition-colors"
-              style={textStyle}
-            >
-              {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
-            </button>
-          </div>
-
-          {/* Sign up — admin login only */}
-          {showAdminLogin && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => navigate('/signup')}
-                className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
-              >
-                {t('login.createAccount')}
-              </button>
-            </div>
-          )}
+      {/* On a phone the column fills at least one screen and the picture
+          absorbs the leftover height. It may shrink to nothing, and the page
+          scrolls when the form needs more than the screen: it used to be held
+          to exactly one screen, which cut off the bottom of the admin form on
+          small phones. */}
+      <main className={`relative flex-1 flex flex-col lg:flex-row items-stretch px-5 pt-4 ${isThemed ? 'pb-6' : 'pb-8'} lg:p-0`}>
+        {/* Phone brand */}
+        <div className="lg:hidden flex items-center gap-2 mb-4">
+          <KaydoLogo size={22} />
+          <span className="text-lg font-bold text-bark" style={headingStyle}>Kaydo</span>
         </div>
 
-        {/* ====== DESKTOP LAYOUT (>= lg) ====== */}
-        {/* Left — Illustration */}
-        <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center p-12 ${isThemed ? '' : 'bg-cream-dark'}`}>
+        {/* Photo or illustration: a card on a phone, the left half on a desktop */}
+        <div
+          className={`${showPhonePicture ? 'flex' : 'hidden lg:flex'} relative overflow-hidden rounded-2xl flex-1 min-h-0 ${isThemed ? 'mb-4' : 'mb-6'} lg:flex-none lg:w-1/2 lg:mb-0 lg:rounded-none items-start justify-center lg:items-center lg:p-12 ${isThemed ? '' : 'lg:bg-cream-dark'}`}
+        >
           {resolvedFamilyHeaderImage
             ? <img src={resolvedFamilyHeaderImage} alt={t('familyImageAlt')} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : <FamilyIllustration />}
+            : (
+              // Out of the flow on a phone, so its own height never pushes the
+              // form down; the card shows as much of it as fits.
+              <div className="absolute inset-0 lg:static lg:w-full">
+                <FamilyIllustration />
+              </div>
+            )}
           {/* The photo or illustration can be light, so the white text sits on a
               dark gradient to stay readable whatever the family uploaded. */}
-          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
+          <div className="hidden lg:block absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
+          <div className="hidden lg:block absolute bottom-8 left-8 right-8 text-white">
             <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">
               {t('login.asideTitle')}
             </h2>
@@ -409,34 +397,33 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right — Login Form */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16">
-          <div
-            className={`w-full max-w-md ${isThemed ? 'bg-warm-white/90 backdrop-blur rounded-2xl shadow-lg p-8' : ''}`}
-            style={isThemed ? themedCardStyle : undefined}
-          >
+        {/* Login column */}
+        <div className="flex flex-col lg:w-1/2 lg:items-center lg:justify-center lg:px-16">
+          <div className={`w-full lg:max-w-md ${columnCardClass}`}>
             {/* Logo mark */}
-            <div className="flex justify-center mb-6">
+            <div className="hidden lg:flex justify-center mb-6">
               <KaydoLogo size={52} />
             </div>
 
-            <h1 className="text-4xl font-bold text-bark text-center mb-2">
+            <h1 className="text-3xl lg:text-4xl font-bold text-bark text-center mb-2 max-lg:[color:var(--login-heading,var(--color-bark))]">
               {welcomeHeading}
             </h1>
-            <p className="text-bark-light text-center mb-8">
+            <p className={`text-bark-light text-center ${isThemed ? 'mb-4' : 'mb-6'} lg:mb-8 max-lg:[color:var(--login-text,var(--color-bark-light))] max-lg:[opacity:var(--login-text-opacity,1)]`}>
               {welcomeSubtitle}
             </p>
 
             {!firebaseReady && <SetupBanner />}
 
-            <LoginForm {...formProps} />
+            <div className={formCardClass}>
+              <LoginForm {...formProps} />
+            </div>
 
             {/* Admin toggle */}
             <div className="mt-4 text-center">
               <button
                 type="button"
                 onClick={toggleAdminLogin}
-                className="text-sm text-bark-muted hover:text-kaydo transition-colors"
+                className={`text-sm text-bark-muted hover:text-kaydo transition-colors ${phoneTextClass}`}
               >
                 {showAdminLogin ? t('login.backToFamily') : t('login.adminLogin')}
               </button>
@@ -445,8 +432,9 @@ export default function LoginPage() {
             {/* Sign up — admin login only */}
             {showAdminLogin && (
               <div className="mt-6 text-center">
-                <p className="text-sm text-bark-light mb-3">{t('login.newToFamily')}</p>
+                <p className="hidden lg:block text-sm text-bark-light mb-3">{t('login.newToFamily')}</p>
                 <button
+                  type="button"
                   onClick={() => navigate('/signup')}
                   className="w-full py-3 border-2 border-cream-dark rounded-full text-kaydo font-semibold hover:bg-cream-dark transition-colors"
                 >
@@ -456,7 +444,7 @@ export default function LoginPage() {
             )}
 
             {/* Secure badge */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-sm text-bark-muted">
+            <div className="hidden lg:flex mt-8 items-center justify-center gap-2 text-sm text-bark-muted">
               <Shield className="w-4 h-4" />
               {t('secureBadge')}
             </div>
@@ -482,7 +470,7 @@ export default function LoginPage() {
 // admin-picked preset (CARD_STYLES); the form itself is always native UI.
 function CustomLoginCard({
   t, navigate, formProps, firebaseReady, familyName,
-  showAdminLogin, toggleAdminLogin, styleKey, onClose, autoFocusPassword = false,
+  showAdminLogin, toggleAdminLogin, styleKey, onClose, titleId, autoFocusPassword = false,
 }) {
   const preset = CARD_STYLES[styleKey] || CARD_STYLES.light
   const dark = preset.tone === 'dark'
@@ -503,7 +491,7 @@ function CustomLoginCard({
       <div className="flex justify-center mb-4">
         <KaydoLogo size={40} />
       </div>
-      <h1 className={`text-2xl font-bold text-center mb-1 ${dark ? 'text-cream' : 'text-bark'}`}>
+      <h1 id={titleId} className={`text-2xl font-bold text-center mb-1 ${dark ? 'text-cream' : 'text-bark'}`}>
         {familyName
           ? t('login.welcomeFamily', { name: familyName })
           : t('login.welcomeHome')}
@@ -529,6 +517,7 @@ function CustomLoginCard({
       {showAdminLogin && (
         <div className="mt-4 text-center">
           <button
+            type="button"
             onClick={() => navigate('/signup')}
             className={`w-full py-3 border-2 rounded-full font-semibold transition-colors ${
               dark ? 'border-white/20 text-cream hover:bg-white/10' : 'border-cream-dark text-kaydo hover:bg-cream-dark'

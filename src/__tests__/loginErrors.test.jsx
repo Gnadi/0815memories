@@ -45,10 +45,8 @@ function renderAt(entry) {
   )
 }
 
-// The page renders a mobile and a desktop form; both submit the same way and
-// both show the error.
 async function submit({ email, password = 'a-long-enough-secret' } = {}) {
-  const pw = (await screen.findAllByPlaceholderText(i18n.t('auth:login.form.privateKeyPlaceholder')))[0]
+  const pw = await screen.findByPlaceholderText(i18n.t('auth:login.form.privateKeyPlaceholder'))
   const form = pw.closest('form')
   if (email !== undefined) {
     fireEvent.change(form.querySelector('input[type="email"]'), { target: { value: email } })
@@ -78,7 +76,7 @@ describe('login errors', () => {
     loginAsViewer.mockRejectedValue(keyedError('login.errors.invalidPassword'))
     renderAt('/family/the-millers')
     await submit()
-    expect(await screen.findAllByText('Ungültiger privater Schlüssel')).not.toHaveLength(0)
+    expect(await screen.findByText('Ungültiger privater Schlüssel')).toBeInTheDocument()
   })
 
   it.each([
@@ -92,14 +90,14 @@ describe('login errors', () => {
     loginAsAdmin.mockRejectedValue(authError(code))
     renderAt('/login?admin=1')
     await submit({ email: 'admin@example.com' })
-    expect(await screen.findAllByText(message)).not.toHaveLength(0)
+    expect(await screen.findByText(message)).toBeInTheDocument()
   })
 
   it('keeps the generic line for admin errors that could say an account exists', async () => {
     loginAsAdmin.mockRejectedValue(authError('auth/user-disabled'))
     renderAt('/login?admin=1')
     await submit({ email: 'admin@example.com' })
-    expect(await screen.findAllByText('Could not sign in')).not.toHaveLength(0)
+    expect(await screen.findByText('Could not sign in')).toBeInTheDocument()
     expect(screen.queryByText(/disabled/i)).not.toBeInTheDocument()
   })
 
@@ -115,7 +113,7 @@ describe('login errors', () => {
     loginAsAdmin.mockRejectedValue(authError('auth/missing-email'))
     renderAt('/login?admin=1')
     await submit({ email: '' })
-    expect(await screen.findAllByText('Please enter a valid email address')).not.toHaveLength(0)
+    expect(await screen.findByText('Please enter a valid email address')).toBeInTheDocument()
     expect(loginAsViewer).not.toHaveBeenCalled()
   })
 })
