@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import FamilyKeyError from './FamilyKeyError'
+import UnlockScreen from '../UnlockScreen'
 import { loginPathFor, safeNextPath } from '../../utils/nextPath'
 
 /**
@@ -20,16 +21,13 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     return <FamilyKeyError reason={keyError} />
   }
 
-  // Show spinner while Firebase auth initialises OR while the encryption key is
-  // being fetched for an authenticated session. The key-loading gate prevents any
-  // protected page from rendering with a null encryptionKey, which would display
-  // raw ciphertext or silently skip decryption.
+  // Show the unlock screen while Firebase auth initialises OR while the
+  // encryption key is being fetched for an authenticated session. The
+  // key-loading gate prevents any protected page from rendering with a null
+  // encryptionKey, which would display raw ciphertext or silently skip
+  // decryption.
   if (loading || (isAuthenticated && familyId && keyLoading)) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-kaydo border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <UnlockScreen />
   }
 
   // A link to a page inside the app — a memory someone shared — goes to the

@@ -48,6 +48,7 @@
     "message": "Une erreur inattendue est survenue. Recharger la page la résout généralement — vos souvenirs sont en sécurité.",
     "reload": "Recharger la page"
   },
+  "unlocking": "Un instant, nous ouvrons la porte…",
   "familyKey": {
     "title": "Impossible d'ouvrir votre famille",
     "missing": "Cette famille n'a pas de clé de chiffrement, et Kaydo n'ouvre que les familles chiffrées.",
