@@ -15,6 +15,8 @@ const loginAsViewer = vi.fn()
 const loginAsAdmin = vi.fn()
 const family = vi.hoisted(() => ({ current: null }))
 
+// Head needs the HelmetProvider only the real app sets up.
+vi.mock('vite-react-ssg', () => ({ Head: () => null }))
 vi.mock('../config/firebase', () => ({ db: { type: 'test' }, auth: null, functions: null }))
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({

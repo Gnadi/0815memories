@@ -199,6 +199,28 @@ test('an admin signs in and every section opens', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
+// A link into the app opened while signed out goes through the login page and
+// back to where it pointed. /login names no family, so it first explains where
+// the family login is and offers the admin login.
+test('signing in from a link into the app comes back to it', async ({ page }) => {
+  const errors = collectErrors(page)
+
+  await page.goto('/recipes')
+  await expect(page).toHaveURL(/\/login\?next=%2Frecipes$/, { timeout: 20_000 })
+  await expect(page).toHaveTitle('Sign in – Kaydo')
+  await expect(page.getByText("Open your family's link")).toBeVisible()
+  await expect(page.locator('input[type="password"]')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Sign in as admin' }).click()
+  await page.getByLabel('Family Email').fill(ADMIN_EMAIL)
+  await page.getByLabel('Private Key').fill(ADMIN_PASSWORD)
+  await page.getByRole('button', { name: /Enter the Home/ }).click()
+
+  await expect(page).toHaveURL(/\/recipes$/, { timeout: 20_000 })
+  await expect(page.getByRole('heading', { name: 'The Recipe Vault' }).first()).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 // Viewers have no account: the viewerLogin Cloud Function checks the shared
 // family password and hands out a token for the family. So this runs through
 // the Functions emulator as well as Firestore and Auth.

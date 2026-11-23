@@ -1,6 +1,7 @@
 import { useState, useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { Head } from 'vite-react-ssg'
 import { db } from '../config/firebase'
 import { useAuth } from '../context/AuthContext'
 import { Link2, Shield, X } from 'lucide-react'
@@ -71,7 +72,22 @@ function writeCachedFamily(key, family) {
   }
 }
 
+// The tab and bookmark name. /login is served the landing page's HTML, whose
+// title ("Kaydo – Free, Private & Encrypted…") stayed in place while
+// someone signed in — in English, whatever the page's language.
 export default function LoginPage() {
+  const { t } = useTranslation('auth')
+  return (
+    <>
+      <Head>
+        <title>{t('login.pageTitle')}</title>
+      </Head>
+      <LoginPageContent />
+    </>
+  )
+}
+
+function LoginPageContent() {
   const { t } = useTranslation('auth')
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')

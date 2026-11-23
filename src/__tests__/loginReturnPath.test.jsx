@@ -15,6 +15,9 @@ import { safeNextPath, loginPathFor } from '../utils/nextPath'
 const auth = vi.hoisted(() => ({ current: {} }))
 const loginAsAdmin = vi.fn()
 
+// Head needs the HelmetProvider only the real app sets up. Passed through,
+// React itself moves the <title> into <head>.
+vi.mock('vite-react-ssg', () => ({ Head: ({ children }) => <>{children}</> }))
 vi.mock('../config/firebase', () => ({ db: null, auth: null, functions: null }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth.current }))
 vi.mock('../utils/familySlug', () => ({ getSubdomainSlug: () => null }))
@@ -126,6 +129,12 @@ describe('the login page without a family link', () => {
     // Back to the family login is back to the notice.
     fireEvent.click(screen.getByRole('button', { name: 'Back to family login' }))
     expect(screen.getByText("Open your family's link")).toBeInTheDocument()
+  })
+
+  it('names itself in the tab', async () => {
+    renderAt('/login')
+    await screen.findByRole('heading', { level: 1 })
+    expect(document.title).toBe('Sign in – Kaydo')
   })
 
   it('links its footer to pages that exist', async () => {

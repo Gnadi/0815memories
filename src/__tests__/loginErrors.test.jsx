@@ -16,6 +16,8 @@ import i18n from '../i18n'
 const loginAsViewer = vi.fn()
 const loginAsAdmin = vi.fn()
 
+// Head needs the HelmetProvider only the real app sets up.
+vi.mock('vite-react-ssg', () => ({ Head: () => null }))
 vi.mock('../config/firebase', () => ({ db: { type: 'test' }, auth: null, functions: null }))
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
