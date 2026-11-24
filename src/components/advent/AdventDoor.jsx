@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, Gift, Lock, Star } from 'lucide-react'
+import { Bell, Camera, CandyCane, Cookie, Flame, Gift, Lock, Snowflake, Star, TreePine } from 'lucide-react'
 import EncryptedImage from '../media/EncryptedImage'
 import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import { focusStyleAt } from '../../utils/mediaFocus'
@@ -19,6 +19,11 @@ const LEAVES = { 24: ['left', 'right'] }
 
 const SPARKS = 8
 
+// A few doors carry a small picture above their number, as printed ones do:
+// a candy cane for Saint Nicholas, a candle for Saint Lucy on the 13th, and
+// otherwise the season's usual things. Not every door, or none would stand out.
+const MOTIFS = { 2: Snowflake, 5: Bell, 6: CandyCane, 9: TreePine, 13: Flame, 16: Star, 19: Cookie, 21: Snowflake, 23: TreePine }
+
 /**
  * One door. Closed it shows its number; opened it swings aside to show what
  * is behind it. What is behind is not even rendered before the door is open,
@@ -32,6 +37,7 @@ function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow
   const doc = entry?.doc
   const photo = doc?.images?.[0] || doc?.imageUrl
   const leaves = LEAVES[day] || ['left']
+  const Motif = MOTIFS[day]
 
   const handleClick = () => {
     if (isOpen) return onShow(door)
@@ -90,6 +96,7 @@ function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow
 
       {leaves.map((side) => (
         <span key={side} className={`advent-door__leaf advent-door__leaf--${side}`} aria-hidden="true">
+          {leaves.length === 1 && Motif && <Motif className="advent-door__motif" />}
           {leaves.length === 1 && <span className="advent-door__number">{day}</span>}
         </span>
       ))}

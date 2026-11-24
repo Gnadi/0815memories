@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext'
 import { useAdventCalendar } from '../hooks/useAdvent'
 import AdventDoor from '../components/advent/AdventDoor'
 import AdventDoorSheet from '../components/advent/AdventDoorSheet'
+import AdventFinale from '../components/advent/AdventFinale'
+import AdventScene from '../components/advent/AdventScene'
 import MomentViewer from '../components/home/MomentViewer'
 import { ADVENT_DOORS, daysUntilAdvent, doorOpensAt, isDoorOpenable } from '../utils/advent'
 import '../components/advent/advent.css'
@@ -22,6 +24,10 @@ export default function AdventPage() {
   const [shownDay, setShownDay] = useState(null)
   const [viewingMoment, setViewingMoment] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [celebrating, setCelebrating] = useState(false)
+  // Set when the last closed door is opened: the finale follows once its
+  // sheet is closed, rather than on top of it.
+  const finalePending = useRef(false)
   const timers = useRef([])
 
   useEffect(() => () => timers.current.forEach(clearTimeout), [])
@@ -52,12 +58,22 @@ export default function AdventPage() {
   // yet, and otherwise what the calendar is.
   const headline = countdown > 0
     ? t('countdown', { count: countdown })
-    : !loading && !error && !hasEntries ? t('empty') : t('subtitle')
+    : !loading && !error && !hasEntries ? t('empty')
+      : openedCount === ADVENT_DOORS ? t('allOpen') : t('subtitle')
 
   const handleOpen = useCallback((door) => {
+    if (!opened.has(door.day) && opened.size === ADVENT_DOORS - 1) finalePending.current = true
     open(door.day)
     timers.current.push(setTimeout(() => setShownDay(door.day), SWING_MS))
-  }, [open])
+  }, [open, opened])
+
+  const handleSheetClose = useCallback(() => {
+    setShownDay(null)
+    if (finalePending.current) {
+      finalePending.current = false
+      setCelebrating(true)
+    }
+  }, [])
 
   const handleLocked = useCallback((door) => {
     setNotice(t('lockedToast', { day: door.day, date: formatDate(doorOpensAt(year, door.day), { day: 'numeric', month: 'long' }) }))
@@ -109,8 +125,9 @@ export default function AdventPage() {
       </header>
 
       <main className="flex-1 min-h-0 w-full max-w-5xl mx-auto px-3 sm:px-4 pt-2 flex flex-col">
-        <div className="advent-board advent-board--framed flex-1 min-h-0 flex flex-col rounded-3xl p-3 pt-5 sm:p-5 sm:pt-7">
+        <div className="advent-board advent-board--framed flex-1 min-h-0 flex flex-col rounded-3xl p-3 pt-5 sm:p-5 sm:pt-7 advent-board--scene">
           <span className="advent-lights" aria-hidden="true" />
+          <AdventScene className="advent-scene" />
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
@@ -154,10 +171,12 @@ export default function AdventPage() {
           door={byDay.get(shownDay)}
           year={year}
           formatDate={formatDate}
-          onClose={() => setShownDay(null)}
+          onClose={handleSheetClose}
           onOpenEntry={handleOpenEntry}
         />
       )}
+
+      {celebrating && <AdventFinale onClose={() => setCelebrating(false)} />}
 
       {viewingMoment && (
         <MomentViewer

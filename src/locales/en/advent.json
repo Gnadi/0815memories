@@ -9,6 +9,7 @@
   "today": "Today",
   "progress_one": "{{count}} of {{total}} open",
   "progress_other": "{{count}} of {{total}} open",
+  "allOpen": "All 24 doors are open. Merry Christmas!",
   "doorLabel": "Door {{day}}",
   "openDoor": "Open door {{day}}",
   "lockedDoor": "Door {{day}} opens on {{date}}",
@@ -25,6 +26,11 @@
     "Time for cookies, candlelight and a photo of both.",
     "An empty door is a place for what this year still has in store."
   ],
+  "finale": {
+    "title": "Merry Christmas!",
+    "body": "All 24 doors are open — 24 memories from your family, one for every day of Advent. Have a lovely Christmas together.",
+    "close": "Back to the calendar"
+  },
   "home": {
     "eyebrow": "Advent calendar",
     "teaserTitle_one": "The first door opens in {{count}} day",

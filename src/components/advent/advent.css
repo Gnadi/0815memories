@@ -27,6 +27,24 @@
     0 18px 40px rgba(45, 27, 14, 0.35);
 }
 
+/* The village along the foot of the board. The board keeps room for it
+   below the doors, scaled with the board's height. */
+.advent-board--scene {
+  --scene: clamp(2.25rem, 9vh, 4.5rem);
+  padding-bottom: calc(var(--scene) * 0.7);
+}
+
+.advent-scene {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 100%;
+  height: var(--scene);
+  pointer-events: none;
+}
+
 /* Snow falling over the board and its doors. Two layers at different speeds
    and sizes give it depth; it never takes a tap. */
 .advent-board::before,
@@ -242,6 +260,20 @@
   font-size: min(24cqw, 44cqh);
 }
 
+/* Printed in the corner, the way a paper door has a little picture beside
+   its number, so the number keeps its size. */
+.advent-door__motif {
+  position: absolute;
+  top: max(8px, 9cqmin);
+  left: max(8px, 9cqmin);
+  width: max(12px, 22cqmin);
+  height: max(12px, 22cqmin);
+  color: var(--ink);
+  opacity: 0.85;
+  stroke-width: 1.75;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.2));
+}
+
 /* Papers. */
 .advent-door--red .advent-door__leaf {
   --paper: linear-gradient(150deg, #c0353a 0%, #8e1c22 100%);
@@ -372,7 +404,7 @@
 
 /* On a small door the lock would sit on the number; the dimmer paper says
    enough there. */
-@container advent-door (max-width: 64px) {
+@container advent-door (max-width: 48px) {
   .advent-door__lock {
     display: none;
   }
@@ -480,7 +512,79 @@
   transition: width 600ms ease;
 }
 
+/* The finale: a shower of gold over a darkened calendar. */
+.advent-finale {
+  background: radial-gradient(circle at 50% 40%, rgba(27, 42, 72, 0.82), rgba(10, 16, 28, 0.92));
+  animation: advent-fade-in 400ms ease-out;
+}
+
+.advent-finale__shower {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.advent-finale__piece {
+  position: absolute;
+  top: -24px;
+  animation: advent-fall 4.5s linear infinite both;
+}
+
+.advent-finale__piece--0 {
+  background: #e9c77b;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.advent-finale__piece--1 {
+  border-radius: 50%;
+  background: #fff3d6;
+  box-shadow: 0 0 8px rgba(255, 243, 214, 0.9);
+}
+
+.advent-finale__piece--2 {
+  border-radius: 2px;
+  background: #c0353a;
+}
+
+.advent-finale__card {
+  background: linear-gradient(160deg, #7a1f1f 0%, #9b2c24 50%, #1f4d3a 100%);
+  box-shadow: 0 0 0 3px #c99a45, 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: advent-pop 600ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.advent-finale__star {
+  animation: advent-spin-in 900ms ease-out;
+  filter: drop-shadow(0 0 12px rgba(233, 199, 123, 0.8));
+}
+
+@keyframes advent-fall {
+  from { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  to { transform: translate(var(--drift), 110vh) rotate(540deg); opacity: 0.6; }
+}
+
+@keyframes advent-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes advent-pop {
+  from { transform: scale(0.7); opacity: 0; }
+}
+
+@keyframes advent-spin-in {
+  from { transform: rotate(-180deg) scale(0.2); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .advent-finale,
+  .advent-finale__card,
+  .advent-finale__star {
+    animation: none;
+  }
+  .advent-finale__shower {
+    display: none;
+  }
+
   .advent-door__leaf,
   .advent-door__tag {
     transition: opacity 200ms;
