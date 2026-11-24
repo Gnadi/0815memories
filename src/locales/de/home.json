@@ -90,5 +90,12 @@
     "body": "Sag uns, was fehlt oder was dich freut.",
     "action": "Feedback geben",
     "notNow": "Nicht jetzt"
+  },
+  "skyDraftHint": {
+    "eyebrow": "Geburtshimmel",
+    "title": "Der Himmel von {{name}} wartet",
+    "body": "Füge ihn der Familie hinzu, um ihn als Wandbild zu bestellen oder aufzubewahren.",
+    "action": "Weiter zum Geburtshimmel",
+    "discard": "Verwerfen"
   }
 }

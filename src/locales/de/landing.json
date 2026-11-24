@@ -40,6 +40,17 @@
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
     "demoCta": "Demo-Familie ansehen"
   },
+  "birthSky": {
+    "badge": "Ein Geschenk zur Geburt",
+    "title": "Der Himmel in der Nacht ihrer Geburt",
+    "desc": "Sterne, Planeten und Mond über dem Geburtsort im Moment der Geburt, als Poster. Fertig, sobald das Kind da ist: kein Album zu füllen, kein Jahr voller Fotos zu sammeln.",
+    "bullets": [
+      "Kostenlos gestalten und herunterladen, ohne Konto",
+      "Im Browser berechnet: die Geburtsdaten werden nirgendwohin geschickt",
+      "Mit einem kostenlosen Kaydo-Konto als Wandbild über Peecho bestellen"
+    ],
+    "button": "Geburtshimmel gestalten"
+  },
   "screens": {
     "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",
     "homeMobileAlt": "Die Kaydo-App auf dem Smartphone mit dem Familien-Feed",

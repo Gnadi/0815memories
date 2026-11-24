@@ -40,6 +40,17 @@
     "subtitleSuffix": "est encore disponible et faites-en la vôtre en quelques secondes.",
     "demoCta": "Découvrir la famille de démonstration"
   },
+  "birthSky": {
+    "badge": "Un cadeau de naissance",
+    "title": "Le ciel de la nuit de leur naissance",
+    "desc": "Les étoiles, les planètes et la lune au-dessus du lieu de naissance, au moment de la naissance, en affiche. Prêt le jour où l'enfant arrive : aucun album à remplir, aucune année de photos à rassembler.",
+    "bullets": [
+      "Gratuit à créer et à télécharger, sans compte",
+      "Calculé dans votre navigateur : les données de naissance ne sont envoyées nulle part",
+      "À commander en tirage mural via Peecho avec un compte Kaydo gratuit"
+    ],
+    "button": "Créer un ciel de naissance"
+  },
   "screens": {
     "homeAlt": "Le fil d'accueil de Kaydo avec les moments du jour et un souvenir de famille mis en avant",
     "homeMobileAlt": "L'application mobile Kaydo affichant le fil des souvenirs de famille",

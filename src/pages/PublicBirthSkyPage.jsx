@@ -1,0 +1,259 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Head } from 'vite-react-ssg'
+import { useTranslation } from 'react-i18next'
+import { Download, FileDown, Lock, Printer, Gift } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { LANDING_PATHS } from '../i18n'
+import useSkyPoster from '../hooks/useSkyPoster'
+import { downloadPosterPdf, downloadPosterPng, posterFileBase } from '../utils/sky/posterExport'
+import { saveSkyDraft } from '../utils/sky/skyDraft'
+import { printConfig } from '../utils/printBook'
+import PlacePicker from '../components/sky/PlacePicker'
+import {
+  SkyCaptionSection,
+  SkyExportButton,
+  SkyPosterPreview,
+  SkyStyleSection,
+  skyInputClass,
+  skySectionClass,
+} from '../components/sky/SkyPosterParts'
+import KaydoLogo from '../components/KaydoLogo'
+import { devError } from '../utils/devLog'
+
+const PRINTING_ENABLED = printConfig().enabled
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * The birth sky for anyone, without an account — the way in from the landing
+ * page. A visitor makes the poster of a birth and downloads it for free; to
+ * order it as a wall print (or keep it), they sign up, and the new family
+ * takes the child over (utils/sky/skyDraft.js, BirthSkyContinuePage).
+ *
+ * Nothing typed here leaves the browser: the sky is computed and drawn on this
+ * device, and places are searched in a bundled list. That is why the page can
+ * be public at all — it reads and writes no family's data.
+ */
+export default function PublicBirthSkyPage() {
+  const { t, i18n } = useTranslation('sky')
+  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  const navigate = useNavigate()
+  const { isAuthenticated, isAdmin, familyId } = useAuth()
+
+  const [name, setName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  // The title follows the name until it is typed into.
+  const [titleEdited, setTitleEdited] = useState(false)
+  const [form, setForm] = useState({ birthTime: '', birthPlace: null, skyStyle: 'midnight', title: '', dedication: '' })
+  const [busy, setBusy] = useState(null)
+  const [error, setError] = useState(null)
+  const [draftError, setDraftError] = useState(false)
+
+  const dateStr = DATE.test(birthDate) ? birthDate : null
+  const { catalog, catalogError, sky, canvasRef, optionsFor } = useSkyPoster({ form, dateStr, lang, t })
+
+  const update = (patch) => setForm((f) => ({ ...f, ...patch }))
+
+  const handleName = (value) => {
+    setName(value)
+    if (!titleEdited) update({ title: value })
+  }
+
+  const handleCaption = (patch) => {
+    if ('title' in patch) setTitleEdited(true)
+    update(patch)
+  }
+
+  const fileBase = posterFileBase(t('export.fileName'), form.title)
+  const posterOptions = () => optionsFor(form.title, form.dedication)
+
+  const run = async (kind, task) => {
+    setBusy(kind)
+    setError(null)
+    try {
+      // Let the button show its busy state before the heavy canvas work blocks the thread.
+      await new Promise((r) => setTimeout(r, 30))
+      await task()
+    } catch (err) {
+      devError(`Sky export (${kind}) failed`, err)
+      setError(t('export.error'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // Signing up or in, then the family takes the poster over. A signed-in
+  // admin goes there at once.
+  const keep = (target) => {
+    setDraftError(false)
+    const saved = saveSkyDraft({
+      name: name.trim() || form.title.trim(),
+      birthDate: dateStr,
+      birthTime: form.birthTime,
+      birthPlace: form.birthPlace,
+      skyStyle: form.skyStyle,
+      title: form.title,
+      dedication: form.dedication,
+      order: PRINTING_ENABLED,
+    })
+    if (!saved) {
+      setDraftError(true)
+      return
+    }
+    if (isAuthenticated && isAdmin && familyId) navigate('/birth-sky/continue')
+    else navigate(target)
+  }
+
+  const canExport = Boolean(sky) && !busy
+  const canKeep = Boolean(sky) && Boolean(name.trim() || form.title.trim())
+  const homePath = LANDING_PATHS[i18n.resolvedLanguage] ?? '/'
+
+  return (
+    <div className="min-h-screen bg-cream font-sans flex flex-col">
+      <Head>
+        <title>{t('public.seoTitle')}</title>
+        <meta name="description" content={t('public.seoDescription')} />
+      </Head>
+
+      <header className="sticky top-0 z-30 bg-cream border-b border-cream-dark">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <Link to={homePath} className="flex items-center gap-2 text-bark font-bold text-lg">
+            <KaydoLogo size={22} />
+            <span>Kaydo</span>
+          </Link>
+          <Link to="/login?admin=1" className="text-sm font-semibold text-bark-muted hover:text-bark">
+            {t('public.login')}
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 pt-8 pb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-bark leading-tight">{t('public.heading')}</h1>
+          <p className="text-bark-light mt-2 max-w-2xl">{t('public.intro')}</p>
+        </div>
+
+        <div className="p-4 md:p-8 lg:pt-4 w-full max-w-7xl mx-auto grid gap-6 lg:gap-10 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_340px]">
+          <SkyPosterPreview
+            canvasRef={canvasRef}
+            sky={sky}
+            catalog={catalog}
+            catalogError={catalogError}
+            label={t('public.previewLabel')}
+          />
+
+          <div className="flex flex-col gap-5">
+            <section className={skySectionClass}>
+              <h2 className="font-semibold text-bark">{t('details.heading')}</h2>
+              <div>
+                <label htmlFor="sky-name" className="block text-xs font-medium text-bark-muted mb-1">
+                  {t('public.name')}
+                </label>
+                <input
+                  id="sky-name"
+                  type="text"
+                  value={name}
+                  maxLength={40}
+                  onChange={(e) => handleName(e.target.value)}
+                  className={skyInputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="birth-date" className="block text-xs font-medium text-bark-muted mb-1">
+                  {t('details.date')}
+                </label>
+                <input
+                  id="birth-date"
+                  type="date"
+                  value={birthDate}
+                  min="1900-01-01"
+                  max="2100-12-31"
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className={skyInputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="birth-time" className="block text-xs font-medium text-bark-muted mb-1">
+                  {t('details.time')}
+                </label>
+                <input
+                  id="birth-time"
+                  type="time"
+                  value={form.birthTime}
+                  onChange={(e) => update({ birthTime: e.target.value })}
+                  className={skyInputClass}
+                />
+                <p className="text-[11px] text-bark-muted mt-1">{t('details.timeHint')}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-bark-muted mb-1">{t('details.place')}</p>
+                <PlacePicker value={form.birthPlace} onChange={(birthPlace) => update({ birthPlace })} />
+              </div>
+              <p className="flex gap-1.5 text-[11px] text-bark-muted">
+                <Lock className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                {t('public.privacy')}
+              </p>
+            </section>
+
+            <SkyStyleSection value={form.skyStyle} onChange={(skyStyle) => update({ skyStyle })} />
+
+            <SkyCaptionSection title={form.title} dedication={form.dedication} onChange={handleCaption} />
+
+            <section className="bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-2">
+              <h2 className="font-semibold text-bark">{t('public.downloadHeading')}</h2>
+              <p className="text-xs text-bark-muted">{t('public.downloadFree')}</p>
+              {[
+                { kind: 'png', label: t('export.png'), icon: Download, onClick: () => run('png', () => downloadPosterPng(posterOptions(), fileBase)) },
+                { kind: 'a4', label: t('export.pdfA4'), icon: FileDown, onClick: () => run('a4', () => downloadPosterPdf(posterOptions(), fileBase, 'a4')) },
+                { kind: 'a3', label: t('export.pdfA3'), icon: FileDown, onClick: () => run('a3', () => downloadPosterPdf(posterOptions(), fileBase, 'a3')) },
+              ].map(({ kind, label, icon, onClick }) => (
+                <SkyExportButton
+                  key={kind}
+                  kind={kind}
+                  busy={busy}
+                  disabled={!canExport}
+                  label={label}
+                  busyLabel={t('export.rendering')}
+                  icon={icon}
+                  onClick={onClick}
+                />
+              ))}
+              {error && <p className="text-xs text-red-500">{error}</p>}
+            </section>
+
+            <section className="bg-kaydo-dark text-white rounded-2xl p-4 shadow-sm space-y-3">
+              <h2 className="font-semibold flex items-center gap-2">
+                {PRINTING_ENABLED ? <Printer className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
+                {PRINTING_ENABLED ? t('public.orderHeading') : t('public.keepHeading')}
+              </h2>
+              <p className="text-sm text-white/90">
+                {PRINTING_ENABLED ? t('public.orderBody') : t('public.keepBody')}
+              </p>
+              <button
+                type="button"
+                onClick={() => keep('/signup')}
+                disabled={!canKeep}
+                className="w-full px-4 py-2.5 rounded-xl bg-white text-kaydo-dark text-sm font-semibold hover:bg-cream disabled:opacity-60"
+              >
+                {PRINTING_ENABLED ? t('public.orderButton') : t('public.keepButton')}
+              </button>
+              {!canKeep && <p className="text-xs text-white/80">{t('public.needsDetails')}</p>}
+              {draftError && <p role="alert" className="text-xs text-white">{t('public.draftError')}</p>}
+              <p className="text-xs text-white/80">
+                {t('public.haveAccount')}{' '}
+                <button
+                  type="button"
+                  onClick={() => keep('/login?admin=1')}
+                  disabled={!canKeep}
+                  className="underline font-semibold disabled:no-underline"
+                >
+                  {t('public.loginInstead')}
+                </button>
+              </p>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

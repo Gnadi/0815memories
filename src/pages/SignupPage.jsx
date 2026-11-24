@@ -7,6 +7,7 @@ import AuthPageLayout from '../components/auth/AuthPageLayout'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 import { generateSlug } from '../utils/familySlug'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
+import { loadSkyDraft } from '../utils/sky/skyDraft'
 
 /**
  * Signing up is three steps: the account, the confirmation of its email
@@ -96,7 +97,9 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await createOwnFamily(familyName)
-      navigate('/home', { replace: true })
+      // A birth sky made before signing up (PublicBirthSkyPage) is what this
+      // family was founded for: it is taken over first.
+      navigate(loadSkyDraft() ? '/birth-sky/continue' : '/home', { replace: true })
     } catch (err) {
       setError(errorMessage(err, 'signup.errors.couldNotCreateFamily'))
     } finally {

@@ -62,6 +62,10 @@ const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
 const JournalArchivePage = lazyPage(() => import('./pages/JournalArchivePage'))
 const BirthSkyPage = lazyPage(() => import('./pages/BirthSkyPage'))
+// The birth sky for visitors without an account, linked from the landing page,
+// and where a family takes over the poster made there.
+const PublicBirthSkyPage = lazyPage(() => import('./pages/PublicBirthSkyPage'))
+const BirthSkyContinuePage = lazyPage(() => import('./pages/BirthSkyContinuePage'))
 const JournalEntryPage = lazyPage(() => import('./pages/JournalEntryPage'))
 const JournalDetailPage = lazyPage(() => import('./pages/JournalDetailPage'))
 const BlackBoxPage = lazyPage(() => import('./pages/BlackBoxPage'))
@@ -347,6 +351,9 @@ export const routes = [
       { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },
       { path: 'invite', element: <OutsideDemo><InviteRedeemPage /></OutsideDemo> },
       { path: 'demo', element: <DemoEntry /> },
+      { path: 'birth-sky', element: <PublicBirthSkyPage /> },
+      { path: 'geburtshimmel', element: <PublicBirthSkyPage /> },
+      { path: 'birth-sky/continue', element: protectAdmin(<BirthSkyContinuePage />) },
 
       // Public legal / informational pages (linked from the footer).
       { path: 'terms', element: <LegalPage docKey="terms" /> },
