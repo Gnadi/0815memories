@@ -13,7 +13,8 @@
  *  - an even page count; an odd one gets a white back cover
  *  - no bleed and no crop marks — Peecho adds those itself
  *  - around 300 dpi, RGB
- *  - hardcover books need 24 pages or more
+ *  - hardcover books need 24 pages or more; a shorter book is filled up with
+ *    blank pages, so a checkout never fails at Peecho for being too thin
  *
  * This module is the arithmetic of that. Rendering happens in the editor
  * (ScrapbookEditorPage), uploading in printUpload.js, the checkout in
@@ -45,7 +46,11 @@ export const THUMBNAIL_WIDTH = 600
 // capture of a whole page is one canvas. Kept a little under the limit.
 const MAX_CANVAS_AREA = 16_000_000
 
-/** Peecho's hardcover books: fewer pages are only offered other products. */
+/**
+ * Peecho's hardcover books need this many pages, covers included. A shorter
+ * book would only fail at Peecho, after the file was made and uploaded, so
+ * printSequence fills it up with blank pages instead.
+ */
 export const HARDCOVER_MIN_PAGES = 24
 
 /**
@@ -115,14 +120,18 @@ function colorOr(value, fallback) {
 /**
  * The book as it will be printed: the editor's first page as the front cover,
  * the others as the inside, and a plain back cover in the front cover's colour.
- * A blank page goes in before the back cover when the count would otherwise be
- * odd, so the back cover is never Peecho's white stand-in.
+ * Blank pages go in before the back cover until the book has at least
+ * HARDCOVER_MIN_PAGES pages and an even count, so the back cover is never
+ * Peecho's white stand-in and every book can be ordered as a hardcover.
  *
  * @returns {Array<{kind: 'page', index: number} | {kind: 'blank'|'back', color: string}>}
  */
 export function printSequence(pages) {
   const sheets = pages.map((_, index) => ({ kind: 'page', index }))
-  if (sheets.length % 2 === 0) sheets.push({ kind: 'blank', color: BLANK_PAGE })
+  // One more sheet, the back cover, follows these.
+  while (sheets.length + 1 < HARDCOVER_MIN_PAGES || sheets.length % 2 === 0) {
+    sheets.push({ kind: 'blank', color: BLANK_PAGE })
+  }
   sheets.push({ kind: 'back', color: colorOr(pages[0]?.backgroundColor, DEFAULT_BACKGROUND) })
   return sheets
 }

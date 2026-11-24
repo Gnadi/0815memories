@@ -54,7 +54,10 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
 
   const busy = phase === 'rendering' || phase === 'uploading' || phase === 'checkout'
   const pageCount = sheets.length
-  const blankAdded = sheets.some((sheet) => sheet.kind === 'blank')
+  const blankCount = sheets.filter((sheet) => sheet.kind === 'blank').length
+  // The book's own pages and the back cover; the blanks make up the rest.
+  const ownCount = pageCount - blankCount
+  const filledToMinimum = blankCount > 0 && ownCount < HARDCOVER_MIN_PAGES
 
   const cm = (mm) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(mm / 10)
 
@@ -166,13 +169,17 @@ export default function PrintOrderModal({ familyId, title, sheets, onRender, onC
                   {t('print.summary', { count: pageCount, width: cm(config.widthMm), height: cm(config.heightMm) })}
                 </p>
                 <p className="text-bark-muted mt-1">{t('print.pagesExplained')}</p>
-                {blankAdded && <p className="text-bark-muted mt-1">{t('print.blankAdded')}</p>}
+                {blankCount > 0 && !filledToMinimum && (
+                  <p className="text-bark-muted mt-1">{t('print.blankAdded')}</p>
+                )}
               </div>
 
-              {pageCount < HARDCOVER_MIN_PAGES && (
+              {filledToMinimum && (
                 <p className="px-3 py-2 rounded-xl bg-cream text-bark flex gap-2">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-kaydo" />
-                  <span>{t('print.tooFewPages', { min: HARDCOVER_MIN_PAGES, count: pageCount })}</span>
+                  <span>
+                    {t('print.filledWithBlanks', { min: HARDCOVER_MIN_PAGES, own: ownCount, count: blankCount })}
+                  </span>
                 </p>
               )}
 

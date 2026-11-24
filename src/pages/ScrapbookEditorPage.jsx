@@ -213,7 +213,7 @@ export default function ScrapbookEditorPage() {
       })
       if (!finished) return null
 
-      // The blank page and the back cover follow the editor's pages.
+      // The blank pages and the back cover follow the editor's pages.
       for (const sheet of sheets.slice(pages.length)) pdf.addPlain(sheet.color)
       onProgress({ done: sheets.length, total: sheets.length })
       return { pdf: pdf.toBlob(), thumbnail, pageCount: pdf.pageCount, format }
