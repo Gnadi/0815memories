@@ -96,8 +96,11 @@ export default function BirthSkyContinuePage() {
   const place = draft.birthPlace.name
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4">
-      <div className="bg-warm-white rounded-2xl shadow-lg border border-cream-dark w-full max-w-md p-6 space-y-5">
+    // Top-aligned rather than centred: with a few children the card is taller
+    // than a phone, and a centred card cannot be scrolled to its top. The
+    // bottom padding keeps it clear of the admin's tab bar below lg.
+    <div className="min-h-screen bg-cream flex justify-center px-4 pt-6 pb-24 lg:pb-6 lg:items-center">
+      <div className="bg-warm-white rounded-2xl shadow-lg border border-cream-dark w-full max-w-md p-6 pb-0 space-y-5 self-start lg:self-auto">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-kaydo/10 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-kaydo" />
@@ -142,7 +145,10 @@ export default function BirthSkyContinuePage() {
               />
               <span className="text-sm text-bark">
                 {t('continue.existingChild', { name: kid.name })}
-                <span className="block text-xs text-bark-muted">{t('continue.existingHint')}</span>
+                {/* The same for every child, so said under the chosen one only. */}
+                {target === kid.id && (
+                  <span className="block text-xs text-bark-muted">{t('continue.existingHint')}</span>
+                )}
               </span>
             </label>
           ))}
@@ -157,7 +163,9 @@ export default function BirthSkyContinuePage() {
             />
             <span className="text-sm text-bark">
               {t('continue.posterOnly')}
-              <span className="block text-xs text-bark-muted">{t('continue.posterOnlyHint', { name: draft.name })}</span>
+              {target === POSTER_ONLY && (
+                <span className="block text-xs text-bark-muted">{t('continue.posterOnlyHint', { name: draft.name })}</span>
+              )}
             </span>
           </label>
         </fieldset>
@@ -175,7 +183,9 @@ export default function BirthSkyContinuePage() {
           </p>
         )}
 
-        <div className="flex flex-col gap-2">
+        {/* Always in view: it sticks above the tab bar while the choices
+            scroll, so neither button is ever behind it or below the fold. */}
+        <div className="sticky bottom-20 lg:bottom-0 -mx-6 px-6 pt-3 pb-4 bg-warm-white rounded-b-2xl border-t border-cream-dark flex flex-col gap-1">
           <button
             onClick={handleContinue}
             disabled={saving}
