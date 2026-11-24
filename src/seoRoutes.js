@@ -42,6 +42,10 @@ export const FEATURE_PAGES = [
   },
 ]
 
+// The birth sky poster, made without an account (src/pages/PublicBirthSkyPage.jsx).
+// The landing page's way in for people looking for a gift for a birth.
+export const BIRTH_SKY_PATHS = { en: '/birth-sky', de: '/de/geburtshimmel' }
+
 // The landing page's addresses. src/i18n re-exports them as LANDING_PATHS.
 export const LANDING_PAGE_PATHS = { en: '/', de: '/de', ar: '/ar', fr: '/fr' }
 
@@ -49,7 +53,7 @@ export const LANDING_PAGE_PATHS = { en: '/', de: '/de', ar: '/ar', fr: '/fr' }
 export const SINGLE_LANGUAGE_PATHS = ['/terms', '/privacy-policy', '/contact', '/safety']
 
 // Pages that exist in both languages, as { en, de } path pairs.
-export const LANGUAGE_GROUPS = [LANDING_PAGE_PATHS, ...FEATURE_PAGES.map((page) => page.paths)]
+export const LANGUAGE_GROUPS = [LANDING_PAGE_PATHS, ...FEATURE_PAGES.map((page) => page.paths), BIRTH_SKY_PATHS]
 
 /** Every address that belongs in the index, in sitemap order. */
 export const INDEXABLE_PATHS = [

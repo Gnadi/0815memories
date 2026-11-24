@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
-import { useTranslation } from 'react-i18next'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 import { Download, FileDown, Lock, Printer, Gift } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { LANDING_PATHS } from '../i18n'
+import i18n, { LANDING_PATHS } from '../i18n'
+import { BIRTH_SKY_PATHS, absoluteUrl, alternatesFor } from '../seoRoutes'
+import { SCREENSHOTS, screenshotPath, screenshotSize } from '../components/landing/screenshots'
+import LanguageSwitcher from '../components/LanguageSwitcher'
+import enSky from '../locales/en/sky.json'
+import deSky from '../locales/de/sky.json'
 import useSkyPoster from '../hooks/useSkyPoster'
 import { downloadPosterPdf, downloadPosterPng, posterFileBase } from '../utils/sky/posterExport'
 import { saveSkyDraft } from '../utils/sky/skyDraft'
@@ -24,6 +29,14 @@ import { devError } from '../utils/devLog'
 const PRINTING_ENABLED = printConfig().enabled
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
+// The birth sky's copy is needed here before the signed-in app's translations
+// are, so it travels in this page's chunk, as the feature pages' does. It is
+// registered as the module loads: in the Node pre-render the first render is
+// synchronous and cannot wait for anything.
+for (const [lng, bundle] of [['en', enSky], ['de', deSky]]) {
+  if (!i18n.hasResourceBundle(lng, 'sky')) i18n.addResourceBundle(lng, 'sky', bundle)
+}
+
 /**
  * The birth sky for anyone, without an account — the way in from the landing
  * page. A visitor makes the poster of a birth and downloads it for free; to
@@ -34,9 +47,22 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
  * device, and places are searched in a bundled list. That is why the page can
  * be public at all — it reads and writes no family's data.
  */
-export default function PublicBirthSkyPage() {
-  const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+export default function PublicBirthSkyPage({ lng = 'en' }) {
+  // The page's address fixes its language (src/seoRoutes.js), as the feature
+  // pages' does, so the pre-rendered page and the one the browser hydrates say
+  // the same. Its parts — the place picker, the style and caption — read the
+  // language from the instance they are given, so they get one fixed to it.
+  const scoped = useMemo(() => i18n.cloneInstance({ lng, initAsync: false }), [lng])
+  return (
+    <I18nextProvider i18n={scoped}>
+      <BirthSkyStudio lng={lng} />
+    </I18nextProvider>
+  )
+}
+
+function BirthSkyStudio({ lng }) {
+  const { t } = useTranslation('sky')
+  const lang = lng
   const navigate = useNavigate()
   const { isAuthenticated, isAdmin, familyId } = useAuth()
 
@@ -106,13 +132,39 @@ export default function PublicBirthSkyPage() {
 
   const canExport = Boolean(sky) && !busy
   const canKeep = Boolean(sky) && Boolean(name.trim() || form.title.trim())
-  const homePath = LANDING_PATHS[i18n.resolvedLanguage] ?? '/'
+  const homePath = LANDING_PATHS[lng] ?? '/'
+  const path = BIRTH_SKY_PATHS[lng]
+  const poster = SCREENSHOTS.birthSkyPoster
+  const example = { src: screenshotPath(poster, lng), ...screenshotSize(poster, lng), alt: t('public.exampleAlt') }
+  const sections = t('public.sections', { returnObjects: true })
+
+  // Picking the other language goes to this page in it and carries the choice
+  // on into the app; a language without this page goes to its landing page.
+  const showLanguage = (next) => {
+    i18n.changeLanguage(next)
+    const target = BIRTH_SKY_PATHS[next] ?? LANDING_PATHS[next]
+    if (target !== path) navigate(target)
+  }
 
   return (
     <div className="min-h-screen bg-cream font-sans flex flex-col">
       <Head>
+        <html lang={lng} />
         <title>{t('public.seoTitle')}</title>
         <meta name="description" content={t('public.seoDescription')} />
+        <meta name="robots" content="index,follow" />
+        <link rel="canonical" href={absoluteUrl(path)} />
+        {alternatesFor(path).map(([hrefLang, href]) => (
+          <link key={hrefLang} rel="alternate" hrefLang={hrefLang} href={href} />
+        ))}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Kaydo" />
+        <meta property="og:title" content={t('public.seoTitle')} />
+        <meta property="og:description" content={t('public.seoDescription')} />
+        <meta property="og:url" content={absoluteUrl(path)} />
+        <meta property="og:image" content={absoluteUrl(example.src)} />
+        <meta property="og:locale" content={lng === 'de' ? 'de_DE' : 'en_US'} />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
       <header className="sticky top-0 z-30 bg-cream border-b border-cream-dark">
@@ -121,9 +173,12 @@ export default function PublicBirthSkyPage() {
             <KaydoLogo size={22} />
             <span>Kaydo</span>
           </Link>
-          <Link to="/login?admin=1" className="text-sm font-semibold text-bark-muted hover:text-bark">
-            {t('public.login')}
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="sidebar" language={lng} onSelect={showLanguage} />
+            <Link to="/login?admin=1" className="text-sm font-semibold text-bark-muted hover:text-bark">
+              {t('public.login')}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -140,6 +195,7 @@ export default function PublicBirthSkyPage() {
             catalog={catalog}
             catalogError={catalogError}
             label={t('public.previewLabel')}
+            placeholder={example}
           />
 
           <div className="flex flex-col gap-5">
@@ -253,6 +309,25 @@ export default function PublicBirthSkyPage() {
             </section>
           </div>
         </div>
+
+        {/* What the poster is, for whoever arrives from a search and wants to
+            know before typing anything — and for the search engine itself. */}
+        <article className="max-w-3xl mx-auto px-4 md:px-8 pt-6 pb-16 space-y-8">
+          {sections.map((section) => (
+            <section key={section.heading}>
+              <h2 className="text-2xl font-bold text-bark mb-3">{section.heading}</h2>
+              {section.paragraphs.map((paragraph) => (
+                <p key={paragraph} className="text-bark-light leading-relaxed mb-3">{paragraph}</p>
+              ))}
+              {section.printParagraph && PRINTING_ENABLED && (
+                <p className="text-bark-light leading-relaxed mb-3">{section.printParagraph}</p>
+              )}
+            </section>
+          ))}
+          <p className="text-sm text-bark-muted">
+            <Link to={homePath} className="underline hover:text-bark">{t('public.moreAboutKaydo')}</Link>
+          </p>
+        </article>
       </main>
     </div>
   )

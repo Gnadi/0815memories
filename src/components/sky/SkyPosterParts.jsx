@@ -13,8 +13,13 @@ export const skyInputClass =
 
 export const skySectionClass = 'bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-3'
 
-/** The poster preview. `canvasRef` and the rest come from useSkyPoster. */
-export function SkyPosterPreview({ canvasRef, sky, catalog, catalogError, label }) {
+/**
+ * The poster preview. `canvasRef` and the rest come from useSkyPoster.
+ * `placeholder` ({ src, width, height, alt }) is a finished poster shown until
+ * there is a sky to draw, so the page opens on what it makes rather than on
+ * an empty frame.
+ */
+export function SkyPosterPreview({ canvasRef, sky, catalog, catalogError, label, placeholder }) {
   const { t } = useTranslation('sky')
   return (
     // On desktop the poster fills the screen height (capped by the column width)
@@ -29,8 +34,18 @@ export function SkyPosterPreview({ canvasRef, sky, catalog, catalogError, label 
           role="img"
           aria-label={label}
         />
+        {!sky && placeholder && (
+          <img
+            src={placeholder.src}
+            width={placeholder.width}
+            height={placeholder.height}
+            alt={placeholder.alt}
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
         {!sky && (
-          <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
+          <div className={`absolute inset-0 flex justify-center p-8 text-center ${placeholder ? 'items-end' : 'items-center'}`}>
             <p className="text-sm text-bark bg-warm-white/90 rounded-xl px-4 py-3 shadow">
               {catalogError ? t('loadError') : !catalog ? <Loader2 className="w-5 h-5 animate-spin text-kaydo" /> : t('emptyPreview')}
             </p>

@@ -243,7 +243,8 @@ notification.
 | `__tests__/` | unit tests, rules tests (`*Rules.test.js`) |
 
 The birth sky is also open to visitors without an account, at `/birth-sky`
-(and `/geburtshimmel`), linked from the landing page. The page reads and
+and `/de/geburtshimmel` (pre-rendered, one language each, like the feature
+pages), linked from the landing page. The page reads and
 writes no family's data: the sky is computed and drawn in the browser, and
 the poster downloads for free. To order it as a wall print, the visitor signs
 up; the poster's details wait in the browser's localStorage meanwhile

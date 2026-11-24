@@ -5,7 +5,7 @@
 import { lazy, Suspense, useState, useEffect } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n, { ensureAppTranslations, isRtl, LANDING_PATHS } from './i18n'
 import { AuthProvider } from './context/AuthContext'
@@ -16,7 +16,7 @@ import RouteErrorScreen from './components/RouteErrorScreen'
 
 import { getSubdomainSlug } from './utils/familySlug'
 import { filterAnalyticsEvent } from './utils/analyticsFilter'
-import { FEATURE_PAGES } from './seoRoutes'
+import { BIRTH_SKY_PATHS, FEATURE_PAGES } from './seoRoutes'
 import { hasStoredSession, readLastFamily } from './utils/authStorage'
 import { isInstalledApp } from './utils/platform'
 import { uncoverPage } from './utils/prehydrationCover'
@@ -62,9 +62,11 @@ const LoginDesignerPage = lazyPage(() => import('./pages/LoginDesignerPage'))
 const KidsJournalPage = lazyPage(() => import('./pages/KidsJournalPage'))
 const JournalArchivePage = lazyPage(() => import('./pages/JournalArchivePage'))
 const BirthSkyPage = lazyPage(() => import('./pages/BirthSkyPage'))
-// The birth sky for visitors without an account, linked from the landing page,
-// and where a family takes over the poster made there.
-const PublicBirthSkyPage = lazyPage(() => import('./pages/PublicBirthSkyPage'))
+// The birth sky for visitors without an account, linked from the landing page.
+// Brings its own translations (the `sky` namespace) like FeaturePage, so a
+// search visitor does not wait for the signed-in app's. Where a family takes
+// over the poster made there is a signed-in page like any other.
+const PublicBirthSkyPage = lazy(() => import('./pages/PublicBirthSkyPage'))
 const BirthSkyContinuePage = lazyPage(() => import('./pages/BirthSkyContinuePage'))
 const JournalEntryPage = lazyPage(() => import('./pages/JournalEntryPage'))
 const JournalDetailPage = lazyPage(() => import('./pages/JournalDetailPage'))
@@ -351,8 +353,13 @@ export const routes = [
       { path: 'signup', element: <OutsideDemo><SignupPage /></OutsideDemo> },
       { path: 'invite', element: <OutsideDemo><InviteRedeemPage /></OutsideDemo> },
       { path: 'demo', element: <DemoEntry /> },
-      { path: 'birth-sky', element: <PublicBirthSkyPage /> },
-      { path: 'geburtshimmel', element: <PublicBirthSkyPage /> },
+      // The public birth sky, one address per language (src/seoRoutes.js).
+      ...Object.entries(BIRTH_SKY_PATHS).map(([lng, path]) => ({
+        path: path.slice(1),
+        element: <PublicBirthSkyPage lng={lng} />,
+      })),
+      // Its first German address; vercel.json redirects it on the site.
+      { path: 'geburtshimmel', element: <Navigate to={BIRTH_SKY_PATHS.de} replace /> },
       { path: 'birth-sky/continue', element: protectAdmin(<BirthSkyContinuePage />) },
 
       // Public legal / informational pages (linked from the footer).

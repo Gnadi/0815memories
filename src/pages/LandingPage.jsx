@@ -36,7 +36,7 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS, isRtl } from '../i18n'
-import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
+import { BIRTH_SKY_PATHS, FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -280,7 +280,7 @@ export default function LandingPage({ lng }) {
               ))}
             </ul>
             <Link
-              to={lang === 'de' ? '/geburtshimmel' : '/birth-sky'}
+              to={BIRTH_SKY_PATHS[lang] ?? BIRTH_SKY_PATHS.en}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F2C46D] text-[#0B1428] font-semibold hover:bg-[#F7D38C] transition-colors"
             >
               {t('birthSky.button')}

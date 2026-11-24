@@ -7,6 +7,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import PublicBirthSkyPage from '../pages/PublicBirthSkyPage'
 import { SKY_DRAFT_KEY } from '../utils/sky/skyDraft'
+import { BIRTH_SKY_PATHS, INDEXABLE_PATHS, alternatesFor, pathLanguage } from '../seoRoutes'
+import { routes } from '../App'
+import vercel from '../../vercel.json'
+import enSky from '../locales/en/sky.json'
+import deSky from '../locales/de/sky.json'
 
 vi.mock('vite-react-ssg', () => ({ Head: () => null }))
 let mockAuth
@@ -20,11 +25,11 @@ vi.mock('../utils/sky/skyData', async (importOriginal) => ({
   loadSkyCatalog: () => Promise.resolve({ stars: [[37.95, 89.26, 1.97, 0.6]], constellations: [] }),
 }))
 
-function renderPage() {
+function renderPage(lng = 'en') {
   return render(
-    <MemoryRouter initialEntries={['/birth-sky']}>
+    <MemoryRouter initialEntries={[BIRTH_SKY_PATHS[lng]]}>
       <Routes>
-        <Route path="/birth-sky" element={<PublicBirthSkyPage />} />
+        <Route path={BIRTH_SKY_PATHS[lng]} element={<PublicBirthSkyPage lng={lng} />} />
         <Route path="/signup" element={<p>signup page</p>} />
         <Route path="/login" element={<p>login page</p>} />
         <Route path="/birth-sky/continue" element={<p>continue page</p>} />
@@ -95,5 +100,62 @@ describe('PublicBirthSkyPage', () => {
     await waitFor(() => expect(order).toBeEnabled())
     fireEvent.click(order)
     expect(screen.getByText('continue page')).toBeInTheDocument()
+  })
+
+  it('shows a finished poster until there is a sky of its own', async () => {
+    renderPage()
+    expect(screen.getByAltText(enSky.public.exampleAlt).getAttribute('src')).toBe('/screenshots/birth-sky-poster.webp')
+    fillIn()
+    await waitFor(() => expect(screen.queryByAltText(enSky.public.exampleAlt)).not.toBeInTheDocument())
+  })
+})
+
+const words = (copy) =>
+  copy.sections
+    .flatMap((s) => [s.heading, ...s.paragraphs, s.printParagraph ?? ''])
+    .join(' ')
+    .split(/\s+/).length
+
+describe('the birth sky for search engines', () => {
+  it.each([['en', enSky], ['de', deSky]])('renders in its address’s language (%s), with one H1 and its sections', (lng, copy) => {
+    renderPage(lng)
+    const h1s = screen.getAllByRole('heading', { level: 1 })
+    expect(h1s).toHaveLength(1)
+    expect(h1s[0].textContent).toBe(copy.public.heading)
+    for (const section of copy.public.sections) {
+      expect(screen.getByRole('heading', { level: 2, name: section.heading })).toBeInTheDocument()
+    }
+    // The place picker and the other parts speak the page's language too.
+    expect(screen.getByText(copy.details.place)).toBeInTheDocument()
+    expect(screen.getByAltText(copy.public.exampleAlt).getAttribute('src')).toMatch(
+      lng === 'de' ? /^\/screenshots\/de\// : /^\/screenshots\/[^/]+\.webp$/,
+    )
+  })
+
+  it.each([['en', enSky], ['de', deSky]])('stays within the length limits (%s)', (lng, copy) => {
+    expect(copy.public.seoTitle.length).toBeLessThanOrEqual(60)
+    expect(copy.public.seoDescription.length).toBeLessThanOrEqual(155)
+    expect(copy.public.seoTitle).toContain('Kaydo')
+    expect(words(copy.public)).toBeGreaterThan(380)
+    expect(words(copy.public)).toBeLessThan(700)
+  })
+
+  it('is indexed in both languages, each pointing at the other', () => {
+    expect(INDEXABLE_PATHS).toEqual(expect.arrayContaining(Object.values(BIRTH_SKY_PATHS)))
+    expect(pathLanguage('/birth-sky')).toBe('en')
+    expect(pathLanguage('/de/geburtshimmel')).toBe('de')
+    expect(alternatesFor('/de/geburtshimmel').map(([lng]) => lng)).toEqual(['en', 'de', 'x-default'])
+  })
+
+  it('is a route served its own pre-rendered file, and the old address redirects', () => {
+    const children = routes[0].children.map((r) => `/${r.path}`)
+    for (const path of Object.values(BIRTH_SKY_PATHS)) {
+      expect(children).toContain(path)
+      expect(vercel.rewrites.find((r) => r.source === path)?.destination).toBe(`${path}.html`)
+    }
+    expect(vercel.redirects.find((r) => r.source === '/geburtshimmel')).toMatchObject({
+      destination: '/de/geburtshimmel',
+      permanent: true,
+    })
   })
 })

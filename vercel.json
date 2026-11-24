@@ -11,7 +11,8 @@
       "has": [{ "type": "query", "key": "lang", "value": "de" }],
       "destination": "/de",
       "permanent": true
-    }
+    },
+    { "source": "/geburtshimmel", "destination": "/de/geburtshimmel", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
@@ -33,6 +34,8 @@
     { "source": "/de/zeitkapsel-fuer-kinder", "destination": "/de/zeitkapsel-fuer-kinder.html" },
     { "source": "/de/familien-rezeptbuch", "destination": "/de/familien-rezeptbuch.html" },
     { "source": "/de/familien-fotobuch", "destination": "/de/familien-fotobuch.html" },
+    { "source": "/birth-sky", "destination": "/birth-sky.html" },
+    { "source": "/de/geburtshimmel", "destination": "/de/geburtshimmel.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
