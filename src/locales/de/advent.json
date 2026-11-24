@@ -6,6 +6,10 @@
   "empty": "Noch gibt es keine Erinnerungen und Momente von vor dem 1. Dezember. Sobald ihr welche teilt, füllen sie im nächsten Advent die Türchen.",
   "countdown_one": "Noch {{count}} Tag, dann öffnet sich das erste Türchen.",
   "countdown_other": "Noch {{count}} Tage, dann öffnet sich das erste Türchen.",
+  "today": "Heute",
+  "progress_one": "{{count}} von {{total}} offen",
+  "progress_other": "{{count}} von {{total}} offen",
+  "allOpen": "Alle 24 Türchen sind offen. Frohe Weihnachten!",
   "doorLabel": "Türchen {{day}}",
   "openDoor": "Türchen {{day}} öffnen",
   "lockedDoor": "Türchen {{day}} öffnet sich am {{date}}",
@@ -22,6 +26,11 @@
     "Zeit für Plätzchen, Kerzenschein und ein Foto davon.",
     "Ein leeres Türchen ist ein Platz für das, was dieses Jahr noch kommt."
   ],
+  "finale": {
+    "title": "Frohe Weihnachten!",
+    "body": "Alle 24 Türchen sind offen — 24 Erinnerungen aus eurer Familie, eine für jeden Tag im Advent. Habt ein schönes Weihnachtsfest miteinander.",
+    "close": "Zurück zum Kalender"
+  },
   "home": {
     "eyebrow": "Adventskalender",
     "teaserTitle_one": "In {{count}} Tag öffnet sich das erste Türchen",

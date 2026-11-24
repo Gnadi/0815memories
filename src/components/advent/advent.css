@@ -1,79 +1,454 @@
 /* The advent calendar's board and its doors. */
 
+/* The page is exactly one screen: the calendar is meant to be seen whole,
+   as a paper one hangs on the wall, so nothing on it scrolls. The board takes
+   what the header leaves, and the doors are sized from the board. */
+.advent-page {
+  height: calc(100vh - var(--advent-top, 0px));
+  height: calc(100dvh - var(--advent-top, 0px));
+  overflow: hidden;
+}
+
 .advent-board {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.12) 0 2px, transparent 3px) 0 0 / 46px 46px,
-    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.1) 0 1.5px, transparent 2.5px) 0 0 / 34px 34px,
-    linear-gradient(160deg, #7a1f1f 0%, #9b2c24 45%, #1f4d3a 100%);
+    radial-gradient(ellipse at 50% -10%, rgba(255, 214, 140, 0.28), transparent 55%),
+    linear-gradient(170deg, #1b2a48 0%, #22344f 40%, #1f4d3a 100%);
 }
 
-/* The grid's measure: cqw below is a percentage of this box's width. */
+/* The calendar's own board hangs in a gilt and red frame; the same night sky
+   heads a door's sheet without one. */
+.advent-board--framed {
+  box-shadow:
+    0 0 0 3px #c99a45,
+    0 0 0 6px #7a1f1f,
+    0 18px 40px rgba(45, 27, 14, 0.35);
+}
+
+/* The village along the foot of the board. The board keeps room for it
+   below the doors, scaled with the screen's height — and on a phone also
+   with its width, so that the drawing is never scaled up so far that the
+   sides cut into its houses. */
+.advent-board--scene {
+  --scene: clamp(2.25rem, min(9vh, 14vw), 4.5rem);
+  padding-bottom: calc(var(--scene) * 0.7);
+}
+
+.advent-scene {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 100%;
+  height: var(--scene);
+  pointer-events: none;
+}
+
+/* Snow falling over the board and its doors. Two layers at different speeds
+   and sizes give it depth; it never takes a tap. */
+.advent-board::before,
+.advent-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.9) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 85% 35%, rgba(255, 255, 255, 0.8) 0 1.2px, transparent 2.2px),
+    radial-gradient(circle at 35% 85%, rgba(255, 255, 255, 0.6) 0 1px, transparent 2px);
+  background-size: 120px 120px, 90px 90px, 150px 150px, 70px 70px;
+  animation: advent-snow 18s linear infinite;
+  opacity: 0.55;
+}
+
+.advent-board::after {
+  background-size: 200px 200px, 160px 160px, 240px 240px, 130px 130px;
+  animation-duration: 30s;
+  opacity: 0.35;
+  filter: blur(0.6px);
+}
+
+@keyframes advent-snow {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 30px 480px, -20px 360px, 40px 600px, -10px 280px; }
+}
+
+/* A string of lights along the top of the board. */
+.advent-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 100%, transparent 9px, rgba(20, 30, 20, 0.6) 9.5px 10.5px, transparent 11px) 0 -10px / 36px 20px repeat-x;
+}
+
+.advent-lights::before,
+.advent-lights::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat-x;
+  background-size: 72px 14px;
+}
+
+.advent-lights::before {
+  background-image:
+    radial-gradient(circle at 18px 8px, #ffd36b 0 3px, rgba(255, 211, 107, 0.35) 4px, transparent 7px),
+    radial-gradient(circle at 54px 8px, #ff6b6b 0 3px, rgba(255, 107, 107, 0.35) 4px, transparent 7px);
+  animation: advent-twinkle 2.6s ease-in-out infinite;
+}
+
+.advent-lights::after {
+  background-image:
+    radial-gradient(circle at 0 8px, #7fe3a1 0 3px, rgba(127, 227, 161, 0.35) 4px, transparent 7px),
+    radial-gradient(circle at 36px 8px, #8fc7ff 0 3px, rgba(143, 199, 255, 0.35) 4px, transparent 7px);
+  animation: advent-twinkle 2.6s ease-in-out -1.3s infinite;
+}
+
+@keyframes advent-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* The grid's box: its width and height are what the doors share out. */
 .advent-grid-wrap {
-  container-type: inline-size;
+  position: relative;
+  z-index: 1;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Square cells sized from the board's own width, so the big doors (two
-   columns, or two by two) line up with the small ones even in a row that
-   holds nothing else. */
+/* A fixed sheet of 28 cells: 22 small doors, Saint Nicholas' two and
+   Christmas Eve's four. Upright screens hang it four wide and seven high,
+   wide ones seven by four, so it always fills the board without a row to
+   scroll to. The cells stretch to the board, but only so far: on a very tall
+   or very wide board the sheet stays near its natural shape and is centred. */
 .advent-grid {
   --cols: 4;
-  --gap: 0.5rem;
+  --rows: 7;
+  --gap: clamp(0.35rem, 1.6cqmin, 0.75rem);
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  grid-auto-rows: calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
   grid-auto-flow: dense;
   gap: var(--gap);
+  width: min(100cqw, 100cqh * 4 / 7 * 1.35);
+  height: min(100cqh, 100cqw * 7 / 4 * 1.35);
 }
 
-@media (min-width: 640px) {
+@container (min-aspect-ratio: 1 / 1) {
   .advent-grid {
     --cols: 7;
-    --gap: 0.75rem;
+    --rows: 4;
+    width: min(100cqw, 100cqh * 7 / 4 * 1.35);
+    height: min(100cqh, 100cqw * 4 / 7 * 1.2);
   }
 }
 
 .advent-door {
   position: relative;
+  container: advent-door / size;
   perspective: 900px;
-  border-radius: 0.75rem;
+  border-radius: 0.7rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.advent-door--wide {
+  grid-column: span 2;
+}
+
+.advent-door--big {
+  grid-column: span 2;
+  grid-row: span 2;
 }
 
 .advent-door__behind {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: 0.75rem;
+  border-radius: inherit;
   background: #fdf6ec;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
+.advent-door--open .advent-door__behind {
+  box-shadow: inset 0 0 0 2px rgba(255, 236, 190, 0.9), inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* The leaf: a printed paper door, with the perforation a real one is cut
+   along. Its paper is set per door below. */
 .advent-door__leaf {
+  --paper: linear-gradient(150deg, #fffdf9 0%, #f2e2c8 100%);
+  --pattern: none;
+  --ink: #a04420;
+  --edge: rgba(45, 27, 14, 0.22);
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
-  background: linear-gradient(145deg, #fffdf9 0%, #f5e6d0 100%);
-  border: 1px solid rgba(45, 27, 14, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  border-radius: inherit;
+  background: var(--pattern), var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.35);
   transform-origin: left center;
-  transition: transform 700ms cubic-bezier(0.3, 0.7, 0.2, 1), box-shadow 700ms;
+  transition: transform 700ms cubic-bezier(0.3, 0.7, 0.2, 1), box-shadow 700ms, filter 300ms;
   backface-visibility: hidden;
 }
 
-.advent-door--open .advent-door__leaf {
-  transform: rotateY(-108deg);
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+.advent-door__leaf::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1.5px dashed var(--edge);
+  border-radius: calc(0.7rem - 4px);
   pointer-events: none;
 }
 
+/* Christmas Eve's two half-width leaves meet in the middle. */
+.advent-door--big .advent-door__leaf {
+  width: 50%;
+}
+
+.advent-door--big .advent-door__leaf--left {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.advent-door--big .advent-door__leaf--left::before {
+  right: 2px;
+  border-right: none;
+  border-radius: calc(0.7rem - 4px) 0 0 calc(0.7rem - 4px);
+}
+
+.advent-door__leaf--right {
+  left: 50%;
+  transform-origin: right center;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.advent-door__leaf--right::before {
+  left: 2px;
+  border-left: none;
+  border-radius: 0 calc(0.7rem - 4px) calc(0.7rem - 4px) 0;
+}
+
+.advent-door__number {
+  position: relative;
+  font-family: var(--font-family-serif, Georgia, serif);
+  font-weight: 700;
+  font-size: min(46cqw, 40cqh);
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 0 12px rgba(255, 220, 150, 0.25);
+  font-variant-numeric: lining-nums;
+}
+
+.advent-door--wide .advent-door__number {
+  font-size: min(24cqw, 44cqh);
+}
+
+/* Printed in the corner, the way a paper door has a little picture beside
+   its number, so the number keeps its size. */
+.advent-door__motif {
+  position: absolute;
+  top: max(8px, 9cqmin);
+  left: max(8px, 9cqmin);
+  width: max(12px, 22cqmin);
+  height: max(12px, 22cqmin);
+  color: var(--ink);
+  opacity: 0.85;
+  stroke-width: 1.75;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.2));
+}
+
+/* Papers. */
+.advent-door--red .advent-door__leaf {
+  --paper: linear-gradient(150deg, #c0353a 0%, #8e1c22 100%);
+  --pattern: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 6px, transparent 6px 14px);
+  --ink: #f6d58e;
+  --edge: rgba(255, 230, 180, 0.45);
+}
+
+.advent-door--green .advent-door__leaf {
+  --paper: linear-gradient(150deg, #3a7d5c 0%, #1f4d3a 100%);
+  --pattern: radial-gradient(circle, rgba(255, 255, 255, 0.12) 1.5px, transparent 2px) 0 0 / 12px 12px;
+  --ink: #fff3d6;
+  --edge: rgba(255, 243, 214, 0.4);
+}
+
+.advent-door--cream .advent-door__leaf {
+  --pattern: radial-gradient(circle, rgba(160, 68, 32, 0.09) 1.5px, transparent 2px) 0 0 / 10px 10px;
+}
+
+.advent-door--blue .advent-door__leaf {
+  --paper: linear-gradient(150deg, #2e4a78 0%, #1b2a48 100%);
+  --pattern:
+    radial-gradient(circle at 30% 30%, rgba(255, 236, 180, 0.5) 0 1px, transparent 1.5px) 0 0 / 22px 22px,
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.3) 0 0.8px, transparent 1.3px) 0 0 / 16px 16px;
+  --ink: #f6d58e;
+  --edge: rgba(246, 213, 142, 0.4);
+}
+
+.advent-door--gold .advent-door__leaf {
+  --paper: linear-gradient(150deg, #f3d899 0%, #d6a854 55%, #c08c3a 100%);
+  --pattern: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.35) 45%, transparent 60%);
+  --ink: #6b3a12;
+  --edge: rgba(107, 58, 18, 0.35);
+}
+
+/* Christmas Eve: a ribbon round the double door, and its number on a tag
+   where the ribbon crosses. */
+.advent-door--big .advent-door__leaf {
+  --pattern:
+    linear-gradient(to bottom, transparent calc(50% - 7px), #e9c77b calc(50% - 7px) calc(50% + 7px), transparent calc(50% + 7px)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 6px, transparent 6px 14px);
+}
+
+.advent-door--big .advent-door__leaf--left {
+  --pattern:
+    linear-gradient(to bottom, transparent calc(50% - 7px), #e9c77b calc(50% - 7px) calc(50% + 7px), transparent calc(50% + 7px)),
+    linear-gradient(to left, #e9c77b 0 7px, transparent 7px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 6px, transparent 6px 14px);
+}
+
+.advent-door--big .advent-door__leaf--right {
+  --pattern:
+    linear-gradient(to bottom, transparent calc(50% - 7px), #e9c77b calc(50% - 7px) calc(50% + 7px), transparent calc(50% + 7px)),
+    linear-gradient(to right, #e9c77b 0 7px, transparent 7px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 6px, transparent 6px 14px);
+}
+
+.advent-door__tag {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: min(56cqw, 56cqh);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffdf9, #f2e2c8);
+  box-shadow: 0 0 0 3px #e9c77b, 0 4px 14px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  transition: transform 450ms cubic-bezier(0.5, 0, 0.75, 0), opacity 350ms;
+  pointer-events: none;
+}
+
+.advent-door__tag .advent-door__number {
+  --ink: #a04420;
+  font-size: min(24cqw, 24cqh);
+  text-shadow: none;
+}
+
+.advent-door__tag-star {
+  width: min(9cqw, 9cqh);
+  height: min(9cqw, 9cqh);
+  color: #c99a45;
+  fill: #e9c77b;
+}
+
+/* Opening: the leaves swing aside, the tag drops away. */
+.advent-door--open .advent-door__leaf {
+  transform: rotateY(-108deg);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.advent-door--open .advent-door__leaf--right {
+  transform: rotateY(108deg);
+}
+
+.advent-door--open .advent-door__tag {
+  transform: translate(-50%, -20%) scale(0.6);
+  opacity: 0;
+}
+
+/* Doors whose day has not come are a little dimmer, with a lock. */
+.advent-door--locked .advent-door__leaf {
+  filter: saturate(0.75) brightness(0.88);
+}
+
+.advent-door__lock {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.4rem;
+  z-index: 1;
+  width: 0.75rem;
+  height: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+
+.advent-door--cream .advent-door__lock,
+.advent-door--gold .advent-door__lock {
+  color: rgba(45, 27, 14, 0.5);
+  filter: none;
+}
+
+/* On a small door the lock would sit on the number; the dimmer paper says
+   enough there. */
+@container advent-door (max-width: 48px) {
+  .advent-door__lock {
+    display: none;
+  }
+}
+
+/* A door that can be opened answers the pointer by lifting a little. */
+@media (hover: hover) {
+  .advent-door:not(.advent-door--open):not(.advent-door--locked):hover .advent-door__leaf--left {
+    transform: rotateY(-14deg);
+  }
+  .advent-door:not(.advent-door--open):not(.advent-door--locked):hover .advent-door__leaf--right {
+    transform: rotateY(14deg);
+  }
+}
+
+.advent-door:focus-visible {
+  outline: 3px solid #ffd36b;
+  outline-offset: 2px;
+}
+
+/* Today's door glows, and says so. */
 .advent-door--today .advent-door__leaf {
   animation: advent-glow 2.4s ease-in-out infinite;
 }
 
-.advent-door--locked .advent-door__leaf {
-  background: linear-gradient(145deg, #f5e6d0 0%, #ead6ba 100%);
+.advent-door__today {
+  position: absolute;
+  top: -0.45rem;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #ffd36b;
+  color: #5a2a08;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 .advent-door--shake {
@@ -81,26 +456,155 @@
 }
 
 @keyframes advent-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 120, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25); }
-  50% { box-shadow: 0 0 0 6px rgba(255, 214, 120, 0), 0 2px 6px rgba(0, 0, 0, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 120, 0.85), 0 3px 8px rgba(0, 0, 0, 0.35); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 214, 120, 0), 0 0 22px rgba(255, 214, 120, 0.6); }
 }
 
 @keyframes advent-shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+  25% { transform: translateX(-4px) rotate(-1deg); }
+  75% { transform: translateX(4px) rotate(1deg); }
+}
+
+/* A burst of golden sparks as a door opens. */
+.advent-door__sparks {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.advent-door__sparks span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 50%;
+  background: #ffd36b;
+  box-shadow: 0 0 8px 2px rgba(255, 211, 107, 0.8);
+  animation: advent-spark 700ms ease-out forwards;
+}
+
+.advent-door__sparks span:nth-child(even) {
+  background: #fff3d6;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+}
+
+@keyframes advent-spark {
+  from { transform: rotate(var(--angle)) translateY(0) scale(1); opacity: 1; }
+  to { transform: rotate(var(--angle)) translateY(-46px) scale(0.3); opacity: 0; }
+}
+
+/* Progress through December, under the title. */
+.advent-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(45, 27, 14, 0.1);
+  overflow: hidden;
+}
+
+.advent-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #c99a45, #c25a2e);
+  transition: width 600ms ease;
+}
+
+/* The finale: a shower of gold over a darkened calendar. */
+.advent-finale {
+  background: radial-gradient(circle at 50% 40%, rgba(27, 42, 72, 0.82), rgba(10, 16, 28, 0.92));
+  animation: advent-fade-in 400ms ease-out;
+}
+
+.advent-finale__shower {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.advent-finale__piece {
+  position: absolute;
+  top: -24px;
+  animation: advent-fall 4.5s linear infinite both;
+}
+
+.advent-finale__piece--0 {
+  background: #e9c77b;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.advent-finale__piece--1 {
+  border-radius: 50%;
+  background: #fff3d6;
+  box-shadow: 0 0 8px rgba(255, 243, 214, 0.9);
+}
+
+.advent-finale__piece--2 {
+  border-radius: 2px;
+  background: #c0353a;
+}
+
+.advent-finale__card {
+  background: linear-gradient(160deg, #7a1f1f 0%, #9b2c24 50%, #1f4d3a 100%);
+  box-shadow: 0 0 0 3px #c99a45, 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: advent-pop 600ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.advent-finale__star {
+  animation: advent-spin-in 900ms ease-out;
+  filter: drop-shadow(0 0 12px rgba(233, 199, 123, 0.8));
+}
+
+@keyframes advent-fall {
+  from { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  to { transform: translate(var(--drift), 110vh) rotate(540deg); opacity: 0.6; }
+}
+
+@keyframes advent-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes advent-pop {
+  from { transform: scale(0.7); opacity: 0; }
+}
+
+@keyframes advent-spin-in {
+  from { transform: rotate(-180deg) scale(0.2); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .advent-door__leaf {
+  .advent-finale,
+  .advent-finale__card,
+  .advent-finale__star {
+    animation: none;
+  }
+  .advent-finale__shower {
+    display: none;
+  }
+
+  .advent-door__leaf,
+  .advent-door__tag {
     transition: opacity 200ms;
   }
-  .advent-door--open .advent-door__leaf {
+  .advent-door--open .advent-door__leaf,
+  .advent-door--open .advent-door__leaf--right {
     transform: none;
     opacity: 0;
   }
   .advent-door--today .advent-door__leaf,
-  .advent-door--shake {
+  .advent-door--shake,
+  .advent-board::before,
+  .advent-board::after,
+  .advent-lights::before,
+  .advent-lights::after {
     animation: none;
+  }
+  .advent-door__sparks {
+    display: none;
   }
 }
