@@ -122,8 +122,13 @@ describe('the birth sky for search engines', () => {
     const h1s = screen.getAllByRole('heading', { level: 1 })
     expect(h1s).toHaveLength(1)
     expect(h1s[0].textContent).toBe(copy.public.heading)
+    expect(screen.getByRole('heading', { level: 2, name: copy.public.faqTitle })).toBeInTheDocument()
+    // Folded, as on the landing page, with every answer in the page.
     for (const section of copy.public.sections) {
-      expect(screen.getByRole('heading', { level: 2, name: section.heading })).toBeInTheDocument()
+      const question = screen.getByText(section.heading)
+      expect(question.tagName).toBe('SUMMARY')
+      expect(question.closest('details')).not.toHaveAttribute('open')
+      expect(question.closest('details')).toHaveTextContent(section.paragraphs[0])
     }
     // The place picker and the other parts speak the page's language too.
     expect(screen.getByText(copy.details.place)).toBeInTheDocument()

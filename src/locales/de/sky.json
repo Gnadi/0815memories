@@ -130,9 +130,10 @@
     "loginInstead": "Anmelden und weitermachen",
     "exampleAlt": "Beispielposter: Sterne, Planeten und Mond über Wien um 04:17 Uhr am Tag von Emmas Geburt",
     "moreAboutKaydo": "Mehr über Kaydo, die private Familien-App",
+    "faqTitle": "Fragen und Antworten",
     "sections": [
       {
-        "heading": "Was das Poster zeigt",
+        "heading": "Was zeigt das Poster?",
         "paragraphs": [
           "Der Kreis ist der ganze Himmel über dem Geburtsort im Moment der Geburt, so wie er von dort aus zu sehen war: die helleren Sterne, die Sternbilder mit ihren Namen, die Planeten über dem Horizont und der Mond in seiner Phase. Norden ist oben, Osten und Westen sind gegenüber einer Landkarte vertauscht, weil man zum Himmel hinauf- und nicht auf den Boden hinunterschaut.",
           "Unter dem Himmel stehen der Name des Kindes, Datum und Uhrzeit der Geburt, der Ort mit seinen Koordinaten, Mond und Planeten dieser Nacht und, wenn du möchtest, eine eigene Zeile. Drei Stile stehen zur Wahl: Mitternacht in tiefem Blau und Gold, Kaydo in warmem Creme und Terrakotta und Schlicht in Schwarz auf Weiß.",
@@ -140,13 +141,13 @@
         ]
       },
       {
-        "heading": "Wenn die Uhrzeit der Geburt fehlt",
+        "heading": "Was, wenn ich die Uhrzeit der Geburt nicht weiß?",
         "paragraphs": [
           "Lass die Uhrzeit leer, dann zeigt das Poster den Nachthimmel dieses Tages um 22 Uhr und sagt das auch in der Beschriftung. Kam das Kind bei Tageslicht zur Welt, zeigt das Poster die Sterne trotzdem und vermerkt, dass sie hinter dem Blau des Taghimmels leuchteten."
         ]
       },
       {
-        "heading": "Ein Geschenk, das am Tag der Geburt fertig ist",
+        "heading": "Warum ist es ein gutes Geschenk zur Geburt?",
         "paragraphs": [
           "Die meisten Geschenke zur Geburt brauchen erst etwas: Fotos für ein Album, ein Jahr voller Meilensteine für ein Buch. Der Geburtshimmel braucht nur Datum, Uhrzeit und Ort. Er ist also fertig, sobald das Kind da ist, ob für die Eltern, die Großeltern oder Freunde.",
           "Lade ihn kostenlos als Bild oder als PDF in A4 oder A3 herunter, ganz ohne Konto, und drucke ihn selbst oder im Copyshop."
@@ -154,14 +155,14 @@
         "printParagraph": "Oder lass ihn von Peecho, unserem Druckpartner, als Wandbild drucken. Zum Bestellen brauchst du ein kostenloses Kaydo-Konto; im Checkout von Peecho wählst du Druck, Papier und Versand und bezahlst direkt bei Peecho."
       },
       {
-        "heading": "Was mit deinen Angaben passiert",
+        "heading": "Was passiert mit meinen Angaben?",
         "paragraphs": [
           "Der Himmel wird in deinem Browser berechnet und gezeichnet. Name, Datum, Uhrzeit und Ort werden beim Gestalten nirgendwohin geschickt: Orte werden in einer Liste gesucht, die mit der Seite kommt, nicht bei einem Kartendienst.",
           "Gespeichert wird nichts, solange du das Poster nicht aufbewahren möchtest. Legst du dann eine Familie in Kaydo an, werden der Name des Kindes sowie Uhrzeit und Ort der Geburt auf deinem Gerät verschlüsselt, bevor sie gespeichert werden, wie alles in einer Kaydo-Familie. Nur die Druckdatei eines bestellten Posters liegt unverschlüsselt, weil eine Druckerei sie lesen muss; der Bestelldialog sagt das, bevor sie entsteht, und nach 30 Tagen wird sie gelöscht."
         ]
       },
       {
-        "heading": "Wohin das Poster führen kann",
+        "heading": "Wohin kann das Poster führen?",
         "paragraphs": [
           "In Kaydo wohnt der Geburtshimmel im Tagebuch des Kindes, dem privaten Ort, an dem Eltern ihren Kindern Briefe für später schreiben. Daneben teilt die Familie Fotos und Momente, versiegelt Zeitkapseln für einen Geburtstag in vielen Jahren und bewahrt ihre Rezepte auf, alles verschlüsselt und ohne Werbung."
         ]

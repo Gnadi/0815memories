@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
 import { I18nextProvider, useTranslation } from 'react-i18next'
-import { Download, FileDown, Lock, Printer, Gift } from 'lucide-react'
+import { ChevronDown, Download, FileDown, Lock, Printer, Gift } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import i18n, { LANDING_PATHS } from '../i18n'
 import { BIRTH_SKY_PATHS, absoluteUrl, alternatesFor } from '../seoRoutes'
@@ -311,23 +311,32 @@ function BirthSkyStudio({ lng }) {
         </div>
 
         {/* What the poster is, for whoever arrives from a search and wants to
-            know before typing anything — and for the search engine itself. */}
-        <article className="max-w-3xl mx-auto px-4 md:px-8 pt-6 pb-16 space-y-8">
-          {sections.map((section) => (
-            <section key={section.heading}>
-              <h2 className="text-2xl font-bold text-bark mb-3">{section.heading}</h2>
-              {section.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="text-bark-light leading-relaxed mb-3">{paragraph}</p>
+            know before typing anything. Folded like the landing page's FAQ;
+            the answers are in the page all the same, for the search engine. */}
+        <section className="bg-warm-white py-16 mt-6">
+          <div className="max-w-2xl mx-auto px-5">
+            <h2 className="text-3xl font-bold text-bark text-center mb-8">{t('public.faqTitle')}</h2>
+            <div className="space-y-3">
+              {sections.map((section) => (
+                <details key={section.heading} className="group bg-cream rounded-2xl px-6 py-4">
+                  <summary className="flex items-center justify-between gap-4 cursor-pointer list-none font-semibold text-bark [&::-webkit-details-marker]:hidden">
+                    {section.heading}
+                    <ChevronDown className="w-5 h-5 text-bark-muted flex-shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="text-bark-light text-sm leading-relaxed mt-3">{paragraph}</p>
+                  ))}
+                  {section.printParagraph && PRINTING_ENABLED && (
+                    <p className="text-bark-light text-sm leading-relaxed mt-3">{section.printParagraph}</p>
+                  )}
+                </details>
               ))}
-              {section.printParagraph && PRINTING_ENABLED && (
-                <p className="text-bark-light leading-relaxed mb-3">{section.printParagraph}</p>
-              )}
-            </section>
-          ))}
-          <p className="text-sm text-bark-muted">
-            <Link to={homePath} className="underline hover:text-bark">{t('public.moreAboutKaydo')}</Link>
-          </p>
-        </article>
+            </div>
+            <p className="text-sm text-bark-muted text-center mt-8">
+              <Link to={homePath} className="underline hover:text-bark">{t('public.moreAboutKaydo')}</Link>
+            </p>
+          </div>
+        </section>
       </main>
     </div>
   )
