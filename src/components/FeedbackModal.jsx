@@ -21,7 +21,7 @@ import { appendDictation } from '../hooks/useDictation'
  * family. Open to viewers as well as admins: the people living in a family's
  * space are mostly viewers, and they are the ones with the most to say about it.
  */
-export default function FeedbackModal({ onClose }) {
+export default function FeedbackModal({ onClose, onSent }) {
   const { t, i18n } = useTranslation('feedback')
   const { familyId, user, isViewer } = useAuth()
   const location = useLocation()
@@ -59,6 +59,7 @@ export default function FeedbackModal({ onClose }) {
         userAgent: typeof navigator === 'undefined' ? '' : navigator.userAgent,
       })
       setSent(true)
+      onSent?.()
     } catch (err) {
       devError('Feedback submission failed:', err)
       // A validation failure names the field; anything else (offline, a denied
