@@ -16,7 +16,9 @@ const { createPrintCheckout } = await import('../utils/printCheckout')
 const PrintOrderModal = (await import('../components/scrapbook/PrintOrderModal')).default
 
 const pages = (n) => Array.from({ length: n }, (_, index) => ({ kind: 'page', index }))
-const sheets = [...pages(2), { kind: 'blank', color: '#FFFFFF' }, { kind: 'back', color: '#2D1B0E' }]
+const blanks = (n) => Array.from({ length: n }, () => ({ kind: 'blank', color: '#FFFFFF' }))
+// Two pages and the back cover, filled up to Peecho's hardcover minimum.
+const sheets = [...pages(2), ...blanks(21), { kind: 'back', color: '#2D1B0E' }]
 
 const renderedFile = {
   pdf: new Blob(['%PDF'], { type: 'application/pdf' }),
@@ -59,13 +61,19 @@ afterEach(() => {
 describe('PrintOrderModal', () => {
   it('describes the book and says the print file is unencrypted before making anything', () => {
     const { onRender } = open()
-    expect(screen.getByText('4 pages · 29.7 × 21 cm')).toBeInTheDocument()
-    expect(screen.getByText(/blank page goes in before the back cover/)).toBeInTheDocument()
-    expect(screen.getByText(/Hardcover books need at least 24 pages, and this one has 4/)).toBeInTheDocument()
+    expect(screen.getByText('24 pages · 29.7 × 21 cm')).toBeInTheDocument()
+    expect(screen.getByText(/Yours has 3 with the back cover, so 21 blank pages go in before the back cover/)).toBeInTheDocument()
+    expect(screen.queryByText(/even number of pages/)).not.toBeInTheDocument()
     expect(screen.getByText('This copy is not encrypted')).toBeInTheDocument()
     expect(screen.getByText(/unencrypted PDF.*deleted automatically after 30 days/)).toBeInTheDocument()
     expect(onRender).not.toHaveBeenCalled()
     expect(uploadPrintFile).not.toHaveBeenCalled()
+  })
+
+  it('only explains the even count when a long book gets one blank page', () => {
+    open({ sheets: [...pages(24), ...blanks(1), { kind: 'back', color: '#2D1B0E' }] })
+    expect(screen.getByText(/blank page goes in before the back cover, because a book needs an even number/)).toBeInTheDocument()
+    expect(screen.queryByText(/Hardcover books need at least/)).not.toBeInTheDocument()
   })
 
   it('renders, uploads, and opens a checkout for the uploaded file', async () => {

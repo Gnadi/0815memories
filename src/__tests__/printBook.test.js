@@ -11,6 +11,7 @@ import {
   printFrame,
   printPixelRatio,
   printSequence,
+  HARDCOVER_MIN_PAGES,
   createPrintPdf,
   DEFAULT_FORMAT,
   PAGE_WIDTH,
@@ -84,30 +85,41 @@ describe('printPixelRatio', () => {
 describe('printSequence', () => {
   const page = (backgroundColor) => ({ backgroundColor, elements: [] })
 
-  it('adds a back cover in the front cover’s colour, and nothing else when the count is then even', () => {
-    const sheets = printSequence([page('#2D1B0E'), page('#FDF6EC'), page('#FDF6EC')])
-    expect(sheets).toEqual([
-      { kind: 'page', index: 0 },
-      { kind: 'page', index: 1 },
-      { kind: 'page', index: 2 },
-      { kind: 'back', color: '#2D1B0E' },
-    ])
+  const book = (n) => Array.from({ length: n }, () => page('#FDF6EC'))
+
+  it('adds a back cover in the front cover’s colour, and nothing else when the book is long enough and even', () => {
+    const sheets = printSequence([page('#2D1B0E'), ...book(22)])
+    expect(sheets).toHaveLength(24)
+    expect(sheets.filter((s) => s.kind === 'blank')).toHaveLength(0)
+    expect(sheets.at(-1)).toEqual({ kind: 'back', color: '#2D1B0E' })
   })
 
   // An odd count would get the book Peecho's white stand-in for a back cover.
   it('puts a blank page before the back cover when the count would be odd', () => {
-    const sheets = printSequence([page('#C25A2E'), page('#FDF6EC')])
-    expect(sheets).toHaveLength(4)
-    expect(sheets[2]).toEqual({ kind: 'blank', color: '#FFFFFF' })
-    expect(sheets[3]).toEqual({ kind: 'back', color: '#C25A2E' })
+    const sheets = printSequence([page('#C25A2E'), ...book(23)])
+    expect(sheets).toHaveLength(26)
+    expect(sheets[24]).toEqual({ kind: 'blank', color: '#FFFFFF' })
+    expect(sheets[25]).toEqual({ kind: 'back', color: '#C25A2E' })
   })
 
-  it('always comes out even', () => {
-    for (let n = 1; n <= 30; n++) {
-      const sheets = printSequence(Array.from({ length: n }, () => page('#FDF6EC')))
+  // Peecho refuses hardcovers under 24 pages, and only once the file is
+  // uploaded and the checkout opened, so a short book is filled up here.
+  it('fills a short book with blank pages up to the hardcover minimum', () => {
+    const sheets = printSequence([page('#C25A2E'), page('#FDF6EC'), page('#FDF6EC')])
+    expect(sheets).toHaveLength(HARDCOVER_MIN_PAGES)
+    expect(sheets.slice(0, 3).map((s) => s.kind)).toEqual(['page', 'page', 'page'])
+    expect(sheets.slice(3, -1).every((s) => s.kind === 'blank' && s.color === '#FFFFFF')).toBe(true)
+    expect(sheets.at(-1)).toEqual({ kind: 'back', color: '#C25A2E' })
+  })
+
+  it('always comes out even, at least the hardcover minimum, with every page kept in order', () => {
+    for (let n = 1; n <= 40; n++) {
+      const sheets = printSequence(book(n))
       expect(sheets.length % 2, `${n} pages`).toBe(0)
+      expect(sheets.length, `${n} pages`).toBeGreaterThanOrEqual(HARDCOVER_MIN_PAGES)
+      expect(sheets.length - (n + 1), `${n} pages`).toBeLessThanOrEqual(Math.max(1, HARDCOVER_MIN_PAGES - (n + 1)))
       expect(sheets.at(-1).kind).toBe('back')
-      expect(sheets.filter((s) => s.kind === 'page')).toHaveLength(n)
+      expect(sheets.filter((s) => s.kind === 'page').map((s) => s.index)).toEqual([...Array(n).keys()])
     }
   })
 
