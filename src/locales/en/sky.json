@@ -119,7 +119,7 @@
     "downloadHeading": "Download for free",
     "downloadFree": "Print it yourself or at a print shop — no account needed.",
     "orderHeading": "Order as a wall print",
-    "orderBody": "Have it printed and sent by Peecho, our print partner. Ordering takes a free Kaydo account: the child is kept in your family's encrypted space, where letters and journals for them can follow.",
+    "orderBody": "Have it printed and sent by Peecho, our print partner. Ordering takes a free Kaydo account. You can keep the child in your family's encrypted space, where letters and journals for them can follow, or use the details for the poster only.",
     "orderButton": "Create a free account and order",
     "keepHeading": "Keep it in Kaydo",
     "keepBody": "With a free Kaydo account the birth sky stays in your family's encrypted space, where letters and journals for the child can follow.",
@@ -158,7 +158,7 @@
         "heading": "What happens to the details I enter?",
         "paragraphs": [
           "The sky is calculated and drawn in your browser. The name, the date, the time and the place are not sent anywhere while you make the poster: places are searched in a list that comes with the page, not with a map service.",
-          "Nothing is kept until you choose to keep the poster. If you then create a family in Kaydo, the child's name and the time and place of birth are encrypted on your device before they are stored, like everything in a Kaydo family. Only the print file of an ordered poster is stored unencrypted, because a print shop has to read it; the order dialog says so before it is made, and the file is deleted after 30 days."
+          "Nothing is kept until you choose to keep the poster. If you then create a family in Kaydo, the child's name and the time and place of birth are encrypted on your device before they are stored, like everything in a Kaydo family. If you order the poster with the details for the poster only, nothing about the birth is stored in your family, and the copy in your browser is deleted once the order is under way. Only the print file of an ordered poster is stored unencrypted, because a print shop has to read it; the order dialog says so before it is made, and the file is deleted after 30 days."
         ]
       },
       {
@@ -179,6 +179,12 @@
     "privacy": "The name, time and place of birth are encrypted on this device before they are stored, like everything in your family.",
     "confirm": "Continue to the birth sky",
     "discard": "Discard the poster",
-    "error": "That did not work. Please try again."
+    "error": "That did not work. Please try again.",
+    "posterOnly": "Only for the poster",
+    "posterOnlyHint": "{{name}} is not added to the family. The details stay in this browser until the poster is ordered, and are deleted then."
+  },
+  "posterOnly": {
+    "notStored": "Used for this poster only: nothing about the birth is stored in your family. The details are deleted from this browser once the order is under way.",
+    "discard": "Discard the poster"
   }
 }

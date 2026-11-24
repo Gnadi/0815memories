@@ -94,7 +94,7 @@
   "skyDraftHint": {
     "eyebrow": "Geburtshimmel",
     "title": "Der Himmel von {{name}} wartet",
-    "body": "Füge ihn der Familie hinzu, um ihn als Wandbild zu bestellen oder aufzubewahren.",
+    "body": "Bestelle ihn als Wandbild, bewahre ihn in der Familie auf oder beides.",
     "action": "Weiter zum Geburtshimmel",
     "discard": "Verwerfen"
   }

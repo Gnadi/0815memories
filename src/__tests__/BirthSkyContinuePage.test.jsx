@@ -114,3 +114,25 @@ describe('BirthSkyContinuePage', () => {
     expect(screen.getByText('journal list')).toBeInTheDocument()
   })
 })
+
+describe('BirthSkyContinuePage, poster only', () => {
+  it('adds no child when the details are for the poster only', async () => {
+    mockKids = [{ id: 'kid-1', name: 'Leo' }]
+    render(
+      <MemoryRouter initialEntries={['/birth-sky/continue']}>
+        <Routes>
+          <Route path="/birth-sky/continue" element={<BirthSkyContinuePage />} />
+          <Route path="/birth-sky/poster" element={<p>poster page</p>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByLabelText(/Only for the poster/))
+    expect(screen.queryByText(/encrypted on this device/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Continue to the birth sky'))
+    expect(await screen.findByText('poster page')).toBeInTheDocument()
+    expect(mockAddKid).not.toHaveBeenCalled()
+    expect(mockUpdateKid).not.toHaveBeenCalled()
+    // The poster page orders from the draft, so it is still there.
+    expect(localStorage.getItem(SKY_DRAFT_KEY)).not.toBeNull()
+  })
+})

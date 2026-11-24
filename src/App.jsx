@@ -68,6 +68,7 @@ const BirthSkyPage = lazyPage(() => import('./pages/BirthSkyPage'))
 // over the poster made there is a signed-in page like any other.
 const PublicBirthSkyPage = lazy(() => import('./pages/PublicBirthSkyPage'))
 const BirthSkyContinuePage = lazyPage(() => import('./pages/BirthSkyContinuePage'))
+const BirthSkyPosterPage = lazyPage(() => import('./pages/BirthSkyPosterPage'))
 const JournalEntryPage = lazyPage(() => import('./pages/JournalEntryPage'))
 const JournalDetailPage = lazyPage(() => import('./pages/JournalDetailPage'))
 const BlackBoxPage = lazyPage(() => import('./pages/BlackBoxPage'))
@@ -361,6 +362,7 @@ export const routes = [
       // Its first German address; vercel.json redirects it on the site.
       { path: 'geburtshimmel', element: <Navigate to={BIRTH_SKY_PATHS.de} replace /> },
       { path: 'birth-sky/continue', element: protectAdmin(<BirthSkyContinuePage />) },
+      { path: 'birth-sky/poster', element: protectAdmin(<BirthSkyPosterPage />) },
 
       // Public legal / informational pages (linked from the footer).
       { path: 'terms', element: <LegalPage docKey="terms" /> },

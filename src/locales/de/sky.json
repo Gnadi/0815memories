@@ -119,7 +119,7 @@
     "downloadHeading": "Kostenlos herunterladen",
     "downloadFree": "Selbst drucken oder im Copyshop – ganz ohne Konto.",
     "orderHeading": "Als Wandbild bestellen",
-    "orderBody": "Lass es von Peecho, unserem Druckpartner, drucken und schicken. Zum Bestellen brauchst du ein kostenloses Kaydo-Konto: Das Kind wird im verschlüsselten Bereich deiner Familie angelegt, wo später Briefe und Tagebücher dazukommen können.",
+    "orderBody": "Lass es von Peecho, unserem Druckpartner, drucken und schicken. Zum Bestellen brauchst du ein kostenloses Kaydo-Konto. Du kannst das Kind im verschlüsselten Bereich deiner Familie anlegen, wo später Briefe und Tagebücher dazukommen können, oder die Angaben nur für das Poster verwenden.",
     "orderButton": "Kostenlos registrieren und bestellen",
     "keepHeading": "In Kaydo aufbewahren",
     "keepBody": "Mit einem kostenlosen Kaydo-Konto bleibt der Geburtshimmel im verschlüsselten Bereich deiner Familie, wo später Briefe und Tagebücher für das Kind dazukommen können.",
@@ -158,7 +158,7 @@
         "heading": "Was passiert mit meinen Angaben?",
         "paragraphs": [
           "Der Himmel wird in deinem Browser berechnet und gezeichnet. Name, Datum, Uhrzeit und Ort werden beim Gestalten nirgendwohin geschickt: Orte werden in einer Liste gesucht, die mit der Seite kommt, nicht bei einem Kartendienst.",
-          "Gespeichert wird nichts, solange du das Poster nicht aufbewahren möchtest. Legst du dann eine Familie in Kaydo an, werden der Name des Kindes sowie Uhrzeit und Ort der Geburt auf deinem Gerät verschlüsselt, bevor sie gespeichert werden, wie alles in einer Kaydo-Familie. Nur die Druckdatei eines bestellten Posters liegt unverschlüsselt, weil eine Druckerei sie lesen muss; der Bestelldialog sagt das, bevor sie entsteht, und nach 30 Tagen wird sie gelöscht."
+          "Gespeichert wird nichts, solange du das Poster nicht aufbewahren möchtest. Legst du dann eine Familie in Kaydo an, werden der Name des Kindes sowie Uhrzeit und Ort der Geburt auf deinem Gerät verschlüsselt, bevor sie gespeichert werden, wie alles in einer Kaydo-Familie. Bestellst du das Poster und verwendest die Angaben nur dafür, wird in deiner Familie nichts über die Geburt gespeichert, und die Kopie in deinem Browser wird gelöscht, sobald die Bestellung läuft. Nur die Druckdatei eines bestellten Posters liegt unverschlüsselt, weil eine Druckerei sie lesen muss; der Bestelldialog sagt das, bevor sie entsteht, und nach 30 Tagen wird sie gelöscht."
         ]
       },
       {
@@ -179,6 +179,12 @@
     "privacy": "Name, Uhrzeit und Ort der Geburt werden auf diesem Gerät verschlüsselt, bevor sie gespeichert werden – wie alles in deiner Familie.",
     "confirm": "Weiter zum Geburtshimmel",
     "discard": "Poster verwerfen",
-    "error": "Das hat nicht geklappt. Bitte versuche es noch einmal."
+    "error": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
+    "posterOnly": "Nur für das Poster",
+    "posterOnlyHint": "{{name}} wird nicht zur Familie hinzugefügt. Die Angaben bleiben nur in diesem Browser, bis das Poster bestellt ist, und werden dann gelöscht."
+  },
+  "posterOnly": {
+    "notStored": "Nur für dieses Poster: In deiner Familie wird nichts über die Geburt gespeichert. Sobald die Bestellung läuft, werden die Angaben aus diesem Browser gelöscht.",
+    "discard": "Poster verwerfen"
   }
 }

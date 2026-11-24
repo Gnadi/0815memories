@@ -20,9 +20,10 @@ import { isDemoMode } from '../../demo/demoMode'
  * what is on it: a child's name, and when and where they were born.
  *
  * `onRender` makes the print file (utils/sky/posterExport renderPosterPrintFile);
- * `ready` is false while the sky is still being worked out.
+ * `ready` is false while the sky is still being worked out;
+ * `onCheckoutReady` is told once Peecho's checkout link is there.
  */
-export default function PosterOrderModal({ familyId, title, ready, onRender, onClose }) {
+export default function PosterOrderModal({ familyId, title, ready, onRender, onCheckoutReady, onClose }) {
   const { t, i18n } = useTranslation('sky')
   // The demo explains and stops before anything is made, as for books.
   const isDemo = isDemoMode()
@@ -61,6 +62,7 @@ export default function PosterOrderModal({ familyId, title, ready, onRender, onC
       if (isCancelled()) return
       setCheckout(result)
       setPhase('ready')
+      onCheckoutReady?.()
     } catch (err) {
       if (isCancelled()) return
       devError('Creating the Peecho checkout failed', err)

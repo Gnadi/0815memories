@@ -94,7 +94,7 @@
   "skyDraftHint": {
     "eyebrow": "Birth sky",
     "title": "{{name}}'s sky is waiting",
-    "body": "Add it to the family to order it as a wall print or keep it.",
+    "body": "Order it as a wall print, keep it in the family, or both.",
     "action": "Continue with the birth sky",
     "discard": "Discard"
   }

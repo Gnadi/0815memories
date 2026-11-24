@@ -221,6 +221,38 @@ test('a visitor orders a birth sky after signing up', async ({ page, request }) 
   expect(errors).toEqual([])
 })
 
+// A signed-in admin who makes a birth sky for someone else's child orders it
+// without adding the child to the family.
+test('an admin orders a birth sky for the poster only', async ({ page }) => {
+  const errors = collectErrors(page)
+  await signIn(page)
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 })
+
+  await goTo(page, '/birth-sky')
+  await page.getByLabel("Child's name").fill('Mia')
+  await page.getByLabel('Date').fill('2026-10-02')
+  await page.getByPlaceholder('Search a town or city…').fill('Graz')
+  await page.getByRole('button', { name: /^Graz/ }).first().click()
+  await page.getByRole('button', { name: 'Create a free account and order' }).click()
+
+  await expect(page).toHaveURL(/\/birth-sky\/continue$/, { timeout: 20_000 })
+  await page.getByLabel(/Only for the poster/).check()
+  await page.getByRole('button', { name: 'Continue to the birth sky' }).click()
+
+  await expect(page).toHaveURL(/\/birth-sky\/poster$/)
+  const dialog = page.getByRole('dialog', { name: 'Order the birth sky' })
+  await expect(dialog.getByRole('button', { name: 'Prepare the print file' })).toBeEnabled({ timeout: 20_000 })
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Discard the poster' }).click()
+  await expect(page).toHaveURL(/\/home$/)
+
+  // Mia is in no journal: nothing about her birth was stored.
+  await goTo(page, '/journal')
+  await expect(page.getByRole('heading', { name: 'A Gift for Their Future' }).first()).toBeVisible()
+  await expect(page.getByText('Mia', { exact: true })).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
 // Firebase keeps the session in IndexedDB, per page — so one sign-in, then
 // every section in the same page. The app keeps a Firestore connection open,
 // so the network never goes idle: wait for content, never for 'networkidle'.

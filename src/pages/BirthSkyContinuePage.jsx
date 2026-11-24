@@ -10,6 +10,8 @@ import { formatWallDate } from '../utils/sky/caption'
 import { devError } from '../utils/devLog'
 
 const NEW_CHILD = 'new'
+// The details are used for the poster and nothing else (BirthSkyPosterPage).
+const POSTER_ONLY = 'poster-only'
 
 /**
  * Where a birth sky made on the public page (PublicBirthSkyPage) joins the
@@ -19,6 +21,9 @@ const NEW_CHILD = 'new'
  * like every child's (services/kids.js) — or, if they are in the family
  * already, the time, place and style go onto their record. Then the draft is
  * deleted from the browser and the birth sky opens, ready to order.
+ *
+ * Or the child is not added at all, when the poster is all it is for — a gift
+ * for a friend's baby, say. Then the poster is ordered from the draft itself.
  */
 export default function BirthSkyContinuePage() {
   const { t, i18n } = useTranslation('sky')
@@ -43,6 +48,10 @@ export default function BirthSkyContinuePage() {
   }
 
   const handleContinue = async () => {
+    if (target === POSTER_ONLY) {
+      navigate('/birth-sky/poster', { replace: true })
+      return
+    }
     setSaving(true)
     setError(false)
     try {
@@ -137,12 +146,28 @@ export default function BirthSkyContinuePage() {
               </span>
             </label>
           ))}
+          <label className="flex items-start gap-3 p-3 rounded-xl border border-cream-dark cursor-pointer has-[:checked]:border-kaydo">
+            <input
+              type="radio"
+              name="sky-target"
+              value={POSTER_ONLY}
+              checked={target === POSTER_ONLY}
+              onChange={() => setTarget(POSTER_ONLY)}
+              className="mt-1 accent-kaydo"
+            />
+            <span className="text-sm text-bark">
+              {t('continue.posterOnly')}
+              <span className="block text-xs text-bark-muted">{t('continue.posterOnlyHint', { name: draft.name })}</span>
+            </span>
+          </label>
         </fieldset>
 
-        <p className="flex gap-1.5 text-xs text-bark-muted">
-          <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          {t('continue.privacy')}
-        </p>
+        {target !== POSTER_ONLY && (
+          <p className="flex gap-1.5 text-xs text-bark-muted">
+            <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            {t('continue.privacy')}
+          </p>
+        )}
 
         {error && (
           <p role="alert" className="text-sm text-red-600">
