@@ -48,9 +48,12 @@ export default function SignupPage() {
     )
   }
 
-  // Done, or nothing to sign up for: a member of a family belongs in it.
+  // Done, or nothing to sign up for: a member of a family belongs in it. An
+  // admin with a birth sky made before signing up (PublicBirthSkyPage) goes
+  // on to it first. This is also where a newly founded family leaves: the
+  // session has its family before handleCreateFamily's navigate() runs.
   if (isAuthenticated && (familyId || isViewer)) {
-    return <Navigate to="/home" replace />
+    return <Navigate to={!isViewer && loadSkyDraft() ? '/birth-sky/continue' : '/home'} replace />
   }
 
   const step = !user ? 'account' : emailVerified ? 'family' : 'verify'
@@ -97,8 +100,7 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await createOwnFamily(familyName)
-      // A birth sky made before signing up (PublicBirthSkyPage) is what this
-      // family was founded for: it is taken over first.
+      // A birth sky made before signing up is taken over first (see above).
       navigate(loadSkyDraft() ? '/birth-sky/continue' : '/home', { replace: true })
     } catch (err) {
       setError(errorMessage(err, 'signup.errors.couldNotCreateFamily'))
