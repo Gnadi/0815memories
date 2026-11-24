@@ -54,6 +54,9 @@ export default defineConfig({
       VITE_FIREBASE_AUTH_DOMAIN: 'demo-kaydo.firebaseapp.com',
       VITE_FIREBASE_PROJECT_ID: 'demo-kaydo',
       VITE_FIREBASE_APP_ID: 'demo-app-id',
+      // The print buttons exist only where printing is on. The order stops at
+      // Kaydo's dialog in these tests: Peecho itself is not emulated.
+      VITE_PEECHO_ENABLED: 'true',
     },
   },
 })

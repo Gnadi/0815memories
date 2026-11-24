@@ -35,6 +35,8 @@ if (CHECKOUT_VALID_DAYS >= PRINT_FILE_RETENTION_DAYS) {
 const FAMILY_ID = /^[A-Za-z0-9_-]{1,100}$/
 const PRINT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const CURRENCY = /^[A-Z]{3}$/
+/** What can be ordered: a scrapbook as a book, or the birth sky as a wall print. */
+export const PRODUCTS = ['book', 'poster']
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export class CheckoutError extends Error {
@@ -91,24 +93,31 @@ export function readCheckoutRequest(data) {
   const currency = String(data?.currency ?? '').toUpperCase()
   const title = String(data?.title ?? '').trim().slice(0, 100)
   const size = (mm) => Number.isFinite(mm) && mm >= 50 && mm <= 1000
+  // Older clients send no product: they only ever ordered books.
+  const product = data?.product == null ? 'book' : String(data.product)
 
   if (!FAMILY_ID.test(familyId) || !PRINT_ID.test(printId)) {
     throw new CheckoutError('invalid-argument', 'Unknown print file')
   }
-  // printSequence always makes an even count, as Peecho requires.
-  if (!Number.isInteger(pages) || pages < 2 || pages > 1000 || pages % 2 !== 0) {
+  if (!PRODUCTS.includes(product)) throw new CheckoutError('invalid-argument', 'Unknown product')
+  if (product === 'poster') {
+    // A wall print is one sheet: Peecho's single-page products take nothing else.
+    if (pages !== 1) throw new CheckoutError('invalid-argument', 'A poster has one page')
+  } else if (!Number.isInteger(pages) || pages < 2 || pages > 1000 || pages % 2 !== 0) {
+    // printSequence always makes an even count, as Peecho requires of a book.
     throw new CheckoutError('invalid-argument', 'Page count must be even')
   }
   if (!size(widthMm) || !size(heightMm)) throw new CheckoutError('invalid-argument', 'Unsupported page size')
   return {
     familyId,
     printId,
+    product,
     pages,
     widthMm,
     heightMm,
     currency: CURRENCY.test(currency) ? currency : 'EUR',
     locale: String(data?.language ?? '').toLowerCase().startsWith('de') ? 'de' : 'en',
-    title: title || 'Kaydo scrapbook',
+    title: title || (product === 'poster' ? 'Kaydo birth sky' : 'Kaydo scrapbook'),
   }
 }
 
@@ -138,6 +147,8 @@ export async function createCheckout(deps, uid, data) {
   }
 
   const folder = `printFiles/${request.familyId}/${request.printId}`
+  // A poster's print file has the same name as a book's: storage.rules know
+  // the folder's two files by name, and what is in them makes no difference.
   const pdf = bucket.file(`${folder}/book.pdf`)
   const [pdfExists] = await pdf.exists()
   if (!pdfExists) throw new CheckoutError('not-found', 'Print file not found')

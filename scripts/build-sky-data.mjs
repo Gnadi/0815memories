@@ -10,7 +10,7 @@
  *
  * Outputs (all served as plain static files, fetched only by the sky page):
  *   stars.json           [raDeg, decDeg, mag, bv] for every star to magnitude 6
- *   constellations.json  lines, label position and EN/DE names per constellation
+ *   constellations.json  lines, label position and EN/DE/FR/AR names per constellation
  *   cities.json          places with at least 5,000 inhabitants, biggest first
  *
  * Licences: star and constellation data © Olaf Frohn, d3-celestial (BSD-3-Clause);
@@ -56,12 +56,16 @@ const lines = new Map(
 // The source uses typographic spaces (U+2005) inside some names; the poster
 // font may not have that glyph.
 const clean = (name) => name.normalize('NFC').replace(/\s+/gu, ' ').trim()
+// The languages the poster is drawn in: the app's, and those of the public page.
+const NAME_LANGUAGES = ['en', 'de', 'fr', 'ar']
 const constellations = readJson('d3-celestial/data/constellations.json').features.map((f) => {
   const [lon, lat] = f.geometry.coordinates
   return {
     id: f.id,
     rank: Number(f.properties.rank),
-    name: { en: clean(f.properties.en || f.properties.name), de: clean(f.properties.de || f.properties.name) },
+    name: Object.fromEntries(
+      NAME_LANGUAGES.map((lng) => [lng, clean(f.properties[lng] || f.properties.en || f.properties.name)])
+    ),
     pos: [ra(lon), round(lat, 3)],
     lines: lines.get(f.id) || [],
   }

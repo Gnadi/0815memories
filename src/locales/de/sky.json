@@ -76,5 +76,115 @@
     "Jupiter": "Jupiter",
     "Saturn": "Saturn"
   },
-  "credits": "Sterndaten: d3-celestial (Olaf Frohn). Orte: GeoNames (CC BY 4.0). Positionen: astronomy-engine."
+  "credits": "Sterndaten: d3-celestial (Olaf Frohn). Orte: GeoNames (CC BY 4.0). Positionen: astronomy-engine.",
+  "order": {
+    "heading": "Als Wandbild bestellen",
+    "teaser": "Gedruckt und verschickt von Peecho, unserem Druckpartner. Produkt und Bezahlung wählst du im Checkout von Peecho.",
+    "button": "Als Wandbild bestellen",
+    "title": "Geburtshimmel bestellen",
+    "subtitle": "Gedruckt und verschickt von Peecho",
+    "close": "Schließen",
+    "summary": "Ein Poster im Format {{width}} × {{height}} cm",
+    "productsExplained": "Im Checkout von Peecho wählst du Druck, Papier und Versand. Es gelten die Preise von Peecho.",
+    "privacyHeading": "Diese Datei ist nicht verschlüsselt",
+    "privacyBody": "Eine Druckerei muss das Poster lesen können. Deshalb wird die Druckdatei unverschlüsselt gespeichert, damit Peecho sie abholen kann – samt Name, Datum, Uhrzeit und Ort der Geburt darauf. Öffnen können sie nur die Admins deiner Familie und wer den Link hat, und nach {{days}} Tagen wird sie gelöscht.",
+    "demoUnavailable": "In der Demo-Familie ist das Bestellen ausgeschaltet. In deiner eigenen Familie entsteht hier die Druckdatei und der Checkout von Peecho öffnet sich.",
+    "prepare": "Druckdatei vorbereiten",
+    "rendering": "Das Poster wird in Druckgröße gezeichnet…",
+    "uploading": "Druckdatei wird hochgeladen… {{percent}} %",
+    "creatingCheckout": "Der Checkout bei Peecho wird geöffnet…",
+    "keepOpen": "Bitte lass dieses Fenster offen.",
+    "checkHeading": "Druckdatei prüfen",
+    "checkBody": "Genau so wird gedruckt.",
+    "preview": "Druckdatei öffnen",
+    "readyHeading": "Bei Peecho bestellen",
+    "readyBody": "Wähle das Produkt, gib die Adresse ein und bezahle bei Peecho.",
+    "orderAtPeecho": "Zum Checkout von Peecho",
+    "linkExpires": "Der Link funktioniert bis {{date}}.",
+    "failed": "Die Druckdatei konnte nicht erstellt werden. Bitte versuche es noch einmal.",
+    "checkoutFailed": "Peecho hat keinen Checkout geöffnet. Bitte versuche es gleich noch einmal.",
+    "quotaUsed": "Deine Familie hat in letzter Zeit mehrere Druckdateien vorbereitet. Bitte versuche es in ein paar Tagen wieder.",
+    "tryAgain": "Noch einmal versuchen",
+    "cancel": "Abbrechen"
+  },
+  "public": {
+    "seoTitle": "Sternenhimmel-Poster zur Geburt, kostenlos | Kaydo",
+    "seoDescription": "Gestalte kostenlos ein Poster mit Sternen, Planeten und Mond über dem Geburtsort im Moment der Geburt. Herunterladen oder mit Kaydo als Wandbild bestellen.",
+    "heading": "Der Himmel in der Nacht ihrer Geburt",
+    "intro": "Sterne, Planeten und Mond über dem Geburtsort im Moment der Geburt – als Poster. Ein Geschenk, das fertig ist, sobald das Kind da ist. Kostenlos zum Herunterladen; nichts, was du eingibst, verlässt dieses Gerät.",
+    "login": "Anmelden",
+    "previewLabel": "Vorschau des Geburtshimmel-Posters",
+    "name": "Name des Kindes",
+    "privacy": "Wird auf diesem Gerät berechnet. Die Angaben werden nirgendwohin geschickt – Orte werden in einer Liste gesucht, die mit der Seite kommt.",
+    "downloadHeading": "Kostenlos herunterladen",
+    "downloadFree": "Selbst drucken oder im Copyshop – ganz ohne Konto.",
+    "orderHeading": "Als Wandbild bestellen",
+    "orderBody": "Lass es von Peecho, unserem Druckpartner, drucken und schicken. Zum Bestellen brauchst du ein kostenloses Kaydo-Konto. Du kannst das Kind im verschlüsselten Bereich deiner Familie anlegen, wo später Briefe und Tagebücher dazukommen können, oder die Angaben nur für das Poster verwenden.",
+    "orderButton": "Kostenlos registrieren und bestellen",
+    "keepHeading": "In Kaydo aufbewahren",
+    "keepBody": "Mit einem kostenlosen Kaydo-Konto bleibt der Geburtshimmel im verschlüsselten Bereich deiner Familie, wo später Briefe und Tagebücher für das Kind dazukommen können.",
+    "keepButton": "Kostenlos registrieren",
+    "needsDetails": "Gib zuerst Name, Datum und Ort der Geburt ein.",
+    "draftError": "Dein Browser lässt uns das Poster während der Registrierung nicht aufbewahren. Bitte lade es stattdessen herunter.",
+    "haveAccount": "Schon ein Konto?",
+    "loginInstead": "Anmelden und weitermachen",
+    "exampleAlt": "Beispielposter: Sterne, Planeten und Mond über Wien um 04:17 Uhr am Tag von Emmas Geburt",
+    "moreAboutKaydo": "Mehr über Kaydo, die private Familien-App",
+    "faqTitle": "Fragen und Antworten",
+    "sections": [
+      {
+        "heading": "Was zeigt das Poster?",
+        "paragraphs": [
+          "Der Kreis ist der ganze Himmel über dem Geburtsort im Moment der Geburt, so wie er von dort aus zu sehen war: die helleren Sterne, die Sternbilder mit ihren Namen, die Planeten über dem Horizont und der Mond in seiner Phase. Norden ist oben, Osten und Westen sind gegenüber einer Landkarte vertauscht, weil man zum Himmel hinauf- und nicht auf den Boden hinunterschaut.",
+          "Unter dem Himmel stehen der Name des Kindes, Datum und Uhrzeit der Geburt, der Ort mit seinen Koordinaten, Mond und Planeten dieser Nacht und, wenn du möchtest, eine eigene Zeile. Drei Stile stehen zur Wahl: Mitternacht in tiefem Blau und Gold, Kaydo in warmem Creme und Terrakotta und Schlicht in Schwarz auf Weiß.",
+          "Die Positionen werden mit astronomy-engine für die genaue Minute und den genauen Ort berechnet, Sterne und Sternbilder stammen aus dem Katalog von d3-celestial, die Orte von GeoNames. Fehlt ein Dorf in der Liste, gibst du seine Koordinaten einfach von Hand ein."
+        ]
+      },
+      {
+        "heading": "Was, wenn ich die Uhrzeit der Geburt nicht weiß?",
+        "paragraphs": [
+          "Lass die Uhrzeit leer, dann zeigt das Poster den Nachthimmel dieses Tages um 22 Uhr und sagt das auch in der Beschriftung. Kam das Kind bei Tageslicht zur Welt, zeigt das Poster die Sterne trotzdem und vermerkt, dass sie hinter dem Blau des Taghimmels leuchteten."
+        ]
+      },
+      {
+        "heading": "Warum ist es ein gutes Geschenk zur Geburt?",
+        "paragraphs": [
+          "Die meisten Geschenke zur Geburt brauchen erst etwas: Fotos für ein Album, ein Jahr voller Meilensteine für ein Buch. Der Geburtshimmel braucht nur Datum, Uhrzeit und Ort. Er ist also fertig, sobald das Kind da ist, ob für die Eltern, die Großeltern oder Freunde.",
+          "Lade ihn kostenlos als Bild oder als PDF in A4 oder A3 herunter, ganz ohne Konto, und drucke ihn selbst oder im Copyshop."
+        ],
+        "printParagraph": "Oder lass ihn von Peecho, unserem Druckpartner, als Wandbild drucken. Zum Bestellen brauchst du ein kostenloses Kaydo-Konto; im Checkout von Peecho wählst du Druck, Papier und Versand und bezahlst direkt bei Peecho."
+      },
+      {
+        "heading": "Was passiert mit meinen Angaben?",
+        "paragraphs": [
+          "Der Himmel wird in deinem Browser berechnet und gezeichnet. Name, Datum, Uhrzeit und Ort werden beim Gestalten nirgendwohin geschickt: Orte werden in einer Liste gesucht, die mit der Seite kommt, nicht bei einem Kartendienst.",
+          "Gespeichert wird nichts, solange du das Poster nicht aufbewahren möchtest. Legst du dann eine Familie in Kaydo an, werden der Name des Kindes sowie Uhrzeit und Ort der Geburt auf deinem Gerät verschlüsselt, bevor sie gespeichert werden, wie alles in einer Kaydo-Familie. Bestellst du das Poster und verwendest die Angaben nur dafür, wird in deiner Familie nichts über die Geburt gespeichert, und die Kopie in deinem Browser wird gelöscht, sobald die Bestellung läuft. Nur die Druckdatei eines bestellten Posters liegt unverschlüsselt, weil eine Druckerei sie lesen muss; der Bestelldialog sagt das, bevor sie entsteht, und nach 30 Tagen wird sie gelöscht."
+        ]
+      },
+      {
+        "heading": "Wohin kann das Poster führen?",
+        "paragraphs": [
+          "In Kaydo wohnt der Geburtshimmel im Tagebuch des Kindes, dem privaten Ort, an dem Eltern ihren Kindern Briefe für später schreiben. Daneben teilt die Familie Fotos und Momente, versiegelt Zeitkapseln für einen Geburtstag in vielen Jahren und bewahrt ihre Rezepte auf, alles verschlüsselt und ohne Werbung."
+        ]
+      }
+    ]
+  },
+  "continue": {
+    "title": "Dein Geburtshimmel",
+    "summary": "{{name}} · {{date}} · {{place}}",
+    "question": "Wessen Himmel ist es?",
+    "newChild": "{{name}} zur Familie hinzufügen",
+    "existingChild": "{{name}}, schon in der Familie",
+    "existingHint": "Das Geburtsdatum bleibt; Uhrzeit, Ort und Stil kommen dazu.",
+    "privacy": "Name, Uhrzeit und Ort der Geburt werden auf diesem Gerät verschlüsselt, bevor sie gespeichert werden – wie alles in deiner Familie.",
+    "confirm": "Weiter zum Geburtshimmel",
+    "discard": "Poster verwerfen",
+    "error": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
+    "posterOnly": "Nur für das Poster",
+    "posterOnlyHint": "{{name}} wird nicht zur Familie hinzugefügt. Die Angaben bleiben nur in diesem Browser, bis das Poster bestellt ist, und werden dann gelöscht."
+  },
+  "posterOnly": {
+    "notStored": "Nur für dieses Poster: In deiner Familie wird nichts über die Geburt gespeichert. Sobald die Bestellung läuft, werden die Angaben aus diesem Browser gelöscht.",
+    "discard": "Poster verwerfen"
+  }
 }

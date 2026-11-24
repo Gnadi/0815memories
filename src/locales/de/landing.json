@@ -40,6 +40,17 @@
     "subtitleSuffix": "noch frei ist und sichere sie dir in Sekunden.",
     "demoCta": "Demo-Familie ansehen"
   },
+  "birthSky": {
+    "badge": "Ein Geschenk zur Geburt",
+    "title": "Der Himmel in der Nacht ihrer Geburt",
+    "desc": "Sterne, Planeten und Mond über dem Geburtsort im Moment der Geburt, als Poster. Fertig, sobald das Kind da ist: kein Album zu füllen, kein Jahr voller Fotos zu sammeln.",
+    "bullets": [
+      "Kostenlos gestalten und herunterladen, ohne Konto",
+      "Im Browser berechnet: die Geburtsdaten werden nirgendwohin geschickt",
+      "Mit einem kostenlosen Kaydo-Konto als Wandbild über Peecho bestellen"
+    ],
+    "button": "Geburtshimmel gestalten"
+  },
   "screens": {
     "homeAlt": "Der Kaydo-Feed mit täglichen Momenten und einer hervorgehobenen Familienerinnerung",
     "homeMobileAlt": "Die Kaydo-App auf dem Smartphone mit dem Familien-Feed",
@@ -51,7 +62,8 @@
     "collagesAlt": "Die Collagen-Galerie in Kaydo — jede Vorlage in der Vorschau mit den eigenen Fotos der Familie",
     "ourYearMobileAlt": "Die Timeline von „Unser Jahr\" in Kaydo auf dem Smartphone, mit einem abgeschlossenen Kapitel und einem versiegelten Brief",
     "bestOfMobileAlt": "Das Monats-Best-of in Kaydo auf dem Handy: die Titelseite des Septembers, dahinter die Fotos des Monats",
-    "printDialogAlt": "Der Kaydo-Dialog zum Bestellen eines Sammelalbums als gedrucktes Buch, mit dem Hinweis, dass die Druckkopie nicht verschlüsselt ist"
+    "printDialogAlt": "Der Kaydo-Dialog zum Bestellen eines Sammelalbums als gedrucktes Buch, mit dem Hinweis, dass die Druckkopie nicht verschlüsselt ist",
+    "birthSkyPosterAlt": "Geburtshimmel-Poster: Sterne, Planeten und Mond über Wien um 04:17 Uhr am Tag von Emmas Geburt"
   },
   "pillars": {
     "sectionTitle": "Die Säulen des Zuhauses",

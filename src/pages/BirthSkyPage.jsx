@@ -1,79 +1,62 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import useSettledText from '../hooks/useSettledText'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Download, FileDown, Send, Loader2, Check, Lock } from 'lucide-react'
+import { ArrowLeft, Download, FileDown, Send, Loader2, Check, Lock, Printer } from 'lucide-react'
 import { Timestamp } from '../config/firestore'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { useMemoryWriter } from '../hooks/useMemories'
+import useSkyPoster from '../hooks/useSkyPoster'
 import { encryptAndUploadWithThumb } from '../utils/encryptedUpload'
-import { computeSky, zonedTimeToUtc, DEFAULT_NIGHT_TIME } from '../utils/sky/astronomy'
-import { loadSkyCatalog } from '../utils/sky/skyData'
-import { drawSkyPoster, renderSkyPosterCanvas, POSTER_RATIO, SKY_STYLES } from '../utils/sky/skyRenderer'
-import { buildCaption, birthDateString, formatWallDate } from '../utils/sky/caption'
+import { SKY_STYLES, renderSkyPosterCanvas } from '../utils/sky/skyRenderer'
+import { birthDateString, formatWallDate, posterLanguage } from '../utils/sky/caption'
+import {
+  canvasToBlob,
+  downloadPosterPdf,
+  downloadPosterPng,
+  posterFileBase,
+  renderPosterPrintFile,
+} from '../utils/sky/posterExport'
+import { printConfig } from '../utils/printBook'
 import PlacePicker from '../components/sky/PlacePicker'
+import PosterOrderModal from '../components/sky/PosterOrderModal'
+import {
+  SkyCaptionSection,
+  SkyExportButton,
+  SkyPosterPreview,
+  SkyStyleSection,
+  skyInputClass,
+  skySectionClass,
+} from '../components/sky/SkyPosterParts'
 import Sidebar from '../components/layout/Sidebar'
 import { devError } from '../utils/devLog'
 
-// Sharp at the desktop size (up to ~700 CSS px) on a 2x display.
-const PREVIEW_WIDTH = 1400
-// A4 at 300 dpi. A3 at 300 dpi (3508 × 4961) is over the ~16.7 megapixel
-// canvas limit of iOS Safari, so A3 renders at 275 dpi — still sharp on paper.
-const A4_WIDTH = 2480
-const A3_WIDTH = 3210
 const FEED_WIDTH = 1600
 
-function canvasToBlob(canvas, type, quality) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Canvas export failed'))), type, quality)
-  })
-}
-
-function downloadBlob(blob, fileName) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  link.click()
-  // Revoked on the next tick so the click has taken the blob.
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
+// Ordering is on when the deployment has turned it on (VITE_PEECHO_ENABLED),
+// as for printed books.
+const PRINTING_ENABLED = printConfig().enabled
 
 export default function BirthSkyPage() {
   const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  const lang = posterLanguage(i18n.language)
   const { familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { childId } = useParams()
   const { kids, loading: kidsLoading, updateKid } = useKids(familyId, encryptionKey)
   const { addMemory } = useMemoryWriter(familyId, encryptionKey)
   const kid = kids.find((k) => k.id === childId)
 
-  const [catalog, setCatalog] = useState(null)
-  const [catalogError, setCatalogError] = useState(false)
+  // Handed over by BirthSkyContinuePage: the caption of a poster made on the
+  // public page, which the child's record does not keep, and whether it was
+  // made to be ordered.
+  const handedOver = location.state?.skyPoster
   const [form, setForm] = useState(null)
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
-  const [fontsReady, setFontsReady] = useState(false)
-  const canvasRef = useRef(null)
-
-  useEffect(() => {
-    loadSkyCatalog()
-      .then(setCatalog)
-      .catch((err) => {
-        devError('Failed to load sky catalog', err)
-        setCatalogError(true)
-      })
-    // The poster title uses the self-hosted display font; draw once it is in.
-    const fonts = document.fonts
-    if (fonts?.load) {
-      fonts.load("40px 'Anton'").finally(() => setFontsReady(true))
-    } else {
-      setFontsReady(true)
-    }
-  }, [])
+  const [orderOpen, setOrderOpen] = useState(() => PRINTING_ENABLED && handedOver?.order === true)
 
   // The form starts from the saved record once it has arrived, and only then —
   // a snapshot update while someone is typing must not throw their edits away.
@@ -83,11 +66,11 @@ export default function BirthSkyPage() {
         birthTime: kid.birthTime || '',
         birthPlace: kid.birthPlace || null,
         skyStyle: SKY_STYLES[kid.skyStyle] ? kid.skyStyle : 'midnight',
-        title: kid.name || '',
-        dedication: '',
+        title: typeof handedOver?.title === 'string' ? handedOver.title : kid.name || '',
+        dedication: typeof handedOver?.dedication === 'string' ? handedOver.dedication : '',
       })
     }
-  }, [kid, form])
+  }, [kid, form, handedOver])
 
   // A string, as the React Compiler can see: from an unknown function it would
   // take the result for an object a later call might change, and give up the
@@ -95,59 +78,7 @@ export default function BirthSkyPage() {
   const birthDay = birthDateString(kid?.birthdate)
   const dateStr = birthDay ? String(birthDay) : null
 
-  // Only place and time move the stars; the sky is not recomputed while the
-  // title or dedication is typed.
-  const place = form?.birthPlace
-  const birthTime = form?.birthTime
-  const sky = useMemo(() => {
-    if (!catalog || !dateStr || !place) return null
-    const date = zonedTimeToUtc(dateStr, birthTime || DEFAULT_NIGHT_TIME, place.tz)
-    return computeSky({ date, lat: place.lat, lon: place.lon, ...catalog })
-  }, [catalog, dateStr, place, birthTime])
-
-  // The poster's options for a given title and dedication. The exports take
-  // what is in the form; the preview takes the text once typing has paused.
-  const optionsFor = (title, dedication) => {
-    if (!form || !dateStr) return null
-    return {
-      sky,
-      style: form.skyStyle,
-      lang,
-      compass: { n: t('compass.n'), e: t('compass.e'), s: t('compass.s'), w: t('compass.w') },
-      planetNames: Object.fromEntries(
-        ['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'].map((b) => [b, t(`planets.${b}`)])
-      ),
-      caption: buildCaption({
-        t,
-        lang,
-        title,
-        dateStr,
-        timeStr: form.birthTime,
-        place: form.birthPlace,
-        sky,
-        dedication,
-      }),
-    }
-  }
-
-  // Drawing the preview takes 100–200 ms on a phone, and it ran for every key
-  // typed into the title or dedication. Their text reaches the preview once
-  // typing pauses; style, place and time still redraw at once.
-  const previewTitle = useSettledText(form?.title)
-  const previewDedication = useSettledText(form?.dedication)
-  const previewKey = form && dateStr
-    ? JSON.stringify([form.skyStyle, form.birthTime, form.birthPlace, previewTitle, previewDedication, dateStr, lang])
-    : null
-
-  useEffect(() => {
-    const ctx = canvasRef.current?.getContext('2d')
-    const options = optionsFor(previewTitle, previewDedication)
-    if (!ctx || !options || !fontsReady) return
-    drawSkyPoster(ctx, { ...options, width: PREVIEW_WIDTH })
-    // optionsFor reads the form; previewKey stands for every part of it the
-    // preview shows, so the canvas is drawn when one changes and not otherwise.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewKey, sky, t, fontsReady])
+  const { catalog, catalogError, sky, canvasRef, optionsFor } = useSkyPoster({ form, dateStr, lang, t })
 
   const posterOptions = () => optionsFor(form?.title, form?.dedication)
 
@@ -179,7 +110,7 @@ export default function BirthSkyPage() {
     }
   }
 
-  const fileBase = `${t('export.fileName')}-${(form?.title || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-') || 'kaydo'}`
+  const fileBase = posterFileBase(t('export.fileName'), form?.title)
 
   const run = async (kind, task) => {
     setBusy(kind)
@@ -196,23 +127,9 @@ export default function BirthSkyPage() {
     }
   }
 
-  const handlePng = () =>
-    run('png', async () => {
-      const canvas = renderSkyPosterCanvas(A4_WIDTH, posterOptions())
-      downloadBlob(await canvasToBlob(canvas, 'image/png'), `${fileBase}.png`)
-    })
+  const handlePng = () => run('png', () => downloadPosterPng(posterOptions(), fileBase))
 
-  const handlePdf = (format) =>
-    run(format, async () => {
-      const { jsPDF } = await import('jspdf')
-      const width = format === 'a3' ? A3_WIDTH : A4_WIDTH
-      const canvas = renderSkyPosterCanvas(width, posterOptions())
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format })
-      const pageW = pdf.internal.pageSize.getWidth()
-      const pageH = pdf.internal.pageSize.getHeight()
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageW, Math.min(pageH, pageW * POSTER_RATIO))
-      pdf.save(`${fileBase}-${format}.pdf`)
-    })
+  const handlePdf = (format) => run(format, () => downloadPosterPdf(posterOptions(), fileBase, format))
 
   const handlePost = () =>
     run('post', async () => {
@@ -233,9 +150,6 @@ export default function BirthSkyPage() {
       })
       navigate('/home')
     })
-
-  const inputClass =
-    'w-full px-3 py-2 border border-cream-dark rounded-xl text-sm bg-cream focus:outline-none focus:ring-2 focus:ring-kaydo/30'
 
   if (kidsLoading) {
     return (
@@ -268,34 +182,18 @@ export default function BirthSkyPage() {
         </div>
 
         <div className="p-4 md:p-8 lg:pt-4 w-full max-w-7xl mx-auto grid gap-6 lg:gap-10 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_340px]">
-          {/* Preview */}
-          {/* On desktop the poster fills the screen height (capped by the column width)
-              and stays in view while the settings scroll. */}
-          <div className="flex flex-col items-center gap-3 lg:sticky lg:top-[4.5rem] lg:self-start">
-            <div className="relative w-full max-w-md lg:max-w-none lg:w-[min(100%,calc((100vh_-_7rem)/1.4142))] rounded-2xl overflow-hidden shadow-lg border border-cream-dark bg-warm-white">
-              <canvas
-                ref={canvasRef}
-                width={PREVIEW_WIDTH}
-                height={Math.round(PREVIEW_WIDTH * POSTER_RATIO)}
-                className="block w-full h-auto"
-                role="img"
-                aria-label={t('subtitle', { name: kid.name })}
-              />
-              {!sky && (
-                <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
-                  <p className="text-sm text-bark bg-warm-white/90 rounded-xl px-4 py-3 shadow">
-                    {catalogError ? t('loadError') : !catalog ? <Loader2 className="w-5 h-5 animate-spin text-kaydo" /> : t('emptyPreview')}
-                  </p>
-                </div>
-              )}
-            </div>
-            <p className="text-[11px] text-bark-muted text-center max-w-md lg:max-w-xl">{t('credits')}</p>
-          </div>
+          <SkyPosterPreview
+            canvasRef={canvasRef}
+            sky={sky}
+            catalog={catalog}
+            catalogError={catalogError}
+            label={t('subtitle', { name: kid.name })}
+          />
 
           {/* Controls */}
           {form && (
             <div className="flex flex-col gap-5">
-              <section className="bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-3">
+              <section className={skySectionClass}>
                 <h2 className="font-semibold text-bark">{t('details.heading')}</h2>
                 <div>
                   <p className="text-xs font-medium text-bark-muted mb-1">{t('details.date')}</p>
@@ -310,7 +208,7 @@ export default function BirthSkyPage() {
                     type="time"
                     value={form.birthTime}
                     onChange={(e) => update({ birthTime: e.target.value })}
-                    className={inputClass}
+                    className={skyInputClass}
                   />
                   <p className="text-[11px] text-bark-muted mt-1">{t('details.timeHint')}</p>
                 </div>
@@ -342,58 +240,28 @@ export default function BirthSkyPage() {
                 {saveState === 'error' && <p className="text-xs text-red-500">{t('details.saveError')}</p>}
               </section>
 
-              <section className="bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-3">
-                <h2 className="font-semibold text-bark">{t('style.heading')}</h2>
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.keys(SKY_STYLES).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => update({ skyStyle: key })}
-                      aria-pressed={form.skyStyle === key}
-                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-xs ${
-                        form.skyStyle === key ? 'border-kaydo ring-2 ring-kaydo/30 text-bark' : 'border-cream-dark text-bark-muted'
-                      }`}
-                    >
-                      <span
-                        className="w-8 h-8 rounded-full border-2"
-                        style={{ background: SKY_STYLES[key].disc, borderColor: SKY_STYLES[key].edge }}
-                      />
-                      {t(`style.${key}`)}
-                    </button>
-                  ))}
-                </div>
-              </section>
+              <SkyStyleSection value={form.skyStyle} onChange={(skyStyle) => update({ skyStyle })} />
 
-              <section className="bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-3">
-                <h2 className="font-semibold text-bark">{t('caption.heading')}</h2>
-                <div>
-                  <label htmlFor="sky-title" className="block text-xs font-medium text-bark-muted mb-1">
-                    {t('caption.titleLabel')}
-                  </label>
-                  <input
-                    id="sky-title"
-                    type="text"
-                    value={form.title}
-                    maxLength={40}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="sky-dedication" className="block text-xs font-medium text-bark-muted mb-1">
-                    {t('caption.dedicationLabel')}
-                  </label>
-                  <input
-                    id="sky-dedication"
-                    type="text"
-                    value={form.dedication}
-                    maxLength={80}
-                    placeholder={t('caption.dedicationPlaceholder')}
-                    onChange={(e) => setForm((f) => ({ ...f, dedication: e.target.value }))}
-                    className={inputClass}
-                  />
-                </div>
-              </section>
+              <SkyCaptionSection
+                title={form.title}
+                dedication={form.dedication}
+                onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+              />
+
+              {PRINTING_ENABLED && (
+                <section className={skySectionClass}>
+                  <h2 className="font-semibold text-bark">{t('order.heading')}</h2>
+                  <p className="text-xs text-bark-muted">{t('order.teaser')}</p>
+                  <button
+                    onClick={() => setOrderOpen(true)}
+                    disabled={!sky || Boolean(busy)}
+                    className="btn-kaydo w-full text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    {t('order.button')}
+                  </button>
+                </section>
+              )}
 
               <section className="bg-warm-white rounded-2xl p-4 shadow-sm border border-cream-dark space-y-2">
                 <h2 className="font-semibold text-bark">{t('export.heading')}</h2>
@@ -402,16 +270,17 @@ export default function BirthSkyPage() {
                   { kind: 'a4', label: t('export.pdfA4'), icon: FileDown, onClick: () => handlePdf('a4') },
                   { kind: 'a3', label: t('export.pdfA3'), icon: FileDown, onClick: () => handlePdf('a3') },
                   { kind: 'post', label: t('export.post'), icon: Send, onClick: handlePost },
-                ].map(({ kind, label, icon: Icon, onClick }) => (
-                  <button
+                ].map(({ kind, label, icon, onClick }) => (
+                  <SkyExportButton
                     key={kind}
-                    onClick={onClick}
+                    kind={kind}
+                    busy={busy}
                     disabled={!canExport}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-cream-dark text-sm text-bark hover:bg-cream disabled:opacity-50"
-                  >
-                    {busy === kind ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4 text-kaydo" />}
-                    {busy === kind ? (kind === 'post' ? t('export.posting') : t('export.rendering')) : label}
-                  </button>
+                    label={label}
+                    busyLabel={kind === 'post' ? t('export.posting') : t('export.rendering')}
+                    icon={icon}
+                    onClick={onClick}
+                  />
                 ))}
                 {error && <p className="text-xs text-red-500">{error}</p>}
               </section>
@@ -419,6 +288,16 @@ export default function BirthSkyPage() {
           )}
         </div>
       </div>
+
+      {orderOpen && (
+        <PosterOrderModal
+          familyId={familyId}
+          title={form?.title || kid.name}
+          ready={Boolean(sky)}
+          onRender={() => renderPosterPrintFile(posterOptions())}
+          onClose={() => setOrderOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -182,3 +182,31 @@ describe('caption', () => {
     expect(caption.lines).toContain('caption.daylight')
   })
 })
+
+describe('posterLanguage', () => {
+  it('draws in the languages the sky data names constellations in, else English', async () => {
+    const { posterLanguage } = await import('../utils/sky/caption')
+    expect(posterLanguage('de-AT')).toBe('de')
+    expect(posterLanguage('fr')).toBe('fr')
+    expect(posterLanguage('ar')).toBe('ar')
+    expect(posterLanguage('es')).toBe('en')
+    expect(posterLanguage(undefined)).toBe('en')
+  })
+
+  it('keeps the coordinates in one piece in an Arabic caption', () => {
+    const t = (key, opts) => (opts?.moon ? `${opts.moon} ${opts.planets}` : key)
+    const place = { name: 'Cairo', country: 'EG', lat: 30.06, lon: 31.25 }
+    const ar = buildCaption({ t, lang: 'ar', title: 'ليلى', dateStr: '2026-11-20', timeStr: '04:17', place, sky: null })
+    expect(ar.lines[1]).toContain('\u206630.06° N · 31.25° E\u2069')
+    const en = buildCaption({ t, lang: 'en', title: 'Leo', dateStr: '2026-11-20', timeStr: '04:17', place, sky: null })
+    expect(en.lines[1]).not.toMatch(/[\u2066\u2069]/)
+  })
+
+  it('has every constellation named in every poster language', async () => {
+    const { POSTER_LANGUAGES } = await import('../utils/sky/caption')
+    const constellations = JSON.parse(readFileSync('public/sky/constellations.json', 'utf8'))
+    for (const c of constellations) {
+      for (const lng of POSTER_LANGUAGES) expect(c.name[lng], `${c.id} in ${lng}`).toBeTruthy()
+    }
+  })
+})

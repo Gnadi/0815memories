@@ -19,6 +19,9 @@
  *
  *   printFiles/{familyId}/{printId}/book.pdf
  *   printFiles/{familyId}/{printId}/cover.jpg
+ *
+ * A birth sky poster ordered as a wall print goes the same way, under the same
+ * names: book.pdf is then its one page and cover.jpg its thumbnail.
  */
 import { getStorageInstance } from '../config/firebase'
 import { reservePrintUpload } from '../services/printReservation'

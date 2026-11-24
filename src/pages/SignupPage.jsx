@@ -7,6 +7,7 @@ import AuthPageLayout from '../components/auth/AuthPageLayout'
 import VerifyEmailStep from '../components/auth/VerifyEmailStep'
 import { generateSlug } from '../utils/familySlug'
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy'
+import { loadSkyDraft } from '../utils/sky/skyDraft'
 
 /**
  * Signing up is three steps: the account, the confirmation of its email
@@ -47,9 +48,12 @@ export default function SignupPage() {
     )
   }
 
-  // Done, or nothing to sign up for: a member of a family belongs in it.
+  // Done, or nothing to sign up for: a member of a family belongs in it. An
+  // admin with a birth sky made before signing up (PublicBirthSkyPage) goes
+  // on to it first. This is also where a newly founded family leaves: the
+  // session has its family before handleCreateFamily's navigate() runs.
   if (isAuthenticated && (familyId || isViewer)) {
-    return <Navigate to="/home" replace />
+    return <Navigate to={!isViewer && loadSkyDraft() ? '/birth-sky/continue' : '/home'} replace />
   }
 
   const step = !user ? 'account' : emailVerified ? 'family' : 'verify'
@@ -96,7 +100,8 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await createOwnFamily(familyName)
-      navigate('/home', { replace: true })
+      // A birth sky made before signing up is taken over first (see above).
+      navigate(loadSkyDraft() ? '/birth-sky/continue' : '/home', { replace: true })
     } catch (err) {
       setError(errorMessage(err, 'signup.errors.couldNotCreateFamily'))
     } finally {

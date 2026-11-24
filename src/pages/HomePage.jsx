@@ -12,6 +12,7 @@ import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import AdventHomeCard from '../components/advent/AdventHomeCard'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
 import LoginPhotoHint from '../components/home/LoginPhotoHint'
+import SkyDraftHint from '../components/home/SkyDraftHint'
 import FeedbackHint from '../components/home/FeedbackHint'
 import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
@@ -110,6 +111,7 @@ export default function HomePage() {
           <div className="mx-auto w-full max-w-[44rem]">
             <FamilyDeletionBanner />
             <VerifyEmailBanner />
+            <SkyDraftHint />
             <LoginPhotoHint />
           </div>
           <DailyMoments

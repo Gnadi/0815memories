@@ -6,13 +6,15 @@
 import { functions } from '../config/firebase'
 
 /** @returns {Promise<{ checkoutUrl: string, expiresAt: string }>} */
-export async function createPrintCheckout({ familyId, printId, pageCount, format, currency, language, title }) {
+/** `product` is 'book' (a scrapbook, the default) or 'poster' (the birth sky, one page). */
+export async function createPrintCheckout({ familyId, printId, product = 'book', pageCount, format, currency, language, title }) {
   if (!functions) throw new Error('Firebase is not configured')
   const { httpsCallable } = await import('firebase/functions')
   const call = httpsCallable(functions, 'createPrintCheckout')
   const { data } = await call({
     familyId,
     printId,
+    product,
     pageCount,
     widthMm: format.widthMm,
     heightMm: format.heightMm,

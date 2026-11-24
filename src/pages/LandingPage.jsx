@@ -36,7 +36,7 @@ import {
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANDING_PATHS, isRtl } from '../i18n'
-import { FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
+import { BIRTH_SKY_PATHS, FEATURE_PAGES, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { landingStructuredData } from '../utils/structuredData'
 import KaydoLogo from '../components/KaydoLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -580,6 +580,47 @@ export default function LandingPage({ lng }) {
                   alt={t('screens.ourYearMobileAlt')}
                 />
               </div>
+            </div>
+
+            {/* Card 8b — A gift for a birth: the birth sky (full-width). A way in
+                that needs no account: the poster is made on a public page
+                (src/pages/PublicBirthSkyPage.jsx) and downloaded for free;
+                ordering it as a print is what leads to an account. */}
+            <div id="birth-sky" className="md:col-span-2 bg-[#0B1428] rounded-3xl p-8 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-white/10 text-[#F2C46D] text-xs font-semibold px-4 py-1.5 rounded-full mb-5 tracking-wide uppercase">
+                  {t('birthSky.badge')}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">{t('birthSky.title')}</h3>
+                <p className="text-white/85 text-sm leading-relaxed mb-6 max-w-lg">{t('birthSky.desc')}</p>
+                <ul className="space-y-2 mb-7">
+                  {t('birthSky.bullets', { returnObjects: true }).map((item) => (
+                    <li key={item} className="flex gap-2 text-sm text-white/85">
+                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#F2C46D]" aria-hidden="true" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={BIRTH_SKY_PATHS[lang] ?? BIRTH_SKY_PATHS.en}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F2C46D] text-[#0B1428] font-semibold hover:bg-[#F7D38C] transition-colors"
+                >
+                  {t('birthSky.button')}
+                  <span aria-hidden="true">&rarr;</span>
+                </Link>
+              </div>
+              {/* The poster of the demo family's child, as the app draws it. */}
+              <figure className="w-56 lg:w-72 mx-auto lg:rotate-2 rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+                <ZoomTarget src={shot('birthSkyPoster').src} alt={t('screens.birthSkyPosterAlt')} className="block w-full">
+                  <img
+                    {...shot('birthSkyPoster')}
+                    alt={t('screens.birthSkyPosterAlt')}
+                    loading="lazy"
+                    decoding="async"
+                    className="block w-full h-auto"
+                  />
+                </ZoomTarget>
+              </figure>
             </div>
 
             {/* Card 9 — Own: Data Export */}

@@ -6,6 +6,7 @@
  * Prerequisites:
  *   VITE_PEECHO_ENABLED=true npm run dev      (serves on http://localhost:5173)
  * Then: node scripts/capture-screenshots.mjs
+ *   or: node scripts/capture-screenshots.mjs birth-sky-poster   (only the named ones)
  *
  * No emulators and no Firebase: the demo needs neither, it has a best-of of
  * last month every time it starts, and its photos are illustrations rather
@@ -105,17 +106,32 @@ async function capturePrintDialog(page) {
   return dialog.screenshot({ type: 'png' })
 }
 
+// The birth sky poster of the demo child, as the canvas holds it: at the
+// preview's full drawing size rather than as large as the window shows it.
+async function captureBirthSkyPoster(page) {
+  await goTo(page, '/journal/demo-emma/sky')
+  const canvas = page.locator('canvas[role="img"]')
+  await canvas.waitFor()
+  const dataUrl = await canvas.evaluate((el) => el.toDataURL('image/png'))
+  return Buffer.from(dataUrl.split(',')[1], 'base64')
+}
+
 async function main() {
+  // Names on the command line take only those pictures again.
+  const only = process.argv.slice(2)
+  const shots = Object.values(SCREENSHOTS).filter((shot) => only.length === 0 || only.includes(shot.name))
+
   const executablePath = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium'
   const browser = await chromium.launch({ executablePath })
 
   for (const lang of SCREENSHOT_LANGUAGES) {
     console.log(`\n${lang}`)
-    for (const shot of Object.values(SCREENSHOTS)) {
+    for (const shot of shots) {
       const { ctx, page } = await openDemo(browser, lang, shot.viewport)
       let png
       if (shot.name === 'best-of-mobile') png = await captureBestOf(page)
       else if (shot.name === 'print-dialog') png = await capturePrintDialog(page)
+      else if (shot.name === 'birth-sky-poster') png = await captureBirthSkyPoster(page)
       else {
         if (shot.path !== '/home') await goTo(page, shot.path)
         png = await page.screenshot({ type: 'png' })

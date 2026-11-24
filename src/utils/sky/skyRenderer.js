@@ -135,7 +135,7 @@ function fitFont(ctx, text, family, size, maxWidth, weight = '') {
  * @param {string} opts.style   key of SKY_STYLES
  * @param {object} opts.caption { title, lines: string[] }
  * @param {object} opts.compass { n, e, s, w } letters
- * @param {string} opts.lang    'en' | 'de' — which constellation names
+ * @param {string} opts.lang    'en' | 'de' | 'fr' | 'ar' — which constellation names
  * @param {object} opts.planetNames  body → localized name
  */
 export function drawSkyPoster(ctx, { width, sky, style: styleKey, caption, compass, lang, planetNames = {} }) {

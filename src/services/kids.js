@@ -63,15 +63,17 @@ export function subscribeKids(familyId, key, onData, onError) {
   )
 }
 
+/** @returns {Promise<string>} the new child's id */
 export async function addKid(familyId, key, kid) {
   const plain = serialize(kid)
   const encrypted = await encryptFields(key, plain, KID_ENCRYPTED_FIELDS)
-  await addDoc(collection(db, CHILDREN), {
+  const ref = await addDoc(collection(db, CHILDREN), {
     ...encrypted,
     ...mediaRefsForCreate(plain),
     familyId,
     createdAt: serverTimestamp(),
   })
+  return ref.id
 }
 
 /** `null` for birthTime or birthPlace removes it. */

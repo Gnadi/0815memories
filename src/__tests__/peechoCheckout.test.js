@@ -94,6 +94,14 @@ describe('createCheckout', () => {
     })
   })
 
+  it('lists a poster with its one page and print size', async () => {
+    const d = deps()
+    await createCheckout(d, ADMIN, payload({ product: 'poster', pageCount: 1, widthMm: 297, heightMm: 420, title: 'Leo' }))
+    const { order } = JSON.parse(d.fetch.mock.calls[0][1].body)
+    expect(order.product.title).toBe('Leo')
+    expect(order.product.source.file).toMatchObject({ pages: 1, dimensions: { width: 297, height: 420 } })
+  })
+
   it('refuses anyone who is not an admin of the family, before asking Peecho', async () => {
     const d = deps({ adminUids: ['someone-else'] })
     await expect(createCheckout(d, ADMIN, payload())).rejects.toMatchObject({ code: 'permission-denied' })
@@ -164,7 +172,18 @@ describe('readCheckoutRequest', () => {
 
   it('falls back to euros, English and a default title', () => {
     const request = readCheckoutRequest(payload({ currency: 'euro', language: 'fr', title: '  ' }))
-    expect(request).toMatchObject({ currency: 'EUR', locale: 'en', title: 'Kaydo scrapbook' })
+    expect(request).toMatchObject({ currency: 'EUR', locale: 'en', title: 'Kaydo scrapbook', product: 'book' })
+  })
+
+  it('takes a birth sky poster as a single page', () => {
+    const poster = payload({ product: 'poster', pageCount: 1, widthMm: 297, heightMm: 420, title: '' })
+    expect(readCheckoutRequest(poster)).toMatchObject({ product: 'poster', pages: 1, title: 'Kaydo birth sky' })
+    expect(() => readCheckoutRequest({ ...poster, pageCount: 2 })).toThrow(/one page/)
+  })
+
+  it('holds a book to an even count, and knows no other product', () => {
+    expect(() => readCheckoutRequest(payload({ product: 'book', pageCount: 1 }))).toThrow(/even/)
+    expect(() => readCheckoutRequest(payload({ product: 'mug' }))).toThrow(/product/)
   })
 })
 

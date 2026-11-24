@@ -40,6 +40,17 @@
     "subtitleSuffix": "is still available and make it yours in seconds.",
     "demoCta": "Explore the demo family"
   },
+  "birthSky": {
+    "badge": "A gift for a birth",
+    "title": "The sky of the night they were born",
+    "desc": "The stars, planets and moon above the birthplace at the moment of birth, as a poster. Complete the day the child arrives: no album to fill, no year of photos to collect.",
+    "bullets": [
+      "Free to make and download, no account needed",
+      "Computed in your browser: the birth details are not sent anywhere",
+      "Order it as a wall print through Peecho with a free Kaydo account"
+    ],
+    "button": "Make a birth sky"
+  },
   "screens": {
     "homeAlt": "The Kaydo home feed showing daily moments and a featured family memory",
     "homeMobileAlt": "The Kaydo mobile app showing the family memory feed",
@@ -51,7 +62,8 @@
     "collagesAlt": "The Kaydo collage gallery, every layout previewed with the family's own photos",
     "ourYearMobileAlt": "The \"Our Year\" timeline in Kaydo on a phone, showing a completed chapter and a sealed letter",
     "bestOfMobileAlt": "The monthly best-of in Kaydo on a phone: the title slide of September, with the month's photos drifting behind it",
-    "printDialogAlt": "The Kaydo dialog for ordering a scrapbook as a printed book, with its notice that the print copy is not encrypted"
+    "printDialogAlt": "The Kaydo dialog for ordering a scrapbook as a printed book, with its notice that the print copy is not encrypted",
+    "birthSkyPosterAlt": "Birth sky poster: the stars, planets and moon over Vienna at 04:17 on the day Emma was born"
   },
   "pillars": {
     "sectionTitle": "The Pillars of Home",

@@ -18,6 +18,12 @@ vi.mock('../utils/sky/skyData', async (importOriginal) => ({
   loadSkyCatalog: () => Promise.resolve({ stars: [[37.95, 89.26, 1.97, 0.6]], constellations: [] }),
 }))
 
+// Printing on, as a deployment with Peecho has it.
+vi.mock('../utils/printBook', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, printConfig: () => ({ ...actual.printConfig({}), enabled: true }) }
+})
+
 const mockDraw = vi.hoisted(() => vi.fn())
 vi.mock('../utils/sky/skyRenderer', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -30,9 +36,9 @@ vi.mock('../hooks/useKids', () => ({
   useKids: () => ({ kids: mockKid ? [mockKid] : [], loading: false, updateKid: mockUpdateKid }),
 }))
 
-function renderPage() {
+function renderPage(state) {
   return render(
-    <MemoryRouter initialEntries={['/journal/kid-1/sky']}>
+    <MemoryRouter initialEntries={[{ pathname: '/journal/kid-1/sky', state }]}>
       <Routes>
         <Route path="/journal/:childId/sky" element={<BirthSkyPage />} />
         <Route path="/journal" element={<p>journal list</p>} />
@@ -119,5 +125,26 @@ describe('BirthSkyPage', () => {
     expect(mockDraw).not.toHaveBeenCalled()
     await waitFor(() => expect(mockDraw).toHaveBeenCalledTimes(1))
     expect(JSON.stringify(mockDraw.mock.calls[0][1].caption)).toContain('Leo is here')
+  })
+
+  it('offers the poster as a wall print once the sky is drawn', async () => {
+    mockKid = {
+      ...mockKid,
+      birthPlace: { name: 'Linz', country: 'AT', lat: 48.31, lon: 14.29, tz: 'Europe/Vienna' },
+    }
+    renderPage()
+    const order = screen.getByRole('button', { name: 'Order as a wall print' })
+    await waitFor(() => expect(order).toBeEnabled())
+    fireEvent.click(order)
+    expect(screen.getByRole('dialog', { name: 'Order the birth sky' })).toBeInTheDocument()
+    expect(screen.getByText('This file is not encrypted')).toBeInTheDocument()
+    expect(screen.getByText('A poster of 29.7 × 42 cm')).toBeInTheDocument()
+  })
+
+  it('takes over the caption of a poster made on the public page, and its order', async () => {
+    renderPage({ skyPoster: { title: 'Leo Sternchen', dedication: 'Willkommen', order: true } })
+    expect(await screen.findByDisplayValue('Leo Sternchen')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Willkommen')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Order the birth sky' })).toBeInTheDocument()
   })
 })

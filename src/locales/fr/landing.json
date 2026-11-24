@@ -40,6 +40,17 @@
     "subtitleSuffix": "est encore disponible et faites-en la vôtre en quelques secondes.",
     "demoCta": "Découvrir la famille de démonstration"
   },
+  "birthSky": {
+    "badge": "Un cadeau de naissance",
+    "title": "Le ciel de la nuit de leur naissance",
+    "desc": "Les étoiles, les planètes et la lune au-dessus du lieu de naissance, au moment de la naissance, en affiche. Prêt le jour où l'enfant arrive : aucun album à remplir, aucune année de photos à rassembler.",
+    "bullets": [
+      "Gratuit à créer et à télécharger, sans compte",
+      "Calculé dans votre navigateur : les données de naissance ne sont envoyées nulle part",
+      "À commander en tirage mural via Peecho avec un compte Kaydo gratuit"
+    ],
+    "button": "Créer un ciel de naissance"
+  },
   "screens": {
     "homeAlt": "Le fil d'accueil de Kaydo avec les moments du jour et un souvenir de famille mis en avant",
     "homeMobileAlt": "L'application mobile Kaydo affichant le fil des souvenirs de famille",
@@ -51,7 +62,8 @@
     "collagesAlt": "La galerie de collages de Kaydo, chaque mise en page présentée avec les propres photos de la famille",
     "ourYearMobileAlt": "La chronologie « Notre année » de Kaydo sur un téléphone, avec un chapitre terminé et une lettre scellée",
     "bestOfMobileAlt": "Le meilleur du mois dans Kaydo sur un téléphone : la diapositive de titre de septembre, avec les photos du mois qui défilent derrière",
-    "printDialogAlt": "La fenêtre de Kaydo pour commander un scrapbook sous forme de livre imprimé, avec l'avertissement que l'exemplaire imprimé n'est pas chiffré"
+    "printDialogAlt": "La fenêtre de Kaydo pour commander un scrapbook sous forme de livre imprimé, avec l'avertissement que l'exemplaire imprimé n'est pas chiffré",
+    "birthSkyPosterAlt": "Affiche du ciel de naissance : les étoiles, les planètes et la lune au-dessus de Vienne à 4 h 17, le jour de la naissance d’Emma"
   },
   "pillars": {
     "sectionTitle": "Les piliers de la maison",

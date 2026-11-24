@@ -90,5 +90,12 @@
     "body": "Tell us what's missing or what you love.",
     "action": "Give feedback",
     "notNow": "Not now"
+  },
+  "skyDraftHint": {
+    "eyebrow": "Birth sky",
+    "title": "{{name}}'s sky is waiting",
+    "body": "Order it as a wall print, keep it in the family, or both.",
+    "action": "Continue with the birth sky",
+    "discard": "Discard"
   }
 }

@@ -76,5 +76,115 @@
     "Jupiter": "Jupiter",
     "Saturn": "Saturn"
   },
-  "credits": "Star data: d3-celestial (Olaf Frohn). Places: GeoNames (CC BY 4.0). Positions: astronomy-engine."
+  "credits": "Star data: d3-celestial (Olaf Frohn). Places: GeoNames (CC BY 4.0). Positions: astronomy-engine.",
+  "order": {
+    "heading": "Order as a wall print",
+    "teaser": "Printed and shipped by Peecho, our print partner. You choose the product and pay at Peecho's checkout.",
+    "button": "Order as a wall print",
+    "title": "Order the birth sky",
+    "subtitle": "Printed and shipped by Peecho",
+    "close": "Close",
+    "summary": "A poster of {{width}} × {{height}} cm",
+    "productsExplained": "At Peecho's checkout you pick the print, the paper and the shipping. Prices are Peecho's.",
+    "privacyHeading": "This file is not encrypted",
+    "privacyBody": "A print shop has to read the poster, so its print file is stored unencrypted for Peecho to fetch: the name, the date, time and place of birth on it included. Only your family's admins and anyone holding the link can open it, and it is deleted after {{days}} days.",
+    "demoUnavailable": "Ordering is switched off in the demo family. In your own family, this makes the print file and opens Peecho's checkout.",
+    "prepare": "Prepare the print file",
+    "rendering": "Drawing the poster in print size…",
+    "uploading": "Uploading the print file… {{percent}}%",
+    "creatingCheckout": "Opening the checkout at Peecho…",
+    "keepOpen": "Please keep this window open.",
+    "checkHeading": "Check the print file",
+    "checkBody": "This is exactly what will be printed.",
+    "preview": "Open the print file",
+    "readyHeading": "Order at Peecho",
+    "readyBody": "Choose the product, enter the address and pay at Peecho.",
+    "orderAtPeecho": "Go to Peecho's checkout",
+    "linkExpires": "The link works until {{date}}.",
+    "failed": "The print file could not be made. Please try again.",
+    "checkoutFailed": "Peecho did not open a checkout. Please try again in a moment.",
+    "quotaUsed": "Your family has prepared several print files lately. Please try again in a few days.",
+    "tryAgain": "Try again",
+    "cancel": "Cancel"
+  },
+  "public": {
+    "seoTitle": "Birth Sky Poster: Free Star Map of a Birth | Kaydo",
+    "seoDescription": "Make a free poster of the stars, planets and moon above the birthplace at the moment of birth. Download it or order it as a wall print with Kaydo.",
+    "heading": "The sky of the night they were born",
+    "intro": "The stars, planets and moon above the birthplace, at the moment of birth — as a poster. A gift that is complete the day the child arrives. Free to download; nothing you type leaves this device.",
+    "login": "Log in",
+    "previewLabel": "Preview of the birth sky poster",
+    "name": "Child's name",
+    "privacy": "Computed on this device. The details are not sent anywhere — places are searched in a list that comes with the page.",
+    "downloadHeading": "Download for free",
+    "downloadFree": "Print it yourself or at a print shop — no account needed.",
+    "orderHeading": "Order as a wall print",
+    "orderBody": "Have it printed and sent by Peecho, our print partner. Ordering takes a free Kaydo account. You can keep the child in your family's encrypted space, where letters and journals for them can follow, or use the details for the poster only.",
+    "orderButton": "Create a free account and order",
+    "keepHeading": "Keep it in Kaydo",
+    "keepBody": "With a free Kaydo account the birth sky stays in your family's encrypted space, where letters and journals for the child can follow.",
+    "keepButton": "Create a free account",
+    "needsDetails": "Enter the name, the date and the place of birth first.",
+    "draftError": "Your browser did not let us keep the poster while you sign up. Please download it instead.",
+    "haveAccount": "Already have an account?",
+    "loginInstead": "Log in and continue",
+    "exampleAlt": "Example poster: the stars, planets and moon over Vienna at 04:17 on the day Emma was born",
+    "moreAboutKaydo": "More about Kaydo, the private family app",
+    "faqTitle": "Questions and answers",
+    "sections": [
+      {
+        "heading": "What does the poster show?",
+        "paragraphs": [
+          "The circle is the whole sky above the birthplace at the moment of birth, as it looked from there: the brighter stars, the constellations with their names, the planets that were above the horizon and the moon in its phase. North is at the top, and east and west are swapped compared with a map, because you look up at the sky rather than down at the ground.",
+          "Below the sky stand the child's name, the date and time of birth, the place with its coordinates, the moon and the planets of that night, and a line of your own if you like. Choose between three styles: Midnight in deep blue and gold, Kaydo in warm cream and terracotta, and Minimal in black on white.",
+          "The positions are calculated for the exact minute and place with astronomy-engine, the stars and constellations come from the d3-celestial catalogue, and the places from GeoNames. If a village is missing from the list, you can enter its coordinates by hand."
+        ]
+      },
+      {
+        "heading": "What if I don't know the time of birth?",
+        "paragraphs": [
+          "Leave the time empty and the poster shows the night sky of that day at 10 pm, and says so in its caption. If the child was born in daylight, the poster shows the stars all the same and notes that they shone behind the blue of the day sky."
+        ]
+      },
+      {
+        "heading": "Why is it a good gift for a birth?",
+        "paragraphs": [
+          "Most gifts for a birth need something first: photos for an album, a year of milestones for a book. The birth sky needs only the date, the time and the place, so it is complete the moment the child is born, for the parents, the grandparents or friends.",
+          "Download it for free as an image or as a PDF in A4 or A3, without an account, and print it yourself or at a print shop."
+        ],
+        "printParagraph": "Or have it printed as a wall print by Peecho, our print partner. Ordering takes a free Kaydo account; at Peecho's checkout you choose the print, the paper and the shipping, and pay Peecho directly."
+      },
+      {
+        "heading": "What happens to the details I enter?",
+        "paragraphs": [
+          "The sky is calculated and drawn in your browser. The name, the date, the time and the place are not sent anywhere while you make the poster: places are searched in a list that comes with the page, not with a map service.",
+          "Nothing is kept until you choose to keep the poster. If you then create a family in Kaydo, the child's name and the time and place of birth are encrypted on your device before they are stored, like everything in a Kaydo family. If you order the poster with the details for the poster only, nothing about the birth is stored in your family, and the copy in your browser is deleted once the order is under way. Only the print file of an ordered poster is stored unencrypted, because a print shop has to read it; the order dialog says so before it is made, and the file is deleted after 30 days."
+        ]
+      },
+      {
+        "heading": "Where can the poster lead?",
+        "paragraphs": [
+          "In Kaydo the birth sky lives in the child's journal, the private space where parents write letters to their children for later. Beside it the family shares photos and moments, seals time capsules for a birthday years away, and keeps its recipes, all encrypted and free of ads."
+        ]
+      }
+    ]
+  },
+  "continue": {
+    "title": "Your birth sky",
+    "summary": "{{name}} · {{date}} · {{place}}",
+    "question": "Whose sky is it?",
+    "newChild": "Add {{name}} to the family",
+    "existingChild": "{{name}}, who is already in the family",
+    "existingHint": "Keeps their birthdate; the time, place and style are added.",
+    "privacy": "The name, time and place of birth are encrypted on this device before they are stored, like everything in your family.",
+    "confirm": "Continue to the birth sky",
+    "discard": "Discard the poster",
+    "error": "That did not work. Please try again.",
+    "posterOnly": "Only for the poster",
+    "posterOnlyHint": "{{name}} is not added to the family. The details stay in this browser until the poster is ordered, and are deleted then."
+  },
+  "posterOnly": {
+    "notStored": "Used for this poster only: nothing about the birth is stored in your family. The details are deleted from this browser once the order is under way.",
+    "discard": "Discard the poster"
+  }
 }

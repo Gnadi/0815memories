@@ -1,0 +1,190 @@
+{
+  "title": "Ciel de naissance",
+  "subtitle": "Les étoiles au-dessus de {{name}} le jour de sa naissance",
+  "back": "Retour",
+  "loadError": "La carte du ciel n'a pas pu être chargée. Veuillez réessayer.",
+  "details": {
+    "heading": "Naissance",
+    "date": "Date",
+    "time": "Heure de naissance",
+    "timeHint": "Laissez vide si vous ne la connaissez pas — nous afficherons le ciel nocturne de ce jour-là.",
+    "place": "Lieu de naissance",
+    "privacy": "Calculé sur cet appareil. Le lieu de naissance est chiffré et n'est jamais envoyé à un service de cartes ou de recherche.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré",
+    "saveError": "L'enregistrement a échoué. Veuillez réessayer."
+  },
+  "place": {
+    "label": "Rechercher un lieu",
+    "placeholder": "Rechercher une ville ou un village…",
+    "change": "Rechercher un autre lieu…",
+    "noResults": "Aucun résultat. Essayez une autre orthographe ou saisissez des coordonnées.",
+    "loadError": "La liste des lieux n'a pas pu être chargée.",
+    "enterCoordinates": "Pas dans la liste ? Saisir des coordonnées",
+    "searchInstead": "Chercher plutôt dans la liste",
+    "manualName": "Nom (p. ex. Saint-Malo)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useCoordinates": "Utiliser ces coordonnées"
+  },
+  "emptyPreview": "Choisissez le lieu de naissance pour voir le ciel.",
+  "style": {
+    "heading": "Style",
+    "midnight": "Minuit",
+    "kaydo": "Kaydo",
+    "minimal": "Épuré"
+  },
+  "caption": {
+    "heading": "Légende",
+    "titleLabel": "Titre",
+    "dedicationLabel": "Une ligne à vous",
+    "dedicationPlaceholder": "p. ex. La nuit où le monde s'est illuminé",
+    "dateTime": "{{date}} · {{time}}",
+    "moonAndPlanets_one": "{{moon}} · {{planets}} dans le ciel",
+    "moonAndPlanets_other": "{{moon}} · {{planets}} dans le ciel",
+    "nightOf": "Le ciel nocturne de ce jour-là, à 22 h",
+    "daylight": "Une naissance en plein jour — ces étoiles brillaient derrière le bleu"
+  },
+  "export": {
+    "heading": "Garder",
+    "png": "Télécharger l'image (A4)",
+    "pdfA4": "Télécharger le PDF (A4)",
+    "pdfA3": "Télécharger le PDF (A3)",
+    "post": "Publier dans le fil",
+    "posting": "Publication…",
+    "rendering": "Préparation…",
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
+    "feedTitle": "Le ciel de la nuit de la naissance de {{name}}",
+    "fileName": "ciel-de-naissance"
+  },
+  "compass": { "n": "N", "e": "E", "s": "S", "w": "O" },
+  "moon": {
+    "new": "Nouvelle lune",
+    "waxingCrescent": "Premier croissant",
+    "firstQuarter": "Premier quartier",
+    "waxingGibbous": "Lune gibbeuse croissante",
+    "full": "Pleine lune",
+    "waningGibbous": "Lune gibbeuse décroissante",
+    "lastQuarter": "Dernier quartier",
+    "waningCrescent": "Dernier croissant"
+  },
+  "planets": {
+    "Mercury": "Mercure",
+    "Venus": "Vénus",
+    "Mars": "Mars",
+    "Jupiter": "Jupiter",
+    "Saturn": "Saturne"
+  },
+  "credits": "Données stellaires : d3-celestial (Olaf Frohn). Lieux : GeoNames (CC BY 4.0). Positions : astronomy-engine.",
+  "order": {
+    "heading": "Commander en tirage mural",
+    "teaser": "Imprimé et expédié par Peecho, notre partenaire d'impression. Vous choisissez le produit et payez sur la page de paiement de Peecho.",
+    "button": "Commander en tirage mural",
+    "title": "Commander le ciel de naissance",
+    "subtitle": "Imprimé et expédié par Peecho",
+    "close": "Fermer",
+    "summary": "Une affiche de {{width}} × {{height}} cm",
+    "productsExplained": "Sur la page de paiement de Peecho, vous choisissez le tirage, le papier et la livraison. Les prix sont ceux de Peecho.",
+    "privacyHeading": "Ce fichier n'est pas chiffré",
+    "privacyBody": "Un imprimeur doit pouvoir lire l'affiche : son fichier d'impression est donc stocké sans chiffrement pour que Peecho puisse le récupérer, y compris le nom, la date, l'heure et le lieu de naissance qui y figurent. Seuls les administrateurs de votre famille et les personnes qui ont le lien peuvent l'ouvrir, et il est supprimé après {{days}} jours.",
+    "demoUnavailable": "La commande est désactivée dans la famille de démonstration. Dans votre propre famille, ceci crée le fichier d'impression et ouvre la page de paiement de Peecho.",
+    "prepare": "Préparer le fichier d'impression",
+    "rendering": "Dessin de l'affiche au format d'impression…",
+    "uploading": "Envoi du fichier d'impression… {{percent}} %",
+    "creatingCheckout": "Ouverture de la page de paiement chez Peecho…",
+    "keepOpen": "Veuillez garder cette fenêtre ouverte.",
+    "checkHeading": "Vérifier le fichier d'impression",
+    "checkBody": "C'est exactement ce qui sera imprimé.",
+    "preview": "Ouvrir le fichier d'impression",
+    "readyHeading": "Commander chez Peecho",
+    "readyBody": "Choisissez le produit, saisissez l'adresse et payez chez Peecho.",
+    "orderAtPeecho": "Aller au paiement chez Peecho",
+    "linkExpires": "Le lien est valable jusqu'au {{date}}.",
+    "failed": "Le fichier d'impression n'a pas pu être créé. Veuillez réessayer.",
+    "checkoutFailed": "Peecho n'a pas ouvert de page de paiement. Veuillez réessayer dans un instant.",
+    "quotaUsed": "Votre famille a préparé plusieurs fichiers d'impression récemment. Veuillez réessayer dans quelques jours.",
+    "tryAgain": "Réessayer",
+    "cancel": "Annuler"
+  },
+  "public": {
+    "seoTitle": "Affiche ciel de naissance : carte gratuite | Kaydo",
+    "seoDescription": "Créez gratuitement l'affiche des étoiles, planètes et de la lune au-dessus du lieu de naissance. À télécharger ou à commander en tirage avec Kaydo.",
+    "heading": "Le ciel de la nuit de leur naissance",
+    "intro": "Les étoiles, les planètes et la lune au-dessus du lieu de naissance, au moment de la naissance — en affiche. Un cadeau prêt le jour où l'enfant arrive. Téléchargement gratuit ; rien de ce que vous saisissez ne quitte cet appareil.",
+    "login": "Se connecter",
+    "previewLabel": "Aperçu de l'affiche du ciel de naissance",
+    "name": "Prénom de l'enfant",
+    "privacy": "Calculé sur cet appareil. Les données ne sont envoyées nulle part — les lieux sont recherchés dans une liste fournie avec la page.",
+    "downloadHeading": "Télécharger gratuitement",
+    "downloadFree": "Imprimez-la vous-même ou chez un imprimeur — sans compte.",
+    "orderHeading": "Commander en tirage mural",
+    "orderBody": "Faites-la imprimer et livrer par Peecho, notre partenaire d'impression. La commande nécessite un compte Kaydo gratuit. Vous pouvez garder l'enfant dans l'espace chiffré de votre famille, où des lettres et des journaux pourront suivre, ou n'utiliser les données que pour l'affiche.",
+    "orderButton": "Créer un compte gratuit et commander",
+    "keepHeading": "Garder dans Kaydo",
+    "keepBody": "Avec un compte Kaydo gratuit, le ciel de naissance reste dans l'espace chiffré de votre famille, où des lettres et des journaux pour l'enfant pourront suivre.",
+    "keepButton": "Créer un compte gratuit",
+    "needsDetails": "Saisissez d'abord le prénom, la date et le lieu de naissance.",
+    "draftError": "Votre navigateur ne nous permet pas de garder l'affiche pendant votre inscription. Téléchargez-la plutôt.",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "loginInstead": "Se connecter et continuer",
+    "exampleAlt": "Exemple d'affiche : les étoiles, les planètes et la lune au-dessus de Vienne à 4 h 17, le jour de la naissance d'Emma",
+    "moreAboutKaydo": "En savoir plus sur Kaydo, l'application familiale privée",
+    "faqTitle": "Questions et réponses",
+    "sections": [
+      {
+        "heading": "Que montre l'affiche ?",
+        "paragraphs": [
+          "Le cercle représente tout le ciel au-dessus du lieu de naissance au moment de la naissance, tel qu'on le voyait de là : les étoiles les plus brillantes, les constellations avec leur nom, les planètes au-dessus de l'horizon et la lune dans sa phase. Le nord est en haut, et l'est et l'ouest sont inversés par rapport à une carte, car on lève les yeux vers le ciel au lieu de regarder le sol.",
+          "Sous le ciel figurent le prénom de l'enfant, la date et l'heure de naissance, le lieu avec ses coordonnées, la lune et les planètes de cette nuit-là, et, si vous le souhaitez, une ligne à vous. Trois styles au choix : Minuit en bleu profond et or, Kaydo en crème chaud et terre cuite, et Épuré en noir sur blanc.",
+          "Les positions sont calculées pour la minute et le lieu exacts avec astronomy-engine ; les étoiles et les constellations proviennent du catalogue d3-celestial, les lieux de GeoNames. S'il manque un village dans la liste, vous pouvez saisir ses coordonnées à la main."
+        ]
+      },
+      {
+        "heading": "Et si je ne connais pas l'heure de naissance ?",
+        "paragraphs": [
+          "Laissez l'heure vide : l'affiche montre alors le ciel nocturne de ce jour-là à 22 h et l'indique dans sa légende. Si l'enfant est né en plein jour, l'affiche montre tout de même les étoiles et précise qu'elles brillaient derrière le bleu du ciel de jour."
+        ]
+      },
+      {
+        "heading": "Pourquoi est-ce un bon cadeau de naissance ?",
+        "paragraphs": [
+          "La plupart des cadeaux de naissance demandent d'abord quelque chose : des photos pour un album, une année de premières fois pour un livre. Le ciel de naissance n'a besoin que de la date, de l'heure et du lieu ; il est donc prêt dès la naissance de l'enfant, pour les parents, les grands-parents ou les amis.",
+          "Téléchargez-le gratuitement en image ou en PDF au format A4 ou A3, sans compte, et imprimez-le vous-même ou chez un imprimeur."
+        ],
+        "printParagraph": "Ou faites-le imprimer en tirage mural par Peecho, notre partenaire d'impression. La commande nécessite un compte Kaydo gratuit ; sur la page de paiement de Peecho, vous choisissez le tirage, le papier et la livraison, et vous payez directement Peecho."
+      },
+      {
+        "heading": "Que deviennent les données que je saisis ?",
+        "paragraphs": [
+          "Le ciel est calculé et dessiné dans votre navigateur. Le prénom, la date, l'heure et le lieu ne sont envoyés nulle part pendant que vous créez l'affiche : les lieux sont recherchés dans une liste fournie avec la page, pas auprès d'un service de cartes.",
+          "Rien n'est conservé tant que vous ne choisissez pas de garder l'affiche. Si vous créez ensuite une famille dans Kaydo, le prénom de l'enfant ainsi que l'heure et le lieu de naissance sont chiffrés sur votre appareil avant d'être enregistrés, comme tout ce qui se trouve dans une famille Kaydo. Si vous commandez l'affiche en utilisant les données uniquement pour elle, rien sur la naissance n'est enregistré dans votre famille, et la copie dans votre navigateur est supprimée dès que la commande est lancée. Seul le fichier d'impression d'une affiche commandée est stocké sans chiffrement, car un imprimeur doit pouvoir le lire ; la fenêtre de commande le signale avant sa création, et le fichier est supprimé après 30 jours."
+        ]
+      },
+      {
+        "heading": "Où l'affiche peut-elle mener ?",
+        "paragraphs": [
+          "Dans Kaydo, le ciel de naissance se trouve dans le journal de l'enfant, l'espace privé où les parents écrivent des lettres à leurs enfants pour plus tard. À côté, la famille partage photos et moments, scelle des capsules temporelles pour un anniversaire dans bien des années et garde ses recettes, le tout chiffré et sans publicité."
+        ]
+      }
+    ]
+  },
+  "continue": {
+    "title": "Votre ciel de naissance",
+    "summary": "{{name}} · {{date}} · {{place}}",
+    "question": "À qui est ce ciel ?",
+    "newChild": "Ajouter {{name}} à la famille",
+    "existingChild": "{{name}}, déjà dans la famille",
+    "existingHint": "Sa date de naissance est conservée ; l'heure, le lieu et le style sont ajoutés.",
+    "privacy": "Le prénom, l'heure et le lieu de naissance sont chiffrés sur cet appareil avant d'être enregistrés, comme tout dans votre famille.",
+    "confirm": "Continuer vers le ciel de naissance",
+    "discard": "Abandonner l'affiche",
+    "error": "Cela n'a pas fonctionné. Veuillez réessayer.",
+    "posterOnly": "Uniquement pour l'affiche",
+    "posterOnlyHint": "{{name}} n'est pas ajouté à la famille. Les données restent dans ce navigateur jusqu'à la commande de l'affiche, puis sont supprimées."
+  },
+  "posterOnly": {
+    "notStored": "Utilisé uniquement pour cette affiche : rien sur la naissance n'est enregistré dans votre famille. Les données sont supprimées de ce navigateur dès que la commande est lancée.",
+    "discard": "Abandonner l'affiche"
+  }
+}

@@ -166,6 +166,93 @@ test('a new admin confirms the email address before the family is founded', asyn
   expect(errors).toEqual([])
 })
 
+// The way in from the landing page: a visitor makes a birth sky without an
+// account, signs up to order it, and once the family exists the child is
+// taken over and the birth sky opens with its order dialog. The confirmation
+// of the address reloads the page in between, as opening the mail in another
+// tab would, so the poster has to survive in the browser.
+test('a visitor orders a birth sky after signing up', async ({ page, request }) => {
+  const errors = collectErrors(page)
+  const stamp = Date.now()
+  const email = `sky-${stamp}@example.com`
+  const familyName = `The Stargazers ${stamp}`
+
+  await page.goto('/birth-sky')
+  await page.getByLabel("Child's name").fill('Lena')
+  await page.getByLabel('Date').fill('2026-11-20')
+  await page.getByLabel('Time of birth').fill('04:17')
+  await page.getByPlaceholder('Search a town or city…').fill('Linz')
+  await page.getByRole('button', { name: /^Linz/ }).first().click()
+  await page.getByLabel('A line of your own').fill('Welcome, little star')
+  await page.getByRole('button', { name: 'Create a free account and order' }).click()
+
+  await expect(page).toHaveURL(/\/signup$/)
+  await visible(page, 'input[placeholder="e.g., Sarah Miller"]').fill('Sam Stargazer')
+  await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
+  await visible(page, 'input[type="email"]').fill(email)
+  await visible(page, `input[placeholder="At least ${MIN_PASSWORD_LENGTH} characters"]`).fill('stargazer-password')
+  await visible(page, 'button[type="submit"]').click()
+  await expect(page.getByText('Confirm your email address').filter({ visible: true })).toBeVisible()
+
+  const listed = await request.get(`${AUTH_EMULATOR}/emulator/v1/projects/demo-kaydo/oobCodes`)
+  const code = (await listed.json()).oobCodes
+    .find((c) => c.email === email && c.requestType === 'VERIFY_EMAIL')
+  const confirm = await request.post(identityToolkit('update'), { data: { oobCode: code.oobCode } })
+  expect(confirm.ok()).toBe(true)
+  await page.getByRole('button', { name: "I've confirmed it" }).filter({ visible: true }).click()
+  await visible(page, 'input[placeholder="e.g., The Millers"]').fill(familyName)
+  await page.getByRole('button', { name: 'Create family' }).filter({ visible: true }).click()
+
+  await expect(page).toHaveURL(/\/birth-sky\/continue$/, { timeout: 20_000 })
+  await expect(page.getByText('Add Lena to the family')).toBeVisible()
+  await page.getByRole('button', { name: 'Continue to the birth sky' }).click()
+
+  await expect(page).toHaveURL(/\/journal\/[^/]+\/sky$/, { timeout: 20_000 })
+  const dialog = page.getByRole('dialog', { name: 'Order the birth sky' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Prepare the print file' })).toBeEnabled({ timeout: 20_000 })
+  // The caption made before signing up came along; the child's record keeps
+  // the time and place, encrypted.
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await expect(page.getByLabel('A line of your own')).toHaveValue('Welcome, little star')
+  await expect(page.getByLabel('Time of birth')).toHaveValue('04:17')
+  await expect(page.getByText('Linz, Austria')).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('kaydo_sky_draft'))).toBeNull()
+  expect(errors).toEqual([])
+})
+
+// A signed-in admin who makes a birth sky for someone else's child orders it
+// without adding the child to the family.
+test('an admin orders a birth sky for the poster only', async ({ page }) => {
+  const errors = collectErrors(page)
+  await signIn(page)
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 })
+
+  await goTo(page, '/birth-sky')
+  await page.getByLabel("Child's name").fill('Mia')
+  await page.getByLabel('Date').fill('2026-10-02')
+  await page.getByPlaceholder('Search a town or city…').fill('Graz')
+  await page.getByRole('button', { name: /^Graz/ }).first().click()
+  await page.getByRole('button', { name: 'Create a free account and order' }).click()
+
+  await expect(page).toHaveURL(/\/birth-sky\/continue$/, { timeout: 20_000 })
+  await page.getByLabel(/Only for the poster/).check()
+  await page.getByRole('button', { name: 'Continue to the birth sky' }).click()
+
+  await expect(page).toHaveURL(/\/birth-sky\/poster$/)
+  const dialog = page.getByRole('dialog', { name: 'Order the birth sky' })
+  await expect(dialog.getByRole('button', { name: 'Prepare the print file' })).toBeEnabled({ timeout: 20_000 })
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Discard the poster' }).click()
+  await expect(page).toHaveURL(/\/home$/)
+
+  // Mia is in no journal: nothing about her birth was stored.
+  await goTo(page, '/journal')
+  await expect(page.getByRole('heading', { name: 'A Gift for Their Future' }).first()).toBeVisible()
+  await expect(page.getByText('Mia', { exact: true })).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
 // Firebase keeps the session in IndexedDB, per page — so one sign-in, then
 // every section in the same page. The app keeps a Firestore connection open,
 // so the network never goes idle: wait for content, never for 'networkidle'.

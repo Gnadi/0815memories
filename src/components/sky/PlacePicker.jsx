@@ -11,7 +11,8 @@ import { devError } from '../../utils/devLog'
  */
 export default function PlacePicker({ value, onChange }) {
   const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  // Country names come from the browser (Intl.DisplayNames), in any language.
+  const lang = (i18n.language || 'en').split('-')[0]
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState(null)
   const [loading, setLoading] = useState(false)
