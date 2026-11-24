@@ -12,7 +12,9 @@ import './homeNotice.css'
  * link. The link's name is `cta`, which only screen readers hear.
  *
  * @param {object} props
- * @param {string} props.to Where a tap leads.
+ * @param {string} [props.to] Where a tap leads.
+ * @param {() => void} [props.onClick] What a tap does instead, for a notice
+ *   that opens a dialog rather than a page.
  * @param {string} props.title
  * @param {string} [props.eyebrow]
  * @param {string} [props.body]
@@ -24,10 +26,19 @@ import './homeNotice.css'
  * @param {string} [props.dismissLabel] That button's text.
  */
 export default function HomeNoticeCard({
-  to, title, eyebrow, body, cta, icon,
+  to, onClick, title, eyebrow, body, cta, icon,
   background = 'kaydo', image, onDismiss, dismissLabel,
 }) {
   const titleId = useId()
+  const action = {
+    className: "w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-white",
+    children: (
+      <>
+        <ChevronRight className="w-5 h-5 text-white" aria-hidden="true" />
+        <span className="sr-only">{cta}</span>
+      </>
+    ),
+  }
 
   return (
     <section
@@ -60,13 +71,9 @@ export default function HomeNoticeCard({
             </button>
           )}
         </div>
-        <Link
-          to={to}
-          className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-white"
-        >
-          <ChevronRight className="w-5 h-5 text-white" aria-hidden="true" />
-          <span className="sr-only">{cta}</span>
-        </Link>
+        {onClick
+          ? <button type="button" onClick={onClick} {...action} />
+          : <Link to={to} {...action} />}
       </div>
     </section>
   )

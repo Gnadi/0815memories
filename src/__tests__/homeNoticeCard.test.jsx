@@ -54,3 +54,13 @@ describe('the home notice card', () => {
     expect(container.querySelector('img')).toHaveAttribute('src', '/picture.webp')
   })
 })
+
+describe('a home notice card that opens a dialog', () => {
+  it('calls onClick from a button named by its cta, instead of a link', () => {
+    const onClick = vi.fn()
+    renderCard({ to: undefined, onClick })
+    expect(screen.queryByRole('link')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Go there' }))
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+})

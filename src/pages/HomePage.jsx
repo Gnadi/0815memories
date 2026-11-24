@@ -12,6 +12,7 @@ import OurYearHomeCard from '../components/ouryear/OurYearHomeCard'
 import AdventHomeCard from '../components/advent/AdventHomeCard'
 import VerifyEmailBanner from '../components/home/VerifyEmailBanner'
 import LoginPhotoHint from '../components/home/LoginPhotoHint'
+import FeedbackHint from '../components/home/FeedbackHint'
 import FamilyDeletionBanner from '../components/home/FamilyDeletionBanner'
 import { useMemories, useMoments } from '../hooks/useMemories'
 import { hasSeenBestOf, useCurrentBestOf } from '../hooks/useBestOf'
@@ -160,6 +161,11 @@ export default function HomePage() {
 
             {/* "Our Year" — renders only for the two partners of a ritual */}
             <OurYearHomeCard />
+
+            {/* Below the feed: a question for when the family has looked around */}
+            <div className="mt-6">
+              <FeedbackHint />
+            </div>
           </div>
         </main>
       </div>

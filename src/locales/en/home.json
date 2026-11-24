@@ -80,8 +80,15 @@
   "loginPhotoHint": {
     "eyebrow": "Tip for admins",
     "title": "Give your login page a face",
-    "body": "Everyone in your family sees the login page first. A photo of your family can welcome them there, in place of the illustration.",
+    "body": "Welcome your family there with a photo of you.",
     "action": "Choose a photo",
+    "notNow": "Not now"
+  },
+  "feedbackHint": {
+    "eyebrow": "Feedback",
+    "title": "How do you like Kaydo?",
+    "body": "Tell us what's missing or what you love.",
+    "action": "Give feedback",
     "notNow": "Not now"
   }
 }
