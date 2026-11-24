@@ -36,6 +36,8 @@
     { "source": "/de/familien-fotobuch", "destination": "/de/familien-fotobuch.html" },
     { "source": "/birth-sky", "destination": "/birth-sky.html" },
     { "source": "/de/geburtshimmel", "destination": "/de/geburtshimmel.html" },
+    { "source": "/fr/ciel-de-naissance", "destination": "/fr/ciel-de-naissance.html" },
+    { "source": "/ar/sama-al-wilada", "destination": "/ar/sama-al-wilada.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

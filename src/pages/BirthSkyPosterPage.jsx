@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, FileDown, Printer, Info } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import useSkyPoster from '../hooks/useSkyPoster'
-import { formatWallDate } from '../utils/sky/caption'
+import { formatWallDate, posterLanguage } from '../utils/sky/caption'
 import { clearSkyDraft, loadSkyDraft } from '../utils/sky/skyDraft'
 import {
   downloadPosterPdf,
@@ -38,7 +38,7 @@ const PRINTING_ENABLED = printConfig().enabled
  */
 export default function BirthSkyPosterPage() {
   const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  const lang = posterLanguage(i18n.language)
   const navigate = useNavigate()
   const { familyId } = useAuth()
   // Read once: the draft is deleted when the order is under way.

@@ -9,7 +9,7 @@ import { useMemoryWriter } from '../hooks/useMemories'
 import useSkyPoster from '../hooks/useSkyPoster'
 import { encryptAndUploadWithThumb } from '../utils/encryptedUpload'
 import { SKY_STYLES, renderSkyPosterCanvas } from '../utils/sky/skyRenderer'
-import { birthDateString, formatWallDate } from '../utils/sky/caption'
+import { birthDateString, formatWallDate, posterLanguage } from '../utils/sky/caption'
 import {
   canvasToBlob,
   downloadPosterPdf,
@@ -39,7 +39,7 @@ const PRINTING_ENABLED = printConfig().enabled
 
 export default function BirthSkyPage() {
   const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  const lang = posterLanguage(i18n.language)
   const { familyId, encryptionKey } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

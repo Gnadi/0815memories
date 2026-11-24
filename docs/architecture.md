@@ -242,9 +242,11 @@ notification.
 | `sw.js` | the service worker (Workbox, `injectManifest`) |
 | `__tests__/` | unit tests, rules tests (`*Rules.test.js`) |
 
-The birth sky is also open to visitors without an account, at `/birth-sky`
-and `/de/geburtshimmel` (pre-rendered, one language each, like the feature
-pages), linked from the landing page. The page reads and
+The birth sky is also open to visitors without an account, at `/birth-sky`,
+`/de/geburtshimmel`, `/fr/ciel-de-naissance` and `/ar/sama-al-wilada`
+(pre-rendered, one language each, like the feature pages), linked from the
+landing page. Its `sky` namespace is the one part of the app translated into
+French and Arabic as well. The page reads and
 writes no family's data: the sky is computed and drawn in the browser, and
 the poster downloads for free. To order it as a wall print, the visitor signs
 up; the poster's details wait in the browser's localStorage meanwhile

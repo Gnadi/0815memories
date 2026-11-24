@@ -44,6 +44,11 @@ import deDemo from '../locales/de/demo.json'
 import deBestOf from '../locales/de/bestOf.json'
 import deAdvent from '../locales/de/advent.json'
 
+// French and Arabic cover the public shell and the birth sky, which visitors
+// reach from the landing page; the rest of the app falls back to English.
+import frSky from '../locales/fr/sky.json'
+import arSky from '../locales/ar/sky.json'
+
 export default {
   en: {
     home: enHome,
@@ -83,4 +88,6 @@ export default {
     bestOf: deBestOf,
     advent: deAdvent,
   },
+  fr: { sky: frSky },
+  ar: { sky: arSky },
 }

@@ -44,7 +44,12 @@ export const FEATURE_PAGES = [
 
 // The birth sky poster, made without an account (src/pages/PublicBirthSkyPage.jsx).
 // The landing page's way in for people looking for a gift for a birth.
-export const BIRTH_SKY_PATHS = { en: '/birth-sky', de: '/de/geburtshimmel' }
+export const BIRTH_SKY_PATHS = {
+  en: '/birth-sky',
+  de: '/de/geburtshimmel',
+  fr: '/fr/ciel-de-naissance',
+  ar: '/ar/sama-al-wilada',
+}
 
 // The landing page's addresses. src/i18n re-exports them as LANDING_PATHS.
 export const LANDING_PAGE_PATHS = { en: '/', de: '/de', ar: '/ar', fr: '/fr' }

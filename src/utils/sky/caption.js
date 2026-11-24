@@ -4,6 +4,17 @@
  */
 import { countryName } from './skyData'
 
+// The languages a poster can be drawn in: its caption, dates and the names of
+// the constellations (public/sky/constellations.json).
+export const POSTER_LANGUAGES = ['en', 'de', 'fr', 'ar']
+const RTL_LANGUAGES = ['ar']
+
+/** The poster language for an i18n language such as 'de-AT'; English otherwise. */
+export function posterLanguage(language) {
+  const base = (language || '').split('-')[0]
+  return POSTER_LANGUAGES.includes(base) ? base : 'en'
+}
+
 /** 'YYYY-MM-DD' of a birthdate stored as a Firestore Timestamp (UTC midnight). */
 export function birthDateString(birthdate) {
   if (!birthdate) return null
@@ -43,7 +54,10 @@ export function buildCaption({ t, lang, title, dateStr, timeStr, place, sky, ded
 
   if (place) {
     const where = place.country ? `${place.name}, ${countryName(place.country, lang)}` : place.name
-    lines.push(`${where} · ${formatCoordinates(place.lat, place.lon)}`)
+    // Kept left to right as a unit (isolated) in a right-to-left caption:
+    // there the bidi algorithm splits "30.06° N · 31.25° E" and reorders it.
+    const coordinates = formatCoordinates(place.lat, place.lon)
+    lines.push(`${where} · ${RTL_LANGUAGES.includes(lang) ? `\u2066${coordinates}\u2069` : coordinates}`)
   }
 
   if (sky) {

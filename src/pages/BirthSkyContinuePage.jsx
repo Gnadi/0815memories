@@ -6,7 +6,7 @@ import { Timestamp } from '../config/firestore'
 import { useAuth } from '../context/AuthContext'
 import { useKids } from '../hooks/useKids'
 import { clearSkyDraft, loadSkyDraft } from '../utils/sky/skyDraft'
-import { formatWallDate } from '../utils/sky/caption'
+import { formatWallDate, posterLanguage } from '../utils/sky/caption'
 import { devError } from '../utils/devLog'
 
 const NEW_CHILD = 'new'
@@ -27,7 +27,7 @@ const POSTER_ONLY = 'poster-only'
  */
 export default function BirthSkyContinuePage() {
   const { t, i18n } = useTranslation('sky')
-  const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
+  const lang = posterLanguage(i18n.language)
   const navigate = useNavigate()
   const { familyId, encryptionKey } = useAuth()
   const { kids, loading, addKid, updateKid } = useKids(familyId, encryptionKey)

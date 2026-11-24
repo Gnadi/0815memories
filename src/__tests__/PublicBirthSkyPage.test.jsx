@@ -12,6 +12,10 @@ import { routes } from '../App'
 import vercel from '../../vercel.json'
 import enSky from '../locales/en/sky.json'
 import deSky from '../locales/de/sky.json'
+import frSky from '../locales/fr/sky.json'
+import arSky from '../locales/ar/sky.json'
+
+const LANGUAGES = [['en', enSky], ['de', deSky], ['fr', frSky], ['ar', arSky]]
 
 vi.mock('vite-react-ssg', () => ({ Head: () => null }))
 let mockAuth
@@ -123,7 +127,7 @@ const words = (copy) =>
     .split(/\s+/).length
 
 describe('the birth sky for search engines', () => {
-  it.each([['en', enSky], ['de', deSky]])('renders in its address’s language (%s), with one H1 and its sections', (lng, copy) => {
+  it.each(LANGUAGES)('renders in its address’s language (%s), with one H1 and its sections', (lng, copy) => {
     renderPage(lng)
     const h1s = screen.getAllByRole('heading', { level: 1 })
     expect(h1s).toHaveLength(1)
@@ -138,12 +142,13 @@ describe('the birth sky for search engines', () => {
     }
     // The place picker and the other parts speak the page's language too.
     expect(screen.getByText(copy.details.place)).toBeInTheDocument()
+    // The example poster is in German or English; other languages show the English one.
     expect(screen.getByAltText(copy.public.exampleAlt).getAttribute('src')).toMatch(
       lng === 'de' ? /^\/screenshots\/de\// : /^\/screenshots\/[^/]+\.webp$/,
     )
   })
 
-  it.each([['en', enSky], ['de', deSky]])('stays within the length limits (%s)', (lng, copy) => {
+  it.each(LANGUAGES)('stays within the length limits (%s)', (lng, copy) => {
     expect(copy.public.seoTitle.length).toBeLessThanOrEqual(60)
     expect(copy.public.seoDescription.length).toBeLessThanOrEqual(155)
     expect(copy.public.seoTitle).toContain('Kaydo')
@@ -153,9 +158,8 @@ describe('the birth sky for search engines', () => {
 
   it('is indexed in both languages, each pointing at the other', () => {
     expect(INDEXABLE_PATHS).toEqual(expect.arrayContaining(Object.values(BIRTH_SKY_PATHS)))
-    expect(pathLanguage('/birth-sky')).toBe('en')
-    expect(pathLanguage('/de/geburtshimmel')).toBe('de')
-    expect(alternatesFor('/de/geburtshimmel').map(([lng]) => lng)).toEqual(['en', 'de', 'x-default'])
+    for (const [lng, path] of Object.entries(BIRTH_SKY_PATHS)) expect(pathLanguage(path)).toBe(lng)
+    expect(alternatesFor('/de/geburtshimmel').map(([lng]) => lng)).toEqual(['en', 'de', 'fr', 'ar', 'x-default'])
   })
 
   it('is a route served its own pre-rendered file, and the old address redirects', () => {

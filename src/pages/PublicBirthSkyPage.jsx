@@ -4,12 +4,14 @@ import { Head } from 'vite-react-ssg'
 import { I18nextProvider, useTranslation } from 'react-i18next'
 import { ChevronDown, Download, FileDown, Lock, Printer, Gift } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import i18n, { LANDING_PATHS } from '../i18n'
+import i18n, { LANDING_PATHS, isRtl } from '../i18n'
 import { BIRTH_SKY_PATHS, absoluteUrl, alternatesFor } from '../seoRoutes'
 import { SCREENSHOTS, screenshotPath, screenshotSize } from '../components/landing/screenshots'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import enSky from '../locales/en/sky.json'
 import deSky from '../locales/de/sky.json'
+import frSky from '../locales/fr/sky.json'
+import arSky from '../locales/ar/sky.json'
 import useSkyPoster from '../hooks/useSkyPoster'
 import { downloadPosterPdf, downloadPosterPng, posterFileBase } from '../utils/sky/posterExport'
 import { saveSkyDraft } from '../utils/sky/skyDraft'
@@ -28,12 +30,13 @@ import { devError } from '../utils/devLog'
 
 const PRINTING_ENABLED = printConfig().enabled
 const DATE = /^\d{4}-\d{2}-\d{2}$/
+const OG_LOCALES = { en: 'en_US', de: 'de_DE', fr: 'fr_FR', ar: 'ar_AR' }
 
 // The birth sky's copy is needed here before the signed-in app's translations
 // are, so it travels in this page's chunk, as the feature pages' does. It is
 // registered as the module loads: in the Node pre-render the first render is
 // synchronous and cannot wait for anything.
-for (const [lng, bundle] of [['en', enSky], ['de', deSky]]) {
+for (const [lng, bundle] of [['en', enSky], ['de', deSky], ['fr', frSky], ['ar', arSky]]) {
   if (!i18n.hasResourceBundle(lng, 'sky')) i18n.addResourceBundle(lng, 'sky', bundle)
 }
 
@@ -156,7 +159,7 @@ function BirthSkyStudio({ lng }) {
   return (
     <div className="min-h-screen bg-cream font-sans flex flex-col">
       <Head>
-        <html lang={lng} />
+        <html lang={lng} dir={isRtl(lng) ? 'rtl' : 'ltr'} />
         <title>{t('public.seoTitle')}</title>
         <meta name="description" content={t('public.seoDescription')} />
         <meta name="robots" content="index,follow" />
@@ -170,7 +173,7 @@ function BirthSkyStudio({ lng }) {
         <meta property="og:description" content={t('public.seoDescription')} />
         <meta property="og:url" content={absoluteUrl(path)} />
         <meta property="og:image" content={absoluteUrl(example.src)} />
-        <meta property="og:locale" content={lng === 'de' ? 'de_DE' : 'en_US'} />
+        <meta property="og:locale" content={OG_LOCALES[lng]} />
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
