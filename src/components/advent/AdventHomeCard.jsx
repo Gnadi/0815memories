@@ -1,10 +1,9 @@
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Gift } from 'lucide-react'
+import { Gift } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useOpenedDoors } from '../../hooks/useAdvent'
 import { ADVENT_DOORS, adventYear, daysUntilAdvent, isAdventSeason } from '../../utils/advent'
-import './advent.css'
+import HomeNoticeCard from '../home/HomeNoticeCard'
 
 /**
  * The advent calendar on the home page, from a week before the first door to
@@ -29,23 +28,16 @@ export default function AdventHomeCard({ now = new Date() }) {
       : t('home.afterTitle')
 
   return (
-    <Link to="/advent" className="block mb-6 rounded-2xl overflow-hidden group advent-board shadow-md">
-      <div className="flex items-center gap-4 px-5 py-5">
-        <div className="w-12 h-12 rounded-xl bg-warm-white flex items-center justify-center flex-shrink-0 shadow">
-          {day
-            ? <span className="font-serif text-2xl font-bold text-kaydo-dark">{day}</span>
-            : <Gift className="w-6 h-6 text-kaydo" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-widest text-white/75 uppercase mb-1">{t('home.eyebrow')}</p>
-          <p className="font-serif text-lg font-bold text-white leading-snug">{title}</p>
-          <p className="text-sm text-white/80 mt-0.5">{t('home.body')}</p>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
-          <ChevronRight className="w-5 h-5 text-white" aria-hidden="true" />
-          <span className="sr-only">{t('home.cta')}</span>
-        </div>
-      </div>
-    </Link>
+    <HomeNoticeCard
+      to="/advent"
+      background="advent"
+      eyebrow={t('home.eyebrow')}
+      title={title}
+      body={t('home.body')}
+      cta={t('home.cta')}
+      icon={day
+        ? <span className="font-serif text-2xl font-bold text-kaydo-dark">{day}</span>
+        : <Gift className="w-6 h-6 text-kaydo" />}
+    />
   )
 }

@@ -78,6 +78,7 @@
     "openSettings": "Einstellungen öffnen"
   },
   "loginPhotoHint": {
+    "eyebrow": "Tipp für Admins",
     "title": "Gebt eurer Anmeldeseite ein Gesicht",
     "body": "Eure ganze Familie sieht zuerst die Anmeldeseite. Ein Foto von euch kann sie dort begrüßen – statt der Illustration.",
     "action": "Foto auswählen",

@@ -1,0 +1,46 @@
+/* The backgrounds of the home page's notice cards (HomeNoticeCard). Each one
+   is dark enough for the card's white text; a new occasion gets a new one
+   here rather than colours of its own in its component. */
+
+.home-notice--advent {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.12) 0 2px, transparent 3px) 0 0 / 46px 46px,
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.1) 0 1.5px, transparent 2.5px) 0 0 / 34px 34px,
+    linear-gradient(160deg, #7a1f1f 0%, #9b2c24 45%, #1f4d3a 100%);
+}
+
+.home-notice--kaydo {
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.14) 0, transparent 40%),
+    linear-gradient(135deg, #a04420 0%, #c25a2e 60%, #d4784a 100%);
+}
+
+.home-notice--forest {
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.12) 0, transparent 40%),
+    linear-gradient(150deg, #1f4d3a 0%, #2f6b4f 55%, #5a8a5e 100%);
+}
+
+.home-notice--night {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.5) 0 1px, transparent 1.5px) 0 0 / 38px 38px,
+    radial-gradient(circle at 65% 70%, rgba(255, 255, 255, 0.35) 0 1px, transparent 1.5px) 0 0 / 27px 27px,
+    linear-gradient(160deg, #141a33 0%, #23305a 60%, #3c3a6b 100%);
+}
+
+/* A picture behind the card, darkened from the text's side so the white
+   text stays legible on any photo. The variant's colours show while it
+   loads, and instead of it if it fails. */
+.home-notice__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-notice__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(45, 27, 14, 0.88) 0%, rgba(45, 27, 14, 0.72) 55%, rgba(45, 27, 14, 0.55) 100%);
+}
