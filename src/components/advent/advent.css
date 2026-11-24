@@ -28,9 +28,11 @@
 }
 
 /* The village along the foot of the board. The board keeps room for it
-   below the doors, scaled with the board's height. */
+   below the doors, scaled with the screen's height — and on a phone also
+   with its width, so that the drawing is never scaled up so far that the
+   sides cut into its houses. */
 .advent-board--scene {
-  --scene: clamp(2.25rem, 9vh, 4.5rem);
+  --scene: clamp(2.25rem, min(9vh, 14vw), 4.5rem);
   padding-bottom: calc(var(--scene) * 0.7);
 }
 

@@ -1,16 +1,18 @@
 // The village at the foot of the board: snowy hills, firs, houses with their
 // windows lit, and a church. Drawn here rather than shipped as an image, so it
 // costs no request and stays sharp at any width; it is wider than most
-// boards and is cut at the sides rather than squeezed.
+// boards and is cut at the sides rather than squeezed. So houses and the
+// church stand in the middle, which every board shows, and the sides hold
+// only firs: a house at the edge was cut through its roof and left a stray
+// line of snow.
 const HOUSES = [
-  { x: 40, w: 26, h: 14, roof: 11 },
-  { x: 96, w: 20, h: 11, roof: 9 },
+  { x: 118, w: 20, h: 11, roof: 9 },
   { x: 236, w: 28, h: 15, roof: 12 },
   { x: 318, w: 22, h: 12, roof: 10 },
-  { x: 446, w: 26, h: 14, roof: 11 },
-  { x: 540, w: 20, h: 11, roof: 9 },
+  { x: 384, w: 20, h: 11, roof: 9 },
+  { x: 452, w: 26, h: 14, roof: 11 },
 ]
-const FIRS = [14, 22, 82, 136, 152, 210, 284, 300, 372, 420, 492, 512, 580, 596]
+const FIRS = [10, 30, 52, 74, 96, 152, 214, 284, 300, 362, 428, 500, 524, 552, 580, 606]
 const GROUND = 52
 
 function House({ x, w, h, roof }) {
