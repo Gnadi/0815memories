@@ -287,7 +287,18 @@ export default function LandingPage({ lng }) {
               <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
-          <SkyDisc className="w-56 h-56 lg:w-72 lg:h-72 mx-auto" />
+          {/* The poster of the demo family's child, as the app draws it. */}
+          <figure className="w-56 lg:w-72 mx-auto lg:rotate-2 rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+            <ZoomTarget src={shot('birthSkyPoster').src} alt={t('screens.birthSkyPosterAlt')} className="block w-full">
+              <img
+                {...shot('birthSkyPoster')}
+                alt={t('screens.birthSkyPosterAlt')}
+                loading="lazy"
+                decoding="async"
+                className="block w-full h-auto"
+              />
+            </ZoomTarget>
+          </figure>
         </div>
       </section>
 
@@ -1033,37 +1044,6 @@ export default function LandingPage({ lng }) {
  * A link from a feature card to the page that tells more about it, in the
  * page's language, named after it so the words say where it leads.
  */
-// A drawing of a star map for the birth sky section: fixed points, so the
-// pre-rendered page and the browser draw the same, and no star catalog has to
-// load with the landing page.
-const DISC_STARS = [
-  [50, 18, 1.6], [62, 27, 1.1], [71, 40, 1.4], [38, 30, 1], [29, 44, 1.3], [45, 47, 0.9],
-  [58, 55, 1.7], [74, 61, 1], [33, 63, 1.2], [47, 72, 1.4], [62, 79, 0.9], [24, 56, 0.8],
-  [80, 48, 0.8], [54, 36, 0.8], [40, 84, 1], [67, 68, 0.8], [20, 38, 0.7], [84, 34, 0.7],
-]
-const DISC_LINES = [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [8, 9], [9, 10]]
-
-function SkyDisc({ className }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
-      <circle cx="50" cy="50" r="47" fill="#08111F" stroke="#D9B26F" strokeWidth="1" />
-      {DISC_LINES.map(([a, b]) => (
-        <line
-          key={`${a}-${b}`}
-          x1={DISC_STARS[a][0]} y1={DISC_STARS[a][1]} x2={DISC_STARS[b][0]} y2={DISC_STARS[b][1]}
-          stroke="#D9B26F" strokeOpacity="0.5" strokeWidth="0.4"
-        />
-      ))}
-      {DISC_STARS.map(([x, y, r]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill="#FFFFFF" />
-      ))}
-      <circle cx="30" cy="74" r="3.2" fill="#F7F1E3" />
-      <circle cx="31.6" cy="73" r="2.8" fill="#08111F" />
-      <circle cx="69" cy="24" r="1.6" fill="#F2C46D" />
-    </svg>
-  )
-}
-
 function FeatureLink({ id, lang, t, className = '' }) {
   const page = FEATURE_PAGES.find((p) => p.id === id)
   return (

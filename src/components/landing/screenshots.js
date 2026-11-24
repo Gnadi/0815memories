@@ -8,7 +8,8 @@
  * it loads. They follow from where the script takes the picture: `viewport`
  * is the window it is taken in, `out` the width it is scaled to, and `path`
  * the page of the demo family it shows. Best-of and print dialog are taken
- * by clicking through instead (`path: null`).
+ * by clicking through instead (`path: null`), and the birth sky poster is
+ * the canvas of the demo child's birth sky, read out at the size it is drawn.
  *
  * `small` is the width of a second, smaller file of the same picture, for a
  * screenshot a phone shows much narrower than it is (the hero): it is offered
@@ -34,6 +35,9 @@ export const SCREENSHOTS = {
   collages: { name: 'collages-desktop', path: '/collages', viewport: [1280, 1000], out: 1200, width: 1200, height: 938 },
   // Phone, not desktop: this is a ritual couples do on the sofa. Taller than
   // the other phone shots so the frame reaches past the header to a chapter.
+  // The poster itself, not the page around it: what the landing page offers
+  // visitors is the print. 1 : √2, like the paper it is printed on.
+  birthSkyPoster: { name: 'birth-sky-poster', path: null, viewport: [1280, 800], out: 600, width: 600, height: 849 },
   ourYearMobile: { name: 'our-year-mobile', path: '/our-year', viewport: [390, 1000], out: 440, width: 440, height: 1128 },
 }
 
