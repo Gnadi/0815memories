@@ -6,7 +6,18 @@ import { thumbAt, tinyPreviewAt } from '../../utils/mediaThumbs'
 import { focusStyleAt } from '../../utils/mediaFocus'
 
 // The big doors, as on a paper calendar: Saint Nicholas' Day and Christmas Eve.
-const SIZE = { 6: 'col-span-2', 24: 'col-span-2 row-span-2' }
+const SIZE = { 6: 'advent-door--wide', 24: 'advent-door--big' }
+
+// Each door is printed in one of a few papers, so that the calendar reads as
+// a printed sheet rather than a grid of buttons. Picked by day, not at
+// random, so a door keeps its look from one visit to the next.
+const PAPERS = ['red', 'green', 'cream', 'blue', 'gold']
+const paperOf = (day) => (day === 24 ? 'red' : day === 6 ? 'gold' : PAPERS[(day * 7) % PAPERS.length])
+
+// Christmas Eve opens as a double door; every other door has one leaf.
+const LEAVES = { 24: ['left', 'right'] }
+
+const SPARKS = 8
 
 /**
  * One door. Closed it shows its number; opened it swings aside to show what
@@ -16,9 +27,11 @@ const SIZE = { 6: 'col-span-2', 24: 'col-span-2 row-span-2' }
 function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow, onLocked }) {
   const { t } = useTranslation('advent')
   const [shaking, setShaking] = useState(false)
+  const [sparkling, setSparkling] = useState(false)
   const { day, entry } = door
   const doc = entry?.doc
   const photo = doc?.images?.[0] || doc?.imageUrl
+  const leaves = LEAVES[day] || ['left']
 
   const handleClick = () => {
     if (isOpen) return onShow(door)
@@ -27,11 +40,13 @@ function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow
       onLocked(door)
       return
     }
+    setSparkling(true)
     onOpen(door)
   }
 
   const classes = [
     'advent-door',
+    `advent-door--${paperOf(day)}`,
     SIZE[day] || '',
     isOpen ? 'advent-door--open' : '',
     !isOpen && isToday ? 'advent-door--today' : '',
@@ -44,7 +59,7 @@ function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow
       type="button"
       className={classes}
       onClick={handleClick}
-      onAnimationEnd={() => setShaking(false)}
+      onAnimationEnd={(e) => { if (e.target === e.currentTarget) setShaking(false) }}
       aria-label={openable ? (isOpen ? t('doorLabel', { day }) : t('openDoor', { day })) : t('lockedDoor', { day, date: dateLabel })}
     >
       <span className="advent-door__behind">
@@ -71,16 +86,33 @@ function AdventDoor({ door, isOpen, openable, isToday, dateLabel, onOpen, onShow
             )}
           </span>
         ))}
-        {isOpen && (
-          <span className="absolute top-1 left-1.5 text-xs font-bold text-white drop-shadow">{day}</span>
-        )}
       </span>
-      <span className="advent-door__leaf" aria-hidden="true">
-        <span className={`font-serif font-bold text-kaydo-dark ${SIZE[day] ? 'text-4xl sm:text-5xl' : 'text-2xl sm:text-3xl'}`}>
-          {day}
+
+      {leaves.map((side) => (
+        <span key={side} className={`advent-door__leaf advent-door__leaf--${side}`} aria-hidden="true">
+          {leaves.length === 1 && <span className="advent-door__number">{day}</span>}
         </span>
-        {!openable && <Lock className="absolute bottom-1.5 right-1.5 w-3 h-3 text-bark-muted/60" />}
-      </span>
+      ))}
+
+      {/* The double door's number hangs across both leaves, like a gift tag,
+          and goes with them. */}
+      {leaves.length > 1 && (
+        <span className="advent-door__tag" aria-hidden="true">
+          <Star className="advent-door__tag-star" />
+          <span className="advent-door__number">{day}</span>
+        </span>
+      )}
+
+      {!isOpen && isToday && <span className="advent-door__today" aria-hidden="true">{t('today')}</span>}
+      {!openable && <Lock className="advent-door__lock" aria-hidden="true" />}
+
+      {sparkling && (
+        <span className="advent-door__sparks" aria-hidden="true" onAnimationEnd={() => setSparkling(false)}>
+          {Array.from({ length: SPARKS }, (_, i) => (
+            <span key={i} style={{ '--angle': `${(360 / SPARKS) * i}deg` }} />
+          ))}
+        </span>
+      )}
     </button>
   )
 }
