@@ -102,6 +102,12 @@ describe('PublicBirthSkyPage', () => {
     expect(screen.getByText('continue page')).toBeInTheDocument()
   })
 
+  it('opens at its top, wherever the page that linked to it was scrolled', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    renderPage()
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+  })
+
   it('shows a finished poster until there is a sky of its own', async () => {
     renderPage()
     expect(screen.getByAltText(enSky.public.exampleAlt).getAttribute('src')).toBe('/screenshots/birth-sky-poster.webp')

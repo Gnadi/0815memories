@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Head } from 'vite-react-ssg'
 import { I18nextProvider, useTranslation } from 'react-i18next'
@@ -62,6 +62,13 @@ export default function PublicBirthSkyPage({ lng = 'en' }) {
 
 function BirthSkyStudio({ lng }) {
   const { t } = useTranslation('sky')
+
+  // The router keeps the scroll position across pages, and the landing page's
+  // link to this one sits far down it: the page opened on its questions
+  // rather than its editor.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
   const lang = lng
   const navigate = useNavigate()
   const { isAuthenticated, isAdmin, familyId } = useAuth()
